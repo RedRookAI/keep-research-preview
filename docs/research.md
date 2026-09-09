@@ -18,6 +18,9 @@ external services involved in longer assignments.
 
 ## A working platform for the research
 
+The [planned security experiments](security-experiments.md) develop three concrete
+comparisons around security repairs, reusable skills, and memory recovery.
+
 Keep's native coding loop reads a permitted repository snapshot, requests model
 proposals, applies edits in a work area, and runs repository checks. Acceptance and
 merge policy determine which changes reach the original project. Persistent memory
