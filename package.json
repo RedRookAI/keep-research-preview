@@ -1,0 +1,89 @@
+{
+  "name": "keep",
+  "version": "0.0.1",
+  "description": "Self-hostable, provider-agnostic build orchestrator with consequence-gated autonomy",
+  "main": "dist/src/index.js",
+  "scripts": {
+    "build": "npm run clean && tsc -p tsconfig.json && node tools/build_native_transport.mjs",
+    "test": "npm run test:full",
+    "test:fast": "tsc -p tsconfig.json --noEmit",
+    "test:notices": "node tools/release_notices.mjs --check",
+    "test:full": "npm run build && node tools/run_full_tests.mjs",
+    "test:portable": "npm run clean && tsc -p tsconfig.json && KEEP_ASSURANCE_PROFILE=portable node tools/run_full_tests.mjs --portable",
+    "test:installed": "node tools/run_installed_golden_journeys.mjs",
+    "test:native-p1": "node tools/native_p1_gate.mjs --verify",
+    "test:native-effects": "node tools/native_transport_effect_observation.mjs",
+    "test:native-p2-deps": "node tools/native_p2_dependency_gate.mjs",
+    "test:firecracker-host": "npm run build && node tools/firecracker_host_evidence.mjs",
+    "test:firecracker-hostile": "npm run build && node tools/firecracker_host_hostile.mjs",
+    "clean": "node tools/clean.mjs",
+    "start": "node dist/src/main.js",
+    "demo": "node dist/src/demo/flagship.js",
+    "demo:recovery": "node acceptance/installed_sg32_resources.mjs",
+    "swe-eval": "node dist/src/eval/swe_eval.js",
+    "prepack": "npm run test:notices && npm run build"
+  },
+  "keywords": [],
+  "author": "Red Rook AI LLC",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "22.20.1"
+  },
+  "dependencies": {
+    "typescript": "5.9.3"
+  },
+  "type": "module",
+  "bin": {
+    "keep": "dist/src/main.js",
+    "keep-chat": "dist/src/channel/chat_server.js"
+  },
+  "files": [
+    "dist/src/",
+    "dist/native/",
+    "native/crates/protocol/src/",
+    "native/crates/protocol/Cargo.toml",
+    "native/crates/p2-d2-evidence/src/",
+    "native/crates/p2-d2-evidence/Cargo.toml",
+    "native/Cargo.toml",
+    "native/Cargo.lock",
+    "native/toolchain-lock.json",
+    "native/toolchain-inventory.json",
+    "native/licenses/README.md",
+    "native/licenses/rust-1.97.1-COPYRIGHT-library.html",
+    "native/licenses/musl-1.2.5-COPYRIGHT.txt",
+    "native/licenses/compiler-builtins-LICENSE.txt",
+    "native/licenses/libm-LICENSE.txt",
+    "native/licenses/compiler-rt-LICENSE.txt",
+    "native/licenses/compiler-rt-CREDITS.txt",
+    "native/licenses/libunwind-LICENSE.txt",
+    "test/fixtures/native_p2_canonical_parity_v1.cbor",
+    "src/",
+    "assets/microvm/",
+    "tools/effect_sweep.mjs",
+    "tools/a4_capability_probe.mjs",
+    "tools/firecracker_host_evidence.mjs",
+    "tools/firecracker_host_hostile.mjs",
+    "tsconfig.json",
+    "README.md",
+    "docs/semantic-memory.md",
+    "LICENSE",
+    "NOTICE",
+    "THIRD_PARTY_NOTICES.txt",
+    "docs/licensing.md",
+    "docs/research-preview.md",
+    "docs/research.md",
+    "docs/evidence.md",
+    "acceptance/installed_sg32_resources.mjs",
+    "WORKFLOW.md",
+    "SECURITY.md"
+  ],
+  "exports": {
+    ".": "./dist/src/index.js",
+    "./client-core": "./dist/src/client/client_core.js",
+    "./client-shell": "./dist/src/client/client_core.js"
+  },
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  }
+}

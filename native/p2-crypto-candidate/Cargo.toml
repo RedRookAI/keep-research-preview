@@ -1,0 +1,13 @@
+[package]
+name = "keep-p2-crypto-candidate"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+ed25519-dalek = { version = "=3.0.0", default-features = false }
+
+[dev-dependencies]
+curve25519-dalek = { version = "=5.0.0", default-features = false }
+
+[workspace]

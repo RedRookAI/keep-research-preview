@@ -1,0 +1,12 @@
+{
+  "schema": "keep.native-p1-toolchain-lock",
+  "version": 1,
+  "host": "x86_64-unknown-linux-gnu",
+  "target": "x86_64-unknown-linux-musl",
+  "toolchain": "1.97.1-x86_64-unknown-linux-gnu",
+  "cargoSha256": "828980723df339d62434390e9fb8ef8831036583343ae2316b7ab5646b5c1953",
+  "rustcSha256": "d3a664c970a9fd8361b64194861bebc1ae37b9054e5ee3400dc1c9e691797eea",
+  "rustdocSha256": "3b0c7aef20e0dfdfe2dd19ddb0b40d3b744f76318a44031813f501e1912934df",
+  "rustfmtSha256": "30de9e1efcd8f8fe7750e00d0c45ff8f4c480608ef1be5baf9ab6f1b4556e8f8",
+  "rustLldSha256": "38a9f28404309892f9c9afe02fa4979a0d9e8bc866979cde09f5bb7ec17e5721"
+}

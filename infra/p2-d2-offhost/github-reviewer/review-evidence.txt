@@ -1,0 +1,3 @@
+BOOTSTRAP ONLY. The real role-specific evidence bundle is installed after AuditPlanV1 binds
+the observed Sigstore workflow identity and trust root. This placeholder must never receive
+a PASS review or enter an authorizing evidence chain.

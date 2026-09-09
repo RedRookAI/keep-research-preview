@@ -1,0 +1,18 @@
+Keep
+Copyright (c) 2026 Red Rook AI LLC
+
+Keep's original code is distributed under the MIT license in LICENSE.
+Third-party code retains its own copyright notices and license terms.
+THIRD_PARTY_NOTICES.txt reproduces notices from the existing vendored Cargo source
+and locked npm runtime/development packages; it does not relicense those works.
+The complete source tree retains the original component notice files as well.
+The Rust standard-library copyright report is retained separately in
+native/licenses/rust-1.97.1-COPYRIGHT-library.html. Additional pinned-source notices
+for musl, compiler-builtins/libm, LLVM compiler-rt and libunwind, including upstream
+compiler-rt credits, are retained alongside it. See native/licenses/README.md for
+their source identities, coverage and remaining attribution-review limitations.
+
+The inventory includes source/build dependencies that may not be linked into a
+particular binary. Package declarations, registry locators, and local checksums
+do not establish rights clearance, upstream authenticity, or legal compliance.
+See docs/licensing.md for the exact coverage and unresolved release boundaries.

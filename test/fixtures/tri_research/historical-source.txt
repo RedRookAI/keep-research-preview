@@ -1,0 +1,1 @@
+Historical failure-lineage fixture bytes for repository admission-gate testing.

@@ -1,0 +1,157 @@
+#!/bin/sh
+# Keep's trusted Firecracker guest supervisor (PID 1). The workload receives no serial descriptor or key.
+set -u
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export LC_ALL=C
+mount -t proc proc /proc 2>/dev/null || true
+mount -o remount,hidepid=2 /proc 2>/dev/null || { poweroff -f; exit 125; }
+mount -t sysfs sys /sys 2>/dev/null || true
+mount -t devtmpfs dev /dev 2>/dev/null || true
+mount -t tmpfs -o mode=0755,size=16m tmpfs /run 2>/dev/null || true
+mount -t tmpfs -o mode=1777,size=16m tmpfs /tmp 2>/dev/null || true
+
+NONCE=""
+MAX_OUTPUT=1048576
+FSIZE=""
+PIDS=""
+for tok in $(cat /proc/cmdline); do
+  case "$tok" in
+    keep.max_output=*) MAX_OUTPUT="${tok#keep.max_output=}" ;;
+    keep.fsize=*) FSIZE="${tok#keep.fsize=}" ;;
+    keep.pids=*) PIDS="${tok#keep.pids=}" ;;
+  esac
+done
+
+case "$MAX_OUTPUT" in (*[!0-9]*|'') MAX_OUTPUT=1048576;; esac
+
+# Establish the trusted result channel before dropping privilege. Linux gives PID 1 an inherited console
+# on fds 0/1/2; path permissions cannot revoke those descriptors. Retain ttyS0 only on private fd 3,
+# redirect every ordinary descriptor, and explicitly close fd 3 in the workload child.
+exec 3>/dev/ttyS0 || { poweroff -f; exit 125; }
+stty -F /dev/ttyS0 -opost 2>/dev/null || { poweroff -f; exit 125; }
+exec 0</dev/null 1>/dev/null 2>/dev/null
+
+NOBODY_UID=$(id -u nobody 2>/dev/null) || { poweroff -f; exit 125; }
+[ "$NOBODY_UID" -ne 0 ] || { poweroff -f; exit 125; }
+chmod 0600 /dev/ttyS0 2>/dev/null || { poweroff -f; exit 125; }
+[ "$(stat -c '%a' /dev/ttyS0 2>/dev/null)" = "600" ] || { poweroff -f; exit 125; }
+if [ -e /dev/console ]; then
+  chmod 0600 /dev/console 2>/dev/null || { poweroff -f; exit 125; }
+  [ "$(stat -c '%a' /dev/console 2>/dev/null)" = "600" ] || { poweroff -f; exit 125; }
+fi
+chmod 0600 /dev/tty 2>/dev/null || { poweroff -f; exit 125; }
+[ "$(stat -c '%a' /dev/tty 2>/dev/null)" = "600" ] || { poweroff -f; exit 125; }
+
+# The host precomputes HMAC's 64-byte inner/outer pads from the fresh per-attempt key. PID 1 reads their
+# hex encodings as non-exported shell state, then hides the rootfs directory. Neither key nor equivalent
+# pad appears in any subprocess argv or environment.
+NONCE=$(tr -d '\n' </keep-secrets/nonce 2>/dev/null) || { poweroff -f; exit 125; }
+IPAD=$(tr -d '\n' </keep-secrets/ipad 2>/dev/null) || { poweroff -f; exit 125; }
+OPAD=$(tr -d '\n' </keep-secrets/opad 2>/dev/null) || { poweroff -f; exit 125; }
+case "$NONCE" in (*[!0-9a-f]*|'') poweroff -f; exit 125;; esac
+[ "${#NONCE}" -eq 32 ] || { poweroff -f; exit 125; }
+case "$IPAD$OPAD" in (*[!0-9a-f]*|'') poweroff -f; exit 125;; esac
+[ "${#IPAD}" -eq 128 ] && [ "${#OPAD}" -eq 128 ] || { poweroff -f; exit 125; }
+# The rootfs is intentionally read-only, so erase visibility rather than pretending unlink can succeed:
+# cover the root-only key directory with a fresh empty tmpfs before any untrusted process exists.
+mount -t tmpfs -o mode=0700,size=4k tmpfs /keep-secrets 2>/dev/null || { poweroff -f; exit 125; }
+
+mkdir -p /project /run/keep
+if ! mount -o rw,nodev,nosuid /dev/vdb /project 2>/dev/null; then
+  poweroff -f
+  exit 125
+fi
+if [ ! -f /project/.keep/request.sh ] || [ -L /project/.keep/request.sh ]; then
+  poweroff -f
+  exit 125
+fi
+cp /project/.keep/request.sh /run/keep/request.sh || { poweroff -f; exit 125; }
+chown root:root /run/keep/request.sh
+chmod 0555 /run/keep/request.sh
+chmod 0700 /project/.keep 2>/dev/null || true
+
+[ -n "$FSIZE" ] && ulimit -f $(( FSIZE / 512 )) 2>/dev/null || true
+[ -n "$PIDS" ] && ulimit -u "$PIDS" 2>/dev/null || true
+
+OUT=/run/keep/stdout
+ERR=/run/keep/stderr
+: > "$OUT"
+: > "$ERR"
+EMITTED=0
+
+hex_to_binary() {
+  awk '
+    function nibble(c) { return index("0123456789abcdef", c) - 1 }
+    { for (i = 1; i <= length($0); i += 2) printf "%c", nibble(substr($0,i,1)) * 16 + nibble(substr($0,i+1,1)) }
+  '
+}
+
+emit_frame() {
+  [ "$EMITTED" -eq 0 ] || return 1
+  # Once emission starts, never attempt a second header. A partial device write is host-side refusal, not
+  # an ambiguous retry carrying the same nonce.
+  EMITTED=1
+  FRAME_CODE=$1
+  OUT_LEN=$(wc -c <"$OUT" | tr -d ' ') || OUT_LEN=0
+  ERR_LEN=$(wc -c <"$ERR" | tr -d ' ') || ERR_LEN=0
+  if [ "$OUT_LEN" -gt "$MAX_OUTPUT" ]; then truncate -s "$MAX_OUTPUT" "$OUT" 2>/dev/null || : >"$OUT"; FRAME_CODE=125; fi
+  if [ "$ERR_LEN" -gt "$MAX_OUTPUT" ]; then truncate -s "$MAX_OUTPUT" "$ERR" 2>/dev/null || : >"$ERR"; FRAME_CODE=125; fi
+  OUT_LEN=$(wc -c <"$OUT" | tr -d ' ') || OUT_LEN=0
+  ERR_LEN=$(wc -c <"$ERR" | tr -d ' ') || ERR_LEN=0
+  OUT_SHA=$(sha256sum "$OUT" | cut -d' ' -f1) || return 1
+  ERR_SHA=$(sha256sum "$ERR" | cut -d' ' -f1) || return 1
+  MAC_INPUT=/run/keep/frame.mac-input
+  FRAME=/run/keep/frame
+  {
+    printf 'keep.microvm-result-auth/v1\000'
+    printf 'KEEP_RESULT_V1 %s %s %s %s %s %s\n' "$NONCE" "$FRAME_CODE" "$OUT_LEN" "$ERR_LEN" "$OUT_SHA" "$ERR_SHA"
+    cat "$OUT" "$ERR"
+    printf '\nKEEP_RESULT_END_V1 %s\n' "$NONCE"
+  } >"$MAC_INPUT" || return 1
+  INNER=$(
+    {
+      printf '%s\n' "$IPAD" | hex_to_binary
+      cat "$MAC_INPUT"
+    } | sha256sum | cut -d' ' -f1
+  ) || return 1
+  MAC=$( { printf '%s\n' "$OPAD" | hex_to_binary; printf '%s\n' "$INNER" | hex_to_binary; } | sha256sum | cut -d' ' -f1 ) || return 1
+  case "$MAC" in (*[!0-9a-f]*|'') return 1;; esac
+  [ "${#MAC}" -eq 64 ] || return 1
+  {
+    printf 'KEEP_RESULT_V1 %s %s %s %s %s %s %s\n' "$NONCE" "$FRAME_CODE" "$OUT_LEN" "$ERR_LEN" "$OUT_SHA" "$ERR_SHA" "$MAC"
+    cat "$OUT" "$ERR"
+    printf '\nKEEP_RESULT_END_V1 %s\n' "$NONCE"
+  } >"$FRAME" || return 1
+  cat "$FRAME" >&3 || return 1
+  IPAD=""
+  OPAD=""
+  return 0
+}
+
+# Unexpected supervisor failure must produce an authenticated adverse frame rather than leave any guest
+# bytes as the apparent result. The trap is best-effort; absence of a valid MAC still refuses host-side.
+trap 'if [ "$EMITTED" -eq 0 ]; then : >"$OUT"; printf "trusted guest supervisor aborted\n" >"$ERR"; emit_frame 125 || true; fi' EXIT
+
+# `setsid` may fork when its caller is already a process-group leader. `-w` keeps the trusted supervisor
+# synchronously joined to that child and propagates its exit status instead of racing the teardown barrier.
+su -s /bin/sh nobody -c 'test "$(id -u)" -ne 0 && cd /project && exec setsid -w /run/keep/request.sh' 0</dev/null 3>&- >"$OUT" 2>"$ERR"
+CODE=$?
+# Detached/background workload processes must not observe HMAC computation or mutate captured streams.
+# In the guest PID namespace, kill(-1) excludes PID 1 itself. Reap, then verify no non-init PID survives.
+kill -KILL -1 2>/dev/null || true
+wait 2>/dev/null || true
+for PROC in /proc/[0-9]*; do
+  PID=${PROC##*/}
+  # Kernel helpers (for example bpfilter_umh) can have an executable link but remain root-owned members of
+  # the guest TCB. Refuse only a surviving task under the dedicated untrusted workload identity.
+  PROC_UID=$(awk '$1 == "Uid:" { print $2; exit }' "$PROC/status" 2>/dev/null) || PROC_UID=
+  [ "$PID" = "1" ] || [ "$PROC_UID" != "$NOBODY_UID" ] || {
+    : >"$OUT"
+    printf 'untrusted guest process survived framing barrier\n' >"$ERR"
+    CODE=125
+    break
+  }
+done
+emit_frame "$CODE" || true
+sync
+reboot -f 2>/dev/null || { echo b > /proc/sysrq-trigger 2>/dev/null; poweroff -f; }

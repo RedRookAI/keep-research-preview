@@ -1,0 +1,39 @@
+import { createHash } from "node:crypto";
+import { decompositionApprovalDigest, type DecompositionGenerationRecordV1 } from "./decomposition_approval.js";
+
+export type DecompositionPublicationCode="ADVANCED"|"MALFORMED_OR_UNKNOWN_FIELD"|"PREREQUISITE_AUTHORITY_INVALID"|"DECOMPOSITION_NOT_DURABLE"|"STALE_DERIVATION";
+export interface PublicationMemberV1 { path:string; sha256:string }
+export interface DecompositionPublicationManifestV1 { schema_version:1; generation:string; authority_digest:string; members:PublicationMemberV1[] }
+export interface DecompositionRemoteObservationV1 { remote:string; ref:string; advertised_commit:string; fetched_commit:string; reachable:boolean; generation:string; product_commit:string; members:PublicationMemberV1[] }
+export interface DecompositionPublicationInputV1 { schema_version:1; canonical_remote:string; canonical_ref:string; expected_remote_commit:string; expected_product_commit:string; approved_generation:DecompositionGenerationRecordV1; manifest:DecompositionPublicationManifestV1; product_predecessor:{commit:string;clean:boolean}; observation:DecompositionRemoteObservationV1 }
+export interface DecompositionPublicationReceiptV1 { schema_version:1; status:"DECOMPOSITION_REMOTE_READBACK_PASS"; generation:string; generation_record_digest:string; manifest_digest:string; remote:string; ref:string; remote_commit:string; product_commit:string; member_count:number; members:readonly PublicationMemberV1[]; receipt_digest:string; implementation_authorized:false }
+export interface DecompositionPublicationResultV1 { advanced:boolean; code:DecompositionPublicationCode; receipt:DecompositionPublicationReceiptV1|null }
+
+const HEX=/^[a-f0-9]{64}$/u,OID=/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u,GEN=/^sha256:[a-f0-9]{64}$/u;
+const object=(v:unknown):v is Record<string,unknown>=>v!==null&&typeof v==="object"&&!Array.isArray(v);
+const exact=(v:Record<string,unknown>,keys:readonly string[])=>{const a=Object.keys(v).sort(),b=[...keys].sort();return a.length===b.length&&a.every((x,i)=>x===b[i]);};
+const canonical=(v:unknown):string=>Array.isArray(v)?`[${v.map(canonical).join(",")}]`:object(v)?`{${Object.keys(v).sort().map(k=>`${JSON.stringify(k)}:${canonical(v[k])}`).join(",")}}`:JSON.stringify(v);
+export const decompositionPublicationDigest=(v:unknown)=>createHash("sha256").update(canonical(v)).digest("hex");
+const validMember=(v:unknown):v is PublicationMemberV1=>object(v)&&exact(v,["path","sha256"])&&typeof v.path==="string"&&v.path.length>0&&v.path.length<=512&&!v.path.startsWith("/")&&!v.path.split("/").includes("..")&&typeof v.sha256==="string"&&HEX.test(v.sha256);
+const validMembers=(v:unknown):v is PublicationMemberV1[]=>Array.isArray(v)&&v.length>0&&v.length<=4096&&v.every(validMember)&&new Set(v.map(x=>x.path)).size===v.length;
+const validManifest=(v:unknown):v is DecompositionPublicationManifestV1=>object(v)&&exact(v,["authority_digest","generation","members","schema_version"])&&v.schema_version===1&&typeof v.generation==="string"&&GEN.test(v.generation)&&typeof v.authority_digest==="string"&&HEX.test(v.authority_digest)&&validMembers(v.members);
+const RECORD_KEYS=["amendment_authorization_digest","approval_digest","candidate_digest","evidence_digests","generation","graph_digest","manifest_digest","parent_record_digest","record_digest","review_disposition_digest","schema_version","scope_digest","scope_ids","status"];
+const validRecord=(v:unknown):v is DecompositionGenerationRecordV1=>object(v)&&exact(v,RECORD_KEYS)&&v.schema_version===1&&v.status==="APPROVED"&&typeof v.generation==="string"&&GEN.test(v.generation)&&(v.parent_record_digest===null||(typeof v.parent_record_digest==="string"&&HEX.test(v.parent_record_digest)))&&[v.graph_digest,v.candidate_digest,v.manifest_digest,v.scope_digest,v.review_disposition_digest,v.approval_digest,v.record_digest].every(x=>typeof x==="string"&&HEX.test(x))&&Array.isArray(v.scope_ids)&&v.scope_ids.length>0&&v.scope_ids.every(x=>typeof x==="string"&&x.length>0)&&new Set(v.scope_ids).size===v.scope_ids.length&&(v.amendment_authorization_digest==="GENESIS"||(typeof v.amendment_authorization_digest==="string"&&HEX.test(v.amendment_authorization_digest)))&&Array.isArray(v.evidence_digests)&&v.evidence_digests.every(x=>typeof x==="string"&&HEX.test(x))&&new Set(v.evidence_digests).size===v.evidence_digests.length&&v.record_digest===decompositionApprovalDigest(Object.fromEntries(Object.entries(v).filter(([k])=>k!=="record_digest")));
+const INPUT_KEYS=["approved_generation","canonical_ref","canonical_remote","expected_product_commit","expected_remote_commit","manifest","observation","product_predecessor","schema_version"];
+const OBS_KEYS=["advertised_commit","fetched_commit","generation","members","product_commit","reachable","ref","remote"];
+const predecessor=(v:unknown)=>object(v)&&exact(v,["clean","commit"])&&typeof v.commit==="string"&&OID.test(v.commit)&&typeof v.clean==="boolean";
+const observation=(v:unknown):v is DecompositionRemoteObservationV1=>object(v)&&exact(v,OBS_KEYS)&&typeof v.remote==="string"&&v.remote.length>0&&typeof v.ref==="string"&&v.ref.startsWith("refs/")&&typeof v.advertised_commit==="string"&&OID.test(v.advertised_commit)&&typeof v.fetched_commit==="string"&&OID.test(v.fetched_commit)&&typeof v.reachable==="boolean"&&typeof v.generation==="string"&&GEN.test(v.generation)&&typeof v.product_commit==="string"&&OID.test(v.product_commit)&&validMembers(v.members);
+const result=(code:DecompositionPublicationCode,receipt:DecompositionPublicationReceiptV1|null=null):DecompositionPublicationResultV1=>Object.freeze({advanced:code==="ADVANCED",code,receipt});
+const deepFreeze=<T>(v:T):T=>{if(v!==null&&typeof v==="object"&&!Object.isFrozen(v)){Object.freeze(v);for(const child of Object.values(v as Record<string,unknown>))deepFreeze(child);}return v;};
+
+export function verifyDecompositionPublication(value:DecompositionPublicationInputV1):DecompositionPublicationResultV1 {
+  let snapshot:DecompositionPublicationInputV1;
+  try{snapshot=structuredClone(value);}catch{return result("MALFORMED_OR_UNKNOWN_FIELD");}
+  if(!object(snapshot)||!exact(snapshot,INPUT_KEYS)||snapshot.schema_version!==1||typeof snapshot.canonical_remote!=="string"||snapshot.canonical_remote.length===0||typeof snapshot.canonical_ref!=="string"||!snapshot.canonical_ref.startsWith("refs/")||!OID.test(snapshot.expected_remote_commit)||!OID.test(snapshot.expected_product_commit)||!validRecord(snapshot.approved_generation)||!validManifest(snapshot.manifest)||!predecessor(snapshot.product_predecessor)||!observation(snapshot.observation))return result("MALFORMED_OR_UNKNOWN_FIELD");
+  const {approved_generation:g,manifest:m,product_predecessor:p,observation:o}=snapshot;
+  if(!p.clean||p.commit!==snapshot.expected_product_commit||o.product_commit!==snapshot.expected_product_commit||decompositionPublicationDigest(m)!==g.manifest_digest)return result("PREREQUISITE_AUTHORITY_INVALID");
+  if(o.remote!==snapshot.canonical_remote||o.ref!==snapshot.canonical_ref||!o.reachable||o.advertised_commit!==snapshot.expected_remote_commit||o.fetched_commit!==snapshot.expected_remote_commit||canonical(o.members)!==canonical(m.members))return result("DECOMPOSITION_NOT_DURABLE");
+  if(m.generation!==g.generation||o.generation!==g.generation)return result("STALE_DERIVATION");
+  const body={schema_version:1 as const,status:"DECOMPOSITION_REMOTE_READBACK_PASS" as const,generation:g.generation,generation_record_digest:g.record_digest,manifest_digest:g.manifest_digest,remote:o.remote,ref:o.ref,remote_commit:o.fetched_commit,product_commit:o.product_commit,member_count:m.members.length,members:structuredClone(m.members),implementation_authorized:false as const};
+  return result("ADVANCED",deepFreeze({...body,receipt_digest:decompositionPublicationDigest(body)}));
+}

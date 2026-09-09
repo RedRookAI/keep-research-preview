@@ -1,0 +1,36 @@
+name: Keep P2-D2 off-host review
+on:
+  workflow_dispatch:
+    inputs:
+      evidence_digest: { description: "Exact SHA-256 of review-evidence.txt", required: true, type: string }
+      audit_plan_digest: { description: "Bound AuditPlanDigest", required: true, type: string }
+      review_role: { description: "Closed audit role", required: true, type: choice, options: [advisory, build-policy, correctness, license, unsafe-contract] }
+      review_counter: { description: "Monotonic attempt counter", required: true, type: number }
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
+        with: { persist-credentials: false }
+      - uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5
+        with: { cosign-release: v2.6.0 }
+      - name: Obtain independent provider review
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          EVIDENCE_DIGEST: ${{ inputs.evidence_digest }}
+          AUDIT_PLAN_DIGEST: ${{ inputs.audit_plan_digest }}
+          REVIEW_ROLE: ${{ inputs.review_role }}
+          REVIEW_COUNTER: ${{ inputs.review_counter }}
+        run: node review.mjs
+      - name: Sign exact review result with GitHub OIDC, Fulcio, and Rekor
+        run: cosign sign-blob --yes --bundle artifact/sigstore-bundle.json artifact/signed-preimage.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: keep-p2-d2-offhost-review
+          path: artifact/
+          if-no-files-found: error
+          retention-days: 90

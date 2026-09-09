@@ -1,0 +1,14 @@
+[build]
+target = "x86_64-unknown-linux-musl"
+
+[target.x86_64-unknown-linux-musl]
+linker = "rust-lld"
+
+[net]
+offline = true
+
+[source.crates-io]
+replace-with = "vendored-transport"
+
+[source.vendored-transport]
+directory = "vendor-transport"

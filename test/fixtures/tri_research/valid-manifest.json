@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "keep.tri-research/v1",
+  "milestoneId": "a6-p2-d2-semantic-admission",
+  "buildDomain": "agent-orchestration",
+  "candidateDigest": "880a9ee6ea87be2ad96463d6e08e3cb097f087e3bd96af461bff761c4b40ecf3",
+  "planDigest": "6c282c82ff284947209e23d7adf07af8d6e7c7160041af7af7f51677cd648675",
+  "researchAsOf": "2026-08-19",
+  "currentWindowStart": "2026-02-19",
+  "currentWindowEnd": "2026-08-19",
+  "completedAt": "2026-08-19T11:00:00.000Z",
+  "searchScopeRef": "repo:test/fixtures/tri_research/search-scope.json",
+  "searchScopeDigest": "d17e41adc2be2671b2cc590421e255952711f0cb473f235a0d25e32e0dfaa3c2",
+  "searchLimitations": ["Fixture evidence tests structure, not external truth."],
+  "sources": [
+    {
+      "id": "cross-1",
+      "lane": "cross-disciplinary",
+      "title": "Cross-disciplinary fixture",
+      "locator": "https://example.invalid/cross",
+      "publisher": "fixture",
+      "domain": "safety-engineering",
+      "sourceDate": "2021-05-01",
+      "retrievedAt": "2026-08-19T10:00:00.000Z",
+      "bodyRef": "repo:test/fixtures/tri_research/cross-source.txt",
+      "bodySha256": "393317cd7302eb5fa3dba3fbc9d0932cde981719228541f88e1dcc35ffd4c90c",
+      "primary": true,
+      "supports": ["claim-1"],
+      "limitation": "Fixture only.",
+      "transferMechanism": "Transfer assurance-case evidence closure into planning admission."
+    },
+    {
+      "id": "current-1",
+      "lane": "current",
+      "title": "Current fixture",
+      "locator": "https://example.invalid/current",
+      "publisher": "fixture",
+      "domain": "software-supply-chain",
+      "sourceDate": "2026-07-01",
+      "retrievedAt": "2026-08-19T10:01:00.000Z",
+      "bodyRef": "repo:test/fixtures/tri_research/current-source.txt",
+      "bodySha256": "a7aa41f64ea6cde277bfae30d5c2ed9ce16888e01a165706301b2ae954a88102",
+      "primary": true,
+      "supports": ["claim-1"],
+      "limitation": "Fixture only.",
+      "transferMechanism": null
+    },
+    {
+      "id": "history-1",
+      "lane": "historical",
+      "title": "Historical fixture",
+      "locator": "https://example.invalid/history",
+      "publisher": "fixture",
+      "domain": "systems-security",
+      "sourceDate": "2022-11-01",
+      "retrievedAt": "2026-08-19T10:02:00.000Z",
+      "bodyRef": "repo:test/fixtures/tri_research/historical-source.txt",
+      "bodySha256": "d0c6aa483adaeedfca1d5ae0cb75dd4fc13a70ca408dc13393f0d239033fe4ce",
+      "primary": true,
+      "supports": ["claim-1"],
+      "limitation": "Fixture only.",
+      "transferMechanism": null
+    }
+  ],
+  "claims": [
+    {
+      "id": "claim-1",
+      "text": "Consequential planning requires exact multi-lane evidence closure.",
+      "sourceIds": ["cross-1", "current-1", "history-1"],
+      "applicability": "Repository admission-gate fixture.",
+      "limitation": "Structural fixture only."
+    }
+  ]
+}

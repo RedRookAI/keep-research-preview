@@ -1,0 +1,1 @@
+Current primary-source fixture bytes for repository admission-gate testing.

@@ -1,0 +1,25 @@
+# Build + dependency artifacts — excluded from lineage, exactly as the content fingerprint excludes them.
+node_modules/
+dist/
+native/target/
+
+# Transport artifacts (tarballs are checksummed for transport, never committed as identity).
+*.tar
+*.tar.gz
+*.tgz
+
+# Editor / OS noise
+.DS_Store
+*.swp
+.claude/
+.keep-state/
+docs/review/evidence/*.stream.partial.jsonl
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# tree_guard transient sentinel (never commit)
+.keep-tree-sentinel.json
