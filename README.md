@@ -11,10 +11,14 @@ the most developed workflow today. Keep can inspect a repository, obtain a
 model-proposed change, run checks in a work area, and apply the configured acceptance
 and merge policy.
 
-Keep is under active development. The first research-preview candidate includes the
+Keep is under active development. The first public research preview includes the
 implementation and a Linux x64 demonstration of resource accounting and recovery
 when an operation's response is lost. The demonstration requires no model account
 or paid service.
+
+Download [research preview 2026-09-09.2](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-09-09.2).
+The [release record](KEEP_RELEASE.md) identifies the reviewed source, prepared
+archives, checksums, and qualification results.
 
 Start with the [preview guide](docs/research-preview.md) to install the package and
 run the experiment. The [research overview](docs/research.md) describes the wider

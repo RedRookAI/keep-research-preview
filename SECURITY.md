@@ -43,15 +43,14 @@ protection against every untrusted input.
 
 ## Reporting a vulnerability
 
-The recommended route for the public preview is GitHub's built-in private
-vulnerability reporting. Once it is enabled, open this repository's **Security**
+GitHub's built-in private vulnerability reporting is enabled for this public
+preview. Open this repository's **Security**
 tab, select **Advisories**, then **Report a vulnerability** to send a private report.
 
-**Release setup is pending:** this policy is prepared for review. The public
-repository and its private reporting configuration have not been created or
-verified. Enabling the reporting form and confirming maintainer notifications are
-publication steps, not properties established by this document. No response
-deadline, bounty, dedicated security team or separate email address is promised.
+The enabled setting was verified through GitHub's API, and the public Advisories
+page displays the reporting link. Maintainer notification delivery has not yet been
+verified. No response deadline, bounty, dedicated security team or separate email
+address is promised. Do not use public issues to transmit sensitive reports.
 
 Do not post credentials, private repository contents, customer data, authentication
 headers or unredacted traces in public issues. Use the private form when available;

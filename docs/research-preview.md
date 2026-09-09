@@ -2,7 +2,12 @@
 
 ## This release
 
-**Keep 0.0.1 — candidate keep-preview-2026-09-09.2. Publication is pending.**
+**Keep 0.0.1 — public research preview keep-preview-2026-09-09.2.**
+
+Download the named assets from the
+[GitHub release](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-09-09.2).
+The [release record](../KEEP_RELEASE.md) connects the originating development revision
+with the public snapshot commit and unchanged prepared archive checksums.
 
 The distribution consists of `keep-source-preview.tar.gz` (the complete selected
 source) and `keep-0.0.1.tgz` (the installable package). The accompanying
@@ -180,7 +185,11 @@ See the [evidence record](evidence.md) for exact results and broader failures, a
 
 ## Release preparation
 
-The current candidate is private pending the owner's publication decision and the
-GitHub private-reporting setup described in SECURITY.md. Status language changes only
-after the corresponding release action occurs. A reviewed whole-source snapshot
-does not require exposing private development history.
+The owner approved publication of the reviewed whole-source snapshot in this new
+repository. The existing private repositories and their histories remain private.
+The release tag and two prepared archives preserve the reviewed bytes; documentation
+inside those archives retains its preparation-time status wording. Main-branch
+publication-status documentation and the companion release record identify what
+has since been published and enabled, without relabeling the archived results.
+GitHub private reporting is enabled; notification delivery remains unverified.
+See [Security](../SECURITY.md) for the reporting route.
