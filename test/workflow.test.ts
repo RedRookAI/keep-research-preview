@@ -12,7 +12,7 @@ const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
   repository?: unknown; bugs?: unknown; homepage?: unknown;
 };
 const publicDocs = ["README.md", "WORKFLOW.md", "CLAUDE.md", "SECURITY.md",
-  "docs/research-preview.md", "docs/research.md", "docs/evidence.md", "docs/licensing.md", "docs/semantic-memory.md", "docs/skill-registry.md"];
+  "docs/research-preview.md", "docs/security-experiments.md", "docs/evidence.md", "docs/licensing.md", "docs/semantic-memory.md", "docs/skill-registry.md"];
 
 test("public instructions have existing local links and no private planning or card prerequisites", () => {
   for (const name of publicDocs) {
@@ -70,7 +70,7 @@ test("npm demo and swe-eval execute compiled targets without destroying or rebui
 });
 
 test("preview's installed demo and limitations are included without inventing a public repository", () => {
-  for (const path of ["acceptance/installed_sg32_resources.mjs", "docs/research-preview.md", "docs/research.md", "docs/evidence.md", "docs/skill-registry.md", "SECURITY.md", "WORKFLOW.md"])
+  for (const path of ["acceptance/installed_sg32_resources.mjs", "docs/research-preview.md", "docs/security-experiments.md", "docs/evidence.md", "docs/skill-registry.md", "SECURITY.md", "WORKFLOW.md"])
     assert.ok(pkg.files.includes(path), "package missing " + path);
   // Publication approval must choose a real destination; no private or invented URL.
   for (const value of [pkg.repository, pkg.bugs, pkg.homepage])

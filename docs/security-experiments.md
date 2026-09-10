@@ -13,7 +13,6 @@ evidence records provide a starting point for testing defenses together.
 The ten directions below are **proposed studies, not completed results**. Each
 addresses a security question within an active research area. Detailed protocols,
 comparison implementations, and model configurations remain to be established.
-They sit within Keep's [wider research program](research.md).
 
 ## 1. Protecting AI security reviewers from manipulation
 

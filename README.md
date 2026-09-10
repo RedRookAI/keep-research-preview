@@ -26,8 +26,8 @@ and remaining limits. **Before upgrading existing data, read the
 and retain a private offline backup.**
 
 Start with the [preview guide](docs/research-preview.md) to install the package and
-run the experiment. The [research overview](docs/research.md) describes the wider
-platform and the questions being investigated.
+run the experiment. The [security research brief](docs/security-experiments.md)
+describes proposed studies, the threats they address, and relevant prior work.
 
 **Use the preview with synthetic data and isolated test resources. It is not ready
 for unattended production use.** Keep production credentials and unrestricted paid
@@ -83,7 +83,6 @@ applications are not part of this preview.
 ## Read further
 
 - [Preview and installation](docs/research-preview.md)
-- [Research at Keep](docs/research.md)
 - [Proposed security research](docs/security-experiments.md)
 - [Results, artifacts and known test status](docs/evidence.md)
 - [Contributing and tests](WORKFLOW.md)

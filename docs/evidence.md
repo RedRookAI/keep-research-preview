@@ -1,7 +1,7 @@
 # Evidence and limitations
 
 This page records what was exercised, on which artifacts, and within which
-boundaries. The [research overview](research.md) explains the proposed advances;
+boundaries. The [security research brief](security-experiments.md) explains the proposed studies;
 the [preview guide](research-preview.md) explains how to run the first experiment.
 
 ## Current release record
