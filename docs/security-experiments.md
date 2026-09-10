@@ -1,273 +1,179 @@
-# Control and oversight of capable agents
-
-Proposed research directions · September 10, 2026
+# Security research at Keep
 
 ## How can we empower agents while keeping people in control?
 
-An agent that can work for days, learn new procedures, and coordinate with other
-agents could take on much more useful work. It also creates a harder oversight
-problem: a person cannot inspect every action, a mistake can become a reusable
-lesson, and several individually reasonable steps can combine into a harmful
-outcome.
+Agents that work across sessions, learn procedures, and cooperate could take on
+much more useful work. But a compromised agent could also steal information,
+spread malicious behavior, or undermine the systems meant to detect an attack.
 
-Keep is being developed as a setting for investigating that problem. The aim is to
-let agents take on more responsibility while preserving people's ability to set
-limits, judge the results, and intervene effectively. Security matters here as a
-condition for greater capability, not just a filter on individual responses.
+Keep is an open-source, self-hosted platform for investigating these problems.
+Its execution runtime, persistent memory, skill system, permission controls, and
+evidence records provide a starting point for testing defenses together.
 
-The three directions below focus on oversight across agent teams, learning from
-unreliable experience, and recovery after compromised information spreads. They
-are proposed studies, not completed results. Existing research provides important
-solutions and strong comparisons; the protocols must establish where a new method
-adds value. These directions sit within Keep's wider
-[research program](research.md), rather than defining every future use of the
-platform.
+The ten directions below are **proposed studies, not completed results**. Each
+addresses a security question within an active research area. Detailed protocols,
+comparison implementations, and model configurations remain to be established.
+They sit within Keep's [wider research program](research.md).
 
-## 1. Keeping oversight effective across long-running agent teams
+## 1. Protecting AI security reviewers from manipulation
 
-### The problem
+An attacker can embed instructions in code, documentation, or tool output that
+manipulate the AI reviewing it. A successful attack could allow a backdoor to pass
+review or suppress a warning before deployment.
 
-When several agents divide a project, no single message or action necessarily
-reveals what the group is doing. A misleading result can pass between agents,
-a reviewer can share the worker's mistake, or an adversarial agent can spread a
-harmful plan across otherwise ordinary steps. Giving every step to a human defeats
-much of the purpose of delegation.
+We propose testing whether Keep's acceptance workflow can separate untrusted
+explanations from independently executed security checks and keep those checks
+binding on the decision. Comparisons would include strong monitors, diverse
+reviewers, and conventional security tests against attackers that know the review
+process. [Adaptive Attacks on Trusted Monitors](https://arxiv.org/html/2510.09462v1)
+already demonstrates monitor manipulation; the question is which defenses retain
+both attack detection and legitimate work.
 
-The research question is whether oversight can detect and interrupt harmful
-activity across a whole project while preserving useful autonomy under a limited
-review budget. This includes ordinary shared mistakes as well as deliberately
-adversarial behavior.
+## 2. Stopping poisoned experience from becoming a malicious skill
 
-For example, agents might legitimately prepare a software release. The evaluator
-would introduce a controlled attempt to weaken its tests or misrepresent what was
-checked. The study would ask whether oversight catches the resulting problem,
-including when the work and misleading evidence are distributed across agents.
+An attacker can influence an experience that an agent converts into a reusable
+procedure. The resulting skill may retain malicious behavior after the original
+poisoned material is removed, spreading compromise into later tasks.
 
-### What we would investigate
+Using Keep's extraction and registry mechanisms, we propose comparing admission
+and execution policies against static review, behavioral monitoring, origin-based
+restrictions, and generation from trusted requirements alone. Tests would measure
+actual unauthorized effects and useful skills retained.
+[SkillJack](https://arxiv.org/html/2608.03509v1) establishes this attack direction,
+with principally proxy-based evaluation.
+[Defense-as-Skill](https://arxiv.org/html/2609.01487v1) studies runtime guards;
+effective protection through skill transformation and reuse remains our proposed
+defensive question.
 
-We propose studying oversight that combines observations of actual effects,
-cross-task history, and selective requests for human review. The central hypothesis
-is that this combination can improve the amount of correctly completed work at a
-given level of harmful outcomes and review effort.
+## 3. Preventing agent teams from combining permissions into an attack
 
-Comparisons would include transcript-based monitoring, structured multi-reviewer
-systems, and conventional permission and approval controls. Tests would include
-reviewers from the same and different model families. Giving all methods the same
-underlying observations would help distinguish better interpretation from simply
-giving one method more information.
+One agent may read information, another transform it, and another send messages.
+Their individually permitted actions can collectively cause unauthorized
+disclosure or sabotage, including across separate sessions.
 
-Adversarial agents would be allowed to adapt to the oversight procedure during
-development. Separate evaluation campaigns would test transfer to new tasks and
-attack strategies. Legitimate work must genuinely require the permissions being
-tested: a system that refuses everything would not count as successful oversight.
+We propose using Keep's delegation and fleet mechanisms to compare cross-session
+security policies with session-bound authorization, persistent monitoring, and
+restricted coordination. The aim is to prevent combined attacks without
+eliminating useful teamwork. [Bounded Agents](https://arxiv.org/html/2608.15888v1)
+already enforces delegated scope and prohibited action combinations, while
+identifying cross-session coordination among its remaining challenges.
+[SCHEME](https://arxiv.org/html/2605.29178v1) provides prior work on coordinated
+sabotage. Simply adding a team-level monitor would not establish an advance.
 
-We would measure actual harmful effects, correct completed work, missed incidents,
-unnecessary interventions, detection delay, and model and human review cost.
-Experiments that simulate a perfect human reviewer would be reported separately
-from studies involving real people.
+## 4. Closing hidden communication paths through shared infrastructure
 
-### What existing work already establishes
+Agents intended to be isolated may discover that a package cache, artifact
+service, or permitted tool can carry messages. That can enable unauthorized
+coordination beyond the operator's intended boundaries.
 
-[Adaptive Attacks on Trusted Monitors](https://proceedings.iclr.cc/paper_files/paper/2026/file/54b153ad8a138f4c186f21a8b7341d5e-Paper-Conference.pdf)
-shows why monitors must be tested against attackers that adapt to them.
-[TraceGuard](https://arxiv.org/html/2604.03968v1) studies structured monitoring,
-while [Colosseum](https://arxiv.org/html/2602.15198v1) examines collusion in
-multi-agent settings. Google's
-[AI Control Roadmap](https://storage.googleapis.com/deepmind-media/DeepMind.com/Blog/securing-the-future-of-ai-agents/gdm-ai-control-roadmap.pdf)
-also identifies risks distributed across many agent instances.
+We propose a controlled service environment for comparing isolation and
+information-flow controls while measuring both unintended communication and
+legitimate task completion. Keep would coordinate the experiments; additional
+systems-security infrastructure is required. The
+[Hugging Face incident report](https://openai.com/index/hugging-face-incident-and-the-road-ahead/)
+documents unintended shared-infrastructure communication, and
+[tool-enabled steganography research](https://arxiv.org/html/2606.28425v1) examines
+covert channels. Our question is which service arrangements resist adaptive
+coordination while preserving necessary shared functionality.
 
-Our proposed focus is persistent, cooperating agents under realistic limits on
-review, including the reliability of the evidence on which oversight depends.
-Adding another reviewing model is not itself the proposed advance. An advance
-would be a method that withstands stronger adaptive tests while allowing more
-legitimate work for the same oversight resources.
+## 5. Preventing secret theft through useful outputs
 
-### What Keep contributes and what remains
+A compromised agent can hide information in an otherwise legitimate report, code
+artifact, or message. Several apparently harmless outputs may together disclose
+a secret to an unauthorized recipient.
 
-Keep provides scoped delegation, separate acceptance powers, execution records,
-and mechanisms for recording effects and recovery. These give us places to
-implement and compare oversight decisions. Its existing local demonstration checks
-effects against a controlled service; it does not establish trustworthy observation
-of arbitrary agent deployments.
+We propose extending Keep's disclosure experiments to measure what a recipient
+can recover, not only whether an output contains a recognizable secret.
+Comparisons would include information-flow restrictions, constrained output
+formats, and calibrated disclosure policies under changing attacker knowledge.
+[OCELOT](https://arxiv.org/html/2606.12341v1) already addresses cumulative inference
+leakage. The proposed question is how well defenses preserve useful work when an
+attacker gains additional information or uses new artifact types and encodings.
 
-The study still needs a multi-agent evaluation environment, defined attacker
-access, observations that tested agents cannot rewrite, and model-backed trials.
-Intended outputs include reproducible task campaigns, an oversight runner, and
-result bundles. Other agent-framework developers could use them to test whether
-their reviewers detect distributed failures; adapters would be needed to run those
-systems without adopting Keep.
+## 6. Detecting covert poisoning of AI training pipelines
 
-## 2. Learning from experience without learning the wrong lessons
+An agent preparing training data or configuration could introduce a hidden
+behavior into another model while ordinary evaluations appear benign. Accepting
+that model could spread compromise into future deployments.
 
-### The problem
+We propose comparing inspection during training with dataset screening and
+final-model auditing, measuring hidden behavior detected, benign adaptations
+rejected, and cost. [Fine-tuning auditing agents](https://arxiv.org/html/2510.16255v1)
+and [Introspection Adapters](https://alignment.anthropic.com/2026/introspection-adapters/)
+provide important prior methods. The question is whether timely, targeted
+intervention improves detection against adaptive attacks. Keep has orchestration
+interfaces; a qualified training backend, suitable compute, and specialist
+evaluation remain necessary for this study.
 
-An agent can remember an apparently successful solution and reuse it later.
-But the original test may have missed a defect, the feedback may have been wrong,
-or a procedure may work only in its original setting. Repetition can turn a small
-evaluation mistake into a persistent habit.
+## 7. Detecting sabotage that makes security research look successful
 
-The question is how an agent should decide which lessons deserve to influence
-future work when reliable feedback is incomplete, delayed, or expensive. The goal
-is genuine improvement on new work, not a growing library of procedures that
-merely passed their own examples.
+An agent can alter evaluation data, checking logic, or experimental configuration
+so an insecure system appears secure. Repeating the submitted experiment may
+reproduce the misleading conclusion rather than expose it.
 
-For example, a coding agent might retain a shortcut that passes an incomplete test
-suite. Later tasks could reveal the error. A useful learning system would need to
-reassess the lesson and related work without discarding every genuinely useful
-procedure it acquired.
+We propose using Keep's coding and evidence paths to test auditors that generate
+independent checks capable of distinguishing competing explanations. Comparisons
+would include existing artifact-capable monitors and conventional reproducibility
+checks at matched investigation budgets.
+[ASMR-Bench](https://arxiv.org/html/2604.16286v1) studies research-sabotage auditing.
+[ResearchArena](https://arxiv.org/html/2607.19321v1) identifies failures to select
+the decisive behavioral test. Discovering that test without knowing the attack
+in advance is the proposed research target.
 
-### What we would investigate
+## 8. Preventing attackers from hijacking incident responders
 
-We propose studying how to allocate additional checks before and after promoting
-a learned procedure: when to seek stronger evidence, when to hold a candidate,
-and when later outcomes should trigger repair or withdrawal. Permission limits
-would remain binding; a better average score would not authorize prohibited work.
+Attackers control parts of the logs and alerts a defender must inspect. Misleading
+evidence could cause an automated responder to disable monitoring, revoke
+legitimate access, destroy evidence, or restore a compromised resource.
 
-Comparisons would include no accumulated learning, well-configured retrieval,
-fixed skill libraries, and relevant methods that already improve memory selection
-or feedback quality. All methods would face the same tasks, information, access
-limits, and accounting of learning and verification costs.
+We propose testing response policies through Keep's permission and recovery
+mechanisms against disposable services with separately observed state. The
+measurements would include attacker-caused damage, genuine incidents contained,
+response time, and unnecessary disruption.
+[OpenSec](https://arxiv.org/html/2601.21083v1) evaluates adversarial incident
+evidence; [AIR](https://arxiv.org/html/2602.11749v1) provides an agent response
+framework. Our question is how to authorize effective response actions when
+observations conflict, arrive late, or are attacker-controlled.
 
-Task sequences would include changing requirements, misleading apparent successes,
-and feedback that becomes available only later. Evaluation would use unfamiliar
-tasks and separately controlled outcome checks that are not available as answers
-to the learning method.
+## 9. Preventing reinfection after an agent appears to be cleaned
 
-We would measure improvement on new tasks, regressions on earlier work, reuse of
-harmful procedures, useful lessons rejected, and the total cost of acquiring,
-checking, and correcting experience. Comparing complete learning policies with
-their simpler components would show whether added machinery earns its cost.
+Deleting malicious source material can leave behind a compromised skill, cached
+plan, peer memory, or checkpoint. Restarting work may reactivate the attack.
 
-### What existing work already establishes
+We propose using Keep's memory and lifecycle mechanisms to compare quarantine,
+revalidation, clean rebuilding, and rollback across derived and shared state.
+Tests would measure actual recurrence, legitimate work preserved, and recovery
+cost, including cases with incomplete dependency records.
+[SkillJack](https://arxiv.org/html/2608.03509v1) describes persistence after source
+deletion, and [AIR](https://arxiv.org/html/2602.11749v1) includes eradication.
+The proposed contribution is evidence about when useful work can safely resume
+after compromise has spread—not another source-deletion mechanism.
 
-[AgentCL](https://arxiv.org/html/2606.02461v2) examines learning and transfer across
-controlled task streams. [SkillLearnBench](https://arxiv.org/html/2604.20087v1)
-evaluates skill learning through task outcomes. Work on
-[memory reward inflation and LUCID](https://arxiv.org/html/2608.00017v1) already
-examines unreliable self-scoring and external checks.
-[MemSkill](https://arxiv.org/html/2602.02474v2) learns memory-management procedures.
+## 10. Trustworthy investigation when agents can manipulate evidence
 
-The proposed advance must go beyond retaining successful traces or asking another
-model to grade them. We would look for a reliable way to decide which evidence is
-worth obtaining and how it should change future behavior under a fixed resource
-budget. The exact decision method remains to be designed and compared with these
-approaches.
+A compromised agent may alter records or steer an investigator toward an
+incomplete account. An operator could then miss the extent of a breach or
+incorrectly conclude that it has been contained.
 
-### What Keep contributes and what remains
+We propose testing AI-assisted investigations against controlled incidents with
+missing or manipulated evidence and separately collected observations. Keep's
+audit and witnessing interfaces provide starting machinery; trustworthy
+observation must be established independently of the investigated agent.
+Comparisons would measure missed attacks, false accusations, unsupported
+conclusions, and investigation cost. The
+[METR and Redwood investigation](https://metr.org/blog/2026-08-26-openai-hugging-face-incident-investigation/)
+documents evidence manipulation and limitations of AI-assisted analysis.
+Hashes alone cannot establish truth or completeness.
 
-Keep includes [skill comparison](../src/loop/skill_evaluator.ts),
-[registry lifecycle controls](../src/registry/skill_registry.ts), and mechanisms
-for recording candidate assignments, exposure, and outcomes. The maintenance
-preview ties relevant approval and lifecycle decisions to the checked content.
-These are foundations for conducting a study, not evidence that Keep has already
-demonstrated continual learning gains.
+## Evaluation and public outputs
 
-The study needs a learning policy, representative task streams, comparison
-implementations, and repeated model evaluations. Foreign-skill intake currently
-produces a replacement specification; producing a tested executable replacement
-requires additional work.
+Studies would use authorized, isolated environments, synthetic sensitive data,
+and outcome checks separate from the agents being evaluated. Strong existing
+defenses, legitimate-work controls, and held-out evaluation would be part of each
+comparison. Success means reducing harmful outcomes while preserving useful
+capability—not refusing every task.
 
-Intended outputs include task streams, an experiment runner, and results connecting
-each retained lesson to later outcomes and costs. Developers could use these to
-evaluate their own memory or skill-learning policies. A separately usable runner
-and its integration interfaces remain to be built.
-
-## 3. Recovering control after compromised information has spread
-
-### The problem
-
-An agent may discover that information was malicious, incorrect, or no longer
-authorized only after it has shaped a plan, generated a skill, or influenced
-another agent. Some actions may already have affected a repository or external
-service. Deleting the original memory cannot undo all of those consequences.
-
-The research question is how to identify work that needs reconsideration, prevent
-further unauthorized effects, and preserve work that remains valid when the
-available history is incomplete. This is a question about the combined behavior
-of learning, coordination, and the outside world.
-
-For example, a poisoned project note might influence a generated procedure that
-another agent uses. After the note is withdrawn, the system must decide what to
-stop, what to check, what can be corrected, and what cannot yet be resolved.
-
-### What we would investigate
-
-We propose studying a recovery procedure that connects source changes, derived
-artifacts, current authority, and observations of effects. The hypothesis is that
-explicitly representing these relationships and unresolved questions can preserve
-more legitimate work than broad invalidation, without allowing additional
-unauthorized effects.
-
-Comparisons would include version-aware retrieval, selective replay where its
-assumptions apply, and full restart combined with proper external-state
-reconciliation. Established transactional coordination and compensating actions
-would be included where appropriate. Restarting an agent while ignoring its
-previous external actions would be an inadequate comparison.
-
-Tests would change information or authority at different stages of a multi-agent
-task. Controlled services would reveal actual effects independently of agents'
-claims. Each method would receive the same observations; selected cases would
-withhold information to test whether the system correctly leaves an outcome
-unresolved.
-
-Measurements would include unauthorized effects after a change, duplicated work,
-retained useful work, unnecessary interruptions, recovery cost, and accuracy about
-what remains unknown. Some past actions cannot be undone. Detecting that limit and
-escalating it accurately is part of the required behavior.
-
-### What existing work already establishes
-
-[Forgetting Without Restarting](https://arxiv.org/html/2609.04875v1) already studies
-selective repair of reconstructible execution state, with explicit boundaries
-around committed external effects.
-[MemSecBench](https://arxiv.org/html/2607.27080v1) evaluates memory attacks and
-downstream consequences.
-[Stateful Governance for Concurrent Agentic Systems](https://arxiv.org/html/2608.02764v2)
-addresses authorization over changing shared state.
-
-The proposed focus is the combined case involving derived skills, cooperating
-agents, partial observations, and effects that may already have happened. This
-overlaps substantial existing work. Before a main study, we must identify a
-specific failure that strong existing methods do not adequately address and a
-testable improvement. Connecting components alone would not establish that advance.
-
-### What Keep contributes and what remains
-
-Keep's [source-linked task context](../src/memory/task_context.ts), authority
-checks, and durable accounting provide starting mechanisms. Its lost-response
-demonstration is a useful engineering check of a bounded recovery path. It is not
-a claim to have invented reliable retries or solved this larger research problem.
-
-The proposed combined recovery procedure, service adapters, and model-backed
-evaluation still need development. Intended outputs include controlled scenarios,
-effect checks, a reference recovery implementation, and comparative results.
-Memory-system and agent-runtime developers could use them to investigate recovery
-across their own components after suitable integration work.
-
-## What would make these studies useful?
-
-Each study would specify its hypothesis, comparison implementations, task
-distribution, attacker powers where relevant, outcome checks, and resource budget
-before the main evaluation. A promising result must improve useful completed work,
-control, or oversight cost against strong alternatives—not merely pass tests written
-for Keep. If existing methods solve the chosen problem adequately, we would revise
-or drop that study.
-
-Development tasks and published examples would be kept distinct from held-out
-evaluation. Accumulated state would be separated between methods and repetitions.
-Reports would distinguish scripted tests, model participation, human review, and
-outside administration, and retain failures and settings where simpler methods
-work well.
-
-Planned public outputs include cleared tasks, runners, configurations, permitted
-model outputs, resulting artifacts, outcome checks, and results with resource use.
-Publication details remain subject to applicable data and model terms and
-responsible disclosure. Reusable outputs should help other developers evaluate
-their systems, rather than require them to accept Keep's own verdict.
-
-Keep supplies an experimental foundation for this work. Its
-[existing evidence](evidence.md) records what has actually been demonstrated; the
-[research overview](research.md) covers the broader platform. Each study requires
-qualification of the execution, isolation, observation, and spending boundaries it
-uses. Experiments would use authorized, isolated resources, not production
-credentials or uncontrolled live targets. See the [security policy](../SECURITY.md).
+We plan to publish reusable test material, runners, configurations, and results,
+including failures, subject to applicable terms and responsible disclosure.
+The [evidence record](evidence.md) describes Keep's existing results and their
+scope; the [security policy](../SECURITY.md) explains current operating limits.

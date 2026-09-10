@@ -70,7 +70,7 @@ claim of universal spending enforcement, production isolation, external-effect
 finality, or general coding superiority. Broader native qualification limitations
 remain documented in the release record.
 
-The [three security studies](security-experiments.md) remain proposed research,
+The [security studies](security-experiments.md) remain proposed research,
 not completed experiments or promised funded outcomes. MIT licensing and required
 third-party notices remain in place. No npm-registry publication is part of this
 GitHub maintenance release.

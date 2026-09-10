@@ -18,10 +18,10 @@ external services involved in longer assignments.
 
 ## A working platform for the research
 
-The [control and oversight research brief](security-experiments.md) proposes
-studies of long-running agent teams, learning from unreliable experience, and
-recovery after compromised information spreads. Their shared question is how to
-give agents more useful responsibility while keeping people in control.
+The [security research brief](security-experiments.md) presents ten proposed
+studies of defenses against theft, sabotage, unauthorized coordination, and
+persistent compromise. It describes the problems, existing research, and what
+Keep could help test while preserving useful agent capability.
 
 Keep's native coding loop reads a permitted repository snapshot, requests model
 proposals, applies edits in a work area, and runs repository checks. Acceptance and

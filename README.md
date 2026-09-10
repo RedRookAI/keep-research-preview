@@ -84,7 +84,7 @@ applications are not part of this preview.
 
 - [Preview and installation](docs/research-preview.md)
 - [Research at Keep](docs/research.md)
-- [Proposed research: control and oversight of capable agents](docs/security-experiments.md)
+- [Proposed security research](docs/security-experiments.md)
 - [Results, artifacts and known test status](docs/evidence.md)
 - [Contributing and tests](WORKFLOW.md)
 - [Security and private reporting](SECURITY.md)
