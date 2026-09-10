@@ -18,8 +18,10 @@ external services involved in longer assignments.
 
 ## A working platform for the research
 
-The [planned security experiments](security-experiments.md) develop three concrete
-comparisons around security repairs, reusable skills, and memory recovery.
+The [control and oversight research brief](security-experiments.md) proposes
+studies of long-running agent teams, learning from unreliable experience, and
+recovery after compromised information spreads. Their shared question is how to
+give agents more useful responsibility while keeping people in control.
 
 Keep's native coding loop reads a permitted repository snapshot, requests model
 proposals, applies edits in a work area, and runs repository checks. Acceptance and
