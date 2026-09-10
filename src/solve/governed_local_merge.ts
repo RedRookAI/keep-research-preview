@@ -15,8 +15,58 @@ class CrashProbeInterruption extends Error {
 }
 
 export type LocalMergeDecision = "approve" | "veto";
-export interface LocalMergeResult { readonly status: "merged" | "refused" | "failed"; readonly reason: string; readonly mergeId?: string; readonly publicationTarget?: string; readonly decision?: LocalMergeDecision }
-export interface LocalRevertResult { readonly status: "reverted" | "refused" | "failed"; readonly reason: string; readonly mergeId?: string; readonly revertCommit?: string }
+export type SourceDeliveryStatus = "landed" | "reverted" | "refused" | "unknown";
+export interface SourceDeliveryReport {
+  readonly status: SourceDeliveryStatus;
+  /** Whether this attempt's outcome journal was confirmed, not a fresh Git check. */
+  readonly recorded?: boolean;
+  readonly recordingError?: string;
+}
+export interface LocalMergeResult { readonly status: "merged" | "refused" | "failed"; readonly reason: string; readonly mergeId?: string; readonly publicationTarget?: string; readonly decision?: LocalMergeDecision; readonly sourceDelivery?: SourceDeliveryReport }
+export interface LocalRevertResult { readonly status: "reverted" | "refused" | "failed"; readonly reason: string; readonly mergeId?: string; readonly revertCommit?: string; readonly sourceDelivery?: SourceDeliveryReport }
+
+/** Reporting projection only. Never used to authorize or replay a Git operation. */
+export function projectRepositoryOutcomes(spine: Pick<Spine, "replay">, runId: string) {
+  type Outcome = { status: string; reason?: string; mergeId?: string; revertCommit?: string };
+  let workspace: Outcome = { status: "unknown" };
+  const source: { merge: Outcome; revert: Outcome } = { merge: { status: "unknown" }, revert: { status: "unknown" } };
+  let latestDecision: string | null = null;
+  // Replay order is durable journal order, not wall-clock order. Old source
+  // terminals remain readable; absent observations are never synthesized success.
+  for (const row of spine.replay()) {
+    const p = row.payload;
+    if (p["runId"] !== runId) continue;
+    const ids = { ...(typeof p["mergeId"] === "string" ? { mergeId: p["mergeId"] } : {}),
+      ...(typeof p["revertCommit"] === "string" ? { revertCommit: p["revertCommit"] } : {}) };
+    if (row.type === "identity.action" && typeof p["event"] === "string" && p["event"].startsWith("local_merge.")) {
+      latestDecision = p["event"];
+      if (p["event"] === "local_merge.merged") workspace = { status: "merged", ...ids };
+    }
+    if (row.type === "effect.terminal" && p["kind"] === "local_merge.revert_terminal") {
+      workspace = { status: "reverted", ...ids };
+      latestDecision = "local_merge.reverted";
+    }
+    if (row.type === "effect.intent" && (p["kind"] === "source_landing.intent" || p["kind"] === "source_revert.intent")) {
+      source[p["kind"] === "source_landing.intent" ? "merge" : "revert"] = { status: "unknown", ...ids };
+    }
+    if (row.type === "effect.terminal" && (p["kind"] === "source_landing.terminal" || p["kind"] === "source_revert.terminal")) {
+      const merge = p["kind"] === "source_landing.terminal";
+      source[merge ? "merge" : "revert"] = { status: merge ? "landed" : "reverted", ...ids };
+    }
+    if (row.type === "identity.action" && (p["operation"] === "merge" || p["operation"] === "revert")) {
+      if (p["event"] === "source_delivery.attempt") {
+        source[p["operation"]] = { status: "unknown", ...ids };
+        latestDecision = `source_delivery.${p["operation"]}.pending`;
+      }
+      if (p["event"] === "source_delivery.outcome" && ["landed", "reverted", "refused", "unknown"].includes(String(p["deliveryStatus"]))) {
+        source[p["operation"]] = { status: String(p["deliveryStatus"]), ...ids,
+          ...(typeof p["reason"] === "string" ? { reason: p["reason"] } : {}) };
+        latestDecision = `source_delivery.${p["operation"]}.${p["deliveryStatus"]}`;
+      }
+    }
+  }
+  return { observation: "last-recorded" as const, workspace, source, latestDecision };
+}
 
 export interface GovernedLocalMergeDeps {
   readonly spine: Spine;
@@ -44,11 +94,39 @@ export class GovernedLocalMerge {
   }
 
   private async landSource(runId: string, result: LocalMergeResult): Promise<LocalMergeResult> {
+    return this.sourceOutcome("merge", runId, result.mergeId!, undefined, () => this.attemptSourceLanding(runId, result));
+  }
+
+  private async sourceOutcome<T extends LocalMergeResult | LocalRevertResult>(operation: "merge" | "revert", runId: string, mergeId: string, revertCommit: string | undefined, attempt: () => Promise<T>): Promise<T> {
+    const identity = { runId, operation, mergeId, ...(revertCommit ? { revertCommit } : {}) };
+    // Explicitly unknown until this attempt has an outcome. This is not an
+    // effect intent: only the existing source intents authorize reconciliation.
+    this.deps.spine.stage({ type: "identity.action", actor: "governed-source-landing", payload: { event: "source_delivery.attempt", ...identity } });
+    await this.deps.spine.seal();
+    const result = await attempt();
+    const status = result.sourceDelivery?.status ?? (result.status === "merged" ? "landed" : result.status === "reverted" ? "reverted" : "unknown");
+    try {
+      this.deps.spine.stage({ type: "identity.action", actor: "governed-source-landing", payload: {
+        event: "source_delivery.outcome", ...identity, deliveryStatus: status, status: result.status, reason: result.reason.slice(0, 500),
+      } });
+      await this.deps.spine.seal();
+    }
+    catch {
+      // Recording failure cannot undo or repeat an already observed Git effect.
+      // The pending/partially written journal must reconcile through Spine before
+      // later operations; do not claim this reporting record is durable.
+      return { ...result, sourceDelivery: { status, recorded: false, recordingError: "source outcome journal could not be confirmed" } };
+    }
+    return { ...result, sourceDelivery: { status, recorded: true } };
+  }
+
+  private async attemptSourceLanding(runId: string, result: LocalMergeResult): Promise<LocalMergeResult> {
     const mergeId = result.mergeId!;
+    const refuse = (reason: string): LocalMergeResult => ({ status: "failed", mergeId, reason, sourceDelivery: { status: "refused" } });
     const state = this.deps.checkpoints.load(runId);
     const artifact = state?.artifacts["implement"] as ProjectImplementationArtifact | undefined;
     const evidence = artifact?.solve?.proposalEvidence;
-    if (!artifact?.solve || !evidence) return { status: "failed", mergeId, reason: "source landing lacks the durable verified proposal" };
+    if (!artifact?.solve || !evidence) return refuse("source landing lacks the durable verified proposal");
     const source = new GitAdapter(this.deps.sourceDir!);
     const workspaceDir = this.deps.projectDir(artifact.issue.repoRef);
     const workspace = new GitAdapter(workspaceDir);
@@ -62,7 +140,7 @@ export class GovernedLocalMerge {
       const workspaceCommit = (await workspace.git(["rev-parse", "--verify", `${mergeId}^{commit}`])).stdout.trim();
       const parents = (await workspace.git(["rev-list", "--parents", "-n", "1", mergeId])).stdout.trim().split(/\s+/u);
       const diff = (await workspace.git(["diff", "--binary", "--no-ext-diff", evidence.baseRevision, mergeId, "--"])).stdout;
-      if (workspaceCommit !== mergeId || parents.length !== 3 || parents[1] !== evidence.baseRevision || diff !== evidence.diff) return { status: "failed", mergeId, reason: "workspace merge is not the exact durable reviewed proposal" };
+      if (workspaceCommit !== mergeId || parents.length !== 3 || parents[1] !== evidence.baseRevision || diff !== evidence.diff) return refuse("workspace merge is not the exact durable reviewed proposal");
       const intents = this.deps.spine.replay().filter((event) => event.type === "effect.intent" && event.payload["kind"] === "source_landing.intent" && event.payload["runId"] === runId);
       const intent = intents.find((event) => event.payload["operationId"] === operationId);
       if (intents.length > 1 || (intents.length === 1 && !intent)) return { status: "failed", mergeId, reason: "source landing intent is ambiguous" };
@@ -74,14 +152,14 @@ export class GovernedLocalMerge {
         await this.deps.spine.seal();
         return { ...result, reason: "reconciled the exact reviewed source landing without redispatch" };
       }
-      if (branch !== this.deps.baseBranch || sourceHead !== evidence.baseRevision || !(await source.isClean())) return { status: "failed", mergeId, reason: "declared source branch, base, or working tree moved; source was not landed" };
+      if (branch !== this.deps.baseBranch || sourceHead !== evidence.baseRevision || !(await source.isClean())) return refuse("declared source branch, base, or working tree moved; source was not landed");
       if (!intent) {
-        if (!this.deps.spine.durableStorage()) return { status: "failed", mergeId, reason: "source landing requires an fsync-durable pre-effect journal" };
+        if (!this.deps.spine.durableStorage()) return refuse("source landing requires an fsync-durable pre-effect journal");
         this.deps.spine.stage({ type: "effect.intent", actor: "governed-source-landing", payload: { kind: "source_landing.intent", operationId, runId, mergeId, sourceBase: evidence.baseRevision, sourceBranch: this.deps.baseBranch, patchSha256: evidence.rollback.patchSha256 } });
         await this.deps.spine.seal();
       }
       await source.git(["fetch", "--no-tags", "--", workspaceDir, mergeId]);
-      if ((await source.git(["branch", "--show-current"])).stdout.trim() !== this.deps.baseBranch || await source.head() !== evidence.baseRevision || !(await source.isClean())) return { status: "failed", mergeId, reason: "declared source moved during landing; its branch was not updated" };
+      if ((await source.git(["branch", "--show-current"])).stdout.trim() !== this.deps.baseBranch || await source.head() !== evidence.baseRevision || !(await source.isClean())) return refuse("declared source moved during landing; its branch was not updated");
       await source.git(["merge", "--ff-only", "--no-edit", mergeId]);
       if (await source.head() !== mergeId || !(await source.isClean())) return { status: "failed", mergeId, reason: "source landing did not produce the exact reviewed commit" };
       await this.deps.advanceMaterialization?.(mergeId);
@@ -142,11 +220,16 @@ export class GovernedLocalMerge {
 
   private async landSourceRevert(runId: string, mergeId: string, revertCommit: string, result: LocalRevertResult): Promise<LocalRevertResult> {
     if (!this.deps.sourceDir) return result;
+    return this.sourceOutcome("revert", runId, mergeId, revertCommit, () => this.attemptSourceRevert(runId, mergeId, revertCommit, result));
+  }
+
+  private async attemptSourceRevert(runId: string, mergeId: string, revertCommit: string, result: LocalRevertResult): Promise<LocalRevertResult> {
+    const refuse = (reason: string): LocalRevertResult => ({ status: "failed", mergeId, revertCommit, reason, sourceDelivery: { status: "refused" } });
     const state = this.deps.checkpoints.load(runId);
     const artifact = state?.artifacts["implement"] as ProjectImplementationArtifact | undefined;
     const evidence = artifact?.solve?.proposalEvidence;
-    if (!artifact?.solve || !evidence) return { status: "failed", mergeId, reason: "source revert lacks the durable verified proposal" };
-    const source = new GitAdapter(this.deps.sourceDir);
+    if (!artifact?.solve || !evidence) return refuse("source revert lacks the durable verified proposal");
+    const source = new GitAdapter(this.deps.sourceDir!);
     const workspaceDir = this.deps.projectDir(artifact.issue.repoRef);
     const workspace = new GitAdapter(workspaceDir);
     const operationId = this.operationId("revert", { runId, mergeId, revertCommit, patchSha256: evidence.rollback.patchSha256 });
@@ -158,7 +241,7 @@ export class GovernedLocalMerge {
       }
       const parents = (await workspace.git(["rev-list", "--parents", "-n", "1", revertCommit])).stdout.trim().split(/\s+/u);
       const restored = (await workspace.git(["diff", "--binary", "--no-ext-diff", revertCommit, mergeId, "--"])).stdout;
-      if (parents.length !== 2 || parents[1] !== mergeId || restored !== evidence.diff) return { status: "failed", mergeId, revertCommit, reason: "workspace revert is not the exact inverse of the reviewed proposal" };
+      if (parents.length !== 2 || parents[1] !== mergeId || restored !== evidence.diff) return refuse("workspace revert is not the exact inverse of the reviewed proposal");
       const intents = this.deps.spine.replay().filter((event) => event.type === "effect.intent" && event.payload["kind"] === "source_revert.intent" && event.payload["runId"] === runId);
       const intent = intents.find((event) => event.payload["operationId"] === operationId);
       if (intents.length > 1 || (intents.length === 1 && !intent)) return { status: "failed", mergeId, revertCommit, reason: "source revert intent is ambiguous" };
@@ -170,14 +253,14 @@ export class GovernedLocalMerge {
         await this.deps.spine.seal();
         return { ...result, reason: "reconciled exact source revert without redispatch" };
       }
-      if (branch !== this.deps.baseBranch || sourceHead !== mergeId || !(await source.isClean())) return { status: "failed", mergeId, revertCommit, reason: "declared source moved after landing; exact source revert refused" };
+      if (branch !== this.deps.baseBranch || sourceHead !== mergeId || !(await source.isClean())) return refuse("declared source moved after landing; exact source revert refused");
       if (!intent) {
-        if (!this.deps.spine.durableStorage()) return { status: "failed", mergeId, revertCommit, reason: "source revert requires an fsync-durable pre-effect journal" };
+        if (!this.deps.spine.durableStorage()) return refuse("source revert requires an fsync-durable pre-effect journal");
         this.deps.spine.stage({ type: "effect.intent", actor: "governed-source-landing", payload: { kind: "source_revert.intent", operationId, runId, mergeId, revertCommit, patchSha256: evidence.rollback.patchSha256 } });
         await this.deps.spine.seal();
       }
       await source.git(["fetch", "--no-tags", "--", workspaceDir, revertCommit]);
-      if ((await source.git(["branch", "--show-current"])).stdout.trim() !== this.deps.baseBranch || await source.head() !== mergeId || !(await source.isClean())) return { status: "failed", mergeId, revertCommit, reason: "declared source moved during revert; its branch was not updated" };
+      if ((await source.git(["branch", "--show-current"])).stdout.trim() !== this.deps.baseBranch || await source.head() !== mergeId || !(await source.isClean())) return refuse("declared source moved during revert; its branch was not updated");
       await source.git(["merge", "--ff-only", "--no-edit", revertCommit]);
       if (await source.head() !== revertCommit || !(await source.isClean())) return { status: "failed", mergeId, revertCommit, reason: "source revert did not land the exact inverse commit" };
       await this.deps.advanceMaterialization?.(revertCommit);

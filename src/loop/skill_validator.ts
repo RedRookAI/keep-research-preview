@@ -1,25 +1,12 @@
 /**
- * SkillValidator (Increment 18.5, Phase S) — the CEGIS gate. This is the centerpiece of Keep's moat and the
- * reason 18.4 only produces CANDIDATES: no distilled skill goes live until it clears counterexample-guided,
- * EXECUTION-ADJUDICATED validation. The verdict comes from running the skill against concrete cases, never
- * from a model asserting the skill is good — which is what makes it immune to debate-hacking / sycophancy.
+ * Bounded counterexample-guided checking of candidate skills. Acceptance requires a nonempty generated
+ * batch and success on all retained cases, including cases encountered before refinement. The supplied
+ * generator defines the sampled task coverage; the supplied oracle must execute the candidate and check
+ * its actual result in isolated state. This class cannot establish that those trusted ports do so.
  *
- * SOTA basis (2026-08-05):
- *  - CEGIS is a learner↔verifier loop (arXiv 2509.04288): propose → VERIFY against the spec → on violation,
- *    PRODUCE A COUNTEREXAMPLE → refine with it → repeat until the property holds or the budget is spent.
- *  - The verdict must be grounded in CONCRETE TRACE EVIDENCE — tool call / file state / command output — not
- *    a compliance CLAIM (Skill Coverage arXiv 2606.20659). → the execution oracle (Keep's verifyPatch on the
- *    skill's produced patch) is the adjudicator; a model is never the judge.
- *  - The verification GATE is a distinct, load-bearing contributor (SkillGen 2605.10999): a skill is not
- *    trusted until it clears the gate.
- *  - Anti-pattern this defends against: 49,943 unvalidated OpenClaw registry skills with measurable
- *    instruction-manipulation deviations (Behavioral Integrity Verification 2026) — Keep validates behavior
- *    BEFORE deployment.
- *  - Round budget cap 3 / ceiling 5, early-stop on no-new-counterexample (KEEP_KNOBS_RESOLVED K2 — the
- *    diminishing-returns + reward-hacking plateau).
- *
- * Zero runtime deps. The execution oracle + counterexample generator are ports (swappable; PBT/fuzzing at the
- * floor, richer generators at the rich tier).
+ * Optional typed-program examples and envelope checks are separate prerequisites. A validated verdict
+ * reports sampled execution success, not universal safety, immunity to manipulation, or improvement over
+ * a baseline. Comparative usefulness is evaluated separately by SkillEvaluator.
  */
 
 import type { DistilledSkill } from "./skill_distiller.js";
@@ -37,9 +24,9 @@ export interface SkillCase {
 }
 
 /**
- * The EXECUTION ORACLE — the adjudicator. Runs a skill against a case and returns a CONCRETE, execution-
- * grounded outcome (did applying the skill produce a passing result, and did it regress vs not using it?).
- * In Keep this is backed by verifyPatch (tests on the produced patch). NEVER a model verdict.
+ * Trusted execution/checking port. Implementations must derive outcomes from candidate behavior and
+ * independently specified task checks, and isolate state across invocations. A model's approval is not
+ * execution evidence. SkillValidator uses runWithSkill; SkillEvaluator also consumes runBaseline.
  */
 export interface ExecutionOracle {
   /** Run WITH the skill applied. Returns whether the produced result passed its tests. */
@@ -63,7 +50,14 @@ export interface EnvelopeSafetyCheck {
   check(skill: DistilledSkill): string | null;
 }
 
-export type ValidationVerdict = "validated" | "abandoned-unrefinable" | "abandoned-budget" | "rejected-unsafe";
+export type ValidationVerdict = "validated" | "abandoned-unrefinable" | "abandoned-budget" | "rejected-unsafe" | "rejected-no-evidence";
+
+/** Actual oracle invocations in this validation, distinct from optional typed-program examples. */
+export interface SkillCaseExecution {
+  readonly round: number;
+  readonly testCase: SkillCase;
+  readonly passed: boolean;
+}
 
 export interface ValidationResult {
   readonly verdict: ValidationVerdict;
@@ -71,6 +65,7 @@ export interface ValidationResult {
   readonly rounds: number;
   /** Every counterexample that refuted a candidate, in order (the audit trail). */
   readonly counterexamples: readonly { readonly round: number; readonly caseId: string }[];
+  readonly executedCases: readonly SkillCaseExecution[];
   readonly reason: string;
 }
 
@@ -103,56 +98,63 @@ export class SkillValidator {
   }
 
   /**
-   * Validate a candidate skill via the CEGIS loop. Returns "validated" only if a round finds NO refuting
-   * counterexample (fix-point) AND the envelope is safe. Otherwise the skill is ABANDONED (never shipped).
+   * All cases sampled during this invocation remain required. There is no runtime-enforced applicability
+   * exclusion in this contract: changing prose/preconditions does not drop earlier obligations. A genuinely
+   * narrower deployment needs a separately enforced consumer boundary and its own scoped evaluation.
    */
   validate(candidate: DistilledSkill): ValidationResult {
     let skill = candidate;
     const counterexamples: { round: number; caseId: string }[] = [];
+    const executedCases: SkillCaseExecution[] = [];
+    const retained = new Map<string, SkillCase>();
 
     for (let round = 1; round <= this.ceiling; round++) {
       const program = verifySkillProgram(skill, this.programs);
       if (!program.ok) {
-        return { verdict: "rejected-unsafe", skill, rounds: round, counterexamples, reason: `typed program verification failed: ${program.detail}` };
+        return { verdict: "rejected-unsafe", skill, rounds: round, counterexamples, executedCases, reason: `typed program verification failed: ${program.detail}` };
       }
       // Envelope safety FIRST (a structurally-unsafe skill is rejected regardless of execution).
       const unsafe = this.safety?.check(skill);
       if (unsafe) {
-        return { verdict: "rejected-unsafe", skill, rounds: round, counterexamples, reason: `envelope unsafe: ${unsafe}` };
+        return { verdict: "rejected-unsafe", skill, rounds: round, counterexamples, executedCases, reason: `envelope unsafe: ${unsafe}` };
       }
 
-      // VERIFY by EXECUTION: find a concrete case the skill REGRESSES (passes baseline, fails with the skill),
-      // or simply fails to solve. That case is the refuting counterexample.
       const cases = this.generator.generate(skill, round);
-      const refuter = this.findCounterexample(skill, cases);
+      if (cases.length === 0) {
+        return { verdict: "rejected-no-evidence", skill, rounds: round, counterexamples, executedCases, reason: `no generated execution cases in round ${round}; typed examples do not replace task validation` };
+      }
+      for (const c of cases) {
+        // Copy string values before calling either mutable external port. IDs alone cannot identify inputs.
+        const key = JSON.stringify([c.id, c.input]);
+        if (!retained.has(key)) retained.set(key, Object.freeze({ id: c.id, input: c.input }));
+      }
+      const refuter = this.findCounterexample(skill, [...retained.values()], round, executedCases);
 
       if (!refuter) {
-        // Fix-point: no counterexample this round → the skill holds under execution. VALIDATED.
-        return { verdict: "validated", skill, rounds: round, counterexamples, reason: `no refuting counterexample after ${round} round(s) — execution-adjudicated fix-point` };
+        return { verdict: "validated", skill, rounds: round, counterexamples, executedCases, reason: `passed all ${retained.size} retained execution cases in round ${round}; sampled success, not a proof or comparative improvement` };
       }
 
       counterexamples.push({ round, caseId: refuter.id });
+      if (round === this.ceiling) break; // Return the tested candidate, not an untested final refinement.
       const refined = this.refiner(skill, refuter, round);
       if (!refined) {
-        return { verdict: "abandoned-unrefinable", skill, rounds: round, counterexamples, reason: `refiner could not address counterexample ${refuter.id} — abandoned (not shipped)` };
+        return { verdict: "abandoned-unrefinable", skill, rounds: round, counterexamples, executedCases, reason: `refiner could not address counterexample ${refuter.id} — abandoned (not shipped)` };
       }
       skill = refined;
     }
 
-    // Budget exhausted without a fix-point → abandon. A non-converging skill is NEVER shipped.
-    return { verdict: "abandoned-budget", skill, rounds: this.ceiling, counterexamples, reason: `no fix-point within ${this.ceiling} rounds — abandoned (not shipped)` };
+    return { verdict: "abandoned-budget", skill, rounds: this.ceiling, counterexamples, executedCases, reason: `execution cases still fail after ${this.ceiling} rounds — abandoned (not shipped)` };
   }
 
   /**
-   * Find a concrete case that refutes the skill: it REGRESSED the case (baseline passed but with-skill failed)
-   * — the strongest refutation — or failed to solve a case at all. Execution-adjudicated; no model verdict.
+   * Stop at the first failing case. Baseline outcomes are not measured here; failure alone refutes this
+   * sampled validation. Successful final rounds execute the entire retained set against the final skill.
    */
-  private findCounterexample(skill: DistilledSkill, cases: readonly SkillCase[]): SkillCase | null {
+  private findCounterexample(skill: DistilledSkill, cases: readonly SkillCase[], round: number, executedCases: SkillCaseExecution[]): SkillCase | null {
     for (const c of cases) {
-      const withSkill = this.oracle.runWithSkill(skill, c);
+      const withSkill = this.oracle.runWithSkill(skill, c) === true;
+      executedCases.push(Object.freeze({ round, testCase: c, passed: withSkill }));
       if (!withSkill) {
-        // A failure. Is it a REGRESSION (baseline would have passed)? Either way it's a valid counterexample:
-        // a skill that fails a relevant case has not earned trust. Regression is the strongest form.
         return c;
       }
     }

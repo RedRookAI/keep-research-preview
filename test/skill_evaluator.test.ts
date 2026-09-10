@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { SkillCanary } from "../src/loop/skill_canary.js";
+import { hashSkill } from "../src/registry/skill_registry.js";
 import { SkillEvaluator } from "../src/loop/skill_evaluator.js";
 import type { DistilledSkill } from "../src/loop/skill_distiller.js";
 import type { ExecutionOracle, SkillCase } from "../src/loop/skill_validator.js";
@@ -115,9 +116,13 @@ test("SKILL-07: a retained skill and its measured reuse resume through composeKe
   assert.equal(first.managedSkillRegistry.activePackages().some((pkg) => pkg.skill.id === candidate.id), true);
   assert.equal(firstNotices.filter((notice) => /promoted provisionally/.test(notice.message)).length, 1);
   const equivalent = { ...candidate, id: "skill:equivalent", name: "equivalent", provenance: ["solve-2"] };
-  assert.equal(first.skillEvaluator!.evaluate(equivalent, cases).verdict, "retained");
+  const merged = first.skillEvaluator!.evaluate(equivalent, cases);
+  assert.equal(merged.verdict, "merged");
+  assert.equal(merged.skill.id, equivalent.id, "scores remain attached to the evaluated candidate");
+  assert.equal(merged.verdict === "merged" ? merged.mergedInto?.id : undefined, candidate.id);
   assert.equal(first.managedSkillRegistry.lifecycle(equivalent.id)?.retired?.replacementId, candidate.id);
-  assert.equal(first.skillCanary.state(equivalent.id), "rolled-back", "a merged duplicate cannot remain live outside the registry");
+  assert.equal(first.skillCanary.state(equivalent.id), undefined, "the duplicate is never activated before being merged");
+  assert.equal(first.skillCanary.state(candidate.id), "canary");
   assert.deepEqual(first.skillRetrieval.retrieve({ taskShape: "bugfix" }).map((item) => item.skill.id), [candidate.id]);
   const dormant = { ...candidate, id: "skill:dormant", relevanceKey: "dormant", provenance: ["solve-old"] };
   first.managedSkillRegistry.trackValidated(dormant, "local-solve", 0);
@@ -145,7 +150,7 @@ test("SKILL-07: a retained skill and its measured reuse resume through composeKe
 test("failed execution evidence never invokes or gets rescued by criticism", () => {
   const calls: string[] = [];
   const result = new SkillEvaluator(oracle(["a", "b", "c"], ["a"]), new SkillCanary(), criticism("clear", calls)).evaluate(candidate, cases);
-  assert.equal(result.verdict, "rolled-back-degradation");
+  assert.equal(result.verdict, "rejected-degradation");
   assert.deepEqual(calls, []);
 });
 
@@ -160,7 +165,7 @@ test("equal performance is not improvement and is not retained", () => {
 
 test("degradation automatically rolls back an already-live candidate", () => {
   const canary = new SkillCanary();
-  canary.goLive(candidate.id);
+  canary.goLive(candidate.id, { revision: hashSkill(candidate) });
   const result = new SkillEvaluator(oracle(["a", "b", "c"], ["a"]), canary).evaluate(candidate, cases);
 
   assert.equal(result.verdict, "rolled-back-degradation");

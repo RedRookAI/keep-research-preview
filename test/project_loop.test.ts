@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, appendFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -339,8 +339,10 @@ test("a missing executor resumes only after exact capability-change evidence", a
 
 test("an unclassified throwing executor preserves its effect and requires matching reconciliation", async () => {
   const spine = newSpine();
+  const effectFile = join(mkdtempSync(join(tmpdir(), "keep-unknown-effect-")), "outbox.txt");
   const executors: StageExecutors = {
     research: async () => {
+      appendFileSync(effectFile, "effect before lost response\n");
       throw new Error("search backend down");
     },
   };
@@ -350,11 +352,13 @@ test("an unclassified throwing executor preserves its effect and requires matchi
   assert.ok(state.note!.includes("search backend down"));
   assert.equal((await loop.resume("r")).state.revision, state.revision);
   assert.equal((await loop.resume("r", { reconciliation: { effectId: "wrong", resolved: true, evidenceId: "observed" } })).state.revision, state.revision);
+  assert.equal(readFileSync(effectFile, "utf8"), "effect before lost response\n", "bare or mismatched resume cannot duplicate the actual effect");
   const effectId = state.wait?.kind === "reconciliation" ? state.wait.effectId : "";
-  const resumed = await loop.resume("r", { reconciliation: { effectId, resolved: true, evidenceId: "sink-observed-no-effect" } });
-  assert.ok(resumed.state.consumedSignals.includes(`reconciliation:${effectId}:sink-observed-no-effect`));
+  const resumed = await loop.resume("r", { reconciliation: { effectId, resolved: true, evidenceId: "sink-observed-and-followup-authorized" } });
+  assert.ok(resumed.state.consumedSignals.includes(`reconciliation:${effectId}:sink-observed-and-followup-authorized`));
   assert.equal(resumed.state.status, "waiting-reconciliation", "a second unknown throw needs its own evidence");
   assert.notEqual(resumed.state.wait?.kind === "reconciliation" ? resumed.state.wait.effectId : "", effectId);
+  assert.equal(readFileSync(effectFile, "utf8"), "effect before lost response\neffect before lost response\n", "explicit trusted reconciliation permits one new attempt, which remains uncertain after another throw");
 });
 
 test("retry is not invoked early and cannot exceed the run-wide budget through resume", async () => {

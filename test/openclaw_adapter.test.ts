@@ -62,7 +62,7 @@ test("M5-REVET BESPOKE MODELS INTENT + is gate-checkable: proposed effects deriv
   assert.equal(r.bespokeSpec!.description.includes("todoist-cli"), true);
 });
 
-test("M5-REVET SIGNATURE: verified / invalid / unsigned via node:crypto Ed25519", () => {
+test("M5-REVET SIGNATURE: verified intent fields / invalid / unsigned via node:crypto Ed25519", () => {
   assert.equal(adoptOpenClawSkill(SKILL_MD).signature, "unsigned", "no signature -> unsigned");
   const { publicKey, privateKey } = generateKeyPairSync("ed25519");
   const pub = publicKey.export({ type: "spki", format: "pem" }).toString();
@@ -70,7 +70,7 @@ test("M5-REVET SIGNATURE: verified / invalid / unsigned via node:crypto Ed25519"
   const payload = `${name}\n${desc}\n${ver}`;
   const sig = edSign(null, Buffer.from(payload), privateKey).toString("base64");
   const signedMd = ["---", `name: ${name}`, `description: ${desc}`, `version: ${ver}`, `publicKey: "${pub.replace(/\n/g, "\\n")}"`, `signature: ${sig}`, "---", "body"].join("\n");
-  assert.equal(adoptOpenClawSkill(signedMd).signature, "verified", "valid Ed25519 -> verified");
+  assert.equal(adoptOpenClawSkill(signedMd).signature, "verified-intent-fields", "valid legacy Ed25519 covers only its three intent fields");
   const tampered = signedMd.replace("a signed skill", "a TAMPERED skill");
   assert.equal(adoptOpenClawSkill(tampered).signature, "invalid", "tampered -> invalid");
 });

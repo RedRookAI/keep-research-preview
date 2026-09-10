@@ -50,6 +50,7 @@ interface CanaryRecord {
   totalUses: number;
   /** True if this skill touches an irreversible/external effect (→ rollback Pages instead of Tickets). */
   readonly irreversible: boolean;
+  revision?: string;
 }
 
 export interface UseResult {
@@ -57,7 +58,7 @@ export interface UseResult {
   readonly state: CanaryState;
   readonly cleanUses: number;
   /** What happened this use: graduated / demoted / still-canary / (skill unknown). */
-  readonly transition: "went-live" | "graduated" | "rolled-back" | "still-canary" | "unknown";
+  readonly transition: "went-live" | "graduated" | "rolled-back" | "still-canary" | "unknown" | "unchanged";
 }
 
 export class SkillCanary {
@@ -73,21 +74,31 @@ export class SkillCanary {
   }
 
   /**
-   * Put a CEGIS-validated skill LIVE as a canary — immediately, no shadow wait. `irreversible` marks skills
-   * whose failure can't be silently reverted (→ a rollback Pages rather than Tickets). Idempotent by id.
+   * Trusted callers activate only after their required admission has committed. A
+   * changed, explicitly bound revision starts a fresh canary; repeated activation
+   * returns its actual state. This component does not perform validation itself.
    */
-  goLive(skillId: string, opts: { irreversible?: boolean } = {}): UseResult {
-    if (!this.records.has(skillId)) {
-      this.records.set(skillId, { skillId, state: "canary", cleanUses: 0, totalUses: 0, irreversible: opts.irreversible ?? false });
+  goLive(skillId: string, opts: { irreversible?: boolean; revision?: string } = {}): UseResult {
+    const existing = this.records.get(skillId);
+    const replaced = existing?.revision !== undefined && opts.revision !== undefined && existing.revision !== opts.revision;
+    if (!existing || replaced) {
+      this.records.set(skillId, { skillId, state: "canary", cleanUses: 0, totalUses: 0, irreversible: opts.irreversible ?? existing?.irreversible ?? false,
+        ...(opts.revision !== undefined ? { revision: opts.revision } : {}) });
       this.emit("log", skillId, "skill promoted provisionally as a monitored canary");
+      return { skillId, state: "canary", cleanUses: 0, transition: "went-live" };
     }
-    return { skillId, state: "canary", cleanUses: 0, transition: "went-live" };
+    // An unbound terminal record establishes neither identity nor a changed version.
+    if (existing.state !== "rolled-back" && existing.revision === undefined && opts.revision !== undefined) existing.revision = opts.revision;
+    return { skillId, state: existing.state, cleanUses: existing.cleanUses, transition: "unchanged" };
   }
 
   /** Restore a previously admitted live skill after restart without claiming a new promotion or notifying again. */
-  restoreLive(skillId: string): void {
-    if (!this.records.has(skillId)) this.records.set(skillId, { skillId, state: "canary", cleanUses: 0, totalUses: 0, irreversible: false });
+  restoreLive(skillId: string, revision?: string): void {
+    if (!this.records.has(skillId)) this.records.set(skillId, { skillId, state: "canary", cleanUses: 0, totalUses: 0, irreversible: false,
+      ...(revision !== undefined ? { revision } : {}) });
   }
+
+  revision(skillId: string): string | undefined { return this.records.get(skillId)?.revision; }
 
   /**
    * Record one triggered USE of a live skill, adjudicated by the outcome signal (execution + human verdict via

@@ -50,6 +50,18 @@ test("S4: the normal skill validation gate rejects a typed contract whose execut
   assert.match(result.reason, /typed program verification failed/);
 });
 
+test("passing typed examples do not replace missing candidate execution evidence", () => {
+  let programCalls = 0;
+  const result = new SkillValidator({
+    oracle: { runWithSkill: () => { throw new Error("no generated tasks"); }, runBaseline: () => false },
+    generator: { generate: () => [] }, refiner: () => null,
+    programs: { "math.add": (i) => { programCalls++; return Number(i.a) + Number(i.b); } },
+  }).validate(typedSkill());
+  assert.equal(programCalls, 2);
+  assert.equal(result.verdict, "rejected-no-evidence");
+  assert.deepEqual(result.executedCases, []);
+});
+
 test("SKILL-04: composed validation executes a host program without replacing the portable envelope", () => {
   const app = composeKeep({
     dataDir: mkdtempSync(join(tmpdir(), "keep-skill-program-")),

@@ -29,24 +29,36 @@ function typedSkill(id = "typed:add"): DistilledSkill {
   };
 }
 
-/** A REAL SkillValidator: envelope-safety flags forbidden sinks (round-1 reject); a clean skill validates (no counterexamples). */
-function realGate(): { gate: (s: DistilledSkill) => Promise<GateVerdict>; calls: DistilledSkill[] } {
+/** Registry integration fixture: real validator with a small deterministic action interpreter, not a coding study. */
+function instrumentedGate(): { gate: (s: DistilledSkill) => Promise<GateVerdict>; calls: DistilledSkill[]; executions: string[] } {
   const calls: DistilledSkill[] = [];
+  const executions: string[] = [];
   const validator = new SkillValidator({
-    oracle: { run: () => ({ solved: true }) } as never,
-    generator: { generate: () => [] }, // no counterexamples → a safe skill reaches the fix-point and validates
+    oracle: {
+      runWithSkill: (candidate, c) => {
+        executions.push(`${candidate.id}:${c.id}`);
+        let text = c.input;
+        for (const step of candidate.envelope.steps) {
+          if (step.action !== "edit" || step.targetPattern !== "{file}") return false;
+          text = text.replace("broken", "fixed");
+        }
+        return text === "fixed";
+      },
+      runBaseline: (c) => c.input === "fixed",
+    },
+    generator: { generate: () => [{ id: "replace-broken", input: "broken" }] },
     refiner: () => null,
     safety: { check: (s) => { const bad = s.envelope.declaredEffects.find((e) => FORBIDDEN.includes(e)); return bad ? `forbidden sink '${bad}'` : null; } },
   });
   return {
-    calls,
+    calls, executions,
     gate: async (s) => { calls.push(s); const r = validator.validate(s); return { ok: r.verdict === "validated", verdict: r.verdict, reason: r.reason }; },
   };
 }
 
 test("REGISTRY: a published skill round-trips (publish → install → retrievable)", async () => {
   const store = new InMemoryRegistryStore();
-  const { gate } = realGate();
+  const { gate } = instrumentedGate();
   const pkg = publishSkill(skill("s1", ["local-edit"]), "alice@example");
   const r = await installSkill(pkg, { store, gate });
   assert.ok(r.ok, "a safe skill installs");
@@ -56,7 +68,7 @@ test("REGISTRY: a published skill round-trips (publish → install → retrievab
 
 test("REGISTRY: a poisoned skill (forbidden sink) is REJECTED by the safety gate", async () => {
   const store = new InMemoryRegistryStore();
-  const { gate } = realGate();
+  const { gate } = instrumentedGate();
   const pkg = publishSkill(skill("evil", ["external-send"]), "attacker@example"); // forbidden sink
   const r = await installSkill(pkg, { store, gate });
   assert.equal(r.ok, false);
@@ -66,7 +78,7 @@ test("REGISTRY: a poisoned skill (forbidden sink) is REJECTED by the safety gate
 
 test("REGISTRY: a tampered package (content-hash mismatch) is REJECTED before the gate", async () => {
   const store = new InMemoryRegistryStore();
-  const { gate, calls } = realGate();
+  const { gate, calls } = instrumentedGate();
   const pkg = publishSkill(skill("s2", ["local-edit"]), "alice@example");
   // Tamper: swap in a different skill body while keeping the original hash.
   const tampered = { ...pkg, skill: skill("s2", ["external-send"]) };
@@ -76,13 +88,14 @@ test("REGISTRY: a tampered package (content-hash mismatch) is REJECTED before th
   assert.equal(calls.length, 0, "a tampered package never even reaches the gate");
 });
 
-test("REGISTRY: install runs the REAL gate (not a stub) — the gate is invoked with the skill", async () => {
+test("REGISTRY: install invokes the validator and executes the candidate in the fixture", async () => {
   const store = new InMemoryRegistryStore();
-  const { gate, calls } = realGate();
+  const { gate, calls, executions } = instrumentedGate();
   const pkg = publishSkill(skill("s3", ["local-edit"]), "alice@example");
   await installSkill(pkg, { store, gate });
   assert.equal(calls.length, 1, "the gate was actually consulted");
   assert.equal(calls[0]!.id, "s3", "with the pulled skill");
+  assert.deepEqual(executions, ["s3:replace-broken"]);
 });
 
 test("REGISTRY: the content hash is deterministic and detects any edit", () => {
@@ -93,9 +106,36 @@ test("REGISTRY: the content hash is deterministic and detects any edit", () => {
   assert.notEqual(a, c, "any change flips the hash");
 });
 
+test("REGISTRY: an executable fixture failure prevents admission", async () => {
+  const store = new InMemoryRegistryStore();
+  const { gate, executions } = instrumentedGate();
+  const broken = skill("broken", ["local-edit"]);
+  const result = await installSkill(publishSkill({ ...broken, envelope: { ...broken.envelope, steps: [] } }, "fixture"), { store, gate });
+  assert.equal(result.ok, false);
+  assert.equal(store.list().length, 0);
+  assert.deepEqual(executions, ["broken:replace-broken"]);
+});
+
+test("REGISTRY: missing execution evidence is not admitted", async () => {
+  const store = new InMemoryRegistryStore();
+  const validator = new SkillValidator({
+    oracle: { runWithSkill: () => { throw new Error("no cases"); }, runBaseline: () => false },
+    generator: { generate: () => [] }, refiner: () => null,
+  });
+  let observed = "";
+  const result = await installSkill(publishSkill(skill("empty", ["local-edit"]), "fixture"), { store, gate: async (candidate) => {
+    const r = validator.validate(candidate);
+    observed = r.verdict;
+    return { ok: r.verdict === "validated", verdict: r.verdict, reason: r.reason };
+  } });
+  assert.equal(observed, "rejected-no-evidence");
+  assert.equal(result.ok, false);
+  assert.equal(store.list().length, 0);
+});
+
 test("S3: execution outcomes reward reuse and immediately retire a harmful skill", async () => {
   const store = new InMemoryRegistryStore();
-  const managed = new ManagedSkillRegistry({ store, gate: realGate().gate });
+  const managed = new ManagedSkillRegistry({ store, gate: instrumentedGate().gate });
   await managed.add(publishSkill(skill("rewarded", ["local-edit"]), "local", 10));
   managed.recordOutcome({ solveId: "ok", taskShape: "shape:x", testsPassed: true, mergeVerdict: "merged", activeArtifacts: ["rewarded"], timestamp: 20 });
   assert.deepEqual(managed.lifecycle("rewarded"), { skillId: "rewarded", uses: 1, reward: 2, lastUsedAt: 20 });
@@ -108,7 +148,7 @@ test("S3: execution outcomes reward reuse and immediately retire a harmful skill
 
 test("S3: unused skills retire at the configured age, but used skills remain", async () => {
   const store = new InMemoryRegistryStore();
-  const managed = new ManagedSkillRegistry({ store, gate: realGate().gate, unusedAfterMs: 100 });
+  const managed = new ManagedSkillRegistry({ store, gate: instrumentedGate().gate, unusedAfterMs: 100 });
   await managed.add(publishSkill(skill("unused", ["local-edit"]), "local", 0));
   await managed.add(publishSkill(skill("used", ["local-test"]), "local", 0));
   managed.recordOutcome({ solveId: "ok", taskShape: "shape:x", testsPassed: true, mergeVerdict: "pending", activeArtifacts: ["used"], timestamp: 50 });
@@ -118,7 +158,7 @@ test("S3: unused skills retire at the configured age, but used skills remain", a
 
 test("S3: behaviorally redundant skills merge provenance and retire the duplicate", async () => {
   const store = new InMemoryRegistryStore();
-  const managed = new ManagedSkillRegistry({ store, gate: realGate().gate });
+  const managed = new ManagedSkillRegistry({ store, gate: instrumentedGate().gate });
   const first = skill("first", ["local-edit"]);
   const duplicate = { ...skill("duplicate", ["local-edit"]), name: "renamed", provenance: ["traj-2"] } satisfies DistilledSkill;
   await managed.add(publishSkill(first, "local", 1));
@@ -132,7 +172,7 @@ test("S3: behaviorally redundant skills merge provenance and retire the duplicat
 test("SKILL-07: packages, merged provenance, reuse reward, and retirement survive restart", async () => {
   const path = join(mkdtempSync(join(tmpdir(), "keep-skill-lifecycle-")), "registry.json");
   const persistence = new FileSkillRegistryPersistence(path);
-  const first = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: realGate().gate, persistence, unusedAfterMs: 100 });
+  const first = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: instrumentedGate().gate, persistence, unusedAfterMs: 100 });
   await first.add(publishSkill(skill("kept", ["local-edit"]), "local", 1));
   await first.add(publishSkill({ ...skill("duplicate", ["local-edit"]), provenance: ["traj-2"] }, "local", 2));
   first.recordOutcome({ solveId: "ok", taskShape: "shape:x", testsPassed: true, mergeVerdict: "merged", activeArtifacts: ["kept"], timestamp: 20 });
@@ -141,7 +181,7 @@ test("SKILL-07: packages, merged provenance, reuse reward, and retirement surviv
   await first.add(publishSkill(skill("unused", ["local-unused"]), "local", 0));
   first.retireUnused(100);
 
-  const restarted = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: realGate().gate, persistence, unusedAfterMs: 100 });
+  const restarted = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: instrumentedGate().gate, persistence, unusedAfterMs: 100 });
   assert.deepEqual(restarted.lifecycle("kept"), { skillId: "kept", uses: 1, reward: 2, lastUsedAt: 20 });
   assert.deepEqual(restarted.activePackages().find((pkg) => pkg.skill.id === "kept")?.skill.provenance, ["traj-1", "traj-2"]);
   assert.equal(restarted.lifecycle("duplicate")?.retired?.reason, "redundant");
@@ -149,25 +189,27 @@ test("SKILL-07: packages, merged provenance, reuse reward, and retirement surviv
   assert.equal(restarted.lifecycle("unused")?.retired?.reason, "unused");
 });
 
-test("SKILL-07: malformed or incomplete persisted lifecycle fails closed", () => {
+test("SKILL-07: legacy catalog-only state remains unadmitted while malformed packages fail closed", () => {
   const good = publishSkill(skill("persisted", ["local-edit"]), "local", 1);
-  assert.throws(() => new ManagedSkillRegistry({
-    store: new InMemoryRegistryStore(), gate: realGate().gate,
+  const recovered = new ManagedSkillRegistry({
+    store: new InMemoryRegistryStore(), gate: instrumentedGate().gate,
     persistence: { load: () => ({ schemaVersion: 1, packages: [good], lifecycle: [] }), save: () => undefined },
-  }), /missing lifecycle state/);
+  });
+  assert.equal(recovered.admissionStatus("persisted"), "catalog-only");
+  assert.deepEqual(recovered.activePackages(), []);
   assert.throws(() => new ManagedSkillRegistry({
-    store: new InMemoryRegistryStore(), gate: realGate().gate,
+    store: new InMemoryRegistryStore(), gate: instrumentedGate().gate,
     persistence: { load: () => ({ schemaVersion: 1, packages: [{ ...good, origin: 7 as never }], lifecycle: [] }), save: () => undefined },
   }), /invalid persisted skill package/);
 });
 
 test("S3: registry export/import round-trips through schema, digest, hash, and safety gates", async () => {
-  const source = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: realGate().gate });
+  const source = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: instrumentedGate().gate });
   await source.add(publishSkill(skill("portable", ["local-edit"]), "alice", 1));
   const serialized = source.exportBundle();
 
   const targetStore = new InMemoryRegistryStore();
-  const { gate, calls } = realGate();
+  const { gate, calls } = instrumentedGate();
   const target = new ManagedSkillRegistry({ store: targetStore, gate });
   assert.deepEqual(await target.importBundle(serialized), { ok: true, installed: 1, merged: 0 });
   assert.equal(targetStore.get("portable")?.origin, "alice");
@@ -182,10 +224,10 @@ test("S3: registry export/import round-trips through schema, digest, hash, and s
 
 test("S3: hostile and oversized imports fail closed before installing anything", async () => {
   const store = new InMemoryRegistryStore();
-  const managed = new ManagedSkillRegistry({ store, gate: realGate().gate, maxImportPackages: 0 });
+  const managed = new ManagedSkillRegistry({ store, gate: instrumentedGate().gate, maxImportPackages: 0 });
   assert.equal((await managed.importBundle('{"format":"keep.skill-registry/v1","packages":[],"bundleHash":7}')).ok, false);
 
-  const source = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: realGate().gate });
+  const source = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: instrumentedGate().gate });
   await source.add(publishSkill(skill("one", ["local-edit"]), "alice", 1));
   const tooLarge = await managed.importBundle(source.exportBundle());
   assert.equal(tooLarge.ok, false);
@@ -200,7 +242,7 @@ test("S3: a poisoned package makes bundle import atomic (no clean prefix is inst
   await source.add(publishSkill(skill("poison", ["external-send"]), "mallory", 2));
 
   const targetStore = new InMemoryRegistryStore();
-  const target = new ManagedSkillRegistry({ store: targetStore, gate: realGate().gate });
+  const target = new ManagedSkillRegistry({ store: targetStore, gate: instrumentedGate().gate });
   const result = await target.importBundle(source.exportBundle());
   assert.equal(result.ok, false);
   assert.equal(result.ok ? "" : result.reason, "rejected-package");
@@ -208,10 +250,10 @@ test("S3: a poisoned package makes bundle import atomic (no clean prefix is inst
 });
 
 test("SKILL-08: exchange rejects excess authority and unavailable typed programs before mutation", async () => {
-  const authoritySource = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: realGate().gate });
+  const authoritySource = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: instrumentedGate().gate });
   await authoritySource.add(publishSkill(skill("writer", ["local-edit"]), "alice", 1));
   const authorityTarget = new ManagedSkillRegistry({
-    store: new InMemoryRegistryStore(), gate: realGate().gate, allowedImportAuthorities: ["workspace:read"],
+    store: new InMemoryRegistryStore(), gate: instrumentedGate().gate, allowedImportAuthorities: ["workspace:read"],
   });
   const authorityResult = await authorityTarget.importBundle(authoritySource.exportBundle());
   assert.equal(authorityResult.ok, false);
@@ -230,11 +272,11 @@ test("SKILL-08: exchange rejects excess authority and unavailable typed programs
 
 test("SKILL-08: incompatible versions and corrupted local exports fail closed", async () => {
   const sourceStore = new InMemoryRegistryStore();
-  const source = new ManagedSkillRegistry({ store: sourceStore, gate: realGate().gate });
+  const source = new ManagedSkillRegistry({ store: sourceStore, gate: instrumentedGate().gate });
   await source.add(publishSkill(skill("portable-v1", ["local-edit"]), "alice", 1));
   const incompatible = JSON.parse(source.exportBundle()) as { format: string };
   incompatible.format = "keep.skill-registry/v2";
-  const target = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: realGate().gate });
+  const target = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: instrumentedGate().gate });
   const result = await target.importBundle(JSON.stringify(incompatible));
   assert.equal(result.ok, false);
   assert.equal(result.ok ? "" : result.reason, "invalid-bundle");
@@ -245,7 +287,7 @@ test("SKILL-08: incompatible versions and corrupted local exports fail closed", 
 });
 
 test("SKILL-08: composeKeep denies imported authority by default and honors an explicit receiver grant", async () => {
-  const source = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: realGate().gate });
+  const source = new ManagedSkillRegistry({ store: new InMemoryRegistryStore(), gate: instrumentedGate().gate });
   await source.add(publishSkill(skill("shared-writer", ["local-edit"]), "alice", 1));
   const bundle = source.exportBundle();
   const oracle = { runWithSkill: () => true, runBaseline: () => false };

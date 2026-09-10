@@ -19,6 +19,7 @@ import { computeMicrovmProjectSourceManifestSha256 } from "../src/infra/microvm_
 import { InProcessLock } from "../src/lock/lock.js";
 import type { MergeSpec } from "../src/oversight/merge_executor.js";
 import { HierarchicalLocalizer } from "../src/solve/localize.js";
+import { GraphLocalizer } from "../src/coderag/graph_localizer.js";
 import { SandboxedCommandRunner } from "../src/solve/sandboxed_runner.js";
 import { SolvePipeline } from "../src/solve/solve_pipeline.js";
 import { LocalFsWorkspace } from "../src/solve/workspace.js";
@@ -35,6 +36,10 @@ function g(cwd: string, ...args: string[]): string { return execFileSync("git", 
 class FixModel implements ModelProvider {
   readonly name = "deterministic-fix"; readonly isLocal = true;
   async generate(_req: GenerateRequest): Promise<GenerateResult> {
+    if (_req.hints?.["taskRole"] === "goal_test") return {
+      text: JSON.stringify({ body: "const {pathToFileURL}=await import('node:url'); const {join}=await import('node:path'); const {add}=await import(pathToFileURL(join(process.cwd(),'calc.js'))); assert.equal(add(2,3),5);" }),
+      model: this.name, tokensIn: 1, tokensOut: 1,
+    };
     return { text: JSON.stringify({ rationale: "replace subtraction", edits: [{ file: "calc.js", search: "return a - b", replace: "return a + b", intent: "add the operands" }] }), model: this.name, tokensIn: 1, tokensOut: 1 };
   }
   async embed(_text: readonly string[]): Promise<Embedding[]> { return []; }
@@ -86,6 +91,7 @@ test("R1 materialization refuses traversal and mutable revision names", async ()
 test("installed source landing on an explicit non-main branch survives restart, reverts exactly, and leaves materialization reusable", async () => {
   const root = mkdtempSync(join(tmpdir(), "keep-source-landing-"));
   const source = join(root, "source"), workspaceBase = join(root, "workspace"), dataDir = join(root, "state");
+  mkdirSync(workspaceBase);
   execFileSync("git", ["init", "-q", "-b", "work/canonical", source]);
   g(source, "config", "user.email", "keep@test"); g(source, "config", "user.name", "Keep");
   writeFileSync(join(source, "calc.js"), "export function add(a, b) { return a - b; }\n");
@@ -123,6 +129,7 @@ test("INTEG-03: malformed forge authority is refused before a workspace is mater
 test("INTEG-03: installed project pushes, merges, and reverts on a pinned private development forge", async () => {
   const root = mkdtempSync(join(tmpdir(), "keep-integ03-"));
   const source = join(root, "source"), remote = join(root, "private.git"), workspaceBase = join(root, "workspace");
+  mkdirSync(workspaceBase);
   execFileSync("git", ["init", "-q", "-b", "main", source]);
   g(source, "config", "user.email", "keep@test"); g(source, "config", "user.name", "Keep");
   writeFileSync(join(source, "calc.js"), "export function add(a, b) { return a - b; }\n");
@@ -170,10 +177,11 @@ test("INTEG-03: installed project pushes, merges, and reverts on a pinned privat
   assert.equal(effects.filter((event) => event["kind"] === "local_merge.revert_intent").length, 1);
 });
 
-test("SOLVE-08: CLI/API real-repository journey reconstructs exact project and proposal without redispatch", async () => {
+test("SOLVE-08: configured-graph CLI/API repository journey reconstructs exact project and proposal without redispatch", async () => {
   const root = mkdtempSync(join(tmpdir(), "keep-solve01-installed-"));
   const source = join(root, "source");
   const workspaceBase = join(root, "workspace");
+  mkdirSync(workspaceBase);
   execFileSync("git", ["init", "-q", "-b", "main", source]);
   g(source, "config", "user.email", "keep@test"); g(source, "config", "user.name", "Keep");
   writeFileSync(join(source, "calc.js"), "export function add(a, b) { return a - b; }\n");
@@ -185,6 +193,9 @@ test("SOLVE-08: CLI/API real-repository journey reconstructs exact project and p
   const commit = g(source, "rev-parse", "HEAD");
   const config = {
     dataDir: join(root, "state"), developmentProvider: new FixModel(),
+    // Named-path defaults deliberately use BM25 only. This retained graph-flow
+    // case requests the actual graph implementation instead of assuming a default.
+    projectLocalizer: new GraphLocalizer(),
     repositoryMaterialization: { sourceDir: source, workspaceBase, repoRef: "project-1", commit },
     testCommand: { command: process.execPath, args: ["--test", "calc.test.js"], timeoutMs: 30_000, cpuLimitSec: 20, maxOutputBytes: 16_384 },
   } as const;
@@ -224,12 +235,15 @@ test("SOLVE-08: CLI/API real-repository journey reconstructs exact project and p
     actorId: `keep-default-solver:${boundary.runId}`, parentActorId: "keep-default-solver", repository: "project-1",
     writeScope: ["."], writeGrant: "per-edit-one-shot", budgetEnvelopeId: "autonomy-default", delegation: "attenuated",
   });
-  assert.deepEqual(implementation.solve.localization.stages, ["bm25", "graph"]);
-  assert.equal(implementation.solve.localization.selected[0]?.path, "calc.js");
-  assert.equal(implementation.solve.localization.selected[0]?.rank, 1);
-  assert.ok((implementation.solve.localization.selected[0]?.score ?? 0) > 0);
-  assert.match(implementation.solve.localization.selected[0]?.reason ?? "", /rank 1 from bm25 \+ graph retrieval at score/);
-  assert.ok(!implementation.solve.localization.selected.some((row) => row.path === "leak.js"));
+  // Admission consumes the project plan's persisted localization rather than
+  // rerunning repository discovery inside the solver. Inspect its owning record.
+  const localized = (state.artifacts["plan"] as { localization: import("../src/autonomy/project_localization.js").ProjectLocalizationArtifact }).localization;
+  assert.deepEqual(localized.stages, ["bm25", "graph"]);
+  assert.equal(localized.selected[0]?.path, "calc.js");
+  assert.equal(localized.selected.findIndex(row => row.path === "calc.js"), 0);
+  assert.ok((localized.selected[0]?.score ?? 0) > 0);
+  assert.match(localized.selected[0]?.reason ?? "", /rank 1 from bm25 \+ graph retrieval at score/);
+  assert.ok(!localized.selected.some((row) => row.path === "leak.js"));
   const recovery = implementation.solve.proposalEvidence;
   assert.equal(recovery.baseRevision, commit);
   assert.match(recovery.diff, /diff --git a\/calc\.js b\/calc\.js/);
@@ -269,8 +283,8 @@ test("SOLVE-08: CLI/API real-repository journey reconstructs exact project and p
   const isolation = events.find((payload) => payload["event"] === "isolated_execution" && payload["executed"] === true);
   assert.equal(isolation?.["tier"], "process", "the installed solve records the measured executor tier");
   assert.match(String(isolation?.["detail"]), /resource-bounded command/);
-  assert.equal(events.filter((payload) => payload["event"] === "isolated_execution").length, 2,
-    "the solver oracle and the independent disposable-root verifier each execute exactly once; neither reruns for bookkeeping");
+  assert.equal(events.filter((payload) => payload["event"] === "isolated_execution").length, 4,
+    "baseline goal check, patched regression, patched goal check and independent verifier each execute once");
   assert.equal(g(join(workspaceBase, "project-1"), "rev-parse", "HEAD"), commit);
   assert.match(readFileSync(join(workspaceBase, "project-1", "calc.js"), "utf8"), /a \+ b/);
   assert.match(readFileSync(join(source, "calc.js"), "utf8"), /a - b/, "the source repository is never edited in place");
@@ -368,7 +382,7 @@ test("SOLVE-08: CLI/API real-repository journey reconstructs exact project and p
   assert.deepEqual(reconstructed.session.history.map(({ role, text }) => ({ role, text })), [
     { role: "user", text: "fix add in calc.js so it adds" }, { role: "event", text: "Project status: completed" },
   ], "the wrapped project key decrypts the same installed session after reconstruction");
-  assert.equal(reconstructed.session.budget.spentTokensToday, 2, "the reconstructed project retains its measured one-input/one-output model spend");
+  assert.equal(reconstructed.session.budget.spentTokensToday, 4, "reconstruction retains one synthetic input/output token pair for each of the proposal and goal-test calls");
   const sessionAtRest = JSON.parse(readFileSync(join(root, "state", "projects", "sessions", `${boundaryView.projectId}.json`), "utf8")) as { history: unknown };
   assert.doesNotMatch(JSON.stringify(sessionAtRest.history), /fix add in calc\.js|Project status/, "session history payloads remain encrypted at rest on the installed path");
   const reopenedCliLines: string[] = [];
@@ -382,6 +396,7 @@ test("SOLVE-08: CLI/API real-repository journey reconstructs exact project and p
 test("SOLVE-03: installed solve refuses before test spawn when the required measured tier is unavailable", async () => {
   const root = mkdtempSync(join(tmpdir(), "keep-solve03-tier-refuse-"));
   const source = join(root, "source"); const workspaceBase = join(root, "workspace");
+  mkdirSync(workspaceBase);
   execFileSync("git", ["init", "-q", "-b", "main", source]);
   g(source, "config", "user.email", "keep@test"); g(source, "config", "user.name", "Keep");
   writeFileSync(join(source, "calc.js"), "export function add(a, b) { return a - b; }\n");
@@ -401,11 +416,12 @@ test("SOLVE-03: installed solve refuses before test spawn when the required meas
   const boundary = JSON.parse(response.body) as { runId: string; status: string; note: string | null };
   assert.equal(response.status, 200);
   assert.equal(boundary.status, "waiting-capability", "missing measured isolation is a resumable named capability, not a terminal failure");
-  assert.match(boundary.note ?? "", /required microvm isolation is unavailable.*refusing execution/);
+  assert.match(boundary.note ?? "", /goal check did not demonstrate an executing baseline defect/);
   const isolationEvents = app.spine.currentEvents().map((event) => event.payload as Record<string, unknown>)
     .filter((payload) => payload["event"] === "isolated_execution");
   assert.equal(isolationEvents.length, 1, "an infrastructure refusal never enters the repair loop or spawns below the required tier");
   const refusal = isolationEvents.find((payload) => payload["executed"] === false);
+  assert.match(String(refusal?.["detail"]), /required microvm isolation is unavailable.*refusing execution/);
   assert.equal(refusal?.["requiredTier"], "microvm");
   assert.match(String(refusal?.["detail"]), /strongest measured enforcing tier is process/);
   const mergeResponse = await handleGatewayRequest(app, {
@@ -419,6 +435,7 @@ test("SOLVE-03: installed solve refuses before test spawn when the required meas
 test("SOLVE-05: veto, stale base, and kill each refuse before local merge mutation", async () => {
   const root = mkdtempSync(join(tmpdir(), "keep-solve05-refuse-"));
   const source = join(root, "source"); const workspaceBase = join(root, "workspace");
+  mkdirSync(workspaceBase);
   execFileSync("git", ["init", "-q", "-b", "main", source]);
   g(source, "config", "user.email", "keep@test"); g(source, "config", "user.name", "Keep");
   writeFileSync(join(source, "calc.js"), "export function add(a, b) { return a - b; }\n");
@@ -479,6 +496,7 @@ test("SOLVE-01: the installed path rejects mutable revisions and workspace trave
   const exact = { sourceDir: source, workspaceBase: join(root, "workspace-conflict"), repoRef: "project", commit: g(source, "rev-parse", "HEAD") };
   assert.throws(() => composeKeep({ dataDir: join(root, "state-conflict"), repositoryMaterialization: exact, workspace: new LocalFsWorkspace(root) }), /repositoryMaterialization is exclusive/);
   for (const [name, repoRef, commit, pattern] of [["mutable", "project", "main", /exact commit/], ["traversal", "../escape", g(source, "rev-parse", "HEAD"), /escapes/]] as const) {
+    mkdirSync(join(root, `workspace-${name}`));
     const app = composeKeep({ dataDir: join(root, `state-${name}`), developmentProvider: new FixModel(), repositoryMaterialization: { sourceDir: source, workspaceBase: join(root, `workspace-${name}`), repoRef, commit } });
     const run = await app.autonomyLoop!.runProject("fix add in calc.js so it adds", { runId: `reject-${name}`, stepBudget: 50 });
     assert.equal(run.state.status, "waiting-reconciliation", "the untyped materializer exception cannot authorize blind replay; its stage remains resumable after observation");

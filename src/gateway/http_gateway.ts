@@ -25,6 +25,7 @@
 import { createServer, type IncomingMessage } from "node:http";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import type { KeepApp } from "../compose.js";
+import { projectRepositoryOutcomes } from "../solve/governed_local_merge.js";
 import { GOAL_PHASES, GOAL_WORK_DOCUMENT, type GoalWorkPhase } from "../session/project_goal_work.js";
 import { ALL_PERMISSIONS, can, OWNER, type Principal, type Permission } from "../identity/rbac.js";
 import { auditTrail } from "../review/review_core.js";
@@ -147,17 +148,17 @@ function adaptationFailure(error: unknown): GatewayResponse {
  * The PURE gateway handler — routing + auth over the composed app. No socket, so it is fully unit-testable.
  */
 /**
- * The install safety gate — the SAME contract a locally-learned skill passes. Prefers the composed CEGIS
- * `SkillValidator`; falls back to the deterministic `EnvelopeForbiddenSinkCheck` reference monitor when no oracle is
- * composed. Either way a forbidden-sink skill pushed over the wire is REJECTED — the wire is never a bypass.
+ * Catalog install uses sampled validation when configured, otherwise declared-
+ * envelope checks only. The response preserves that distinction. Neither catalog
+ * storage nor an envelope-only check confers managed execution eligibility.
  */
 function buildInstallGate(app: KeepApp): (skill: DistilledSkill) => Promise<GateVerdict> {
   const validator = app.skillValidator;
   if (validator) {
-    return async (skill) => { const r = validator.validate(skill); return { ok: r.verdict === "validated", verdict: r.verdict, reason: r.reason }; };
+    return async (skill) => { const r = validator.validate(skill); return { ok: r.verdict === "validated", verdict: r.verdict, reason: r.reason, checkedSkill: r.skill }; };
   }
   const monitor = new EnvelopeForbiddenSinkCheck();
-  return async (skill) => { const bad = monitor.check(skill); return bad ? { ok: false, verdict: "rejected-unsafe", reason: bad } : { ok: true, verdict: "validated" }; };
+  return async (skill) => { const bad = monitor.check(skill); return bad ? { ok: false, verdict: "rejected-unsafe", reason: bad } : { ok: true, verdict: "envelope-checked" }; };
 }
 
 export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, sec: GatewaySecurity): Promise<GatewayResponse> {
@@ -230,7 +231,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     if (personalMode) return json(404, { error: "not found" });
     const denied = gate("rbac.admin"); if (denied) return denied;
     const body = parseBody(req.body); if (body === null || typeof body["grantId"] !== "string") return json(400, { error: "grantId is required" });
-    try { return json(200, { grantId: body["grantId"], revoked: await app.authorization.revoke(body["grantId"]) }); }
+    try { return json(200, { grantId: body["grantId"], revoked: await app.authorization.revokeFor(principal, body["grantId"]) }); }
     catch (error) { return json(400, { error: error instanceof Error ? error.message : "delegation revocation refused" }); }
   }
 
@@ -753,6 +754,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
       projectId: record.id,
       project,
       proposal: implementation?.solve?.proposalEvidence ?? null,
+      repository: projectRepositoryOutcomes(app.spine, runId),
       session: { record, history: session.history(), checkpoint: session.lastCheckpoint() ?? null, budget: { ...session.budget } },
     });
   }
@@ -794,7 +796,8 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
         ? session!.history().find((entry) => entry.role === "user")?.text
         : undefined;
       const implementation = checkpoint?.artifacts["implement"] as { solve?: { proposalEvidence?: unknown } } | undefined;
-      const decision = runId === null ? null : app.spine.replay().map((event) => event.payload as Record<string, unknown>).find((payload) => typeof payload["event"] === "string" && String(payload["event"]).startsWith("local_merge.") && payload["runId"] === runId)?.["event"] ?? null;
+      const repository = projectRepositoryOutcomes(app.spine, runId ?? "");
+      const decision = repository.latestDecision;
       const goal = app.projectRuntime !== undefined && session?.resolveDocumentVersioned(GOAL_WORK_DOCUMENT).value !== undefined
         ? app.projectRuntime.goalWork(r.id) : undefined;
       // A read-only projection of retained work, not execution or whole-goal completion.
@@ -804,7 +807,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
         deferredTasks: goal.selection.deferred.length, heldTasks: Object.keys(goal.selection.held).length,
         nextTaskId: goal.selection.selected ?? null,
       };
-      return { id: String(r.id), name: firstGoal === undefined ? r.name : projectNameFromGoal(firstGoal), lifecycle: r.lifecycle, quarantined, runId, status: checkpoint?.status ?? null, proposal: implementation?.solve?.proposalEvidence !== undefined, decision, ...(goalWork === undefined ? {} : { goalWork }) };
+      return { id: String(r.id), name: firstGoal === undefined ? r.name : projectNameFromGoal(firstGoal), lifecycle: r.lifecycle, quarantined, runId, status: checkpoint?.status ?? null, proposal: implementation?.solve?.proposalEvidence !== undefined, decision, repository, ...(goalWork === undefined ? {} : { goalWork }) };
     });
     const active = app.autonomyLoop.manager.active();
     return json(200, { projects, active: active !== undefined && projects.some((project) => project.id === active) ? String(active) : null });
@@ -1073,7 +1076,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     const pkg = b?.["pkg"] as SkillPackage | undefined;
     if (!pkg || typeof pkg !== "object") return json(400, { error: "pkg required" });
     const result = await installSkill(pkg, { store: skillRegistry, gate: buildInstallGate(app) });
-    return result.ok ? json(200, { ok: true, id: result.pkg.skill.id }) : json(422, { ok: false, reason: result.reason, detail: result.detail });
+    return result.ok ? json(200, { ok: true, id: result.pkg.skill.id, contentHash: result.pkg.contentHash, assessment: result.assessment }) : json(422, { ok: false, reason: result.reason, detail: result.detail });
   }
 
   // ─── M5-REVET: ADOPT an OpenClaw skill (warn-first, bespoke-by-default). Never a silent import: ALWAYS returns the
@@ -1092,12 +1095,12 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     if (result.rejected) return json(422, { ok: false, warning: result.warning, reason: result.rejected, signature: result.signature });
     // DEFAULT (or gate-rejected foreign): return the warning + bespoke recommendation, publish NOTHING foreign.
     if (!result.rawSkill) {
-      return json(200, { ok: true, adopted: false, warning: result.warning, bespokeSpec: result.bespokeSpec, recommendation: result.recommendation, signature: result.signature, unsupported: result.unsupported, ...(result.rawRejected ? { rawRejected: result.rawRejected } : {}) });
+      return json(200, { ok: true, adopted: false, warning: result.warning, bespokeSpec: result.bespokeSpec, recommendation: result.recommendation, signature: result.signature, signatureInfo: result.signatureInfo, unsupported: result.unsupported, ...(result.rawRejected ? { rawRejected: result.rawRejected } : {}) });
     }
     // OVERRIDE honored: the acknowledged, gate-passed foreign skill is published (the warning still rides along).
     const pkg = publishSkill(result.rawSkill, `${principal.id}:openclaw-adopt-acknowledged`);
     skillRegistry.put(pkg);
-    return json(200, { ok: true, adopted: true, warning: result.warning, id: pkg.skill.id, contentHash: pkg.contentHash, signature: result.signature, unsupported: result.unsupported });
+    return json(200, { ok: true, adopted: true, warning: result.warning, id: pkg.skill.id, contentHash: pkg.contentHash, signature: result.signature, signatureInfo: result.signatureInfo, unsupported: result.unsupported });
   }
 
   if (req.method === "GET" && req.path === "/skills") {

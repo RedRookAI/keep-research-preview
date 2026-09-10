@@ -2,6 +2,7 @@ import type { DistilledSkill } from "./skill_distiller.js";
 import type { ExecutionOracle, SkillCase } from "./skill_validator.js";
 import type { SkillCanary } from "./skill_canary.js";
 import type { BoundedCrossFamilyCriticism, CriticismGateResult } from "../learning/cross_family_criticism.js";
+import { hashSkill, snapshotSkill } from "../registry/skill_registry.js";
 
 /** Aggregate execution evidence for one arm of a held-out skill evaluation. */
 export interface SkillEvalArm {
@@ -36,7 +37,15 @@ export interface SkillDiagnosticProfile {
   readonly baselineQuality: number;
   readonly qualityImpact: number;
 }
-export interface RetainedSkillSink { add(skill: DistilledSkill): void; }
+/** Sink result, not the scored candidate: retained/merged names actual stored
+ * content; retired may name the stored incumbent; changed names the submitted
+ * candidate. The evaluator reports its own captured candidate on either hold. */
+export interface RetainedSkillDecision { readonly status: "retained" | "retired" | "merged" | "changed"; readonly skill: DistilledSkill; }
+export interface RetainedSkillSink {
+  add(skill: DistilledSkill, expectedSubject?: string): void | RetainedSkillDecision;
+  subject?(skillId: string): string;
+  withdraw?(skill: DistilledSkill, expectedSubject?: string): boolean;
+}
 
 export type SkillEvaluationResult =
   | {
@@ -48,8 +57,9 @@ export type SkillEvaluationResult =
       readonly criticism?: CriticismGateResult;
     }
   | {
-      readonly verdict: "rejected-no-improvement" | "rolled-back-degradation" | "rejected-no-cases" | "rejected-invalid-cases" | "held-for-criticism";
+      readonly verdict: "rejected-no-improvement" | "rolled-back-degradation" | "rejected-degradation" | "rejected-no-cases" | "rejected-invalid-cases" | "held-for-criticism" | "held-retired" | "held-state-changed" | "merged";
       readonly skill: DistilledSkill;
+      readonly mergedInto?: DistilledSkill;
       readonly withSkill: SkillEvalArm;
       readonly baseline: SkillEvalArm;
       readonly delta: number;
@@ -62,6 +72,7 @@ export type SkillEvaluationResult =
  * is retained only when it strictly improves the same-case no-skill baseline.
  */
 export class SkillEvaluator {
+  private retryApproval: { readonly key: string; readonly criticism: CriticismGateResult } | undefined;
   constructor(
     private readonly oracle: ExecutionOracle,
     private readonly canary: SkillCanary,
@@ -70,6 +81,10 @@ export class SkillEvaluator {
   ) {}
 
   evaluate(candidate: DistilledSkill, heldOutCases: readonly SkillCase[]): SkillEvaluationResult {
+    const retryApproval = this.retryApproval;
+    this.retryApproval = undefined;
+    candidate = snapshotSkill(candidate);
+    const subject = this.retained?.subject?.(candidate.id);
     if (heldOutCases.length === 0) {
       return {
         verdict: "rejected-no-cases",
@@ -97,8 +112,14 @@ export class SkillEvaluator {
     const withSkill = arm(withSkillPassed, cases.length);
     const delta = withSkill.rate - baseline.rate;
     if (delta > 0) {
+      // An unbound terminal canary is not evidence that a different revision was
+      // checked. Do not retain first and discover the refusal only afterwards.
+      if (this.canary.state(candidate.id) === "rolled-back" && (this.canary.revision(candidate.id) === undefined || this.canary.revision(candidate.id) === hashSkill(candidate))) {
+        return { verdict: "held-retired", skill: candidate, withSkill, baseline, delta };
+      }
       const highImpact = candidate.requiredAuthority.includes("workspace:write") || candidate.requiredAuthority.includes("sandbox:execute");
-      const criticism = this.criticism?.assess({
+      const approvalKey = JSON.stringify([hashSkill(candidate), cases, baseline, withSkill, subject]);
+      const criticism = retryApproval?.key === approvalKey ? retryApproval.criticism : this.criticism?.assess({
         proposalId: candidate.id,
         proposalKind: "skill",
         summary: `${candidate.name}: ${candidate.envelope.declaredEffects.join(", ")}`,
@@ -107,14 +128,30 @@ export class SkillEvaluator {
       if (highImpact && (!criticism || criticism.status !== "cleared")) {
         return { verdict: "held-for-criticism", skill: candidate, withSkill, baseline, delta, ...(criticism ? { criticism } : {}) };
       }
-      this.canary.goLive(candidate.id);
-      this.retained?.add(candidate);
+      let retained: void | RetainedSkillDecision;
+      try { retained = this.retained?.add(candidate, subject); }
+      catch (error) {
+        if (criticism?.status === "cleared") this.retryApproval = { key: approvalKey, criticism };
+        throw error;
+      }
+      if (retained?.status === "changed" || retained?.status === "retired") {
+        return { verdict: retained.status === "changed" ? "held-state-changed" : "held-retired", skill: candidate, withSkill, baseline, delta, ...(criticism ? { criticism } : {}) };
+      }
+      if (retained?.status === "merged") {
+        this.canary.goLive(retained.skill.id, { revision: hashSkill(retained.skill) });
+        return { verdict: "merged", skill: candidate, mergedInto: retained.skill, withSkill, baseline, delta, ...(criticism ? { criticism } : {}) };
+      }
+      const live = this.canary.goLive(candidate.id, { revision: hashSkill(candidate) });
+      if (live.state === "rolled-back") return { verdict: "held-retired", skill: candidate, withSkill, baseline, delta, ...(criticism ? { criticism } : {}) };
       return { verdict: "retained", skill: candidate, withSkill, baseline, delta, ...(criticism ? { criticism } : {}) };
     }
 
     if (delta < 0) {
-      this.canary.forceRollback(candidate.id, `held-out execution regressed ${(Math.abs(delta) * 100).toFixed(1)} percentage points versus no-skill baseline`);
-      return { verdict: "rolled-back-degradation", skill: candidate, withSkill, baseline, delta };
+      const withdrew = this.retained?.withdraw
+        ? this.retained.withdraw(candidate, subject)
+        : this.canary.revision(candidate.id) === hashSkill(candidate);
+      if (withdrew) this.canary.forceRollback(candidate.id, `held-out execution regressed ${(Math.abs(delta) * 100).toFixed(1)} percentage points versus no-skill baseline`);
+      return { verdict: withdrew ? "rolled-back-degradation" : "rejected-degradation", skill: candidate, withSkill, baseline, delta };
     }
 
     return { verdict: "rejected-no-improvement", skill: candidate, withSkill, baseline, delta };

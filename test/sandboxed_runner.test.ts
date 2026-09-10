@@ -99,9 +99,17 @@ test("COMPOSE WIRE: composeKeep(testCommand + disk workspace) runs the solver's 
     `import { test } from "node:test"; import assert from "node:assert/strict";\nimport { add } from "./src/math.mjs";\ntest("add", () => assert.equal(add(1,2), 3));\n`);
 
   const plan = JSON.stringify({ rationale: "fix operator", edits: [{ file: "src/math.mjs", search: "a - b", replace: "a + b", intent: "fix" }] });
+  const roles: string[] = [];
   const model: ModelProvider = {
     name: "scripted", isLocal: true,
-    async generate(_r: GenerateRequest): Promise<GenerateResult> { return { text: plan, model: "s", tokensIn: 0, tokensOut: 0 } as GenerateResult; },
+    async generate(req: GenerateRequest): Promise<GenerateResult> {
+      const role = String(req.hints?.["taskRole"]); roles.push(role);
+      assert.ok(role === "goal_test" || role === "repository_edit", "explicit scripted provider protocol");
+      const text = role === "goal_test" ? JSON.stringify({
+        body: "const {pathToFileURL}=await import('node:url');const {join}=await import('node:path');const {add}=await import(pathToFileURL(join(process.cwd(),'src/math.mjs')));for(const [a,b,c] of [[1,2,3],[-4,2,-2],[0,0,0],[1.5,2.25,3.75]])assert.equal(add(a,b),c);",
+      }) : plan;
+      return { text, model: "s", tokensIn: 0, tokensOut: 0 };
+    },
     async embed(t: readonly string[]): Promise<Embedding[]> { return t.map(() => [0]); },
   };
 
@@ -115,7 +123,9 @@ test("COMPOSE WIRE: composeKeep(testCommand + disk workspace) runs the solver's 
 
   const run = await app.autonomyLoop!.runProject("fix add() in src/math.mjs so it returns a+b", { runId: "rSbx", stepBudget: 50 });
   assert.ok(run.feasibility?.proceed, "feasible");
+  assert.deepEqual(roles, ["repository_edit", "goal_test"]);
   const independent = run.state.artifacts["vet_artifact"] as { schemaVersion?: unknown; verdict?: unknown; repositoryTreeSha256?: unknown; testsExecuted?: unknown };
+  assert.ok(independent, JSON.stringify(run.state));
   assert.equal(independent.schemaVersion, 1);
   assert.equal(independent.verdict, "passed", "the installed composition persisted an independent post-implementation verdict");
   assert.equal(independent.testsExecuted, true);

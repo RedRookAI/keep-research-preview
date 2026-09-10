@@ -17,7 +17,12 @@ const g = (cwd, ...args) => execFileSync("git", args, { cwd, encoding: "utf8" })
 class FixModel {
   name = "installed-deterministic-fix";
   isLocal = true;
-  async generate() {
+  async generate(req) {
+    if (req.hints?.taskRole === "goal_test") return {
+      text: JSON.stringify({ body: "const {pathToFileURL}=await import('node:url');const {join}=await import('node:path');const {add}=await import(pathToFileURL(join(process.cwd(),'calc.js')));for(const [a,b,c] of [[2,3,5],[-4,2,-2],[0,0,0],[1.5,2.25,3.75]])assert.equal(add(a,b),c);" }),
+      model: this.name, tokensIn: 1, tokensOut: 1,
+    };
+    assert.equal(req.hints?.taskRole, "repository_edit");
     return { text: JSON.stringify({ rationale: "replace subtraction", edits: [{ file: "calc.js", search: "return a - b", replace: "return a + b", intent: "add operands" }] }), model: this.name, tokensIn: 1, tokensOut: 1 };
   }
   async embed() { return []; }

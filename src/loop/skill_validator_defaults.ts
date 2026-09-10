@@ -51,10 +51,9 @@ export class EnvelopeForbiddenSinkCheck implements EnvelopeSafetyCheck {
 }
 
 /**
- * Default refiner: tightens the skill in response to a counterexample by ADDING a guarding precondition that
- * excludes the failing case's dimension. This is the zero-dep "narrow the skill's applicability" move —
- * a skill that fails an edge case is restricted so it no longer claims to handle it. Returns null only if the
- * skill is already maximally narrowed (nothing left to guard) → abandon.
+ * Proposes a descriptive precondition for the failing dimension. This does not implement an executable
+ * applicability restriction. SkillValidator still replays the case; this prose alone cannot make it pass
+ * or authorize narrower deployment. Returns null when the same descriptive guard is already present.
  */
 export const narrowingRefiner: SkillRefiner = (skill, counterexample) => {
   const dim = counterexample.input.split(":")[1] ?? counterexample.id;

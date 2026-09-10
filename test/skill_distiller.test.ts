@@ -53,7 +53,7 @@ test("distilled skill is portable JSON with activation, provenance, and authorit
   assert.ok(!JSON.stringify(portable).includes("foo.ts"), "portable skill must not leak trajectory-specific targets");
 });
 
-test("SKILL-01: a real successful solve produces a portable non-authorizing candidate", () => {
+test("SKILL-01: a constructed successful solve record produces a portable non-authorizing candidate", () => {
   const distiller = new SkillDistiller();
   const result = distiller.observeSolve({
     issueId: "real-42", solved: true, stagesRun: ["localize", "plan", "apply", "validate", "done"], repairRounds: 0,

@@ -48,6 +48,8 @@ export interface RetrievalConfig {
   /** Bounded top-k — the offered set size. Default 3; hard cap 5 (below the skill-shadowing phase transition). */
   readonly topK?: number;
   readonly state: SkillStateProvider;
+  /** Optional consumer-owned content/lifecycle check, evaluated on every retrieval. */
+  readonly eligible?: (skill: DistilledSkill) => boolean;
 }
 
 /** Hard cap on the offered set — structurally below the phase-transition threshold regardless of config. */
@@ -57,10 +59,12 @@ export class SkillRetrieval {
   private readonly skills = new Map<string, DistilledSkill>();
   private readonly topK: number;
   private readonly state: SkillStateProvider;
+  private readonly eligible: ((skill: DistilledSkill) => boolean) | undefined;
 
   constructor(config: RetrievalConfig) {
     this.topK = Math.min(Math.max(1, config.topK ?? 3), RETRIEVAL_HARD_CAP);
     this.state = config.state;
+    this.eligible = config.eligible;
   }
 
   /** Add a skill to the library (idempotent by id). */
@@ -78,6 +82,7 @@ export class SkillRetrieval {
     const candidates: RetrievedSkill[] = [];
 
     for (const skill of this.skills.values()) {
+      if (this.eligible && !this.eligible(skill)) continue;
       // 1. Relevance: the skill's relevance key must match the task shape.
       if (skill.relevanceKey !== query.taskShape) continue;
       // 2. Admission gate: only LIVE skills (canary/graduated) — a rolled-back/unknown skill is excluded.

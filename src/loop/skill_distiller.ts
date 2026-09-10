@@ -1,24 +1,11 @@
 /**
- * SkillDistiller (Increment 18.4, Phase S) — distills a reusable SKILL from successful solve trajectories.
- * This is the first headline moat increment: Keep does not just tune prompts, it BUILDS its own validated
- * capabilities. The distiller only PRODUCES a candidate skill (safely); 18.5's CEGIS loop VALIDATES it before
- * anything goes live, and 18.3's lifecycle manages its provisional→full journey. The human merge gate remains.
+ * Extract candidate reusable action patterns from supplied successful trajectories. The structured
+ * envelope parameterizes targets, retains common action ordering, and derives declared effects from
+ * recorded steps. The order check compares action names, not executable semantic equivalence.
  *
- * SOTA basis (2026-08-05):
- *  - Trajectory distillation pairs EXECUTABLE structure with step-level NL guidance (WebXSkill 2026;
- *    Anthropic agent-skills standard: activation conditions + execution steps + termination conditions;
- *    ProcMEM). → the HYBRID representation (D1): a StructuredEnvelope + an NL description.
- *  - FAITHFULNESS must be EXPLICITLY VERIFIED (MIND-Skill 2605.08670): the shared failure of prior work is
- *    that "the faithfulness of the abstraction is never verified." MIND-Skill's fix is round-trip
- *    reconstruction. → zero-dep faithfulness check: the skill's structured steps must reconstruct the
- *    trajectory's ESSENTIAL actions. This DOUBLES as the cross-modal consistency guard (SkillMutator
- *    2606.14154): NL and structure must agree, and declared effects must be DERIVED from the steps (no hidden
- *    sink smuggled into free-form text).
- *  - Distill from BATCHES not single runs where possible (Ni et al. 2026): comparing traces isolates reusable
- *    patterns from task-specific noise. → multi-trajectory corroboration raises confidence; a single
- *    trajectory yields a LOW-confidence provisional (which the canary/CEGIS path then stresses).
- *
- * Zero runtime deps. Everything behind ports.
+ * Success and effect records are trusted inputs. Keyword screening of declared effects does not
+ * establish containment, consistency of arbitrary prose, or the absence of undeclared effects.
+ * Candidates need separate execution checks and, for improvement claims, comparative evaluation.
  */
 
 /** One step of a solve trajectory (the raw material). Structurally minimal + provider-agnostic. */
@@ -72,7 +59,7 @@ export interface DistilledSkill {
   readonly requiredAuthority: readonly SkillAuthority[];
   /** Provenance: which trajectories it was distilled from (audit + corroboration count). */
   readonly provenance: readonly string[];
-  /** Confidence: "low" from a single trajectory, "corroborated" from ≥2 of the same shape. */
+  /** "corroborated" counts distinct supplied solve IDs of one task shape, not independent administration. */
   readonly confidence: "low" | "corroborated";
 }
 
@@ -95,6 +82,12 @@ export type SkillAuthority = "workspace:read" | "workspace:write" | "sandbox:exe
 export interface DistillResult {
   readonly skill?: DistilledSkill;
   readonly rejected?: string; // why nothing was distilled (unsuccessful, unfaithful, inconsistent)
+  readonly extraction?: {
+    readonly retainedActions: readonly string[];
+    readonly omittedSourceSteps: number;
+    readonly distinctSourceSolves: number;
+    readonly collapsedTargetSlots: boolean;
+  };
 }
 
 /** Sinks that may never appear in a distilled skill's declared effects without an explicit human gate. */
@@ -143,13 +136,32 @@ export class SkillDistiller {
     const pattern = this.commonPattern(successful);
     if (pattern.length === 0) return { rejected: "no common action pattern across trajectories" };
 
-    // Build the parameterized structured steps + derive declared effects FROM those steps (cross-modal guard).
+    // Parameterize the common steps and derive declarations from the supplied action/effect records.
     const steps = pattern.map((p) => ({ action: p.action, targetPattern: parameterize(p.target) }));
-    const declaredEffects = deriveEffects(pattern);
+    const retainedActions = new Set(pattern.map(step => step.action));
+    const contributing = successful.flatMap(t => t.steps.filter(step => retainedActions.has(step.action)));
+    // Every occurrence of a retained action contributes: repeated-action ambiguity
+    // must not hide another supplied effect. Distinct omitted actions remain outside
+    // this pattern's screen; this is not an all-trace safety verdict.
+    const declaredEffects = [...deriveEffects(contributing)].sort();
+    const distinctSources = [...new Set(successful.map(t => t.solveId))];
+    const extraction = {
+      retainedActions: [...retainedActions],
+      omittedSourceSteps: successful.reduce((n, t) => n + t.steps.filter(step => !retainedActions.has(step.action)).length, 0),
+      distinctSourceSolves: distinctSources.length,
+      collapsedTargetSlots: successful.some(t => {
+        const slots = new Map<string, Set<string>>();
+        for (const step of t.steps.filter(step => retainedActions.has(step.action))) {
+          const slot = parameterize(step.target), targets = slots.get(slot) ?? new Set<string>();
+          targets.add(step.target); slots.set(slot, targets);
+        }
+        return [...slots.values()].some(targets => targets.size > 1);
+      }),
+    };
 
-    // Cross-modal safety: a forbidden sink can never be smuggled in.
+    // Screen declared effects for known forbidden terms; this does not observe actual execution.
     const sink = declaredEffects.find((e) => FORBIDDEN_SINKS.some((s) => e.toLowerCase().includes(s)));
-    if (sink) return { rejected: `distilled skill declares a forbidden sink ("${sink}") — requires a human gate, not auto-distill` };
+    if (sink) return { rejected: `distilled skill declares a forbidden sink ("${sink}") — requires a human gate, not auto-distill`, extraction };
 
     const envelope: StructuredEnvelope = {
       preconditions: [`task shape is "${shape}"`],
@@ -159,10 +171,10 @@ export class SkillDistiller {
       declaredEffects,
     };
 
-    // FAITHFULNESS (MIND-Skill round-trip): the envelope must reconstruct each trajectory's ESSENTIAL actions.
+    // Require the extracted action names to occur in order in each source trajectory.
     for (const t of successful) {
       if (!this.reconstructs(envelope, t)) {
-        return { rejected: `faithfulness check failed — the skill does not reconstruct trajectory ${t.solveId}` };
+        return { rejected: `faithfulness check failed — the skill does not reconstruct trajectory ${t.solveId}`, extraction };
       }
     }
 
@@ -175,13 +187,13 @@ export class SkillDistiller {
       relevanceKey: shape,
       envelope,
       requiredAuthority: [...new Set(successful.flatMap((t) => t.requiredAuthority))],
-      provenance: successful.map((t) => t.solveId),
-      confidence: successful.length >= 2 ? "corroborated" : "low",
+      provenance: distinctSources,
+      confidence: distinctSources.length >= 2 ? "corroborated" : "low",
     };
-    return { skill };
+    return { skill, extraction };
   }
 
-  /** The longest common action subsequence across trajectories (the reusable core). Simple + deterministic. */
+  /** First-source action-membership intersection, followed by an order check; not an LCS algorithm. */
   private commonPattern(trajectories: readonly SolveTrajectory[]): readonly TrajectoryStep[] {
     if (trajectories.length === 1) return trajectories[0]!.steps;
     // Intersect on (action) sequence: keep steps whose action appears (in order) in every trajectory.
@@ -193,7 +205,7 @@ export class SkillDistiller {
     return common;
   }
 
-  /** Round-trip faithfulness: every structured step's action must appear in the trajectory, in order. */
+  /** Action-name subsequence check; not target, effect, or executable-behavior equivalence. */
   private reconstructs(envelope: StructuredEnvelope, trajectory: SolveTrajectory): boolean {
     let ti = 0;
     for (const step of envelope.steps) {
@@ -215,7 +227,7 @@ function parameterize(target: string): string {
   return "{arg}";
 }
 
-/** Derive declared effects FROM the steps' actions/effects — never free-form (the cross-modal guard). */
+/** Derive declarations from supplied effects or action-name heuristics; these are not observed effects. */
 function deriveEffects(pattern: readonly TrajectoryStep[]): readonly string[] {
   const effects = new Set<string>();
   for (const step of pattern) {

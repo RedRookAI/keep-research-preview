@@ -19,7 +19,7 @@ const sig = (over: Partial<RegressionSignal> = {}): RegressionSignal => ({
 
 // A validator stub with a fixed verdict.
 function validatorStub(verdict: ValidationResult["verdict"]): SkillValidator {
-  return { validate: (s: DistilledSkill): ValidationResult => ({ verdict, skill: s, rounds: 1, counterexamples: [], reason: `stub ${verdict}` }) } as unknown as SkillValidator;
+  return { validate: (s: DistilledSkill): ValidationResult => ({ verdict, skill: s, rounds: 1, counterexamples: [], executedCases: [], reason: `stub ${verdict}` }) } as unknown as SkillValidator;
 }
 function recorder(): HealEscalation & { escalations: HealResult[] } {
   const escalations: HealResult[] = [];
@@ -104,7 +104,7 @@ test("the failing contract is used to localize the repair (added as a heal-local
   const capturingValidator = {
     validate: (s: DistilledSkill): ValidationResult => {
       seenPreconditions = s.envelope.preconditions;
-      return { verdict: "validated", skill: s, rounds: 1, counterexamples: [], reason: "ok" };
+      return { verdict: "validated", skill: s, rounds: 1, counterexamples: [], executedCases: [], reason: "stub localization check only" };
     },
   } as unknown as SkillValidator;
   const heal = new ArtifactSelfHeal({ validator: capturingValidator, canary: new SkillCanary() });

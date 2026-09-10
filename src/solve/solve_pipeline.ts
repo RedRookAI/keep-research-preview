@@ -527,6 +527,23 @@ export class SolvePipeline {
     let applied: Awaited<ReturnType<typeof applyEditPlan>>;
     let initialRollbackId: string | undefined;
     if (admitted !== undefined || context.memoryContext !== undefined || context.assertAuthority !== undefined || (this.deps.reversibleEnvelope ?? true)) {
+      // Negative-only preflight, as on the governed repair path. Resolve in an
+      // isolated snapshot before registering any inverse or attempting a write.
+      // A matched prefix is discarded when another hunk fails. Success here
+      // grants nothing: live authority, freshness and commit checks remain below.
+      // Exceptions still reach the existing uncertain-effect handler.
+      const resolution = await resolveEditPlan(plan, new InMemoryFileTree(Object.fromEntries(files.map(file => [file.path, file.content]))));
+      if (!resolution.ok) {
+        const perEdit = resolution.perEdit.map(edit => ({ ...edit,
+          status: edit.status === "applied" ? "held" as const : edit.status,
+          reason: edit.reason ?? "whole plan refused before application",
+        }));
+        const why = resolution.perEdit.filter(edit => edit.status !== "applied")
+          .map(edit => edit.reason ?? "plan is not applicable to the supplied snapshot").join("; ").slice(0, 500);
+        audit("apply", { applied: false, classification: "non-applicable", effect: "not-attempted", perEdit });
+        narrator.done("apply", `Patch not applied — ${why}`);
+        return this.gaveUp(issue.id, stagesRun, `patch did not apply: ${why}`, localizationEvidence);
+      }
       // BUILD-ORDER 2.5 (Z126) — this run takes the KEPT strangler-fig default. Record WHY the flag
       // is still kept as a durable, auditable spine fact (the specific unmet stabilization criterion
       // + its revisit condition), so a "keep" stays a governed decision and never drifts into a

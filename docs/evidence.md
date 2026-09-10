@@ -58,6 +58,36 @@ production organizational identity, broad coding quality, or reduced operator
 effort. This checkpoint's broader historical qualification does not override the
 later failures listed below.
 
+#### Reading repository outcomes in the corrected runtime
+
+`GET /project` and `GET /projects` expose an additive `repository` summary.
+Its `observation: "last-recorded"` field matters: this is a projection of the
+journal, not a fresh inspection of Git or a delivery guarantee. `workspace`
+records the merge or inverse completed in Keep's workspace. `source.merge` and
+`source.revert` separately record delivery to the configured original repository.
+Their status can be `landed`, `reverted`, `refused`, or `unknown`. A refused
+attempt does not undo prior work; missing results, interrupted attempts and
+unresolved execution errors remain unknown. Older workspace-only history has no
+inferred source success. Existing journals are read without rewriting history.
+
+`latestDecision` (also the list's `decision`) identifies the latest recorded
+request outcome, separately from completed workspace work. Source-attempt entries
+use `source_delivery.<merge|revert>.<status>`; `pending` means no final attempt
+result has been recorded. `local_merge.reverted` is the summary label for the
+workspace's `local_merge.revert_terminal` event. Reporting reasons are bounded
+to 500 characters. These reporting entries never authorize replay.
+Source-operation responses include `sourceDelivery.recorded`; a false value
+warns that reporting persistence could not be confirmed, even if Git delivery
+was observed to succeed. Resolve that journal problem before relying on the
+record or retrying. No failed log write triggers an automatic Git retry or undo.
+
+An initial non-applicable edit returns a retained unsolved result rather than an
+uncertain-effect obstruction. Its apply record says `classification:
+"non-applicable"` and `effect: "not-attempted"`; a matched prefix is held, not
+partially applied. Actual unexpected exceptions still require reconciliation.
+These are corrected-runtime contracts; historical release results above and
+below retain their original artifact identities.
+
 ### Coding with corrected memory
 
 On September 8, source

@@ -75,11 +75,31 @@ export class DelegationRegistry implements AuthorizationPort {
     });
   }
 
+  /** Trusted host-administrator operation. Request handlers must use revokeFor. */
   async revoke(grantId: string): Promise<boolean> {
+    return this.revokeMatching(grantId);
+  }
+
+  /** Revoke only within the authenticated human manager's tenant. Unknown/foreign IDs are no-ops. */
+  async revokeFor(caller: Principal, grantId: string): Promise<boolean> {
+    // Capture identity before awaiting coordination; never keep a mutable caller reference.
+    if (caller.kind !== "human" || caller.role === "agent") return false;
+    let captured: DurableGrant["parent"];
+    try { captured = captureParent(caller); } catch { return false; }
+    return this.revokeMatching(grantId, captured);
+  }
+
+  private async revokeMatching(grantId: string, caller?: DurableGrant["parent"]): Promise<boolean> {
     if (!this.spine.durableStorage()) throw new Error("delegation revocation requires an fsync-durable Spine");
     if (!SAFE_ID.test(grantId)) return false;
     return this.spine.withCoordinationLock("identity.delegation", async () => {
-      if (!this.project().grants.has(grantId)) return false;
+      if (caller !== undefined) {
+        // Recheck live authority under the same lock as target lookup and mutation.
+        const current = this.resolveParent(caller.id, caller.tenant);
+        if (current === undefined || current.kind !== "human" || current.role === "agent" || current.id !== caller.id || current.tenant !== caller.tenant || !this.base.authorize(current, "rbac.admin").allow) return false;
+      }
+      const grant = this.project().grants.get(grantId);
+      if (grant === undefined || (caller !== undefined && grant.parent.tenant !== caller.tenant)) return false;
       this.spine.stage({ type: "identity.action", actor: "delegation", payload: { event: "delegation.revoked", grantId } });
       await this.spine.seal();
       if (!this.spine.verify().ok || this.project().grants.has(grantId)) throw new Error("delegation revocation could not be verified after sealing");
@@ -168,7 +188,7 @@ export class DelegationRegistry implements AuthorizationPort {
 }
 
 function captureParent(parent: Principal): DurableGrant["parent"] {
-  if (parent.kind !== "human" || !SAFE_ID.test(parent.id) || !(parent.role in ROLE_PERMISSIONS) || (parent.tenant !== undefined && !SAFE_ID.test(parent.tenant))) throw new Error("delegation requires a valid human parent");
+  if (parent.kind !== "human" || typeof parent.id !== "string" || !SAFE_ID.test(parent.id) || !(parent.role in ROLE_PERMISSIONS) || (parent.tenant !== undefined && (typeof parent.tenant !== "string" || !SAFE_ID.test(parent.tenant)))) throw new Error("delegation requires a valid human parent");
   return Object.freeze({ id: parent.id, role: parent.role, ...(parent.tenant === undefined ? {} : { tenant: parent.tenant }) });
 }
 

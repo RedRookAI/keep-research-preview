@@ -16,9 +16,14 @@ implementation and a Linux x64 demonstration of resource accounting and recovery
 when an operation's response is lost. The demonstration requires no model account
 or paid service.
 
-Download [research preview 2026-09-09.2](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-09-09.2).
+Download [maintenance preview 2026-09-10.1](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-09-10.1).
 The [release record](KEEP_RELEASE.md) identifies the reviewed source, prepared
 archives, checksums, and qualification results.
+
+The [maintenance notes](docs/maintenance-2026-09-10.md) describe the corrections
+and remaining limits. **Before upgrading existing data, read the
+[skill-registry upgrade instructions](docs/skill-registry.md#upgrading-data-from-the-september-9-research-preview)
+and retain a private offline backup.**
 
 Start with the [preview guide](docs/research-preview.md) to install the package and
 run the experiment. The [research overview](docs/research.md) describes the wider

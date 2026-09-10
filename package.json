@@ -1,6 +1,6 @@
 {
   "name": "keep",
-  "version": "0.0.1",
+  "version": "0.0.2-preview.1",
   "description": "Self-hostable, provider-agnostic build orchestrator with consequence-gated autonomy",
   "main": "dist/src/index.js",
   "scripts": {
@@ -66,6 +66,7 @@
     "tsconfig.json",
     "README.md",
     "docs/semantic-memory.md",
+    "docs/skill-registry.md",
     "LICENSE",
     "NOTICE",
     "THIRD_PARTY_NOTICES.txt",
@@ -75,7 +76,9 @@
     "docs/evidence.md",
     "acceptance/installed_sg32_resources.mjs",
     "WORKFLOW.md",
-    "SECURITY.md"
+    "SECURITY.md",
+    "docs/security-experiments.md",
+    "docs/maintenance-2026-09-10.md"
   ],
   "exports": {
     ".": "./dist/src/index.js",

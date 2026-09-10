@@ -170,7 +170,7 @@ import { DataClassifier } from "./ingest/data_classifier.js";
 import { RedactionGateway as RedactionGatewayCls, EMBEDDING_REPRESENTATION_VERSION } from "./privacy/redaction_gateway.js";
 import { PersistentPersonalDataStore } from "./privacy/persistent_personal_data_store.js";
 import { ObservedFailureDefenseRegistry } from "./resilience/observed_failure_defense.js";
-import { FileSkillRegistryPersistence, InMemoryRegistryStore, ManagedSkillRegistry, type RegistryStore } from "./registry/skill_registry.js";
+import { FileSkillRegistryPersistence, InMemoryRegistryStore, ManagedSkillRegistry, hashSkill, type RegistryStore } from "./registry/skill_registry.js";
 import { BoundedCrossFamilyCriticism, type CrossFamilyCritic } from "./learning/cross_family_criticism.js";
 import { buildVettingGates, type VettingGates } from "./cascade/vetting_gates.js";
 import { buildGovernanceSuite, type GovernanceSuite } from "./governance/governance_suite.js";
@@ -1260,12 +1260,10 @@ export function composeKeep(config: KeepConfig): KeepApp {
     config.anchorThreshold !== undefined ? { cadenceSessions: config.consolidationCadence ?? 5 } : {},
   );
   selfImprovementBus.register(consolidation.asLearner());
-  // --- 18.4: the SkillDistiller — distills reusable skills from successful trajectories (HYBRID envelope +
-  // faithfulness + cross-modal guard). Produces candidates; 18.5 CEGIS validates before anything goes live. ---
+  // Extract candidate action patterns from successful trajectories; extraction is not execution evidence.
   const skillDistiller = new SkillDistiller();
-  // --- 18.5: the CEGIS SkillValidator — execution-adjudicated counterexample-guided validation. Floor ports
-  // (PBT generator + forbidden-sink envelope check + narrowing refiner) are wired here; the EXECUTION ORACLE
-  // is caller-supplied (backed by verifyPatch at solve time), so a skill is only validated against REAL tests. ---
+  // Sampled validation uses a nonempty default generator and caller-supplied oracle. The caller must execute
+  // and check real task behavior; composition cannot verify that a supplied callback fulfills that contract.
   // --- 18.6: the SkillCanary — retention/reuse-reward/notify. A CEGIS-validated skill goes LIVE instantly as
   // an instant-rollback canary, graduates after 3 clean uses (K1), auto-demotes on any regression, notifies at
   // the right tier (K5: silent graduate / quiet-ticket rollback / page only irreversible). ---
@@ -1287,7 +1285,8 @@ export function composeKeep(config: KeepConfig): KeepApp {
     liveState: (id): SkillLiveState => skillCanary.state(id) ?? "unknown",
     utility: (id) => consolidation.record(id)?.utility ?? 0,
   };
-  const skillRetrieval = new SkillRetrieval({ state: skillStateProvider, ...(config.retrievalTopK !== undefined ? { topK: config.retrievalTopK } : {}) });
+  let skillEligible = (_skill: import("./loop/skill_distiller.js").DistilledSkill): boolean => false;
+  const skillRetrieval = new SkillRetrieval({ state: skillStateProvider, eligible: (skill) => skillEligible(skill), ...(config.retrievalTopK !== undefined ? { topK: config.retrievalTopK } : {}) });
   // --- C3: the self-heal CEGIS loop for self-authored artifacts (heal-class). On a regressed skill/lesson it
   // attempts a localized, bounded CEGIS repair (reusing the validator) that must RE-CLEAR validation, re-
   // canaries on success, and rolls back + escalates otherwise. Never touches the frozen floor. Present only
@@ -1296,8 +1295,12 @@ export function composeKeep(config: KeepConfig): KeepApp {
     ? new SkillValidator({ oracle: config.skillOracle, generator: new PbtCounterexampleGenerator(), refiner: narrowingRefiner, safety: new EnvelopeForbiddenSinkCheck(), ...(config.skillPrograms ? { programs: config.skillPrograms } : {}) })
     : undefined;
   const skillCriticism = config.skillCriticism ? new BoundedCrossFamilyCriticism(config.skillCriticism.builderFamily, config.skillCriticism.critic) : undefined;
-  let retainSkill = (skill: import("./loop/skill_distiller.js").DistilledSkill): void => { skillRetrieval.add(skill); };
-  const skillEvaluator = config.skillOracle ? new SkillEvaluator(config.skillOracle, skillCanary, skillCriticism, { add: (skill) => retainSkill(skill) }) : undefined;
+  let retainedSkills: import("./loop/skill_evaluator.js").RetainedSkillSink;
+  const skillEvaluator = config.skillOracle ? new SkillEvaluator(config.skillOracle, skillCanary, skillCriticism, {
+    add: (skill, expected) => retainedSkills.add(skill, expected),
+    subject: (id) => retainedSkills.subject!(id),
+    withdraw: (skill, expected) => retainedSkills.withdraw!(skill, expected),
+  }) : undefined;
   const resolveCascadeFn = config.resolutionTiers && config.resolutionTiers.length > 0
     ? (issue: Issue) => resolveCascade({ tiers: config.resolutionTiers!, spine, ...(config.cascadeBudget ? { budget: config.cascadeBudget } : {}), ...(config.testGenerator ? { generator: config.testGenerator } : {}), ...(config.testExecutor ? { executor: config.testExecutor } : {}), ...(config.complexityRouter ? { complexity: config.complexityRouter } : {}) }, issue)
     : undefined;
@@ -1625,19 +1628,29 @@ export function composeKeep(config: KeepConfig): KeepApp {
       if (!skillValidator) return { ok: false, verdict: "validator-unavailable", reason: "skill validator is not configured" };
       const result = skillValidator.validate(skill);
       if (result.verdict !== "validated") return { ok: false, verdict: result.verdict, reason: result.reason };
-      return { ok: true, verdict: result.verdict };
+      return { ok: true, verdict: result.verdict, checkedSkill: result.skill };
     },
-    onAdmit: (skill) => { skillCanary.goLive(skill.id); skillRetrieval.add(skill); },
+    onAdmit: (skill) => { skillRetrieval.add(skill); skillCanary.goLive(skill.id, { revision: hashSkill(skill) }); },
   });
-  for (const pkg of managedSkillRegistry.activePackages()) { skillCanary.restoreLive(pkg.skill.id); skillRetrieval.add(pkg.skill); }
-  retainSkill = (skill): void => {
-    const tracked = managedSkillRegistry.trackValidated(skill, "local-solve");
-    skillRetrieval.add(tracked.pkg.skill);
-    if (!tracked.active) skillCanary.forceRollback(skill.id, tracked.mergedInto ? `merged into equivalent ${tracked.mergedInto}` : "previously retired lifecycle");
+  skillEligible = (skill) => managedSkillRegistry.isEligible(skill);
+  for (const pkg of managedSkillRegistry.activePackages()) { skillCanary.restoreLive(pkg.skill.id, pkg.contentHash); skillRetrieval.add(pkg.skill); }
+  retainedSkills = {
+    subject: (id) => managedSkillRegistry.subjectToken(id),
+    add: (skill, expected) => {
+      if (expected !== undefined && expected !== managedSkillRegistry.subjectToken(skill.id)) return { status: "changed", skill };
+      const tracked = managedSkillRegistry.trackValidated(skill, "local-solve");
+      if (tracked.active || tracked.mergedInto) skillRetrieval.add(tracked.pkg.skill);
+      if (!tracked.active) skillCanary.forceRollback(skill.id, tracked.mergedInto ? `merged into equivalent ${tracked.mergedInto}` : "previously retired lifecycle");
+      return { status: tracked.mergedInto ? "merged" : tracked.active ? "retained" : "retired", skill: tracked.pkg.skill };
+    },
+    withdraw: (skill, expected) => {
+      if (expected !== undefined && expected !== managedSkillRegistry.subjectToken(skill.id)) return false;
+      return managedSkillRegistry.withdrawExact(skill);
+    },
   };
   selfImprovementBus.register({ id: "managed-skill-registry", loopClass: "protect", onOutcome: (signal) => {
     managedSkillRegistry.recordOutcome(signal);
-    managedSkillRegistry.retireUnused(signal.timestamp);
+    for (const id of managedSkillRegistry.retireUnused(signal.timestamp)) skillCanary.forceRollback(id, "unused skill retired");
   } });
   const vetoQueue = new VetoQueue({ spine, run: (action) => { spine.stage({ type: "identity.action", actor: "veto-queue", payload: { event: "approved_run", id: action.id, description: action.description } }); } });
   if (config.solve && config.projectEditor) throw new Error("compose: projectEditor requires the built-in canonical solver; custom solve seams cannot self-attest project edit consumption");

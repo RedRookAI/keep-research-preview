@@ -496,6 +496,28 @@ test("rollback intent persistence failure prevents the admitted effect", async (
   assert.equal(await workspace.tree(repositoryRef).read("src/value.ts"), original);
 });
 
+test("initial preflight exceptions remain uncertain rather than becoming non-applicability", async () => {
+  const workspace = new InMemoryWorkspace({ repo: { "src/value.ts": original, "src/other.ts": other } });
+  const model = new ResponseModel(plan([allowedEdit]));
+  const proposal = await buildModelProjectEditPlanner(model, workspace, repositoryRef).prepare(issue, task, await state(workspace));
+  const s = spine(), ledger = new RollbackLedger(s);
+  // Trusted-host fault injection at the snapshot's map operation. Admission's
+  // iterated digest remains valid; only the initial in-memory preflight throws.
+  const files = new Proxy(await workspace.files(repositoryRef), {
+    get(target, property, receiver) {
+      if (property === "map") return () => { throw new Error("synthetic snapshot mapping failure"); };
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  const pipeline = new SolvePipeline({ spine: s, ledger, tree: workspace.tree(repositoryRef), model,
+    localizer: new HierarchicalLocalizer(), snapshotFiles: () => workspace.files(repositoryRef),
+    runner: { async run() { throw new Error("test execution must not follow a preflight exception"); } } });
+  await assert.rejects(pipeline.run(issue, files, { admittedEdit: proposal }), /synthetic snapshot mapping failure/);
+  assert.equal(ledger.pending, 0); assert.equal(await workspace.tree(repositoryRef).read("src/value.ts"), original);
+  assert.equal(s.currentEvents().some(event => event.payload["classification"] === "non-applicable"), false);
+  assert.ok(JSON.stringify(s.currentEvents()).includes("solve threw; reconciliation required"));
+});
+
 test("task memory reaches deferred project editing and canonical repair without extra generation", async () => {
   const workspace = new InMemoryWorkspace({ repo: { "src/value.ts": original, "src/other.ts": other } });
   const tree = workspace.tree(repositoryRef), s = spine();
