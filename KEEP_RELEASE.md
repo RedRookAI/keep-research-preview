@@ -1,104 +1,135 @@
 # Keep release record
 
-## This candidate
+## Maintenance research preview 2026-09-10.1
 
-**Keep 0.0.1 — keep-preview-2026-09-09.2. Public research preview.**
+**Keep 0.0.2-preview.1 — `keep-preview-2026-09-10.1`.**
 
-This is the current record for the two archives below. It is a companion document,
-not part of either prepared archive. The source revision identifies the development input;
-the selected source archive, not private Git history, is the distribution subject.
+[Repository](https://github.com/RedRookAI/keep-research-preview) ·
+[Release and downloads](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-09-10.1) ·
+[Changes and upgrade notes](docs/maintenance-2026-09-10.md)
+
+This is the companion record for the two immutable archives below. It is not
+embedded in either archive whose hash it records. The tagged public tree contains
+the same selected source plus this companion record; private development history
+is not imported. The original September 9 tag and assets remain unchanged.
 
 | Item | Exact identity |
 | --- | --- |
-| Source revision | `b4c0c77a89e1b2b3d1613ab11bb3251eb84b2b62` |
-| Source selection digest | `1bac8fe17e2f18d3fe46e981c034ec2372a0ae3ac04b82ac20c20d961bc6408d` |
-| Source archive | `keep-source-preview.tar.gz` — 16,275,635 bytes; 3,949 members |
-| Source archive SHA256 | `81dab7fafc30061fa85495a2d683f9600f8eef0506eee23e8382dfd6e0d7ed20` |
-| Installable package | `keep-0.0.1.tgz` — 6,251,659 bytes; 2,086 members |
-| Package SHA256 | `5bd03fd022d85a0a1f129c3396edc88c77016851feec4b0dc4addeb0c0768d78` |
+| Frozen public source export | `59003dc9d0aff8346eb8a60d6b30fbb49fb6b589` |
+| Selected development baseline | `4dcba6d4fb8e9b46255c09b3f0b97113f1abf06c` |
+| Additional legacy-upgrade changes | `5cdcb0584d4d3c12f466f5d6618edbef2864593c`, `36b4db5f55cdccd70aeaab8242985a31644c309f` |
+| Source archive | `keep-source-preview-2026-09-10.1.tar.gz` — 16,346,262 bytes; 3,959 selected files |
+| Source archive SHA-256 | `00d08b26e9491306e5e5e95002776422f7a78434ba869b8545823d4dee57a189` |
+| Installable package | `keep-0.0.2-preview.1.tgz` — 6,278,243 bytes; 2,089 files |
+| Package SHA-256 | `08f96c05d5968ad7bbffe80d2f698c43ab7c38a949a07afd2162b00b1b2361dc` |
 
-For the checksum-gated installation block in docs/research-preview.md, set:
+The final tag includes the companion-only successor to the frozen source export.
+No runtime, test, build or packaged documentation bytes change in that successor.
+The baseline and two additional revisions explain selection, not a claim that
+the entire newer private development tree is published. The exact public export
+above identifies the combined source, tests, version metadata and public guides.
+
+For the checksum-gated installation block in the preview guide, set:
 
 ~~~sh
-export KEEP_RELEASE_SHA256='5bd03fd022d85a0a1f129c3396edc88c77016851feec4b0dc4addeb0c0768d78'
+export KEEP_RELEASE_SHA256='08f96c05d5968ad7bbffe80d2f698c43ab7c38a949a07afd2162b00b1b2361dc'
 ~~~
 
-Do not derive the expected value from the downloaded archive. A checksum compares
-bytes; it does not independently authenticate this record's publisher.
+Do not derive the expected checksum from the downloaded archive. Matching bytes
+do not independently authenticate the publisher.
 
-## Checks performed on this revision
+## Checks on this exact distribution
 
-- TypeScript compilation and 16 focused documentation/attribution tests passed.
-  Local document links and heading targets were checked. The checksum-command
-  test covers matching, mismatched, malformed, unset and missing-archive inputs;
-  failures stop before installation.
-- All eight public pages were rendered using the existing Markdown renderer with
-  table support; generated HTML and structure were inspected. All 12 shell blocks
-  passed syntax checks. This was local HTML inspection, not a GitHub browser test.
-- Selected source built with empty npm cache and ordinary scripts-enabled npm ci
-  and npm pack. Native outputs were freshly compiled.
-- A separate empty-cache consumer installed the exact package normally.
-- The network-disabled installed demonstration passed 16 accounting and eight
-  single-entry cases, with zero model calls.
-- Direct reads matched all 24 local sink outcomes to the report: 20 sink files
-  and four zero-effect cases without a file.
-- The source archive matches the complete selection; the package contains the
-  new evidence page, eight runtime-notice paths and guest-supervisor text asset.
+- Ordinary scripts-enabled offline `npm ci` and `npm pack` succeeded. TypeScript
+  compiled, the notice check passed, and native release binaries were compiled
+  and staged. Previously acquired pinned toolchain and dependency cache reused;
+  no fresh toolchain acquisition or empty-cache claim.
+- A fresh consumer installed the archive with lifecycle scripts enabled. Its
+  isolated filesystem did not expose the private source or toolchain; networking
+  was disabled. All **2,089** installed files matched the package and build bytes.
+- **88/88 installed correction/validator/program regressions passed**, no skips.
+  Includes tenant revocation, skill admission/promotion/translation, repository
+  refusal and source delivery, and legacy-state revalidation and recovery.
+- **201/201 installed related-path tests passed**, no skips: registry, canary,
+  evaluator, distiller, retrieval, static adoption, project editing, project loop,
+  recoverable repository flow, delegation and gateway identity controls.
+- The installed no-model demonstration passed **16 accounting and eight
+  single-entry cases**, using owner and injected-tenant configurations and fresh
+  child processes. It ran in the isolated consumer arrangement.
+- **10/10 source attribution/package-policy tests passed**, no skips.
+- The actual original installed registry reader accepted a disposable v1 backup,
+  rejected its v2 successor, and recovered the original history after restoring
+  the copied v1 bytes. The original package and reader bytes were checked first.
+- Twelve public documents rendered; 106 local links/anchors and 14 shell or
+  JavaScript blocks passed checks. The installation checksum guard passed matching,
+  mismatched, malformed and unset-value cases before installer invocation.
+- All **3,959** selected source files were extracted and byte-compared with the
+  frozen public source export. Dependency/vendor and runtime-notice inputs are
+  unchanged from the reviewed release; their completed provenance work is carried
+  forward, not represented as newly performed.
 
-The broader experimental suite and historical model workflows were not rerun.
-Their original identities, failures and scope are retained in docs/evidence.md.
+These are builder-administered synthetic checks on the maintainer's existing host,
+not independent audit verification or real-model performance experiments. Installed
+regressions ran serially in a separate private network and could see host paths;
+they do not qualify nested operating-system isolation. Tests retained successful
+work, negative controls, real synthetic filesystem/Git outcomes and restart cases.
 
-## Environment and carried-forward evidence
+Linux x64; Node.js 22.23.2, npm 10.9.8, pinned Rust 1.97.1 with the musl target.
+Runs used one CPU, 2 GiB RAM, no swap and at most 128 tasks. Offline build setup
+initially failed on duplicate npm configuration paths and then an incomplete reused
+consumer cache; the corrected run used distinct configuration files and the prior
+full build cache. Those attempts did not pass and are not hidden as successful runs.
 
-Linux x64; Node.js 22.23.2, npm 10.9.8, Rust 1.97.1 targeting x86_64-unknown-linux-musl,
-GCC 13.3 and binutils 2.42. Build and consumer ran sequentially in isolated arrangements
-limited to one CPU, 2 GiB RAM, no swap and 128 tasks, on the maintainer's existing host.
-The build took 41.121 seconds; the separate install/demo check took 14.467 seconds.
+## Upgrade behavior
 
-The previously acquired pinned Rust installation was reused read-only at a different
-path. Private source paths, prior native outputs and prior npm caches were not supplied.
-The compiler was not reacquired. Compared with the preceding candidate, changes are
-public documentation, its package inclusion and link tests. Native and dependency-lock
-inputs are unchanged. Completed vendor provenance and runtime attribution checks
-were carried forward for those exact inputs, not rerun or relabeled as new.
+**Before starting this version with existing data, stop writers and retain a
+verified private copy of the complete data directory. No automatic backup is made.**
 
-## Known limits
+Valid v1 skill packages, counters and retirement survive loading without rewriting
+the file. Missing checked-content bindings do not become assumed approvals.
+Non-retired retained skills can pass the configured managed execution gate and
+become eligible again; successful readmission starts new content-bound counters.
+Retired legacy IDs remain held, including through bundle import and promotion.
+Unconfigured or failed revalidation preserves the previous stored record.
 
-This is a builder-administered synthetic result, not outside replication, production
-identity qualification, remote-effect finality or general coding/recovery assurance.
-The sink does not model every possible provider behavior.
+The next managed save writes v2. The original preview rejects that format. Restoring
+old software requires matching old state and omits work saved afterward; preserve
+the newer state separately and reconcile external effects before recovery. Tests
+on disposable registry copies demonstrate exact backup-byte restoration and the
+absence of an intentionally added later skill, not lossless system-wide rollback.
+See the [complete upgrade instructions](docs/skill-registry.md).
 
-Historical source 63cbf80 had 4,497 passes and 11 failures in the broader portable
-profile; its release/security phase did not run. Five repository-flow cases still
-failed after the workspace prerequisite was supplied. Those and the missing
-solver-result finding remain relevant limits on broader workflow claims, not
-environment-only dismissals. See docs/evidence.md for the classification and history.
+## Remaining limitations
 
-The original-code ownership confirmation and vendor byte comparison are complete.
-These checks do not claim blanket legal compliance or malware absence.
+The ongoing audit is not complete and this update does not resolve every finding.
+Later private transport, event-storage, monetary-accounting, adaptation and
+isolation changes are excluded. Do not use this preview with production
+credentials, unrestricted paid services or unattended production workloads.
 
-## Publication record
+The complete experimental/native suite was not rerun for this maintenance release.
+Earlier correction-checkpoint evidence includes 4,599 ordinary passes and targeted
+refreshes of release and paired-journey fixtures. Those are historical results,
+not cumulative passes for this candidate. Four broader native checks remained
+unresolved: test-adapter allowlist expectations, native-source package-boundary
+expectations, dependency-inventory agreement and a probe syscall allowlist check.
+Nested-isolation qualification also remains incomplete. No full-native-suite pass,
+production isolation or universal spending guarantee is claimed.
 
-Lisa explicitly authorized this publication as owner of Red Rook AI LLC.
+Historical coding and memory evidence retains its exact scope and original
+identities in [docs/evidence.md](docs/evidence.md). A retrieved skill is not proof
+that it executed; a sampled validation result is not evidence of general learning
+advantage. The [security studies](docs/security-experiments.md) remain proposed.
 
-- Repository: https://github.com/RedRookAI/keep-research-preview
-- Release: https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-09-09.2
-- Public snapshot/tag commit: `4b42436867a0eb16b23065203ef38a3639830ed7`
-- Originating development revision: `b4c0c77a89e1b2b3d1613ab11bb3251eb84b2b62`
+## Publication and reporting
 
-The tagged root commit contains exactly the 3,949 reviewed source files, with no
-private Git history. Main-branch publication-status documentation is a separate
-successor; the tagged source and two prepared archives are unchanged. Documents
-inside the prepared archives retain pre-publication wording; use this record and
-the main-branch security policy for current publication status.
+Lisa authorized this bounded maintenance update while the audit continues against
+the unchanged `keep-preview-2026-09-09.2` baseline. This release contains reviewed
+source, public regression tests, documentation and required notices under the
+existing MIT license. Private repositories, private history, planning/funding
+records and operational data remain private. No npm-registry publication is made.
 
-GitHub private vulnerability reporting is enabled and its enabled state was read
-back through GitHub's API. Maintainer notification delivery has not been verified.
-Lisa should select Watch → Custom → Security alerts on this repository. If she
-wants email delivery, she must also enable Email under her personal notification
-settings, Subscriptions → Watching. No email address, response deadline, bounty
-or paid service is introduced.
-
-The existing private repositories remain private. This publication contains no
-private development/backup history or internal funding material and does not
-include npm-registry publication.
+GitHub private vulnerability reporting remains enabled; its enabled state was
+read back through GitHub's API during preparation. Notification delivery has not
+been verified. Lisa should review Watch → Custom → Security alerts and her personal
+notification delivery settings. No new email address, response deadline, bounty
+or paid service is promised.
