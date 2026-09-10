@@ -5,9 +5,10 @@ a native execution runtime with persistent knowledge, reusable procedures, and
 controls for permissions, acceptance, and recovery. Red Rook AI is developing Keep
 for individual operators and organizations coordinating several agents.
 
-The goal is to let agents take on longer assignments and improve through experience,
-while giving their owners practical control over the work. Software development is
-the most developed workflow today. Keep can inspect a repository, obtain a
+Our proposed research focuses on securing capable agents: preventing attacks,
+containing compromises, and preserving people's control while agents do useful work.
+The [security research brief](docs/security-experiments.md) sets out the proposed studies.
+Software development is the most developed workflow today. Keep can inspect a repository, obtain a
 model-proposed change, run checks in a work area, and apply the configured acceptance
 and merge policy.
 

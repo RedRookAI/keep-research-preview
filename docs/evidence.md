@@ -153,8 +153,9 @@ not require pretending those claims have already been earned.
 ## Reading implementation claims
 
 Implemented mechanisms, component tests, installed synthetic workflows, and
-installed real-model participation answer different questions. Research sections
-describe comparisons still to be performed, not measured advantages.
+installed real-model participation answer different questions. The
+[security research brief](security-experiments.md) describes comparisons still to
+be performed, not measured advantages.
 
 Skill syntax, intake, execution permission, held-out usefulness, promotion, and
 continued eligibility are separate gates. A replacement specification is not yet a
@@ -168,8 +169,8 @@ Hash integrity supports consistency under the verifier's trust assumptions; it
 does not establish complete observation or semantic truth. See [Security](../SECURITY.md)
 for operational restrictions, including incomplete paid-usage metering.
 
-Public fixtures and expected answers are exposed development material. Future
-studies must separate them from genuinely held-out tasks, retain negative outcomes,
+Public fixtures and expected answers are exposed development material. The proposed
+security studies must separate them from genuinely held-out tasks, retain negative outcomes,
 and distinguish independent execution from independent administration.
 
 ## Evidence history
