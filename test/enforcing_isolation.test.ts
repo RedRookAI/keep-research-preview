@@ -34,8 +34,12 @@ test("EXECUTOR TIMEOUT: an opaque in-process runner that hangs is bounded (fail-
   const hanging: TestRunner = { run(): Promise<TestRunResult> { return new Promise(() => {}); } }; // never resolves
   const exec = new ProcessIsolationExecutor(spine(), { timeoutMs: 400 });
   const out = await exec.runIsolated(hanging, { projectDir: base, repoRef: ".", patchRisk: "medium" });
-  assert.equal(out.executed, false, "a hung in-process runner is time-bounded and refused");
-  assert.match(out.refusedReason ?? "", /exceeded|killed/i);
+  assert.equal(out.executed, true, "the callback was invoked; timing out does not undo that fact");
+  assert.equal(out.completion, "unconfirmed");
+  assert.equal(out.lifecycleContractVersion, 2);
+  assert.match(out.result?.runnerError ?? "", /exceeded.*unconfirmed/i);
+  assert.equal(out.result?.results.length, 0, "a hang never supplies passing test evidence");
+  assert.doesNotMatch(JSON.stringify(out), /killed/i, "no kill mechanism exists for the opaque callback");
 });
 
 test("ENFORCING PATH (crown): buildEnforcingRunner runs a REAL command resource-bounded + jailed + audited", async () => {

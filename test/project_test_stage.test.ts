@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -73,6 +73,8 @@ test("independent verification persists a bounded, redacted, content-bound failu
 test("a clean non-empty enforcing run passes", async () => {
   const f = await fixture();
   const artifact = await buildProjectTester(config(f, `console.log("ok 1 - regression")`)).run(issue, f.state);
+  assert.equal(artifact.isolation.processIsolation?.namespacePolicy, "best-effort");
+  assert.notEqual(artifact.isolation.processIsolation?.namespaceSetup, undefined);
   assert.equal(artifact.verdict, "passed");
   assert.equal(artifact.testsPassed, true);
   assert.equal(artifact.isolation.requirementMet, true);
@@ -218,6 +220,7 @@ test("feedback returns a true pass only after provenance and cleanup pass", asyn
   const cleanupFailed = await buildProjectTester({ ...cfg, disposeExecution: () => { throw Error("cleanup unavailable"); } }).feedbackRunner("repo").run("repo");
   assert.deepEqual(cleanupFailed.results, []);
   assert.match(cleanupFailed.runnerError ?? "", /cleanup unavailable/);
+  assert.deepEqual(cleanupFailed.processIsolation, passed.processIsolation);
   const fake: IsolatedExecutor = { tier: "process", async runIsolated() { throw Error("must not execute"); } };
   const refused = await buildProjectTester(config(f, "", { executor: fake })).feedbackRunner("repo").run("repo");
   assert.deepEqual(refused.results, []);
@@ -231,4 +234,20 @@ test("feedback checks repository and expired admission before preparing any exec
   assert.match((await runner.run("other")).runnerError ?? "", /bound repository/);
   assert.match((await runner.run("repo", { deadline: Date.now() - 1 })).runnerError ?? "", /deadline exhausted/);
   assert.match((await runner.run("repo", { signal: AbortSignal.abort() })).runnerError ?? "", /deadline exhausted/);
+});
+
+test("KEEP-11A-003 feedback preserves cancellation acquired during asynchronous preparation", async t => {
+  const f = await fixture(); t.after(() => rmSync(f.root, { recursive: true, force: true }));
+  const marker = join(f.root, "must-not-start"), controller = new AbortController(); let snapshots = 0;
+  const script = `require('fs').writeFileSync(${JSON.stringify(marker)},'bad');console.log('ok 1 - must not run')`;
+  const cfg = config(f, script);
+  const runner = buildProjectTester({ ...cfg, snapshotFiles: async ref => {
+    const files = await cfg.snapshotFiles(ref);
+    if (++snapshots === 2) controller.abort();
+    return files;
+  } }).feedbackRunner("repo");
+  const result = await runner.run("repo", { signal: controller.signal });
+  assert.ok(snapshots >= 2); assert.deepEqual(result.results, []);
+  assert.match(result.runnerError ?? "", /cancelled/);
+  assert.equal(existsSync(marker), false);
 });

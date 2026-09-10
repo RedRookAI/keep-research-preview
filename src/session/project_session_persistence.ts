@@ -27,12 +27,15 @@ export interface ProjectSessionSnapshot {
 export interface PersistedProjectDocument { readonly schemaVersion: 1; readonly storageRevision: number; readonly name: string; readonly deleted: boolean; readonly cipher?: Ciphertext; }
 export interface ProjectSessionPersistence {
   load(): ProjectSessionSnapshot | undefined;
-  save(snapshot: ProjectSessionSnapshot, expectedRevision: number): number;
+  /** undefined means create only if absent; numeric zero is an existing legacy snapshot. */
+  save(snapshot: ProjectSessionSnapshot, expectedRevision: number | undefined): number;
   loadDocument?(name: string): PersistedProjectDocument | undefined;
-  saveDocument?(name: string, value: Ciphertext, expectedRevision: number): number;
-  deleteDocument?(name: string, expectedRevision: number): boolean;
+  saveDocument?(name: string, value: Ciphertext, expectedRevision: number | undefined): number;
+  deleteDocument?(name: string, expectedRevision: number | undefined): boolean;
 }
 export class ProjectSessionConflictError extends Error { override readonly name = "ProjectSessionConflictError"; }
+/** No state was decoded. A later lookup may try a full read again; this is not proof of recovery. */
+export class ProjectSessionReadError extends Error { override readonly name = "ProjectSessionReadError"; }
 
 const roles = new Set<HistoryRole>(["user", "assistant", "system", "tool", "event"]);
 const MAX_SESSION_BYTES = 64 * 1024 * 1024;
@@ -63,7 +66,7 @@ function cipher(value: unknown): Ciphertext {
 function persistedCipher(value: Ciphertext): Ciphertext {
   return { iv: value.iv, authTag: value.authTag, data: value.data };
 }
-function budget(value: unknown): BudgetEnvelope {
+export function validateProjectBudget(value: unknown): BudgetEnvelope {
   const row = object(value, "session budget");
   exact(row, ["spentTokensToday"], ["dailyTokenCap", "perRunStepCap", "meteredTraceTokens"], "session budget");
   return {
@@ -118,19 +121,26 @@ export function validateProjectSessionSnapshot(value: unknown): ProjectSessionSn
   }
   if (runId !== undefined && checkpointRef !== undefined && runId !== checkpointRef.runId) throw new Error("session run binding disagrees with checkpoint reference");
   const storageRevision = "storageRevision" in root ? uint(root.storageRevision, "session storage revision") : 0;
-  return { schemaVersion: 1, storageRevision, projectId, history, secrets, compactions, nextSeq, budget: budget(root.budget), ...(runId ? { runId } : {}), ...(checkpointRef ? { checkpointRef } : {}) };
+  return { schemaVersion: 1, storageRevision, projectId, history, secrets, compactions, nextSeq, budget: validateProjectBudget(root.budget), ...(runId ? { runId } : {}), ...(checkpointRef ? { checkpointRef } : {}) };
 }
 
 export class FileProjectSessionPersistence implements ProjectSessionPersistence {
   constructor(private readonly path: string) {}
   load(): ProjectSessionSnapshot | undefined {
-    if (!existsSync(this.path)) return undefined;
-    if (!statSync(this.path).isFile() || statSync(this.path).size > MAX_SESSION_BYTES) throw new Error(`invalid project session store ${this.path}`);
-    try { return validateProjectSessionSnapshot(JSON.parse(readFileSync(this.path, "utf8"))); }
+    let metadata: ReturnType<typeof statSync>, contents: string;
+    try { metadata = statSync(this.path); }
+    catch (cause) {
+      if ((cause as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+      throw new ProjectSessionReadError("project session storage could not be read", { cause });
+    }
+    if (!metadata.isFile() || metadata.size > MAX_SESSION_BYTES) throw new Error(`invalid project session store ${this.path}`);
+    try { contents = readFileSync(this.path, "utf8"); }
+    catch (cause) { throw new ProjectSessionReadError("project session storage could not be read", { cause }); }
+    try { return validateProjectSessionSnapshot(JSON.parse(contents)); }
     catch (cause) { throw new Error(`invalid project session store ${this.path}`, { cause }); }
   }
-  save(snapshot: ProjectSessionSnapshot, expectedRevision: number): number {
-    if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new Error("invalid expected session revision");
+  save(snapshot: ProjectSessionSnapshot, expectedRevision: number | undefined): number {
+    if (expectedRevision !== undefined && (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0)) throw new Error("invalid expected session revision");
     // A raw SHA-256 of secret plaintext is a post-shred dictionary oracle. AES-GCM already
     // authenticates the ciphertext; persist only its cryptographic envelope.
     const sanitized: ProjectSessionSnapshot = {
@@ -141,9 +151,9 @@ export class FileProjectSessionPersistence implements ProjectSessionPersistence 
     };
     validateProjectSessionSnapshot(sanitized);
     return withSyncFileMutationLock(this.path, () => {
-      const current = this.load(); const actual = current?.storageRevision ?? 0;
+      const current = this.load(); const actual = current?.storageRevision;
       if (actual !== expectedRevision) throw new ProjectSessionConflictError(`project session conflict: expected ${expectedRevision}, found ${actual}`);
-      const nextRevision = expectedRevision + 1;
+      const nextRevision = (expectedRevision ?? 0) + 1;
       const validated = validateProjectSessionSnapshot({ ...sanitized, storageRevision: nextRevision });
       const bytes = Buffer.from(`${JSON.stringify(validated)}\n`, "utf8");
       if (bytes.byteLength > MAX_SESSION_BYTES) throw new Error(`project session store exceeds ${MAX_SESSION_BYTES} bytes`);
@@ -182,13 +192,13 @@ export class FileProjectSessionPersistence implements ProjectSessionPersistence 
     } catch (cause) { throw new Error(`invalid project document store ${path}`, { cause }); }
   }
 
-  saveDocument(name: string, value: Ciphertext, expectedRevision: number): number {
-    if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new Error("invalid expected project document revision");
+  saveDocument(name: string, value: Ciphertext, expectedRevision: number | undefined): number {
+    if (expectedRevision !== undefined && (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0)) throw new Error("invalid expected project document revision");
     const path = this.documentPath(name);
     return withSyncFileMutationLock(path, () => {
-      const actual = this.loadDocument(name)?.storageRevision ?? 0;
+      const actual = this.loadDocument(name)?.storageRevision;
       if (actual !== expectedRevision) throw new ProjectSessionConflictError(`project document conflict: expected ${expectedRevision}, found ${actual}`);
-      const nextRevision = expectedRevision + 1;
+      const nextRevision = (expectedRevision ?? 0) + 1;
       const bytes = Buffer.from(`${JSON.stringify({ schemaVersion: 1, storageRevision: nextRevision, name, deleted: false, cipher: persistedCipher(value) })}\n`, "utf8");
       if (bytes.byteLength > MAX_DOCUMENT_BYTES) throw new Error(`project document store exceeds ${MAX_DOCUMENT_BYTES} bytes`);
       const dir = dirname(path); ensureDurableDir(NODE_IO, dir);
@@ -206,14 +216,15 @@ export class FileProjectSessionPersistence implements ProjectSessionPersistence 
     });
   }
 
-  deleteDocument(name: string, expectedRevision: number): boolean {
+  deleteDocument(name: string, expectedRevision: number | undefined): boolean {
+    if (expectedRevision !== undefined && (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0)) throw new Error("invalid expected project document revision");
     const path = this.documentPath(name);
     return withSyncFileMutationLock(path, () => {
       const current = this.loadDocument(name);
-      const actual = current?.storageRevision ?? 0;
+      const actual = current?.storageRevision;
       if (actual !== expectedRevision) throw new ProjectSessionConflictError(`project document conflict: expected ${expectedRevision}, found ${actual}`);
       if (current?.deleted === true || current === undefined) return false;
-      const bytes = Buffer.from(`${JSON.stringify({ schemaVersion: 1, storageRevision: expectedRevision + 1, name, deleted: true })}\n`, "utf8");
+      const bytes = Buffer.from(`${JSON.stringify({ schemaVersion: 1, storageRevision: (expectedRevision ?? 0) + 1, name, deleted: true })}\n`, "utf8");
       const dir = dirname(path); ensureDurableDir(NODE_IO, dir);
       const temp = `${path}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
       let fd: number | undefined;

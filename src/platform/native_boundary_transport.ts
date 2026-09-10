@@ -205,6 +205,11 @@ export async function exchangePackagedNativeCancel(
     let settled = false;
     let stdout = Buffer.alloc(0);
     let stderr = Buffer.alloc(0);
+    let stdinFailure: string | undefined;
+    const diagnostic = (message: string): NativeBoundaryTransportError => {
+      const detail = stderr.toString("utf8").trim().replace(/[\r\n]+/g, " ");
+      return new NativeBoundaryTransportError(`${message}${stdinFailure ? `; ${stdinFailure}` : ""}${detail ? `: ${detail}` : ""}`);
+    };
     const finish = (error?: Error, response?: NativeBoundaryV2Response): void => {
       if (settled) return;
       settled = true;
@@ -212,8 +217,9 @@ export async function exchangePackagedNativeCancel(
       if (error !== undefined) reject(error); else resolve(response!);
     };
     const terminate = (message: string): void => {
+      if (settled) return;
       child.kill("SIGKILL");
-      finish(new NativeBoundaryTransportError(message));
+      finish(diagnostic(message));
     };
     const timer = setTimeout(() => terminate("client deadline exceeded"), timeoutMs);
     timer.unref();
@@ -225,12 +231,17 @@ export async function exchangePackagedNativeCancel(
     stderrStream.on("data", (chunk: Buffer) => {
       if (stderr.length < STDERR_MAX_BYTES) stderr = Buffer.concat([stderr, chunk.subarray(0, STDERR_MAX_BYTES - stderr.length)]);
     });
-    stdin.on("error", (error) => terminate(`client stdin failed: ${error.message}`));
+    stdin.on("error", (error) => {
+      // An early setup refusal can close stdin before its stderr arrives.
+      // Keep the write failure; close drains the diagnostic, while the ORIGINAL
+      // deadline still bounds a client that does not exit. Neither this error
+      // nor diagnostic prose establishes delivery or absence of a peer effect.
+      stdinFailure ??= `client stdin failed: ${error.message}`;
+    });
     child.on("close", (code, signal) => {
       if (settled) return;
-      if (code !== 0 || signal !== null) {
-        const detail = stderr.toString("utf8").trim().replace(/[\r\n]+/g, " ");
-        finish(new NativeBoundaryTransportError(`client failed (${signal ?? code})${detail ? `: ${detail}` : ""}`));
+      if (stdinFailure !== undefined || code !== 0 || signal !== null) {
+        finish(diagnostic(`client failed (${signal ?? code})`));
         return;
       }
       try { finish(undefined, responseFromFrame(stdout, request)); }

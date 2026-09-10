@@ -25,6 +25,8 @@ export type Embedding = readonly number[];
 export interface GenerateRequest {
   readonly prompt: string;
   readonly maxTokens?: number;
+  /** Optional stricter attempt ceiling. A supporting transport must never raise it. */
+  readonly maxAttempts?: number;
   readonly signal?: AbortSignal;
   /** Opaque routing hints (e.g. difficulty tier); interpreted by the adapter. */
   readonly hints?: Readonly<Record<string, unknown>>;
@@ -35,6 +37,8 @@ export interface GenerateResult {
   readonly model: string;
   readonly tokensIn: number;
   readonly tokensOut: number;
+  /** False means reported counters are incomplete/unusable for settlement. */
+  readonly usageComplete?: boolean;
   /** Provider route actually reported by an aggregator. Absent for direct/local providers. */
   readonly providerRoute?: string;
 }

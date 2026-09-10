@@ -10,6 +10,7 @@ import { encodeCanonical } from "../dist/src/eir/canonical.js";
 import { productionDeploymentFixture } from "../dist/test/fixtures/native_v2_production_deployment.js";
 import { nativeDeploymentBaseDigest } from "../dist/src/platform/native_boundary_protocol_v2.js";
 import { nativeProductionResolutionTranscriptDigest } from "../dist/src/platform/native_production_resolution_observation.js";
+import { assertResolverTrace } from "./native_resolver_trace.mjs";
 
 const repository = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const resolver = process.env.KEEP_PRODUCTION_RESOLVER_PROBE ??
@@ -197,18 +198,7 @@ try {
     if (result.status !== 0 || !result.stdout.startsWith(`OBSERVED\tdeploy.1\t${manifestDigest}\t`))
       throw new Error(`resolver probe failed: status=${result.status} stdout=${result.stdout} stderr=${result.stderr}`);
   const tracedEffects = readFileSync(effectTrace, "utf8");
-  const allowedSyscalls = new Set(["arch_prctl", "brk", "close", "execve", "exit_group", "fchmod", "fcntl",
-    "fstat", "fstatfs", "lseek", "memfd_create", "mmap", "mprotect", "munmap", "open", "openat2", "poll",
-    "read", "rt_sigaction", "rt_sigprocmask", "set_tid_address", "sigaltstack", "statx", "write"]);
-  const calls = [...tracedEffects.matchAll(/^(?:\d+\s+)?([a-z_][a-z0-9_]*)\(/gm)].map((match) => match[1]);
-  const unexpectedSyscall = calls.find((call) => !allowedSyscalls.has(call));
-  if (unexpectedSyscall) throw new Error(`resolver performed non-allowlisted syscall ${unexpectedSyscall}: ${tracedEffects}`);
-  if (/\bopen(?:at2?)?\([^\n]*(?:O_WRONLY|O_RDWR|O_CREAT)/.test(tracedEffects))
-    throw new Error(`resolver opened a pathname for writing: ${tracedEffects}`);
-  if (/\/dev\/kvm|\/sys\/fs\/cgroup|credential|evidence/i.test(tracedEffects))
-    throw new Error(`resolver touched authority-bearing or evidence state: ${tracedEffects}`);
-  if ((tracedEffects.match(/\bexecve\s*\(/g) ?? []).length !== 1)
-    throw new Error(`resolver process trace has unexpected exec count: ${tracedEffects}`);
+  assertResolverTrace(tracedEffects);
   const fields = result.stdout.trim().split("\t");
   if (fields.length !== 6 || !/^[0-9a-f]{64}$/.test(fields[3]) || Number(fields[4]) !== manifest.length)
     throw new Error("resolver observation shape is malformed");

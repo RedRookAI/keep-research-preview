@@ -28,7 +28,7 @@ const HEX64 = /^[0-9a-f]{64}$/;
  * inspects only the one block), never a global/aggregate limit — those belong to a
  * higher gate. Generous: real sealed blocks are orders of magnitude smaller.
  */
-export const MAX_BLOCK_BYTES = 1 << 20; // 1 MiB
+export const MAX_BLOCK_BYTES = 1 << 20; // 1 MiB for new writes; legacy verification uses UTF-16 units below.
 
 export interface SealedBlock {
   readonly seq: number;
@@ -40,6 +40,11 @@ export interface SealedBlock {
   readonly events: readonly StagedEvent[];
   /** SHA-256 over the block's canonical content (excluding this field). */
   readonly hash: string;
+}
+
+/** Canonical UTF-8 size, including the entire block envelope. */
+export function blockByteLength(block: SealedBlock): number {
+  return Buffer.byteLength(canonicalize(block), "utf8");
 }
 
 function sha256(input: string): string {
@@ -198,8 +203,11 @@ export function validateBlock(block: SealedBlock, prior: SealedBlock | undefined
     return { ok: false, reason: "malformed block: hash must be a 64-char hex digest" };
   if (!Array.isArray(block.events) || !block.events.every(isWellFormedEvent))
     return { ok: false, reason: "malformed block: events must be an array of well-formed events" };
+  // Retain the historical schema's UTF-16-unit predicate when reading existing
+  // chains. New writer admission additionally enforces the stricter UTF-8 byte
+  // bound; accepting old history does not qualify it under that new write bound.
   if (canonicalize(block).length > MAX_BLOCK_BYTES)
-    return { ok: false, reason: `malformed block: exceeds ${MAX_BLOCK_BYTES}-byte local size bound` };
+    return { ok: false, reason: `malformed block: exceeds ${MAX_BLOCK_BYTES}-unit legacy size bound` };
 
   // (1) SEQ — monotonic +1 (genesis = 0). LOCAL: only the predecessor's seq.
   const expectedSeq = prior ? prior.seq + 1 : 0;

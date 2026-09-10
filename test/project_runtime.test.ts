@@ -596,10 +596,16 @@ test("non-durable composition exposes no background runtime that could overstate
 
 test("managed autonomy never invokes work when persist-before-execution run binding fails", async () => {
   const registry = new ProjectRegistry(new CryptoShredKeyStore());
-  const failed: ProjectSessionPersistence = { load: () => undefined, save: () => { throw new Error("binding disk full"); } };
+  const store = new FileProjectSessionPersistence(join(mkdtempSync(join(tmpdir(), "keep-binding-save-")), "session.json"));
+  let failBinding = false;
+  const failed: ProjectSessionPersistence = { load: () => store.load(), save: (snapshot, expected) => {
+    if (failBinding) throw new Error("binding disk full");
+    return store.save(snapshot, expected);
+  } };
   const checkpoints = new InMemoryProjectCheckpointStore();
   const managed = new ProjectSessionManager(registry, undefined, () => failed, checkpoints);
   const project = managed.create({ name: "must not execute" });
+  failBinding = true; // A created project exists; fail the subsequent binding write, not its preparation.
   let solves = 0;
   const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "keep-bind-first-")), { fsync: true }), new InProcessLock(), new SchemaRegistry());
   const loop = buildAutonomyLoop({

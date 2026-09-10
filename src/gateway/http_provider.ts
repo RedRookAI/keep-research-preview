@@ -12,7 +12,7 @@
 import type { ModelProvider, GenerateRequest, GenerateResult, Embedding } from "./gateway.js";
 import type { TokenUsage } from "../observability/cost_model.js";
 import type { WireDialect } from "./wire_dialect.js";
-import { SseDecoder } from "./sse.js";
+import { SseDecoder, type SseEvent } from "./sse.js";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { isIP } from "node:net";
 import type { CapabilityAdapter } from "../ecosystem/capability_port.js";
@@ -139,6 +139,9 @@ const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 export class HttpProvider implements ModelProvider {
   readonly name: string;
   readonly isLocal: boolean;
+  /** Diagnostic counters from the last successfully parsed transport response.
+   * May be incomplete and remain after a later failure. Not per-request settlement
+   * evidence; consumers must use that request's GenerateResult and usageComplete. */
   readonly lastUsage: { value?: TokenUsage } = {};
 
   private readonly maxAttempts: number;
@@ -162,10 +165,10 @@ export class HttpProvider implements ModelProvider {
   async generate(req: GenerateRequest): Promise<GenerateResult> {
     const maxTokens = req.maxTokens ?? this.opts.defaultMaxTokens ?? 1024;
     const wire = this.opts.dialect.buildGenerate(this.opts.model, req.prompt, maxTokens, false, { structuredOutput: req.hints?.["structuredOutput"] === true });
-    const json = await this.send(wire, req.signal);
+    const json = await this.send(wire, req.signal, req.maxAttempts);
     const parsed = this.opts.dialect.parseGenerate(json);
     this.lastUsage.value = parsed.usage;
-    return { text: parsed.text, model: parsed.model, tokensIn: parsed.usage.freshInputTokens + parsed.usage.cachedInputTokens, tokensOut: parsed.usage.outputTokens, ...(parsed.providerRoute === undefined ? {} : { providerRoute: parsed.providerRoute }) };
+    return { text: parsed.text, model: parsed.model, tokensIn: parsed.usage.freshInputTokens + parsed.usage.cachedInputTokens, tokensOut: parsed.usage.outputTokens, ...(parsed.usageComplete === undefined ? {} : { usageComplete: parsed.usageComplete }), ...(parsed.providerRoute === undefined ? {} : { providerRoute: parsed.providerRoute }) };
   }
 
   async embed(texts: readonly string[]): Promise<Embedding[]> {
@@ -269,12 +272,12 @@ export class HttpProvider implements ModelProvider {
   }
 
   /**
-   * Streaming generate. Yields text deltas as they arrive, then returns the aggregated result. FAILS
-   * CLOSED on truncation: if the stream ends without the dialect's terminal sentinel / stop event, it
-   * throws — a partial stream is an error, never a silent partial success (SOTA: detect mid-stream
-   * failure by the missing [DONE]/message_stop). Streaming responses are NOT retried mid-flight
-   * (can't cleanly resume), but a pre-first-token connection failure surfaces as a throw the caller
-   * may fall back on.
+   * Yields text deltas, then returns their aggregate. Explicit protocol errors and EOF before
+   * any recognized stop indication fail. Compatibility permits EOF after an OpenAI-style soft
+   * finish reason even without the final sentinel, and accepts a final undelimited SSE event.
+   * A hard terminal ends consumption; later content cannot reopen it. The attempt deadline
+   * covers body consumption. There is no automatic midstream retry or retraction of callbacks
+   * already delivered to the caller. This is not proof of remote execution finality.
    */
   async generateStream(req: GenerateRequest, onDelta?: (text: string) => void): Promise<GenerateResult> {
     const maxTokens = req.maxTokens ?? this.opts.defaultMaxTokens ?? 1024;
@@ -293,13 +296,18 @@ export class HttpProvider implements ModelProvider {
     const timer = setTimeout(() => ac.abort(), this.timeoutMs);
     let res: Response;
     try {
-      res = await this.fetchImpl(url, { method: "POST", headers, body: JSON.stringify(wire.body), signal });
+      if (req.signal?.aborted) throw new ProviderError("request cancelled", 0, true);
+      res = await this.fetchImpl(url, { method: "POST", redirect: "manual", headers, body: JSON.stringify(wire.body), signal });
+      rejectRedirect(res);
     } catch (err) {
       clearTimeout(timer);
+      if (req.signal?.aborted) throw new ProviderError("request cancelled", 0, true);
+      if (err instanceof ProviderError) throw err;
       throw new ProviderError(`stream connect failed: ${String(err)}`, 0, false);
     }
     if (!res.ok) {
       clearTimeout(timer);
+      discardBody(res);
       const permanent = res.status !== 429 && res.status >= 400 && res.status < 500;
       throw new ProviderError(`stream ${res.status}`, res.status, permanent);
     }
@@ -312,50 +320,74 @@ export class HttpProvider implements ModelProvider {
     const textDecoder = new TextDecoder();
     const events: unknown[] = [];
     let text = "";
-    let sawStop = false;
+    let sawStop = false, hardComplete = false, reachedEof = false;
     const reader = res.body.getReader();
 
+    const consume = (ev: SseEvent): void => {
+      if (hardComplete) return;
+      // A named error is an error even if its data is malformed or says DONE.
+      if (ev.event === "error") throw new ProviderError("provider stream error event", res.status, true);
+      if (ev.data === dialect.streamDoneSentinel) { sawStop = true; hardComplete = true; return; }
+      let parsed: unknown;
+      try { parsed = JSON.parse(ev.data); } catch { return; } // unknown/malformed heartbeat compatibility
+      if (parsed !== null && typeof parsed === "object") {
+        const obj = parsed as Record<string, unknown>;
+        if (obj["type"] === "error" || obj["error"] != null) throw new ProviderError("provider stream error payload", res.status, true);
+      }
+      const delta = dialect.streamDelta(parsed);
+      if (delta && sawStop) throw new ProviderError("provider stream content after completion", res.status, true);
+      events.push(parsed);
+      // The final content delta may share its frame with a finish reason.
+      if (delta) { text += delta; onDelta?.(delta); }
+      if (dialect.isStreamStop(parsed)) { sawStop = true; hardComplete = dialect.streamStopIsFinal !== false; }
+    };
+    const feed = (chunk: string): void => {
+      let decoded: SseEvent[];
+      try { decoded = decoder.feed(chunk); }
+      catch { throw new ProviderError("provider stream framing error", res.status, true); }
+      for (const ev of decoded) { consume(ev); if (hardComplete) break; }
+    };
+
     try {
-      for (;;) {
+      while (!hardComplete) {
+        signal.throwIfAborted();
         const { done, value } = await reader.read();
-        if (done) break;
-        const sseEvents = decoder.feed(textDecoder.decode(value, { stream: true }));
-        for (const ev of sseEvents) {
-          if (ev.data === dialect.streamDoneSentinel) { sawStop = true; continue; }
-          let parsed: unknown;
-          try { parsed = JSON.parse(ev.data); } catch { continue; } // ignore unparseable heartbeat lines
-          events.push(parsed);
-          if (dialect.isStreamStop(parsed)) sawStop = true;
-          const delta = dialect.streamDelta(parsed);
-          if (delta) { text += delta; onDelta?.(delta); }
-        }
+        signal.throwIfAborted();
+        if (done) { reachedEof = true; break; }
+        feed(textDecoder.decode(value, { stream: true }));
       }
-      for (const ev of decoder.finish()) {
-        if (ev.data === dialect.streamDoneSentinel) { sawStop = true; continue; }
-        try {
-          const parsed = JSON.parse(ev.data);
-          events.push(parsed);
-          if (dialect.isStreamStop(parsed)) sawStop = true;
-          const delta = dialect.streamDelta(parsed);
-          if (delta) { text += delta; onDelta?.(delta); }
-        } catch { /* ignore */ }
+      if (!hardComplete) {
+        feed(textDecoder.decode());
+        for (const ev of decoder.finish()) { consume(ev); if (hardComplete) break; }
       }
+      signal.throwIfAborted(); // including cancellation from a final-delta callback
     } finally {
       clearTimeout(timer);
+      if (!reachedEof) void reader.cancel().catch(() => {});
+      reader.releaseLock();
     }
 
-    // FAIL CLOSED: no terminal sentinel/stop means the stream was cut off mid-generation.
+    // A recognized soft stop followed by EOF remains accepted compatibility behavior.
+    // Without any stop indication, partial text is not returned as a successful result.
     if (!sawStop) {
       throw new ProviderError("stream ended without terminal sentinel (truncated) — treating as failure, not partial success", 0, false);
     }
 
-    const usage: TokenUsage = dialect.streamUsage(events) ?? { freshInputTokens: 0, cachedInputTokens: 0, outputTokens: 0 };
+    const reported = dialect.streamUsage(events);
+    const usage: TokenUsage = { freshInputTokens: reported?.freshInputTokens ?? 0,
+      cachedInputTokens: reported?.cachedInputTokens ?? 0, outputTokens: reported?.outputTokens ?? 0 };
     this.lastUsage.value = usage;
-    return { text, model: this.opts.model, tokensIn: usage.freshInputTokens + usage.cachedInputTokens, tokensOut: usage.outputTokens };
+    const countsValid = [usage.freshInputTokens, usage.cachedInputTokens, usage.outputTokens,
+      usage.freshInputTokens + usage.cachedInputTokens].every(n => Number.isSafeInteger(n) && n >= 0);
+    return { text, model: this.opts.model, tokensIn: usage.freshInputTokens + usage.cachedInputTokens, tokensOut: usage.outputTokens,
+      usageComplete: reported !== undefined && reported.usageComplete !== false && countsValid,
+      ...(reported?.providerRoute === undefined ? {} : { providerRoute: reported.providerRoute }) };
   }
 
   /** Send with retry. Honors Retry-After; else exponential backoff; never retries permanent (4xx≠429). */
-  private async send(wire: { path: string; body: Record<string, unknown> }, externalSignal?: AbortSignal): Promise<unknown> {
+  private async send(wire: { path: string; body: Record<string, unknown> }, externalSignal?: AbortSignal, requestMaxAttempts?: number): Promise<unknown> {
+    if (requestMaxAttempts !== undefined && (!Number.isSafeInteger(requestMaxAttempts) || requestMaxAttempts < 1)) throw new ProviderError("invalid request attempt ceiling", 0, true);
+    const maxAttempts = Math.min(this.maxAttempts, requestMaxAttempts ?? this.maxAttempts);
     const url = this.opts.baseUrl.replace(/\/+$/, "") + wire.path;
     const dialect = this.opts.dialect;
     const headers: Record<string, string> = {
@@ -365,41 +397,55 @@ export class HttpProvider implements ModelProvider {
     };
 
     let lastErr: ProviderError | undefined;
-    for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (externalSignal?.aborted) throw new ProviderError("request cancelled", 0, true);
       const ac = new AbortController();
       const signal = externalSignal === undefined ? ac.signal : AbortSignal.any([ac.signal, externalSignal]);
       const timer = setTimeout(() => ac.abort(), this.timeoutMs);
-      let res: Response;
+      let retryAfterMs: number | undefined;
       try {
-        res = await this.fetchImpl(url, { method: "POST", headers, body: JSON.stringify(wire.body), signal });
-      } catch (err) {
+        let res: Response | undefined;
+        try {
+          res = await this.fetchImpl(url, { method: "POST", redirect: "manual", headers, body: JSON.stringify(wire.body), signal });
+        } catch (err) {
+          if (externalSignal?.aborted) throw new ProviderError("request cancelled", 0, true);
+          // Preserve existing finite retries for connection/header failures only.
+          lastErr = new ProviderError(`network error: ${String(err)}`, 0, false);
+        }
+        if (res) {
+          if (externalSignal?.aborted) { discardBody(res); throw new ProviderError("request cancelled", 0, true); }
+          rejectRedirect(res);
+          if (res.ok) {
+            try {
+              const body: unknown = await res.json();
+              signal.throwIfAborted();
+              return body;
+            } catch {
+              // No automatic replay after headers: the remote effect may exist.
+              discardBody(res);
+              throw new ProviderError(externalSignal?.aborted ? "request cancelled" : "response body incomplete or invalid", res.status, true);
+            }
+          }
+          // Keep the deadline active during permanent-error detail consumption too.
+          if (res.status !== 429 && res.status >= 400 && res.status < 500) {
+            let bodyText: string;
+            try { bodyText = await safeText(res, signal); }
+            catch {
+              discardBody(res);
+              throw new ProviderError(externalSignal?.aborted ? "request cancelled" : "error response body incomplete", res.status, true);
+            }
+            throw new ProviderError(`permanent ${res.status}: ${bodyText.slice(0, 200)}`, res.status, true);
+          }
+          // Status determines retries; do not await an unnecessary transient body.
+          discardBody(res);
+          lastErr = new ProviderError(`transient ${res.status}`, res.status, false);
+          retryAfterMs = parseRetryAfter(res.headers.get("retry-after"));
+        }
+      } finally {
         clearTimeout(timer);
-        if (externalSignal?.aborted) throw new ProviderError("request cancelled", 0, true);
-        // Network error / abort → transient; retry with backoff.
-        lastErr = new ProviderError(`network error: ${String(err)}`, 0, false);
-        if (attempt < this.maxAttempts) { await this.sleep(this.backoff(attempt, undefined)); continue; }
-        throw lastErr;
       }
-      clearTimeout(timer);
-
-      if (res.ok) {
-        return await res.json();
-      }
-
-      // Permanent client errors (400/401/403/404/422) must NOT be retried.
-      if (res.status !== 429 && res.status >= 400 && res.status < 500) {
-        const bodyText = await safeText(res);
-        throw new ProviderError(`permanent ${res.status}: ${bodyText.slice(0, 200)}`, res.status, true);
-      }
-
-      // Transient (429 / 5xx): honor Retry-After, else backoff, then retry.
-      lastErr = new ProviderError(`transient ${res.status}`, res.status, false);
-      if (attempt < this.maxAttempts) {
-        const retryAfterMs = parseRetryAfter(res.headers.get("retry-after"));
-        await this.sleep(this.backoff(attempt, retryAfterMs));
-        continue;
-      }
-      throw lastErr;
+      if (attempt < maxAttempts) await this.waitForRetry(this.backoff(attempt, retryAfterMs), externalSignal);
+      else throw lastErr;
     }
     throw lastErr ?? new ProviderError("exhausted retries", 0, false);
   }
@@ -408,6 +454,24 @@ export class HttpProvider implements ModelProvider {
     if (retryAfterMs !== undefined) return Math.min(retryAfterMs, this.maxBackoffMs);
     // exponential: base * 2^(attempt-1), capped.
     return Math.min(this.baseBackoffMs * 2 ** (attempt - 1), this.maxBackoffMs);
+  }
+
+  private async waitForRetry(ms: number, signal?: AbortSignal): Promise<void> {
+    if (!signal) return this.sleep(ms);
+    if (signal.aborted) throw new ProviderError("request cancelled", 0, true);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let onAbort: () => void = () => {};
+    try {
+      await new Promise<void>((resolve, reject) => {
+        onAbort = () => reject(new ProviderError("request cancelled", 0, true));
+        signal.addEventListener("abort", onAbort, { once: true });
+        if (this.sleep === defaultSleep) timer = setTimeout(resolve, ms);
+        else void this.sleep(ms).then(resolve, reject); // supplied sleep owns its cleanup
+      });
+    } finally {
+      signal.removeEventListener("abort", onAbort);
+      clearTimeout(timer);
+    }
   }
 }
 
@@ -421,8 +485,20 @@ export function parseRetryAfter(value: string | null): number | undefined {
   return undefined;
 }
 
-async function safeText(res: Response): Promise<string> {
-  try { return await res.text(); } catch { return ""; }
+function discardBody(res: Response): void {
+  if (!res.body?.locked) void res.body?.cancel().catch(() => {});
+}
+
+function rejectRedirect(res: Response): void {
+  if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) {
+    discardBody(res);
+    throw new ProviderError("provider redirect refused", res.status, true);
+  }
+}
+
+async function safeText(res: Response, signal: AbortSignal): Promise<string> {
+  try { const text = await res.text(); signal.throwIfAborted(); return text; }
+  catch { signal.throwIfAborted(); return ""; }
 }
 
 async function boundedJson(res: Response, maxBytes: number, signal: AbortSignal): Promise<unknown> {

@@ -59,7 +59,10 @@ const model: ModelProvider = {
 
 async function run(extra: Record<string, unknown>) {
   const work = setupRemote();
-  const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "b23ws-"))), new InProcessLock(), new SchemaRegistry());
+  // The real pipeline now admits monetary authority only over fsync-backed
+  // storage. Supply that prerequisite; do not bypass its durability check.
+  const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "b23ws-")), { fsync: true }), new InProcessLock(), new SchemaRegistry());
+  assert.equal(spine.durableStorage(), true);
   const tree = new InMemoryFileTree({ "src/calc.ts": BROKEN });
   const runner: TestRunner = {
     async run(): Promise<TestRunResult> {

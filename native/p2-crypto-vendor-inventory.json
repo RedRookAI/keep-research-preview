@@ -5,11 +5,15 @@
   "admissionStatus": "candidate-pending-independent-unsafe-and-host-tool-audit",
   "collectorIdentity": {
     "path": "tools/native_p2_dependency_gate.mjs",
-    "sha256": "15b03ae7afea0591275ca82ae035ca584ecdd14ab5ea1f716c0e1a0f18923cf6"
+    "sha256": "21f3b547920f3e4d549674d640efcd6c9b66f85bed8d17ab91e88a76bf2675ba"
   },
   "archiveSnapshotHelperIdentity": {
     "path": "tools/native_p2_archive_snapshot.mjs",
     "sha256": "e1cfd3209d8d9032da399ea1c4539863a4bab0dd907c23f8793c9d1373fd43d7"
+  },
+  "compilationOrderHelperIdentity": {
+    "path": "tools/native_compilation_units.mjs",
+    "sha256": "59f82fc9a62c08bccda3db3a3ac8811267926f0c952ae9268e1ab1379048345f"
   },
   "toolchain": "1.97.1-x86_64-unknown-linux-gnu",
   "target": "x86_64-unknown-linux-musl",

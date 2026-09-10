@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { assertNativeReferenceMembers, resolvedPackageMembers } from "./helpers/native_package_membership.js";
 import { captureNativeBoundaryRequest, encodeNativeBoundaryFrame, NativeBoundaryFrameDecoder, NativeBoundarySession, nativeBoundaryRequestDigest, type NativeBoundaryPort, type NativeBoundaryRequest } from "../src/platform/native_boundary_port.js";
 
 const D = "ab".repeat(32);
@@ -57,7 +57,14 @@ test("A5 session rejects replay, regression, nonce reuse, concurrency and stalls
 });
 
 test("A5 fake adapter remains test-only and cannot enter the release package", () => {
-  const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { files?: string[] };
-  assert.equal(pkg.files?.some((path) => path === "test/" || path.startsWith("test/")), false);
+  const members = resolvedPackageMembers(process.cwd());
+  for (const extra of ["test/native_boundary_port.test.ts", "test/helpers/fake_microvm_boundary.ts",
+    "dist/test/helpers/fake_microvm_boundary.js", "native/p2-crypto-candidate/src/lib.rs", "native/vendor-p2/extra.rs"]) {
+    assert.throws(() => assertNativeReferenceMembers([...members, extra]), /package boundary differs/);
+  }
+  assert.throws(() => assertNativeReferenceMembers(members.filter(path => path !== "test/fixtures/native_p2_canonical_parity_v1.cbor")), /package boundary differs/);
+  assert.throws(() => assertNativeReferenceMembers([...members, members[0]!]), /duplicate/);
+  assert.throws(() => assertNativeReferenceMembers([]), /empty/);
+  assert.doesNotThrow(() => assertNativeReferenceMembers([...members, "docs/additional-guide.md"]));
   assert.throws(() => captureNativeBoundaryRequest({ ...request(), roles: [{ ...request().roles[0]!, artifactDigest: "00".repeat(32) }] }), /SHA-256/);
 });

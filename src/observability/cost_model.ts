@@ -55,10 +55,14 @@ export class CostModel {
   constructor(
     /** Hourly rate used to price human-approval time, USD/hour. */
     private readonly humanHourlyUsd = 100,
-  ) {}
+  ) {
+    if (!Number.isFinite(humanHourlyUsd) || humanHourlyUsd < 0) throw new Error("invalid hourly price");
+  }
 
   registerPricing(p: ModelPricing): void {
-    this.pricing.set(p.model, p);
+    if (typeof p.model !== "string" || !p.model.length ||
+      [p.inputPerMillion, p.outputPerMillion, p.cachedInputPerMillion ?? 0].some(n => !Number.isFinite(n) || n < 0)) throw new Error("invalid model pricing");
+    this.pricing.set(p.model, Object.freeze({ ...p }));
   }
 
   hasPricing(model: string): boolean {
@@ -67,6 +71,8 @@ export class CostModel {
 
   /** Compute a full cost breakdown for one model call + its non-token costs. */
   cost(model: string, usage: TokenUsage, nonToken: NonTokenCost = {}): CostBreakdown {
+    if ([usage.freshInputTokens, usage.cachedInputTokens, usage.outputTokens].some(n => !Number.isSafeInteger(n) || n < 0) ||
+      Object.values(nonToken).some(n => !Number.isFinite(n) || n < 0)) throw new Error("invalid cost inputs");
     const p = this.pricing.get(model);
     if (!p) throw new Error(`no pricing registered for model "${model}"`);
     const cachedRate = p.cachedInputPerMillion ?? p.inputPerMillion * 0.25;
@@ -81,6 +87,7 @@ export class CostModel {
     const toolApiUsd = nonToken.toolApiUsd ?? 0;
 
     const totalUsd = tokenUsd + humanUsd + infraUsd + toolApiUsd;
+    if (!Number.isFinite(totalUsd)) throw new Error("cost overflow");
     return { inputUsd, cachedInputUsd, outputUsd, tokenUsd, humanUsd, infraUsd, toolApiUsd, totalUsd };
   }
 

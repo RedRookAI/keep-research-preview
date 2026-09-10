@@ -69,7 +69,7 @@ test("dogfood goal overview: projects gateway projects actual durable counts wit
     definition: { objective: "private objective must not be copied into list metadata", maxTaskStarts: 3, tasks: [task("repair"), { ...task("verify"), dependsOn: ["repair"], requires: ["release-host"] }, { ...task("polish"), kind: "hardening", due: "release" }] },
     claims: { repair: { jobId, projectId: child.id } }, accepted: { repair: { jobId, projectId: child.id, kind: "tested-proposal", checkpointRevision: 2, sourceDigest: "a".repeat(64), validationDigest: "b".repeat(64) } } };
   const session = app.projectManager!.session(parent.id);
-  session.putDocumentVersioned(GOAL_WORK_DOCUMENT, JSON.stringify(document), 0);
+  session.putDocumentVersioned(GOAL_WORK_DOCUMENT, JSON.stringify(document), undefined);
   const before = session.resolveDocumentVersioned(GOAL_WORK_DOCUMENT);
   const response = await handleGatewayRequest(app, { method: "GET", path: "/projects", query: {}, headers: { authorization: "Bearer overview" }, body: "" }, { token: "overview" });
   assert.equal(response.status, 200);

@@ -26,7 +26,7 @@ import { makePublicationAttempt, publicationAttemptDigest, type MergeSpec, type 
 import { canonicalize } from "../src/spine/event.js";
 
 function newSpine(dir: string): Spine {
-  return new Spine(new FileSpineStore(dir), new InProcessLock(), new SchemaRegistry());
+  return new Spine(new FileSpineStore(dir, { fsync: true }), new InProcessLock(), new SchemaRegistry());
 }
 
 function setupRemote(seedFile: string, seedContent: string): { work: string; bare: string } {

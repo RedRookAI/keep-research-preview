@@ -1,7 +1,7 @@
 /** Dependency-free, byte-only P2-D2 add/replace carrier capture and overlay join. */
 import { createHash } from "node:crypto";
 import { types } from "node:util";
-import { decodeCanonical, encodeCanonical, type CanonicalValue } from "../eir/canonical.js";
+import { CanonicalByteLimitError, decodeCanonicalSnapshot, type CanonicalValue } from "../eir/canonical.js";
 import {
   P2_D2_OVERLAY_LIMITS,
   type NativePatchOperationKindV1,
@@ -17,8 +17,8 @@ const ROOT_KEYS = ["schema", "version", "packageId", "entries"] as const;
 const ENTRY_KEYS = ["path", "operation", "bytes"] as const;
 
 export class NativeP2D2CarrierError extends Error {
-  constructor(message: string) {
-    super(`native P2-D2 patch byte carriers: ${message}`);
+  constructor(message: string, options?: ErrorOptions) {
+    super(`native P2-D2 patch byte carriers: ${message}`, options);
     this.name = "NativeP2D2CarrierError";
   }
 }
@@ -67,9 +67,17 @@ function plainBytes(value: CanonicalValue | undefined, path: string): Uint8Array
 export function captureNativePatchByteCarrierSetV1(bytesInput: unknown): ValidatedPatchByteCarrierSet {
   if (bytesInput === null || typeof bytesInput !== "object" || types.isProxy(bytesInput) || !(bytesInput instanceof Uint8Array))
     throw new NativeP2D2CarrierError("input is not an owned byte string");
-  if (bytesInput.byteLength === 0 || bytesInput.byteLength > MAX_ENCODED_BYTES)
-    throw new NativeP2D2CarrierError("encoded-size bound violated");
-  const value = decodeCanonical(bytesInput);
+  // Bound the intrinsic input length before allocation, then retain the very
+  // bytes that passed canonical verification. No second read of caller getters
+  // and no caller-supplied decoded pair can confer this validation.
+  let captured: ReturnType<typeof decodeCanonicalSnapshot>;
+  try { captured = decodeCanonicalSnapshot(bytesInput, MAX_ENCODED_BYTES); }
+  catch (cause) {
+    if (cause instanceof CanonicalByteLimitError)
+      throw new NativeP2D2CarrierError("encoded-size bound violated", { cause });
+    throw cause; // Canonical-wire failures keep their existing distinct error type.
+  }
+  const { value, bytes: snapshot } = captured;
   const row = record(value, "carrierSet");
   exactKeys(row, ROOT_KEYS, "carrierSet");
   if (row.schema !== SCHEMA || row.version !== 1n || row.packageId !== PACKAGE_ID)
@@ -94,21 +102,17 @@ export function captureNativePatchByteCarrierSetV1(bytesInput: unknown): Validat
     const foldedPath = entry.path.toLowerCase();
     if (folded.has(foldedPath)) throw new NativeP2D2CarrierError("entry paths collide under ASCII case folding");
     folded.add(foldedPath);
-    const snapshot = plainBytes(entry.bytes, `${path}.bytes`);
-    aggregate += BigInt(snapshot.byteLength);
+    const payload = plainBytes(entry.bytes, `${path}.bytes`);
+    aggregate += BigInt(payload.byteLength);
     if (aggregate > P2_D2_OVERLAY_LIMITS.aggregateNewBytes)
       throw new NativeP2D2CarrierError("aggregate carrier bytes exceed the bound");
     return Object.freeze({
       path: entry.path,
       operation: entry.operation,
-      bytes: () => Uint8Array.from(snapshot),
+      bytes: () => Uint8Array.from(payload),
     });
   });
-  const canonical = encodeCanonical(value);
-  if (canonical.byteLength !== bytesInput.byteLength)
-    throw new NativeP2D2CarrierError("canonical byte identity changed");
-  const snapshot = Uint8Array.from(canonical);
-  const patchByteCarrierSetDigest = createHash("sha256").update(DOMAIN, "ascii").update(canonical).digest("hex") as PatchByteCarrierSetDigest;
+  const patchByteCarrierSetDigest = createHash("sha256").update(DOMAIN, "ascii").update(snapshot).digest("hex") as PatchByteCarrierSetDigest;
   return Object.freeze({
     kind: "ValidatedPatchByteCarrierSet" as const,
     entries: Object.freeze(entries),

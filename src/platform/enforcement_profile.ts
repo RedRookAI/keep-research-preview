@@ -1,7 +1,8 @@
 import { eirDigest, type CanonicalValue } from "../eir/canonical.js";
 import type { CapabilityReport } from "./capability_probe.js";
 
-export type EnforcementStatus = "enforced" | "detected-only" | "unavailable" | "unknown";
+export const ENFORCEMENT_STATUSES = ["enforced", "detected-only", "unavailable", "unknown"] as const;
+export type EnforcementStatus = typeof ENFORCEMENT_STATUSES[number];
 
 export const ENFORCEMENT_FIELDS = [
   "workloadPrincipalSeparation", "brokerPeerAuthentication", "credentialNonExposure", "filesystemScope",
@@ -76,4 +77,3 @@ export function resolveReferenceEnforcementProfile(capabilities: CapabilityRepor
 export function satisfiesIsolation(profile: EnforcementProfile, required: readonly EnforcementField[]): boolean {
   return required.every((field) => profile.fields[field].status === "enforced");
 }
-

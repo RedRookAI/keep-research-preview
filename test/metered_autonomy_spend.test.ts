@@ -53,7 +53,7 @@ function recordingProvider(): { provider: ModelProvider; calls: () => number } {
 }
 
 function newSpine(): Spine {
-  return new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "keep-l7-"))), new InProcessLock(), new SchemaRegistry());
+  return new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "keep-l7-")), { fsync: true }), new InProcessLock(), new SchemaRegistry());
 }
 
 const TIGHT: AuthorizationEnvelope = {
@@ -65,8 +65,8 @@ const TIGHT: AuthorizationEnvelope = {
 test("HARD-STOP: a metered call that would breach throws BudgetExceeded BEFORE the provider is called", async () => {
   const spine = newSpine();
   const ledger = new BudgetLedger(spine, new CostModel());
-  ledger.grant(TIGHT);
-  ledger.beginRun("r", TIGHT.id);
+  await ledger.grant(TIGHT);
+  await ledger.beginRun("r", TIGHT.id);
   const rec = recordingProvider();
   const metered = new MeteredGateway(new ModelGateway(rec.provider), ledger, new TokenVelocityBreaker(spine), spine);
   const provider = new MeteredProvider(rec.provider, metered, { runId: "r", cls: "auto-research", tier: "local" });
@@ -86,8 +86,8 @@ test("USD-CAP-BITES: with a PRICED model (via the injected price lookup) a tiny 
     dailyCapUsd: 0.0001, perRunCapUsd: 0.0001, perCallTokenCeiling: 32_000, expiresAt: Number.MAX_SAFE_INTEGER,
     grantedReason: "test: tiny USD cap, generous token ceiling — isolates the USD dimension",
   };
-  ledger.grant(env);
-  ledger.beginRun("r", env.id);
+  await ledger.grant(env);
+  await ledger.beginRun("r", env.id);
   const rec = recordingProvider();
   const metered = new MeteredGateway(new ModelGateway(rec.provider), ledger, new TokenVelocityBreaker(spine), spine);
   const provider = new MeteredProvider(rec.provider, metered, { runId: "r", cls: "auto-research", tier: "frontier" });
@@ -102,8 +102,8 @@ test("USD-CAP-BITES: with a PRICED model (via the injected price lookup) a tiny 
 test("ATTENDED-UNMETERED: the plain gateway.generate() is not enforced (interactive path, operator present)", async () => {
   const spine = newSpine();
   const ledger = new BudgetLedger(spine, new CostModel());
-  ledger.grant(TIGHT);
-  ledger.beginRun("r", TIGHT.id);
+  await ledger.grant(TIGHT);
+  await ledger.beginRun("r", TIGHT.id);
   const rec = recordingProvider();
   const metered = new MeteredGateway(new ModelGateway(rec.provider), ledger, new TokenVelocityBreaker(spine), spine);
   // the ATTENDED path uses generate(), which passes straight through despite the 0-token envelope
@@ -116,7 +116,7 @@ test("ADAPTIVE-PROJECTION: injected adaptive prompt bytes are included before th
   const spine = newSpine();
   const ledger = new BudgetLedger(spine, new LenientCostModel((model) => model === "rec" ? { inputPerM: 1000, outputPerM: 1000 } : undefined));
   const envelope: AuthorizationEnvelope = { ...TIGHT, id: "adaptive-projection", dailyCapUsd: 0.05, perRunCapUsd: 0.05, perCallTokenCeiling: 50 };
-  ledger.grant(envelope); ledger.beginRun("r", envelope.id);
+  await ledger.grant(envelope); await ledger.beginRun("r", envelope.id);
   const rec = recordingProvider();
   const gateway = new MeteredGateway(new ModelGateway(rec.provider), ledger, new TokenVelocityBreaker(spine), spine);
   const metered = new MeteredProvider(rec.provider, gateway, { runId: "r", cls: "auto-research", tier: "local" });

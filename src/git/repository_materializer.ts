@@ -1,7 +1,7 @@
 /** Materialize one exact local Git revision into a confined workspace directory. */
 import { execFile } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, realpathSync } from "node:fs";
-import { basename, join, relative, resolve, sep } from "node:path";
+import { basename, join, relative, resolve, sep, isAbsolute } from "node:path";
 import { promisify } from "node:util";
 import { GitAdapter } from "../infra/git_adapter.js";
 import { installedEffectAdmission, INSTALLED_EFFECT_OWNERS, type InstalledEffectAdmission } from "../control/installed_effect_admission.js";
@@ -56,7 +56,7 @@ export function spineMaterializationJournal(spine: Spine): MaterializationJourna
 
 function confined(base: string, candidate: string): boolean {
   const rel = relative(base, candidate);
-  return rel !== "" && !rel.startsWith("..") && !rel.startsWith(sep);
+  return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
 }
 
 /**

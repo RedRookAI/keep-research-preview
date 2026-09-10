@@ -1,13 +1,13 @@
 /**
  * L7 (money-enforcement — arming). A ModelProvider that routes the UNATTENDED autonomy path's model
  * calls through the MeteredGateway's enforced `generateMetered()` under a granted budget envelope:
- *  - `willBreach` HARD-STOPS an over-budget call BEFORE it is made (fail-closed, LLM cannot override);
+ *  - durable admission reserves projected token cost before the provider is entered;
  *  - the TokenVelocityBreaker trips on rate-of-spend or a repetitive-identical-call burst;
- *  - real spend is recorded to the BudgetLedger after each successful call.
+ *  - valid reported usage settles that reservation; entered failures keep an unresolved hold.
  *
  * The attended/interactive path keeps using the plain gateway (`generate`, unmetered — the operator is
  * present), exactly as the MeteredGateway design intends. This provider is injected ONLY into the
- * autonomy loop's solve, so composeKeep's ingress solve is unchanged.
+ * composed automated solve paths; direct interactive gateway calls remain unmetered.
  *
  * HONEST SEAM (scope): this arms ONE granted envelope for the whole unattended autonomy SUBSYSTEM
  * (daily cap + per-run cap + per-call token ceiling + velocity). PER-PROJECT-RUN envelope granularity
@@ -20,15 +20,8 @@ import type { AuthorizationEnvelope, LoopClass, ModelTier } from "./authorizatio
 import { CostModel, type TokenUsage, type CostBreakdown, type NonTokenCost } from "../observability/cost_model.js";
 
 /**
- * A CostModel for the metering ledger. It resolves a model's price from (1) prices already registered,
- * then (2) an injected `priceLookup` (compose passes the live pricing registry). A model that BOTH is
- * unregistered AND the lookup doesn't know is treated as $0 — this is the genuinely-free local case.
- *
- * So the USD caps (dailyCapUsd/perRunCapUsd) DO bite for any model the pricing registry prices (the paid
- * remote case); the velocity rate-check is fed real cost for those too. HONEST SEAM: a model with NO
- * price anywhere (local, or a remote model the registry hasn't priced yet) counts as $0 against the USD
- * caps and is bounded by the per-call token ceiling + velocity/repetition until it is priced. Used ONLY
- * by the metering ledger — the scheduler's ledger keeps the strict throw-on-unpriced CostModel.
+ * Historical exported name retained for compatibility. Resolve configured prices
+ * dynamically; unknown pricing is an error, never an implicit zero-dollar rate.
  */
 export class LenientCostModel extends CostModel {
   constructor(private readonly priceLookup?: (model: string) => { inputPerM: number; outputPerM: number } | undefined) {
@@ -39,8 +32,7 @@ export class LenientCostModel extends CostModel {
       const p = this.priceLookup?.(model);
       if (p) this.registerPricing({ model, inputPerMillion: p.inputPerM, outputPerMillion: p.outputPerM });
     }
-    if (this.hasPricing(model)) return super.cost(model, usage, nonToken);
-    return { inputUsd: 0, cachedInputUsd: 0, outputUsd: 0, tokenUsd: 0, humanUsd: 0, infraUsd: 0, toolApiUsd: 0, totalUsd: 0 };
+    return super.cost(model, usage, nonToken);
   }
 }
 
@@ -73,9 +65,10 @@ export class MeteredProvider implements ModelProvider {
     return this.inner.isLocal;
   }
 
-  /** Enforced generate: willBreach + velocity BEFORE the call; recordSpend AFTER. Throws BudgetExceeded on breach. */
+  /** Capture one effective output/attempt bound for both reservation and dispatch. */
   generate(req: GenerateRequest): Promise<GenerateResult> {
-    return this.metered.generateMetered(req, { ...this.ctx, projected: projectUsage(req) }, this.name);
+    const request = Object.freeze({ ...req, maxTokens: req.maxTokens ?? 512, maxAttempts: 1 });
+    return this.metered.generateMetered(request, { ...this.ctx, projected: projectUsage(request) }, this.name);
   }
 
   /** Embeddings pass through unmetered — `generate` is the spend enforcement point. (No generateStream so

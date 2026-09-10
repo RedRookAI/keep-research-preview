@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { concurrencyGovernor, type ConcurrencyPolicy, type RunningEntry } from "../autonomy/project_loop.js";
+import { concurrencyGovernor, ProjectFinalizationError, type ConcurrencyPolicy, type RunningEntry } from "../autonomy/project_loop.js";
 import type { ProjectId } from "./project_id.js";
 import type { ProjectJobIntent, ProjectJobJournal, ProjectJobIntentState, ProjectJobSubmission, ProjectJobActivity, ProjectJobActivityTracker } from "./project_job_journal.js";
 import { ProjectSessionManager } from "./project_session_manager.js";
@@ -92,7 +92,7 @@ export class ProjectRuntime {
     const d: GoalWorkDocument = { schema: "keep.goal-work/v1", creationId: reservation.submission.jobId, definition: captured,
       binding: this.config.commands.binding, principal, phase: "development", active, startsUsed: 0, claims: {}, accepted: {} };
     this.validateGoalWork(parent.id, d);
-    this.manager.session(parent.id).putDocumentVersioned(GOAL_WORK_DOCUMENT, JSON.stringify(d), 0);
+    this.manager.session(parent.id).putDocumentVersioned(GOAL_WORK_DOCUMENT, JSON.stringify(d), undefined);
     this.ensureHeartbeat();
     return parent.id;
   }
@@ -253,7 +253,7 @@ export class ProjectRuntime {
     if (encoded !== undefined) {
       if (!this.config.commands || command!.binding !== this.config.commands.binding) throw new Error("native project commands are unavailable");
       this.config.commands.validate(command!, projectId);
-      if (this.manager.session(projectId).putDocumentVersioned(commandDocumentName(jobId), encoded.value, 0) !== 1) throw new Error("project command requires a durable versioned document");
+      if (this.manager.session(projectId).putDocumentVersioned(commandDocumentName(jobId), encoded.value, undefined) !== 1) throw new Error("project command requires a durable versioned document");
     }
     const intent: ProjectJobIntent = { id: jobId, projectId, workspaceKey: `project/${projectId}`, weight, label: normalizedLabel, ownerId: this.ownerId, leaseUntil: now + this.leaseMs, state: "queued", createdAt: now, updatedAt: now, ...(encoded ? { commandDigest: encoded.digest } : {}), ...(this.config.commands?.resource ? { exclusiveResource: this.config.commands.resource } : {}) };
     if (encoded) run = context => this.executeCommand(intent, context) as Promise<T>;
@@ -435,13 +435,23 @@ export class ProjectRuntime {
     if (this.intents.get(job.intentId)?.cancellationRequested) controller.abort(new ProjectJobCancelledError("operator requested cancellation"));
     const token = Symbol(job.projectId); this.running.set(token, { intentId: job.intentId, project: job.projectId, weight: job.weight });
     const result = Promise.resolve().then(async () => {
+      let callbackError: unknown;
       try {
         this.refreshJournal(); controller.signal.throwIfAborted();
         return await job.run({ jobId: job.intentId, projectId: job.projectId, workspaceKey: `project/${job.projectId}`, signal: controller.signal,
           trackActivity: (label, run) => this.trackActivity(job.intentId, label, run, controller.signal),
         });
+      } catch (error) {
+        callbackError = error; throw error;
       } finally {
-        if (callbackActivity !== undefined) await this.journal!.settleActivity!(callbackActivity.id, this.ownerId, this.now());
+        if (callbackActivity !== undefined) {
+          try { await this.journal!.settleActivity!(callbackActivity.id, this.ownerId, this.now()); }
+          catch (error) {
+            // The activity remains unresolved in the journal. Do not discard an
+            // already observed task result when recording settlement also fails.
+            throw callbackError instanceof ProjectFinalizationError ? callbackError : error;
+          }
+        }
       }
     }).then(
       async (value) => {
@@ -450,6 +460,13 @@ export class ProjectRuntime {
         try { this.finish(job.intentId, "completed"); return value; } catch (cause) { this.uncertain(job.intentId); throw new ProjectJobReconciliationError("job completed but its terminal record was not durable", { cause }); }
       },
       (error) => {
+        if (error instanceof ProjectFinalizationError) {
+          const reason = `task result exists; session ${error.phase} finalization requires reconciliation`;
+          try { this.transition(job.intentId, "reconciliation-required", reason); }
+          catch { this.markLocallyUncertain(job.intentId, reason); }
+          // Preserve the original result even if persisting this hold also fails.
+          throw error;
+        }
         if (controller.signal.aborted) { this.finishCancellation(job.intentId); throw error; }
         if ((this.job(job.intentId)?.activeActivityIds?.length ?? 0) > 0) { this.finishCancellation(job.intentId, "callback failed while owned activity remains unresolved"); throw error; }
         try { this.finish(job.intentId, "failed", "callback failed"); } catch (cause) { this.uncertain(job.intentId); throw new ProjectJobReconciliationError("job failed but its terminal record was not durable", { cause }); } throw error;

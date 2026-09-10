@@ -46,12 +46,12 @@ test("X6 client posts shared project and decision behavior through the gateway c
   assert.equal(seen[1]!.body, '{"id":"decision-1"}');
 });
 
-test("SURF-08: lifecycle client methods preserve the gateway's exact field contract", async () => {
+test("SURF-08: lifecycle request serialization (not gateway acceptance)", async () => {
   const seen: ClientTransportRequest[] = [];
   const client = new KeepClient({ origin: "https://keep.internal", token: "t", transport: async (request) => { seen.push(request); return { status: 200, body: "{}" }; } });
-  await client.switchProject("p1"); await client.archiveProject("p1"); await client.deleteProject("p1", "p1"); await client.mergeProject("p1", "approve");
+  await client.switchProject("p1"); await client.archiveProject("p1"); await client.deleteProject("p1", "p1");
   assert.deepEqual(seen.map((request) => JSON.parse(request.body!)), [
-    { projectId: "p1" }, { projectId: "p1" }, { projectId: "p1", confirmProjectId: "p1" }, { runId: "p1", decision: "approve" },
+    { projectId: "p1" }, { projectId: "p1" }, { projectId: "p1", confirmProjectId: "p1" },
   ]);
 });
 

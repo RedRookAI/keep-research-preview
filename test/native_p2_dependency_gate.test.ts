@@ -6,6 +6,7 @@ import { createPublicKey, verify } from "node:crypto";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { resolvedPackageMembers } from "./helpers/native_package_membership.js";
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
 const gate = fileURLToPath(new URL("../../tools/native_p2_dependency_gate.mjs", import.meta.url));
@@ -37,6 +38,12 @@ function run(root: string, extra: NodeJS.ProcessEnv = {}, write = false) {
 
 test("A6 P2 dependency closure rejects vendor, candidate, transcript, and ambient build neuters", () => {
   const mutations = [
+    (root: string) => {
+      const path = join(root, "native/p2-crypto-vendor-inventory.json");
+      const value = JSON.parse(readFileSync(path, "utf8"));
+      value.compilationOrderHelperIdentity.sha256 = "00".repeat(32);
+      writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+    },
     (root: string) => {
       const path = join(root, "native/vendor-p2/ed25519-dalek/src/verifying.rs");
       writeFileSync(path, `${readFileSync(path, "utf8")}\n// neuter\n`);
@@ -191,43 +198,7 @@ test("A6 P2 authenticated crate carrier set is exact and closed", () => {
 });
 
 test("A6 npm package ships declared native runtime and inspection inputs, never experimental builds or vendor trees", () => {
-  const result = spawnSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-    timeout: 30000,
-    env: { ...process.env, npm_config_offline: "true", npm_config_update_notifier: "false" },
-  });
-  assert.equal(result.status, 0, result.stderr);
-  const rows = JSON.parse(result.stdout) as { files: { path: string }[] }[];
-  const paths = rows[0]?.files.map((row) => row.path) ?? [];
-  // Runtime inspection needs the protocol/evidence sources and frozen inventories.
-  // This is the binary npm distribution, not the complete source-preview snapshot.
-  assert.deepEqual(paths.filter((path) => path.startsWith("native/")).sort(), [
-    "native/Cargo.lock",
-    "native/Cargo.toml",
-    "native/crates/p2-d2-evidence/Cargo.toml",
-    "native/crates/p2-d2-evidence/src/audit_plan.rs",
-    "native/crates/p2-d2-evidence/src/lib.rs",
-    "native/crates/p2-d2-evidence/src/main.rs",
-    "native/crates/protocol/Cargo.toml",
-    "native/crates/protocol/src/gzip.rs",
-    "native/crates/protocol/src/lib.rs",
-    "native/crates/protocol/src/main.rs",
-    "native/crates/protocol/src/p2_d2.rs",
-    "native/crates/protocol/src/p2_schema.rs",
-    "native/crates/protocol/src/p2_schema_specs.rs",
-    "native/crates/protocol/src/patch_capture.rs",
-    "native/licenses/README.md",
-    "native/licenses/rust-1.97.1-COPYRIGHT-library.html",
-    "native/licenses/musl-1.2.5-COPYRIGHT.txt",
-    "native/licenses/compiler-builtins-LICENSE.txt",
-    "native/licenses/libm-LICENSE.txt",
-    "native/licenses/compiler-rt-LICENSE.txt",
-    "native/licenses/compiler-rt-CREDITS.txt",
-    "native/licenses/libunwind-LICENSE.txt",
-    "native/toolchain-inventory.json",
-    "native/toolchain-lock.json",
-  ].sort());
+  const paths = resolvedPackageMembers(repositoryRoot);
   for (const path of paths)
     assert.doesNotMatch(path, /(?:^|\/)(?:vendor-p2|vendor-transport|p2-crypto-candidate|p2-crypto-crates|target)(?:\/|$)/u);
   assert.deepEqual(
@@ -304,6 +275,7 @@ test("A6 P2 producer-side unsafe, role, and backend neuters redden named control
         .replace(variant.from, variant.to);
       assert.notEqual(source, original, `producer neuter ${index} must change source`);
       writeFileSync(path, source);
+      cpSync(join(repositoryRoot, "tools/native_compilation_units.mjs"), join(directory, "native_compilation_units.mjs"));
       writeFileSync(
         join(directory, "native_p2_archive_snapshot.mjs"),
         readFileSync(archiveSnapshotHelper),

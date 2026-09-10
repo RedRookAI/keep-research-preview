@@ -181,13 +181,13 @@ test("switch checkpoints the outgoing project and restores the incoming (nothing
   ds.append("user", "drone SOTA research");
   ds.checkpoint(fakeState("d1", "plan"));
   mgr.switch(drone); // activate drone
-  assert.equal(mgr.active(), drone);
+  assert.equal(mgr.active(undefined), drone);
 
   // switch to novel, keeping drone in the background
-  const r = mgr.switch(novel, { keepOutgoingInBackground: true });
+  const r = mgr.switch(novel);
   assert.equal(r.incoming, novel);
   assert.equal(r.outgoing, drone);
-  assert.equal(mgr.active(), novel);
+  assert.equal(mgr.active(undefined), novel);
 
   // come back to drone: its checkpoint is intact (a restore, not a replay)
   mgr.switch(drone);
@@ -203,7 +203,7 @@ test("backgrounded project keeps its session + checkpoint (can continue in-envel
   mgr.session(p).checkpoint(fakeState("r", "implement"));
   mgr.switch(p);
   mgr.background(p);
-  assert.equal(mgr.active(), undefined, "backgrounded project is no longer foreground");
+  assert.equal(mgr.active(undefined), undefined, "backgrounded project is no longer foreground");
   assert.equal(registry.get(p).lifecycle, "background");
   assert.ok(mgr.session(p).lastCheckpoint(), "checkpoint retained for background continuation");
 });

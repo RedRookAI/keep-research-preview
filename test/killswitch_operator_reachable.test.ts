@@ -59,7 +59,7 @@ const BROKEN = "export function add(a, b) { return a - b; }";
 
 function harness() {
   const { work } = setupRemote("src/calc.ts", `${BROKEN}\n`);
-  const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "r35-spine-"))), new InProcessLock(), new SchemaRegistry());
+  const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "r35-spine-")), { fsync: true }), new InProcessLock(), new SchemaRegistry());
   const files: RepoFile[] = [{ path: "src/calc.ts", content: BROKEN }];
   const tree = new InMemoryFileTree({ "src/calc.ts": BROKEN });
   const runner: TestRunner = {

@@ -2,15 +2,15 @@
 
 ## This release
 
-**Keep 0.0.2-preview.1 — maintenance research preview keep-preview-2026-09-10.1.**
+**Keep 0.0.3-preview.1 — maintenance research preview keep-preview-2026-09-10.2.**
 
 Download the named assets from the
-[GitHub release](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-09-10.1).
+[GitHub release](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-09-10.2).
 The [release record](../KEEP_RELEASE.md) connects the originating development revision
 with the public snapshot commit and unchanged prepared archive checksums.
 
-The distribution consists of `keep-source-preview-2026-09-10.1.tar.gz` (the complete selected
-source) and `keep-0.0.2-preview.1.tgz` (the installable package). The accompanying
+The distribution consists of `keep-source-preview-2026-09-10.2.tar.gz` (the complete selected
+source) and `keep-0.0.3-preview.1.tgz` (the installable package). The accompanying
 `KEEP_RELEASE.md` is the single current release record: it names the source revision,
 both archive hashes, supported configuration, checks actually performed and remaining
 limitations. It is supplied alongside the archives, not embedded inside an archive
@@ -37,9 +37,11 @@ workflows; a passing introductory demo does not qualify general coding.
 This maintenance update includes targeted corrections and regression tests, not
 completion of the ongoing audit. Its exact installation and test results are in
 the [release record](../KEEP_RELEASE.md); see the
-[maintenance notes](maintenance-2026-09-10.md) for included work and limitations.
+[maintenance notes](maintenance-2026-09-10.2.md) for included work and limitations.
 Before opening existing data, follow the
 [skill-registry upgrade and backup instructions](skill-registry.md#upgrading-data-from-the-september-9-research-preview).
+Also read the [current upgrade notes](maintenance-2026-09-10.2.md#upgrade-and-recovery)
+for project snapshots, event history, accounting and client compatibility.
 
 ## First supported experiment
 
@@ -140,13 +142,13 @@ do not calculate the expected value from the downloaded package itself.
 export KEEP_RELEASE_SHA256='PASTE_PACKAGE_SHA256_FROM_KEEP_RELEASE_MD'
 ~~~
 
-Then run this block from the directory containing `keep-0.0.2-preview.1.tgz`:
+Then run this block from the directory containing `keep-0.0.3-preview.1.tgz`:
 
 ~~~sh
 (
   set -eu
   : "${KEEP_RELEASE_SHA256:?Set KEEP_RELEASE_SHA256 to the package SHA256 from KEEP_RELEASE.md}"
-  keep_demo_archive="$(realpath keep-0.0.2-preview.1.tgz)"
+  keep_demo_archive="$(realpath keep-0.0.3-preview.1.tgz)"
   printf '%s  %s\n' "$KEEP_RELEASE_SHA256" "$keep_demo_archive" |
     sha256sum --check --status
   keep_demo_consumer="$(mktemp -d)"

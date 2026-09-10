@@ -71,7 +71,7 @@ test("persistent session rejects uncommitted checkpoints and follows a newer can
   const registry = new ProjectRegistry(keys);
   const project = registry.create("checkpoint owner");
   let durable: ProjectSessionSnapshot | undefined;
-  const persistence: ProjectSessionPersistence = { load: () => durable, save: (next, expected) => { durable = structuredClone({ ...next, storageRevision: expected + 1 }); return expected + 1; } };
+  const persistence: ProjectSessionPersistence = { load: () => durable, save: (next, expected) => { assert.equal(expected, durable?.storageRevision); durable = structuredClone({ ...next, storageRevision: (expected ?? 0) + 1 }); return durable.storageRevision; } };
   const checkpoints = new InMemoryProjectCheckpointStore();
   const session = new ProjectSession(registry.namespace(project.id), undefined, persistence, checkpoints);
   const first = state("run");
@@ -87,7 +87,7 @@ test("run ownership persists before any checkpoint and is immutable across resta
   const registry = new ProjectRegistry(keys);
   const project = registry.create("run owner");
   let durable: ProjectSessionSnapshot | undefined;
-  const persistence: ProjectSessionPersistence = { load: () => durable, save: (next, expected) => { durable = structuredClone({ ...next, storageRevision: expected + 1 }); return expected + 1; } };
+  const persistence: ProjectSessionPersistence = { load: () => durable, save: (next, expected) => { assert.equal(expected, durable?.storageRevision); durable = structuredClone({ ...next, storageRevision: (expected ?? 0) + 1 }); return durable.storageRevision; } };
   const first = new ProjectSession(registry.namespace(project.id), undefined, persistence, new InMemoryProjectCheckpointStore());
   first.bindRun("persist-before-callback");
   assert.equal(first.boundRunId(), "persist-before-callback");
@@ -119,7 +119,7 @@ test("malformed session bytes fail closed and failed persistence publishes no mu
 
 test("project document persistence is all-or-none and CAS tombstones never reuse a revision", () => {
   const keys = new CryptoShredKeyStore(); const registry = new ProjectRegistry(keys); const project = registry.create("documents");
-  const partial = { load: () => undefined, save: (_snapshot: ProjectSessionSnapshot, expected: number) => expected + 1, loadDocument: () => undefined };
+  const partial = { load: () => undefined, save: (_snapshot: ProjectSessionSnapshot, expected: number | undefined) => (expected ?? 0) + 1, loadDocument: () => undefined };
   assert.throws(() => new ProjectSession(registry.namespace(project.id), undefined, partial), /configured together/u);
 
   const dir = mkdtempSync(join(tmpdir(), "keep-document-cas-"));
@@ -161,7 +161,7 @@ test("manager restores exactly one foreground project and archived projects rema
   first.switch(current.id);
 
   const reopened = open();
-  assert.equal(reopened.active(), current.id);
+  assert.equal(reopened.active(undefined), current.id);
   assert.equal(reopened.lifecycle(archived.id), "archived");
   assert.deepEqual(reopened.session(archived.id).history().map((entry) => entry.text), ["final archived artifact"]);
   assert.throws(() => reopened.runnableSession(archived.id), /archived and read-only/u);
@@ -184,8 +184,10 @@ test("one corrupt session is quarantined without preventing healthy project reco
   const keys = new CryptoShredKeyStore();
   const registry = new ProjectRegistry(keys);
   const broken = registry.create("broken", "background"); const healthy = registry.create("healthy", "background");
-  const corrupt: ProjectSessionPersistence = { load: () => { throw new Error("authentication failed"); }, save: (_next, expected) => expected + 1 };
-  const clean: ProjectSessionPersistence = { load: () => undefined, save: (_next, expected) => expected + 1 };
+  const corrupt: ProjectSessionPersistence = { load: () => { throw new Error("authentication failed"); }, save: (_next, expected) => (expected ?? 0) + 1 };
+  const clean: ProjectSessionPersistence = { load: () => ({ schemaVersion: 1, storageRevision: 1,
+    projectId: healthy.id, history: [], secrets: [], compactions: [], nextSeq: 0,
+    budget: { spentTokensToday: 0 } }), save: (_next, expected) => (expected ?? 0) + 1 };
   const manager = new ProjectSessionManager(registry, undefined, (id) => id === broken.id ? corrupt : clean, new InMemoryProjectCheckpointStore());
   assert.match(manager.quarantine(broken.id) ?? "", /authentication failed/u);
   assert.throws(() => manager.session(broken.id), /quarantined/u);
@@ -221,9 +223,9 @@ test("quarantined active state is durably demoted and cannot create a two-active
   const open = (corruptId?: string) => {
     const keys = new CryptoShredKeyStore(new FileWrappedKeyPersistence({ masterKeyPath: join(dir, "master.key"), wrappedKeysPath: join(dir, "keys.json") }));
     const registry = new ProjectRegistry(keys, new FileProjectRecordStore(join(dir, "records.json")));
-    return new ProjectSessionManager(registry, undefined, (id) => corruptId === id ? { load: () => { throw new Error("corrupt active session"); }, save: (_next, expected) => expected + 1 } : new FileProjectSessionPersistence(join(dir, "sessions", `${id}.json`)), new FileProjectCheckpointStore(join(dir, "checkpoints")));
+    return new ProjectSessionManager(registry, undefined, (id) => corruptId === id ? { load: () => { throw new Error("corrupt active session"); }, save: (_next, expected) => (expected ?? 0) + 1 } : new FileProjectSessionPersistence(join(dir, "sessions", `${id}.json`)), new FileProjectCheckpointStore(join(dir, "checkpoints")));
   };
   const first = open(); const broken = first.create({ name: "broken active" }); const healthy = first.create({ name: "healthy" }); first.switch(broken.id);
   const quarantining = open(broken.id); assert.match(quarantining.quarantine(broken.id) ?? "", /corrupt/u); quarantining.switch(healthy.id);
-  const restarted = open(); assert.equal(restarted.active(), healthy.id); assert.equal(restarted.lifecycle(broken.id), "background");
+  const restarted = open(); assert.equal(restarted.active(undefined), healthy.id); assert.equal(restarted.lifecycle(broken.id), "background");
 });

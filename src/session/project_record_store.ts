@@ -18,9 +18,10 @@ import type { ProjectLifecycle, ProjectRecord } from "./project_registry.js";
 /** Atomic persistence boundary for the registry's complete project record set. */
 export interface ProjectRecordStore {
   load(): ProjectRecordSnapshot;
-  save(records: readonly ProjectRecord[], expectedRevision: number): number;
+  save(records: readonly ProjectRecord[], expectedRevision: number | undefined): number;
 }
-export interface ProjectRecordSnapshot { readonly revision: number; readonly records: readonly ProjectRecord[]; }
+/** An absent carrier has undefined revision; an existing legacy array has revision zero. */
+export interface ProjectRecordSnapshot { readonly revision: number | undefined; readonly records: readonly ProjectRecord[]; }
 
 const lifecycles = new Set<ProjectLifecycle>(["active", "background", "archived", "deleted"]);
 const MAX_PROJECT_RECORDS = 100_000;
@@ -77,7 +78,7 @@ export class FileProjectRecordStore implements ProjectRecordStore {
   constructor(private readonly path: string) {}
 
   load(): ProjectRecordSnapshot {
-    if (!existsSync(this.path)) return { revision: 0, records: [] };
+    if (!existsSync(this.path)) return { revision: undefined, records: [] };
     let bytes: Buffer;
     try { bytes = readFileSync(this.path); }
     catch (error) { throw new Error(`cannot read project record store ${this.path}`, { cause: error }); }
@@ -93,10 +94,10 @@ export class FileProjectRecordStore implements ProjectRecordStore {
     catch (error) { throw new Error(`invalid project record store ${this.path}`, { cause: error }); }
   }
 
-  save(records: readonly ProjectRecord[], expectedRevision: number): number {
+  save(records: readonly ProjectRecord[], expectedRevision: number | undefined): number {
     const validated = validateRecords(records);
-    if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new Error("invalid expected project record revision");
-    const nextRevision = expectedRevision + 1;
+    if (expectedRevision !== undefined && (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0)) throw new Error("invalid expected project record revision");
+    const nextRevision = (expectedRevision ?? 0) + 1;
     return withSyncFileMutationLock(this.path, () => {
       const current = this.load();
       if (current.revision !== expectedRevision) throw new ProjectRecordConflictError(`project record conflict: expected ${expectedRevision}, found ${current.revision}`);

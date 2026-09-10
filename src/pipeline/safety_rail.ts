@@ -119,7 +119,7 @@ export class SafetyRail {
    * RESTRICTIVE envelope (Fork C, secure-by-default). Deny (not crash) only if a supplied envelope is
    * expired/invalid. Opens a budget run for subsequent guardModelCall checks.
    */
-  authorize(runId: string, envelope: AuthorizationEnvelope | undefined, projectId: string): RailDecision {
+  async authorize(runId: string, envelope: AuthorizationEnvelope | undefined, projectId: string): Promise<RailDecision> {
     let env = envelope;
     if (!env) {
       env = this.synthesizeDefaultEnvelope(projectId);
@@ -130,9 +130,9 @@ export class SafetyRail {
     } else {
       this.record("authorize", "allow", { effect: "allow", ruleId: env.id, reason: env.grantedReason, matchedRuleIds: [env.id], policyVersion: "1" }, "proceeded");
     }
+    await this.budget.grant(env);
+    await this.budget.beginRun(runId, env.id);
     this.currentEnvelope = env;
-    this.budget.grant(env);
-    this.budget.beginRun(runId, env.id);
     return { outcome: "allow", reason: `authorized under envelope ${env.id}` };
   }
 
@@ -142,15 +142,16 @@ export class SafetyRail {
    * cap (default 80% of per-run) → pause-soft (routes to operator approval, resumable). A valid
    * resume grant that raises the ceiling lets the call proceed. Never a dead-end kill.
    */
-  guardModelCall(runId: string, cls: LoopClass, tier: ModelTier, model: string, projected: TokenUsage, resume?: RunResumeGrant): RailDecision {
+  async guardModelCall(runId: string, cls: LoopClass, tier: ModelTier, model: string, projected: TokenUsage, resume?: RunResumeGrant): Promise<RailDecision> {
+    await this.budget.refresh();
     const env = this.currentEnvelope;
     if (!env) return { outcome: "deny", reason: "no active envelope — call authorize() first" };
 
     // Apply a valid resume grant by raising the run's effective ceiling (audited).
     if (resume && this.clock() <= resume.expiresAt) {
       const raised: AuthorizationEnvelope = { ...env, perRunCapUsd: resume.raisedPerRunCapUsd };
+      await this.budget.grant(raised);
       this.currentEnvelope = raised;
-      this.budget.grant(raised);
       this.record("budget.resume", "allow", { effect: "allow", ruleId: "run-resume-grant", reason: `operator ${resume.operatorId} raised per-run cap to ${resume.raisedPerRunCapUsd}: ${resume.reason}`, matchedRuleIds: ["run-resume-grant"], policyVersion: "1" }, "warned-and-proceeded");
     }
 
@@ -193,8 +194,8 @@ export class SafetyRail {
   }
 
   /** Record actual spend after a call (keeps the ledger honest for the next guard check). */
-  recordSpend(runId: string, model: string, usage: TokenUsage): void {
-    this.budget.recordSpend(runId, model, usage);
+  async recordSpend(runId: string, model: string, usage: TokenUsage): Promise<void> {
+    await this.budget.recordSpend(runId, model, usage);
   }
 
   /**
@@ -243,7 +244,7 @@ export class SafetyRail {
 
   private projectedSpend(runId: string, model: string, projected: TokenUsage): number {
     const run = this.budget.runSpend(runId);
-    const spent = run?.spentUsd ?? 0;
+    const spent = (run?.spentUsd ?? 0) + (run?.reservedUsd ?? 0);
     const callCost = this.costModel.cost(model, projected).totalUsd;
     return spent + callCost;
   }

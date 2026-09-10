@@ -58,7 +58,7 @@ export class InMemoryWorkspace implements Workspace {
 /** True if `candidate` resolves to a path inside `base` (traversal-resistant). */
 function withinBase(base: string, candidate: string): boolean {
   const rel = relative(resolve(base), resolve(base, candidate));
-  return rel === "" || (!rel.startsWith("..") && !rel.startsWith(sep) && !isAbsolute(rel));
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
 /**
@@ -145,7 +145,7 @@ export class LocalFsWorkspace implements Workspace {
     const openedInside = (fd: number, fallback: string): boolean => {
       const openedReal = realpathSync(process.platform === "linux" ? `/proc/self/fd/${fd}` : fallback);
       const rel = relative(rootReal, openedReal);
-      return rel === "" || (!rel.startsWith("..") && !rel.startsWith(sep) && !isAbsolute(rel));
+      return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
     };
     const readOne = (path: string): string | undefined => {
         this.effectAdmission.admit(INSTALLED_EFFECT_OWNERS.workspaceRead.id);

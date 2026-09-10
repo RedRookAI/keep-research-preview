@@ -17,14 +17,17 @@
  */
 
 import { spawn } from "node:child_process";
-import { selectPlatformIsolation, type PlatformIsolation, type PlatformCapabilities, type NamespaceJailSpec } from "./isolation_backend.js";
+import { Writable, type Readable } from "node:stream";
+import { prepareRequiredJail, type RequiredJailLaunch } from "./required_project_jail.js";
+import { selectPlatformIsolation, processPlanObservation, type ProcessIsolationObservation, type PlatformIsolation, type PlatformCapabilities, type NamespaceJailSpec } from "./isolation_backend.js";
 import { realpathSync } from "node:fs";
-import { isAbsolute as pathIsAbsolute, join as pathJoin, relative as pathRelative, resolve as pathResolve, dirname as pathDirname, basename as pathBasename } from "node:path";
+import { atDeadline, executionStopReason, type ExecutionContext } from "./execution_lifetime.js";
+import { isAbsolute as pathIsAbsolute, join as pathJoin, relative as pathRelative, resolve as pathResolve, dirname as pathDirname, basename as pathBasename, sep as pathSep } from "node:path";
 
-export interface IsolationPolicy {
+export interface IsolationPolicy extends ExecutionContext {
   /** Working directory; setting cwd alone does not restrict filesystem access. */
   readonly cwd: string;
-  /** Wall-clock timeout (ms) before the process group is killed. */
+  /** Wall-clock timeout (ms) before requesting process-tree termination. */
   readonly timeoutMs: number;
   /** Environment variables allowed through (secrets scoping). Default: none. */
   readonly envAllowlist?: readonly string[];
@@ -39,11 +42,8 @@ export interface IsolationPolicy {
    */
   readonly cpuLimitSec?: number;
   /**
-   * BUILD-ORDER 1.3 — bound the child with a KERNEL mount+net+PID namespace jail (`unshare`) plus rlimits
-   * (RLIMIT_FSIZE/NPROC/NOFILE). These specific controls do not imply a hard memory cap or complete host-resource
-   * protection. Applied ONLY where the kernel grants the namespaces;
-   * whatever does not apply is surfaced in `degraded` (honest-seam), never a silent under-enforcement. The
-   * network/filesystem jail is a HARD default; `allowNet`/`allowWritePaths` are opt-IN operator allowances.
+   * Omitted mode requests legacy best-effort setup. Explicit required mode uses
+   * the qualified Linux launcher or refuses; setup observations remain local.
    */
   readonly namespaceJail?: NamespaceJailSpec;
 }
@@ -51,7 +51,9 @@ export interface IsolationPolicy {
 export interface IsolatedRunResult {
   readonly code: number | null;
   readonly signal: NodeJS.Signals | null;
+  /** UTF8 presentation of captured bytes; an incomplete terminal character uses U+FFFD. */
   readonly stdout: string;
+  /** Same presentation rule, with a separate parent-side spawn diagnostic when applicable. */
   readonly stderr: string;
   /** Exact captured bytes, before UTF-8 presentation decoding. Authority protocols must use these. */
   readonly stdoutBytes?: Buffer;
@@ -59,25 +61,32 @@ export interface IsolatedRunResult {
   readonly timedOut: boolean;
   readonly truncated: boolean;
   readonly durationMs: number;
+  readonly cancelled?: boolean;
+  /** Direct child only; neither close nor a group signal proves all descendants stopped. */
+  readonly completion?: "not-started" | "direct-child-closed" | "unconfirmed";
+  readonly terminationError?: string;
   /** Controls the caller requested that this platform could not enforce (e.g. ["cpuLimit"] on Windows). Never silent. */
   readonly degraded?: readonly string[];
+  readonly processIsolation?: ProcessIsolationObservation;
 }
 
 /** A running isolated process with an out-of-band terminate() (for the kill-switch). */
 export interface IsolatedProcess {
   readonly pid: number | undefined;
-  /** Kill the whole process group (out-of-band; does not call into the process). */
+  /** Request process-tree termination; inspect done for the observed outcome. */
   terminate: () => void;
   readonly done: Promise<IsolatedRunResult>;
 }
 
 export class ProcessIsolationAdapter {
   private readonly iso: PlatformIsolation;
+  private readonly requestedPlatform: string;
   constructor(private readonly clock: () => number = () => Date.now(), platform?: string) {
+    this.requestedPlatform = platform ?? process.platform;
     this.iso = selectPlatformIsolation(platform);
   }
 
-  /** What this platform's backend actually ENFORCES (reported honestly; never assumed). */
+  /** Backend features/probe availability, not proof of this run's setup. */
   get capabilities(): PlatformCapabilities { return this.iso.capabilities; }
   /** The selected backend's platform label. */
   get platform(): string { return this.iso.platform; }
@@ -96,30 +105,55 @@ export class ProcessIsolationAdapter {
 
   /**
    * Start `command` with `args` (argv-only — no shell). Returns an IsolatedProcess
-   * whose `done` resolves with the captured result. On timeout the whole process
-   * group is killed. `command`/`args` are passed as an argv array, so shell
+   * whose `done` resolves with the captured result. Timeout requests process-tree
+   * termination and bounds observation, without claiming escaped descendants stopped.
+   * `command`/`args` are passed as an argv array, so shell
    * metacharacters in args are inert (argument-injection defense).
    */
   start(command: string, args: readonly string[], policy: IsolationPolicy): IsolatedProcess {
     const start = this.clock();
     const maxBytes = policy.maxOutputBytes ?? 1024 * 1024;
+    let processIsolation: ProcessIsolationObservation | undefined;
+    const refuse = (reason: string, cancelled = false): IsolatedProcess => ({ pid: undefined, terminate() {}, done: Promise.resolve({
+      code: null, signal: null, stdout: "", stderr: reason, stdoutBytes: Buffer.alloc(0), stderrBytes: Buffer.alloc(0), timedOut: false, cancelled, terminationError: reason,
+      completion: "not-started", truncated: false, durationMs: this.clock() - start,
+      ...(processIsolation ? { processIsolation, degraded: processIsolation.degraded } : {}),
+    }) });
+    const invalidTimeout = !Number.isFinite(policy.timeoutMs) || policy.timeoutMs < 0;
+    const precheck = executionStopReason(policy);
+    if (invalidTimeout || precheck) return refuse(precheck ?? "invalid execution timeout", policy.signal?.aborted === true);
+    const deadline = Math.min(Date.now() + policy.timeoutMs, policy.deadline ?? Infinity);
 
     // Platform-native spawn plan: POSIX applies a ulimit CPU wrapper; Windows spawns direct and reports cpuLimit as
     // degraded (no Job Objects without a native addon). Either way, argv-only (shell:false) keeps metacharacters inert.
-    const plan = this.iso.planSpawn(command, args, policy.cpuLimitSec, policy.namespaceJail);
+    let required: RequiredJailLaunch | undefined;
+    processIsolation = processPlanObservation(policy.namespaceJail, policy.cpuLimitSec, [], "policy-refusal");
+    if (policy.namespaceJail?.mode !== undefined && policy.namespaceJail.mode !== "required") return refuse("unsupported namespace-jail mode");
+    if (policy.namespaceJail?.mode === "required") {
+      if (this.requestedPlatform !== "linux") return refuse("required project jail needs the Linux backend");
+      try { required = prepareRequiredJail(command, args, policy.namespaceJail, policy.cpuLimitSec, this.scrubEnv(policy.envAllowlist), deadline); }
+      catch (error) { return refuse(error instanceof Error ? error.message : "required-jail preparation failed"); }
+    }
+    const plan = required ? { cmd: required.cmd, args: required.args, detached: true, degraded: [] as readonly string[] }
+      : this.iso.planSpawn(command, args, policy.cpuLimitSec, policy.namespaceJail);
+    processIsolation = processPlanObservation(policy.namespaceJail, policy.cpuLimitSec, plan.degraded);
+    if (required) processIsolation = required.observation;
 
-    const child = spawn(plan.cmd, [...plan.args], {
-      cwd: policy.cwd,
-      env: this.scrubEnv(policy.envAllowlist),
+    const preparedStop = executionStopReason({ ...policy, deadline });
+    if (preparedStop) { required?.close(); return refuse(preparedStop, policy.signal?.aborted === true); }
+
+    let child: ReturnType<typeof spawn>;
+    try { child = spawn(plan.cmd, [...plan.args], {
+      cwd: required ? "/" : policy.cwd,
+      env: required ? { PATH: "/usr/bin:/bin", LANG: "C" } : this.scrubEnv(policy.envAllowlist),
       // POSIX process-group termination; this alone does not prevent a hostile child from leaving that group.
       detached: plan.detached,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: required ? ["ignore", "pipe", "pipe", "pipe", "pipe", "pipe", ...required.mounts] : ["ignore", "pipe", "pipe"],
       windowsHide: true,
       shell: false, // NEVER a shell string — argv only (the POSIX wrapper script is a fixed constant, not caller input).
-    });
+    }); } catch (error) { required?.close(); return refuse(error instanceof Error ? error.message : "spawn failed"); }
 
-    let stdout = "";
-    let stderr = "";
+    let stderrDiagnostic = "";
     const stdoutChunks: Buffer[] = [];
     const stderrChunks: Buffer[] = [];
     let stdoutByteLength = 0;
@@ -135,54 +169,104 @@ export class ProcessIsolationAdapter {
       }
       const room = maxBytes - cur;
       const captured = Buffer.from(buf.subarray(0, Math.min(buf.length, room)));
-      const text = captured.toString("utf8");
       if (buf.length > room) truncated = true;
-      if (which === "out") { stdoutChunks.push(captured); stdoutByteLength += captured.length; stdout += text; }
-      else { stderrChunks.push(captured); stderrByteLength += captured.length; stderr += text; }
+      if (which === "out") { stdoutChunks.push(captured); stdoutByteLength += captured.length; }
+      else { stderrChunks.push(captured); stderrByteLength += captured.length; }
     };
-    child.stdout?.on("data", (b: Buffer) => capture(b, "out"));
-    child.stderr?.on("data", (b: Buffer) => capture(b, "err"));
+    const captureOut = (b: Buffer) => capture(b, "out");
+    const captureErr = (b: Buffer) => capture(b, "err");
+    child.stdout?.on("data", captureOut);
+    child.stderr?.on("data", captureErr);
 
-    const killGroup = () => this.iso.killTree(child);
-
-    const timer = setTimeout(() => {
-      timedOut = true;
-      killGroup();
-    }, policy.timeoutMs);
-
+    let cancelled = false;
+    let stopped = false;
+    let completed = false;
+    let terminationError: string | undefined;
+    let cancelTimer = () => {};
+    let cancelGrace = () => {};
+    const statusChunks: Buffer[] = [];
+    let statusBytes = 0, statusEnded = false;
+    let finish!: (code: number | null, signal: NodeJS.Signals | null, completion: "direct-child-closed" | "unconfirmed" | "not-started") => void;
+    const stop = (timeout: boolean, cancellation = !timeout) => {
+      if (completed || stopped) return;
+      stopped = true; timedOut = timeout; cancelled = cancellation;
+      cancelGrace = atDeadline(Date.now() + (policy.terminationGraceMs ?? 1000), () => finish(null, null, "unconfirmed"));
+      try { this.iso.killTree(child); }
+      catch (error) { terminationError = error instanceof Error ? error.message : String(error); }
+    };
+    const onAbort = () => stop(false);
     const done = new Promise<IsolatedRunResult>((resolve) => {
-      child.on("close", (code, signal) => {
-        clearTimeout(timer);
+      finish = (code, signal, completion) => {
+        if (completed) return;
+        if (completion === "direct-child-closed" && Date.now() >= deadline) timedOut = true;
+        completed = true;
+        required?.close();
+        cancelTimer(); cancelGrace(); policy.signal?.removeEventListener("abort", onAbort);
+        child.stdout?.off("data", captureOut); child.stderr?.off("data", captureErr);
+        if (completion === "unconfirmed") {
+          // Release only our pipes/handle. Work may still continue; this is not
+          // termination evidence and cannot revise the terminal result later.
+          child.stdout?.destroy(); child.stderr?.destroy(); child.unref();
+          if (required) for (const stream of child.stdio.slice(3)) {
+            if (stream && typeof stream !== "number") stream.destroy();
+          }
+        }
+        // A pipe read can end inside a UTF8 character. Decode each retained
+        // byte stream once, including after truncation or interrupted completion.
+        const stdoutBytes = Buffer.concat(stdoutChunks);
+        const stderrBytes = Buffer.concat(stderrChunks);
+        if (required && completion === "direct-child-closed" && !stopped && !timedOut && !terminationError) {
+          processIsolation = required.completed(Buffer.concat(statusChunks), statusEnded, code, signal);
+        }
         resolve({
           code,
           signal: signal ?? null,
-          stdout,
-          stderr,
-          stdoutBytes: Buffer.concat(stdoutChunks),
-          stderrBytes: Buffer.concat(stderrChunks),
+          stdout: stdoutBytes.toString("utf8"),
+          stderr: stderrBytes.toString("utf8") + stderrDiagnostic,
+          stdoutBytes,
+          stderrBytes,
           timedOut,
+          cancelled,
+          completion,
+          ...(terminationError ? { terminationError } : {}),
           truncated,
           durationMs: this.clock() - start,
+          ...(processIsolation ? { processIsolation } : {}),
           ...(plan.degraded.length ? { degraded: plan.degraded } : {}),
         });
-      });
+      };
+      child.on("close", (code, signal) => finish(code, signal ?? null, child.pid === undefined ? "not-started" : "direct-child-closed"));
       child.on("error", (err) => {
-        clearTimeout(timer);
-        resolve({
-          code: null,
-          signal: null,
-          stdout,
-          stderr: stderr + `\n[spawn error: ${(err as Error).message}]`,
-          stdoutBytes: Buffer.concat(stdoutChunks),
-          stderrBytes: Buffer.concat(stderrChunks),
-          timedOut,
-          truncated,
-          durationMs: this.clock() - start,
-        });
+        terminationError = err.message;
+        // A post-spawn error can mean a failed kill. Wait for close or bounded
+        // observation expiry; never classify a still-live child as not started.
+        if (child.pid === undefined) { stderrDiagnostic = `\n[spawn error: ${err.message}]`; finish(null, null, "not-started"); }
+        else stop(false, false);
       });
     });
-
-    return { pid: child.pid, terminate: killGroup, done };
+    if (required) {
+      // Node supports arbitrary extra stdio slots; its overload tuple only names
+      // the first five. Widen that tuple without inventing stream methods.
+      const pipes: readonly (Readable | Writable | null | undefined)[] = child.stdio;
+      const status = pipes[4];
+      status?.on("data", (chunk: Buffer) => {
+        required.close(); // The pinned launcher has executed; it owns its mount FDs now.
+        const kept = Buffer.from(chunk.subarray(0, Math.max(0, 8193 - statusBytes)));
+        statusChunks.push(kept); statusBytes += kept.length;
+        if (statusBytes > 8192) { terminationError = "required-jail status exceeds bound"; stop(false, false); }
+      });
+      status?.once("end", () => { statusEnded = true; });
+      for (const slot of [3,4,5]) pipes[slot]?.on("error", () => { terminationError = `required-jail control pipe ${slot} failed`; stop(false, false); });
+      const filterInput = pipes[3], argumentInput = pipes[5];
+      if (!(filterInput instanceof Writable) || !(argumentInput instanceof Writable) || !status) {
+        terminationError = "required-jail control pipes unavailable"; stop(false, false);
+      } else { filterInput.end(required.filterBytes); argumentInput.end(required.argumentBytes); }
+    }
+    policy.signal?.addEventListener("abort", onAbort, { once: true });
+    // Abort may have occurred while synchronous spawn preparation acquired the handle.
+    if (policy.signal?.aborted) stop(false);
+    if (!completed) cancelTimer = atDeadline(deadline, () => stop(true));
+    return { pid: child.pid, terminate: () => stop(false), done };
   }
 
   /** Convenience: run to completion and return the result. */
@@ -201,7 +285,8 @@ export function resolvedWithinProject(projectDir: string, candidate: string): bo
   const abs = pathIsAbsolute(candidate) ? candidate : pathJoin(projectDir, candidate);
   const realCand = safeRealpath(abs);
   const rel = pathRelative(realBase, realCand);
-  return rel === "" || (!rel.startsWith("..") && !pathIsAbsolute(rel));
+  // Only a complete parent component escapes; '..cache' is an ordinary child.
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${pathSep}`) && !pathIsAbsolute(rel));
 }
 
 function safeRealpath(p: string): string {

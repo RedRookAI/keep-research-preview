@@ -1,16 +1,16 @@
 /**
- * SSE parser (Increment 12b) — spec-compliant, incremental, fail-closed.
+ * Incremental SSE text decoder for Keep's provider transports.
  *
- * SOTA basis (2026-08-05): LLM streaming is SSE (text/event-stream). The correctness-critical rules,
- * confirmed across current parsers (litellmjs, mastra, sindresorhus/parse-sse, dev.to SSE-2026):
+ * Supported framing rules:
  *  - Events are terminated by a blank line (\n\n); a single event may have multiple `data:` lines
  *    which are joined with newlines.
  *  - A JSON payload can be split across network chunk boundaries, so a BUFFER must accumulate partial
  *    lines and only complete (\n\n-delimited) events are emitted.
  *  - `:` lines are comments/heartbeats and are ignored.
- *  - Buffer size must be capped to prevent memory exhaustion from a malformed stream (fail closed).
- *  - Terminal detection: a stream that ends WITHOUT its `[DONE]`/stop sentinel was interrupted — that
- *    is a truncation, not a partial success (Zylos 2026).
+ *  - Normalized buffered text has a configured UTF8 byte cap, checked before each feed is emitted.
+ * This is not an aggregate output/memory bound. finish() intentionally accepts an undelimited
+ * final block for provider compatibility, unlike strict EventSource framing. The provider owns
+ * error/terminal interpretation; this decoder alone cannot establish successful generation.
  *
  * Zero deps. This module is transport-agnostic: it decodes text; the provider maps decoded events to
  * dialect deltas.
@@ -26,7 +26,8 @@ export interface SseEvent {
 }
 
 export interface SseDecoderOptions {
-  /** Max bytes to buffer before failing closed (malformed/unterminated stream guard). Default 8 MiB. */
+  /** Positive integer UTF8 byte cap on normalized decoded buffer, including framing, before
+   * each feed is dispatched. Not raw wire bytes or an aggregate output cap. Default 8 MiB. */
   readonly maxBufferBytes?: number;
 }
 
@@ -37,17 +38,23 @@ export interface SseDecoderOptions {
  */
 export class SseDecoder {
   private buffer = "";
+  private previousEndedWithCr = false;
   private readonly maxBufferBytes: number;
 
   constructor(opts: SseDecoderOptions = {}) {
     this.maxBufferBytes = opts.maxBufferBytes ?? 8 * 1024 * 1024;
+    if (!Number.isSafeInteger(this.maxBufferBytes) || this.maxBufferBytes < 1) throw new Error("SSE buffer byte limit must be a positive safe integer");
   }
 
   /** Feed a text chunk; returns any newly-complete events. */
   feed(chunk: string): SseEvent[] {
-    // Normalize CRLF/CR to LF so framing is consistent regardless of server line endings.
+    // A CR is already a newline; swallow only its following LF, even across feeds.
+    if (chunk.length === 0) return [];
+    const endedWithCr = chunk.endsWith("\r");
+    if (this.previousEndedWithCr && chunk.startsWith("\n")) chunk = chunk.slice(1);
+    this.previousEndedWithCr = endedWithCr;
     this.buffer += chunk.replace(/\r\n?/g, "\n");
-    if (this.buffer.length > this.maxBufferBytes) {
+    if (Buffer.byteLength(this.buffer, "utf8") > this.maxBufferBytes) {
       throw new Error(`SSE buffer overflow (> ${this.maxBufferBytes} bytes) — malformed or unterminated stream`);
     }
     const events: SseEvent[] = [];
@@ -63,12 +70,13 @@ export class SseDecoder {
   }
 
   /**
-   * Finish the stream: returns any final buffered complete event (some servers omit the trailing
-   * blank line before closing). Does NOT invent an event from a partial line.
+   * Compatibility: parse the final buffered block even without a terminating blank line.
+   * Its data may be incomplete; the caller still owns JSON and terminal validation.
    */
   finish(): SseEvent[] {
     const rest = this.buffer.trim();
     this.buffer = "";
+    this.previousEndedWithCr = false;
     if (rest === "") return [];
     const ev = parseEventBlock(rest);
     return ev ? [ev] : [];

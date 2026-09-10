@@ -10,6 +10,7 @@ import {
 } from "../src/platform/native_p2_d2_overlay.js";
 import { captureValidatedPatchOverlayPlan } from "../src/platform/native_authority_schema_v1.js";
 import { isCanonicalNativeP2RelativePath } from "../src/platform/native_p2_path.js";
+import { resolvedPackageMembers } from "./helpers/native_package_membership.js";
 
 const root = process.cwd();
 const oracle = fileURLToPath(new URL("../../native/target/x86_64-unknown-linux-musl/debug/keep-native-p2-d2-overlay-oracle", import.meta.url));
@@ -220,6 +221,6 @@ test("P2-D2 workspace/package boundary is exact and cannot import candidate cryp
   assert.doesNotMatch(manifest, /dalek|vendor-p2|p2-crypto-candidate/);
   const source = readFileSync(`${root}/native/crates/p2-d2-evidence/src/lib.rs`, "utf8");
   assert.doesNotMatch(source, /vendor-p2|p2-crypto-candidate|admissionStatus|VerifiedNativeArtifacts/);
-  const packageJson = JSON.parse(readFileSync(`${root}/package.json`, "utf8")) as { files: string[] };
-  assert.equal(packageJson.files.some((entry) => entry.startsWith("native/")), false);
+  const members = resolvedPackageMembers(root);
+  assert.ok(members.includes("native/crates/p2-d2-evidence/src/lib.rs"));
 });

@@ -67,10 +67,28 @@ export interface BudgetEnvelope {
   /** Durable watermark used to reconcile append-only metering without double counting. */
   meteredTraceTokens?: number;
 }
-export interface ProjectDocumentValue { readonly value: string | undefined; readonly revision: number; }
+/** undefined revision means absent; numeric zero is an existing legacy record.
+ * Deleted file-backed documents retain a numeric tombstone revision. */
+export type ProjectDocumentValue =
+  | { readonly value: string; readonly revision: number }
+  | { readonly value: undefined; readonly revision: number | undefined };
+
+export interface ProjectSessionInspection {
+  readonly storageRevision: number | undefined;
+  readonly runId: string | undefined;
+  readonly history: readonly HistoryEntry[];
+  readonly budget: BudgetEnvelope;
+  readonly checkpoint: ProjectState | undefined;
+}
 
 const DOCUMENT_PREFIX = "keep.document.";
 const MAX_DOCUMENT_BEARING_SESSION_BYTES = 32 * 1024 * 1024;
+
+/** Missing saved state is not evidence of a new, empty or unbounded project. */
+export class ProjectSessionUnavailableError extends Error {
+  override readonly name = "ProjectSessionUnavailableError";
+  constructor() { super("project session snapshot is missing; restore its saved state or create a new project"); }
+}
 
 export class ProjectSession {
   readonly projectId: ProjectId;
@@ -89,10 +107,14 @@ export class ProjectSession {
   private runId: string | undefined;
   private checkpointRef: import("./project_session_persistence.js").ProjectCheckpointReference | undefined;
   private persistenceRevision = 0;
+  private hasPersistedSnapshot = false;
   private persistenceSuperseded = false;
 
   /** The project's budget envelope. */
-  readonly budget: BudgetEnvelope;
+  private readonly budgetState: BudgetEnvelope;
+
+  /** Detached current view; changing a returned object cannot change saved limits or usage. */
+  get budget(): BudgetEnvelope { this.assertCurrent(); return { ...this.budgetState }; }
 
   constructor(
     ns: ProjectNamespace,
@@ -100,15 +122,18 @@ export class ProjectSession {
     private readonly persistence?: ProjectSessionPersistence,
     private readonly checkpoints?: ProjectCheckpointStore,
     private readonly writable: () => boolean = () => true,
+    requireSnapshot = false,
   ) {
     this.ns = ns;
     const documentMethods = [persistence?.loadDocument, persistence?.saveDocument, persistence?.deleteDocument].filter((method) => method !== undefined).length;
     if (documentMethods !== 0 && documentMethods !== 3) throw new Error("project document persistence methods must be configured together");
     this.projectId = ns.projectId;
     const restored = persistence?.load();
+    if (requireSnapshot && restored === undefined) throw new ProjectSessionUnavailableError();
     if (restored !== undefined && restored.projectId !== this.projectId) throw new Error(`project session store belongs to ${restored.projectId}, not ${this.projectId}`);
-    this.budget = { ...(restored?.budget ?? budget) };
+    this.budgetState = { ...(restored?.budget ?? budget) };
     if (restored) {
+      this.hasPersistedSnapshot = true;
       this.persistenceRevision = restored.storageRevision;
       this.stored.push(...restored.history.map((entry) => ({ ...entry, cipher: { ...entry.cipher } })));
       for (const secret of restored.secrets) this.secrets.set(secret.name, { ...secret.cipher });
@@ -129,7 +154,7 @@ export class ProjectSession {
       secrets: [...this.secrets.entries()].map(([name, cipher]): PersistedProjectSecret => ({ name, cipher })),
       compactions: this.persistedNotes,
       nextSeq: this.nextSeq,
-      budget: this.budget,
+      budget: this.budgetState,
       ...(this.runId ? { runId: this.runId } : {}),
       ...(this.checkpointRef ? { checkpointRef: this.checkpointRef } : {}),
       ...overrides,
@@ -139,7 +164,10 @@ export class ProjectSession {
   private persist(snapshot: ProjectSessionSnapshot): void {
     if (this.persistenceSuperseded) throw new Error(`project session ${this.projectId} was superseded by a newer process and is read-only`);
     if (this.persistence !== undefined) {
-      try { this.persistenceRevision = this.persistence.save(snapshot, this.persistenceRevision); }
+      try {
+        this.persistenceRevision = this.persistence.save(snapshot, this.hasPersistedSnapshot ? this.persistenceRevision : undefined);
+        this.hasPersistedSnapshot = true;
+      }
       catch (error) {
         if (error instanceof ProjectSessionConflictError) this.persistenceSuperseded = true;
         throw error;
@@ -149,14 +177,23 @@ export class ProjectSession {
 
   private assertWritable(): void {
     if (!this.writable()) throw new Error(`project ${this.projectId} is not writable (archived, deleted, or unavailable)`);
+    this.assertCurrent();
   }
 
-  private assertCurrentForRead(): void {
-    if (this.persistenceSuperseded) throw new Error(`project session ${this.projectId} was superseded by a newer process and cannot serve stale data`);
-    const durable = this.persistence?.load();
-    if (durable !== undefined && durable.storageRevision !== this.persistenceRevision) {
+  /** Check observation identity only; never execute, save, replay, or rebase this object. */
+  assertCurrent(): void {
+    if (this.persistenceSuperseded) throw new ProjectSessionConflictError(`project session conflict: ${this.projectId} was superseded and cannot serve stale data`);
+    if (this.persistence === undefined) return;
+    let durable: ProjectSessionSnapshot | undefined;
+    try { durable = this.persistence.load(); }
+    catch (error) { this.persistenceSuperseded = true; throw error; }
+    if (durable === undefined && this.hasPersistedSnapshot) {
       this.persistenceSuperseded = true;
-      throw new Error(`project session ${this.projectId} was superseded by a newer process and cannot serve stale data`);
+      throw new ProjectSessionUnavailableError();
+    }
+    if (durable !== undefined && (durable.projectId !== this.projectId || !this.hasPersistedSnapshot || durable.storageRevision !== this.persistenceRevision)) {
+      this.persistenceSuperseded = true;
+      throw new ProjectSessionConflictError(`project session conflict: ${this.projectId} was superseded by changed saved state`);
     }
   }
 
@@ -170,7 +207,7 @@ export class ProjectSession {
     this.runId = runId;
   }
 
-  boundRunId(): string | undefined { return this.runId; }
+  boundRunId(): string | undefined { this.assertCurrent(); return this.runId; }
 
   private decryptCompaction(entry: PersistedCompaction): CompactionNote {
     let value: unknown;
@@ -208,13 +245,14 @@ export class ProjectSession {
     this.putDocumentVersioned(name, value, current.revision);
   }
 
-  putDocumentVersioned(name: string, value: string, expectedRevision: number): number {
+  putDocumentVersioned(name: string, value: string, expectedRevision: number | undefined): number {
     this.assertWritable();
-    if (!/^[A-Za-z0-9._-]{1,128}$/u.test(name) || typeof value !== "string" || value.length === 0 || Buffer.byteLength(value, "utf8") > 8 * 1024 * 1024 || !Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new Error("invalid project document value");
+    if (!/^[A-Za-z0-9._-]{1,128}$/u.test(name) || typeof value !== "string" || value.length === 0 || Buffer.byteLength(value, "utf8") > 8 * 1024 * 1024 || (expectedRevision !== undefined && (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0))) throw new Error("invalid project document value");
     if (this.persistence?.saveDocument !== undefined && this.persistence.loadDocument !== undefined) {
       return this.persistence.saveDocument(name, this.ns.encrypt(value), expectedRevision);
     }
-    if (expectedRevision !== this.persistenceRevision) throw new ProjectSessionConflictError(`project document conflict: expected ${expectedRevision}, found ${this.persistenceRevision}`);
+    const actual = this.secrets.has(`${DOCUMENT_PREFIX}${name}`) ? this.persistenceRevision : undefined;
+    if (expectedRevision !== actual) throw new ProjectSessionConflictError(`project document conflict: expected ${expectedRevision}, found ${actual}`);
     this.putEncryptedValue(`${DOCUMENT_PREFIX}${name}`, value, 8 * 1024 * 1024, "project document");
     return this.persistenceRevision;
   }
@@ -232,7 +270,7 @@ export class ProjectSession {
   }
 
   resolveSecret(name: string): string | undefined {
-    this.assertCurrentForRead();
+    this.assertCurrent();
     if (name.startsWith(DOCUMENT_PREFIX)) return undefined;
     const value = this.secrets.get(name); return value ? this.ns.decrypt(value) : undefined;
   }
@@ -243,24 +281,27 @@ export class ProjectSession {
     if (!/^[A-Za-z0-9._-]{1,128}$/u.test(name)) throw new Error("invalid project document name");
     if (this.persistence?.loadDocument !== undefined) {
       const document = this.persistence.loadDocument(name);
-      if (document === undefined) return { value: undefined, revision: 0 };
+      if (document === undefined) return { value: undefined, revision: undefined };
       return { value: document.deleted ? undefined : this.ns.decrypt(document.cipher!), revision: document.storageRevision };
     }
-    this.assertCurrentForRead();
-    const value = this.secrets.get(`${DOCUMENT_PREFIX}${name}`); return { value: value ? this.ns.decrypt(value) : undefined, revision: this.persistenceRevision };
+    this.assertCurrent();
+    const value = this.secrets.get(`${DOCUMENT_PREFIX}${name}`);
+    return value ? { value: this.ns.decrypt(value), revision: this.persistenceRevision } : { value: undefined, revision: undefined };
   }
-  listSecrets(): readonly string[] { return [...this.secrets.keys()].filter((name) => !name.startsWith(DOCUMENT_PREFIX)).sort(); }
+  listSecrets(): readonly string[] { this.assertCurrent(); return [...this.secrets.keys()].filter((name) => !name.startsWith(DOCUMENT_PREFIX)).sort(); }
   forgetDocument(name: string): boolean {
     const current = this.resolveDocumentVersioned(name);
     return this.forgetDocumentVersioned(name, current.revision);
   }
-  forgetDocumentVersioned(name: string, expectedRevision: number): boolean {
+  forgetDocumentVersioned(name: string, expectedRevision: number | undefined): boolean {
     this.assertWritable();
+    if (!/^[A-Za-z0-9._-]{1,128}$/u.test(name) || (expectedRevision !== undefined && (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0))) throw new Error("invalid project document deletion");
     if (this.persistence?.deleteDocument !== undefined && this.persistence.loadDocument !== undefined) {
       return this.persistence.deleteDocument(name, expectedRevision);
     }
-    if (expectedRevision !== this.persistenceRevision) throw new ProjectSessionConflictError(`project document conflict: expected ${expectedRevision}, found ${this.persistenceRevision}`);
     const internalName = `${DOCUMENT_PREFIX}${name}`;
+    const actual = this.secrets.has(internalName) ? this.persistenceRevision : undefined;
+    if (expectedRevision !== actual) throw new ProjectSessionConflictError(`project document conflict: expected ${expectedRevision}, found ${actual}`);
     if (!this.secrets.has(internalName)) return false;
     const next = new Map(this.secrets); next.delete(internalName);
     this.persist(this.snapshot({ secrets: [...next.entries()].map(([secretName, cipher]) => ({ name: secretName, cipher })) }));
@@ -276,6 +317,11 @@ export class ProjectSession {
 
   /** Read full history (decrypts each entry under the project key). Chronological. */
   history(): HistoryEntry[] {
+    this.assertCurrent();
+    return this.readHistory();
+  }
+
+  private readHistory(): HistoryEntry[] {
     return this.stored.map((s) => ({
       seq: s.seq,
       role: s.role,
@@ -286,11 +332,13 @@ export class ProjectSession {
 
   /** The typed-note compactions produced so far (already summaries; no decryption needed). */
   compactions(): readonly CompactionNote[] {
+    this.assertCurrent();
     return this.notes.map((note) => ({ ...note, keptFacts: [...note.keptFacts] }));
   }
 
   /** Number of live (un-compacted) entries currently retained. */
   liveCount(): number {
+    this.assertCurrent();
     return this.stored.length;
   }
 
@@ -351,6 +399,26 @@ export class ProjectSession {
 
   /** Restore the last checkpoint (used on switch-back — a state restore, not a replay). */
   lastCheckpoint(): ProjectState | undefined {
+    this.assertCurrent();
+    return this.readCheckpoint();
+  }
+
+  /** Fixed detached read projection; never an unchecked callback or write scope.
+   * The canonical checkpoint can be newer than the session's reference, as in
+   * lastCheckpoint(), but is read only once for every field in this view. */
+  inspect(): ProjectSessionInspection {
+    this.assertCurrent();
+    const revision = this.persistenceRevision;
+    const storageRevision = this.hasPersistedSnapshot ? revision : undefined;
+    const runId = this.runId, budget = { ...this.budgetState }, history = this.readHistory();
+    const checkpoint = this.readCheckpoint();
+    this.assertCurrent();
+    if (revision !== this.persistenceRevision) throw new ProjectSessionConflictError("project session changed during inspection");
+    return { storageRevision, runId, budget, history,
+      checkpoint: checkpoint === undefined ? undefined : structuredClone(checkpoint) };
+  }
+
+  private readCheckpoint(): ProjectState | undefined {
     if (this.checkpointRef !== undefined) {
       if (this.checkpoints === undefined) throw new Error("canonical checkpoint resolver is unavailable");
       const durable = this.checkpoints.load(this.checkpointRef.runId);
@@ -365,35 +433,36 @@ export class ProjectSession {
   spend(tokens: number): boolean {
     this.assertWritable();
     if (!Number.isSafeInteger(tokens)) throw new Error("token spend must be an integer");
-    const spentTokensToday = this.budget.spentTokensToday + Math.max(0, tokens);
+    const spentTokensToday = this.budgetState.spentTokensToday + Math.max(0, tokens);
     if (!Number.isSafeInteger(spentTokensToday)) throw new RangeError("token spend overflow");
-    this.persist(this.snapshot({ budget: { ...this.budget, spentTokensToday } }));
-    this.budget.spentTokensToday = spentTokensToday;
+    this.persist(this.snapshot({ budget: { ...this.budgetState, spentTokensToday } }));
+    this.budgetState.spentTokensToday = spentTokensToday;
     return (
-      this.budget.dailyTokenCap === undefined ||
-      this.budget.spentTokensToday <= this.budget.dailyTokenCap
+      this.budgetState.dailyTokenCap === undefined ||
+      this.budgetState.spentTokensToday <= this.budgetState.dailyTokenCap
     );
   }
 
   reconcileMeteredTokens(total: number): boolean {
     this.assertWritable();
     if (!Number.isSafeInteger(total) || total < 0) throw new Error("metered token total must be a nonnegative integer");
-    const prior = this.budget.meteredTraceTokens ?? 0;
+    const prior = this.budgetState.meteredTraceTokens ?? 0;
     if (total <= prior) return this.withinBudget();
-    const spentTokensToday = this.budget.spentTokensToday + total - prior;
+    const spentTokensToday = this.budgetState.spentTokensToday + total - prior;
     if (!Number.isSafeInteger(spentTokensToday)) throw new RangeError("token spend overflow");
-    const budget = { ...this.budget, spentTokensToday, meteredTraceTokens: total };
+    const budget = { ...this.budgetState, spentTokensToday, meteredTraceTokens: total };
     this.persist(this.snapshot({ budget }));
-    this.budget.spentTokensToday = spentTokensToday;
-    this.budget.meteredTraceTokens = total;
+    this.budgetState.spentTokensToday = spentTokensToday;
+    this.budgetState.meteredTraceTokens = total;
     return this.withinBudget();
   }
 
   /** True if the project is within its daily token budget. */
   withinBudget(): boolean {
+    this.assertCurrent();
     return (
-      this.budget.dailyTokenCap === undefined ||
-      this.budget.spentTokensToday <= this.budget.dailyTokenCap
+      this.budgetState.dailyTokenCap === undefined ||
+      this.budgetState.spentTokensToday <= this.budgetState.dailyTokenCap
     );
   }
 }

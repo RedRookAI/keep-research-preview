@@ -91,11 +91,15 @@ test("documented expected-checksum gate stops before install on mismatch or miss
   const guide = readFileSync(join(root, "docs/research-preview.md"), "utf8");
   const block = guide.match(/~~~sh\n(\(\n[\s\S]*?\n\))\n~~~/u)?.[1];
   assert.ok(block, "documented install block missing");
+  const version = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
+  assert.equal(typeof version, "string");
+  const archiveName = `keep-${version}.tgz`;
+  assert.ok(block.includes(`realpath ${archiveName}`), "guide must name the current package version");
   for (const variant of ["matching", "mismatch", "malformed", "unset", "missing-archive"] as const) {
     const fixture = mkdtempSync(join(tmpdir(), "keep-checksum-guide-"));
     try {
       const bytes = Buffer.from("synthetic archive: never installed or executed\n");
-      if (variant !== "missing-archive") writeFileSync(join(fixture, "keep-0.0.1.tgz"), bytes);
+      if (variant !== "missing-archive") writeFileSync(join(fixture, archiveName), bytes);
       const bin = join(fixture, "bin"), sentinel = join(fixture, "calls");
       mkdirSync(bin);
       for (const name of ["npm", "node"])

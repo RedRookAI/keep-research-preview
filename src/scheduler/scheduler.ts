@@ -127,12 +127,13 @@ export class Scheduler {
     if (!toggle) {
       return { runId, ranTasks: [], proposals: [], deadLettered: [], halted: true, haltReason: "cadence disabled" };
     }
+    await this.deps.ledger.refresh();
     const env = this.deps.ledger.getEnvelope(toggle.envelopeId);
     if (!env || this.clock() > env.expiresAt) {
       return { runId, ranTasks: [], proposals: [], deadLettered: [], halted: true, haltReason: "no valid envelope (absent/expired)" };
     }
 
-    this.deps.ledger.beginRun(runId, env.id);
+    await this.deps.ledger.beginRun(runId, env.id);
     this.deps.spine.stage({ type: "identity.action", actor: "scheduler", payload: { event: "tick_begin", projectId, runId, envelopeId: env.id } });
 
     const ranTasks: string[] = [];

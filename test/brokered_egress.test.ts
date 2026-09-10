@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { buildDefaultBrokeredEgress, EgressDeniedError } from "../src/gateway/brokered_egress.js";
 import { LocalProvider } from "../src/gateway/local_provider.js";
-import type { ModelProvider } from "../src/gateway/gateway.js";
+import type { ModelProvider, GenerateRequest } from "../src/gateway/gateway.js";
 import type { RestrictedReleaseRuntime } from "../src/graph/release_boot.js";
 
 // A4 surface test. The broker/permit/owner mechanics have their own exhaustive suites; this file proves the public
@@ -43,4 +43,20 @@ test("owner egress binds privacy policy and rejects a returned route outside its
   const inner: ModelProvider = { name: "aggregator", isLocal: false, async generate() { return { text: "x", model: "m", tokensIn: 1, tokensOut: 1, providerRoute: "Other" }; }, async embed() { return []; } };
   const wrapped = buildDefaultBrokeredEgress(inner, { write() {} }, { transportClass: "remote", ownerAuthority: true, externalRouting: policy });
   await assert.rejects(wrapped.generate({ prompt: "repository" }), /outside the admitted allowlist/u);
+});
+
+test("broker binds exact zero/nonzero output and attempt ceilings and preserves incomplete usage", async () => {
+  const seen: GenerateRequest[] = [];
+  const inner: ModelProvider = { name: "accounted", isLocal: false, async generate(req) {
+    seen.push(req); return { text: "useful", model: "synthetic", tokensIn: 1, tokensOut: -1, usageComplete: false };
+  }, async embed() { return []; } };
+  const wrapped = buildDefaultBrokeredEgress(inner, { write() {} }, { transportClass: "remote", ownerAuthority: true });
+  for (const maxTokens of [0, 512]) {
+    const result = await wrapped.generate({ prompt: "synthetic", maxTokens, maxAttempts: 1 });
+    assert.equal(seen.at(-1)!.maxTokens, maxTokens); assert.equal(seen.at(-1)!.maxAttempts, 1);
+    assert.equal(result.usageComplete, false, "normalizing inert counters cannot create settlement evidence");
+  }
+  await assert.rejects(wrapped.generate({ prompt: "synthetic", maxTokens: -1 }), /ceiling/);
+  await assert.rejects(wrapped.generate({ prompt: "synthetic", maxAttempts: 0 }), /ceiling/);
+  assert.equal(seen.length, 2);
 });

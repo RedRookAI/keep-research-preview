@@ -17,7 +17,7 @@
  */
 
 import { readFileSync, existsSync, writeFileSync, realpathSync, lstatSync } from "node:fs";
-import { dirname, join, resolve, relative, isAbsolute, basename } from "node:path";
+import { dirname, join, resolve, relative, isAbsolute, basename, sep } from "node:path";
 import type { ChainWitness, SealedBlock, WitnessCheck } from "../spine/hashchain.js";
 import { verifyAgainstWitness, verifyChain } from "../spine/hashchain.js";
 import { NODE_IO, durableAppend, ensureDurableDir, fsyncDir } from "../spine/durable_fs.js";
@@ -64,7 +64,8 @@ export function classifyExportLocation(witnessPath: string, dataDir: string): Ex
   const d = canonicalPath(dataDir);
   if (w === d) return { outOfWriteSet: false, reason: `witness destination equals the dataDir (${d}) — same write-set` };
   const rel = relative(d, w);
-  const inside = rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+  // Only a complete parent component escapes; '..reference' is an ordinary child.
+  const inside = rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
   if (inside) return { outOfWriteSet: false, reason: `witness destination (${w}) is INSIDE the dataDir (${d}) — same write-set, detection only` };
   return { outOfWriteSet: true, reason: `witness destination (${w}) is outside the dataDir (${d})` };
 }

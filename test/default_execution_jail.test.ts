@@ -162,7 +162,10 @@ function setupRealRepo(): string {
 
 test("END-TO-END: a DEFAULT solveIssueToPR applies the in-project fix on the real filesystem", async () => {
   const work = setupRealRepo();
-  const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "keep-jail-e2es-"))), new InProcessLock(), new SchemaRegistry());
+  // This journey reaches consequential effect admission, which requires actual
+  // durable event confirmation; the default non-fsync store is not that contract.
+  const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "keep-jail-e2es-")), { fsync: true }), new InProcessLock(), new SchemaRegistry());
+  assert.equal(spine.durableStorage(), true);
   const tree = rawFsTree(work); // the operator's tree IS the real working tree; the pipeline jails it by default
   const runner: TestRunner = {
     async run(): Promise<TestRunResult> {

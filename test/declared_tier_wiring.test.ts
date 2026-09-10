@@ -57,7 +57,7 @@ const model: ModelProvider = {
 
 async function run(extra: Record<string, unknown>) {
   const work = setupRemote();
-  const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "r43ws-"))), new InProcessLock(), new SchemaRegistry());
+  const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "r43ws-")), { fsync: true }), new InProcessLock(), new SchemaRegistry());
   const tree = new InMemoryFileTree({ "src/calc.ts": BROKEN });
   const runner: TestRunner = {
     async run(): Promise<TestRunResult> {

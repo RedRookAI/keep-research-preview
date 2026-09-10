@@ -127,6 +127,7 @@ export interface PatchApplyResult {
 
 /** The test/validation oracle outcome. */
 export interface ValidationOutcome {
+  readonly processIsolation?: import("../infra/isolation_backend.js").ProcessIsolationObservation;
   readonly testsPassed: boolean;
   /** Count from the same oracle invocation; avoids rerunning solely for regression tracking. */
   readonly passedCount?: number;

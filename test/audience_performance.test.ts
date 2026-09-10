@@ -19,6 +19,15 @@ function directContext() {
   const project = registry.create("audience unit test");
   return { projectId: project.id, ingestion: new IngestionPipeline({ ns: registry.namespace(project.id) }) };
 }
+test("guarded in-memory corpus never invents a persisted revision", () => {
+  const revisions: (number | undefined)[] = [];
+  const corpus = new AudiencePerformanceCorpus({ ...directContext(), guard: expected => {
+    revisions.push(expected); assert.equal(expected, undefined);
+  } });
+  corpus.ingest({ source: "portfolio", id: "owned", text: "useful owned work", metrics: { leads: 1 } }, DIRECT_OWNER);
+  assert.equal(corpus.search("owned").length, 1);
+  assert.deepEqual(revisions, [undefined, undefined]);
+});
 const owner = (tenant: string): Principal => ({ id: `owner-${tenant}`, kind: "human", role: "owner", tenant });
 function request(method: string, path: string, body?: unknown, query: Record<string, string> = {}): GatewayRequest {
   return { method, path, query, headers: { authorization: `Bearer ${TOKEN}` }, body: body === undefined ? "" : JSON.stringify(body) };
@@ -89,19 +98,44 @@ test("audience persistence fails closed and publishes no in-memory mutation when
   assert.deepEqual(diskFull.search("ordinary"), []);
 });
 
+test("audience guards distinguish absent documents from later legacy-zero state", () => {
+  let revision: number | undefined;
+  let durable: unknown;
+  let saves = 0;
+  const context = { ...directContext(), guard: (expected: number | undefined) => {
+    if (expected !== revision) throw new Error("document conflict");
+  } };
+  const persistence: AudiencePerformancePersistence = {
+    load: () => ({ snapshot: durable, revision }),
+    save: (snapshot, expected) => {
+      assert.equal(expected, revision); durable = structuredClone(snapshot);
+      revision = (revision ?? 0) + 1; saves++; return revision;
+    },
+  };
+  const stale = new AudiencePerformanceCorpus(context, persistence);
+  revision = 0;
+  assert.throws(() => stale.ingest({ source: "portfolio", id: "x", text: "owned work", metrics: { leads: 1 } }, DIRECT_OWNER), /document conflict/u);
+  assert.equal(saves, 0);
+  const current = new AudiencePerformanceCorpus(context, persistence);
+  current.ingest({ source: "portfolio", id: "x", text: "owned work", metrics: { leads: 1 } }, DIRECT_OWNER);
+  assert.equal(revision, 1); assert.equal(saves, 1);
+  assert.equal(new AudiencePerformanceCorpus(context, persistence).search("owned work").length, 1);
+});
+
 test("owned exports are encrypted, project-isolated, restartable, and hostile input is atomic", async () => {
   const dataDir = mkdtempSync(join(tmpdir(), "keep-audience-installed-"));
   const app = composed(dataDir);
   const first = app.projectManager!.create({ name: "creator one" });
   const second = app.projectManager!.create({ name: "creator two" });
+  const sessionPath = join(dataDir, "projects", "sessions", `${first.id}.json`);
+  const initialSession = readFileSync(sessionPath);
   const item = { source: "youtube", id: "yt-1", title: "Studio lesson", text: "Lighting walkthrough", metrics: { views: 800 }, attributes: ["tutorial"] };
   assert.equal((await call(app, "POST", "/project/audience-export", { projectId: first.id, item })).status, 200);
   const searchBody = JSON.parse((await call(app, "GET", "/project/audience-search", undefined, { projectId: first.id, q: "lighting" })).body);
   assert.deepEqual(searchBody.hits.map((hit: { sourceId: string }) => hit.sourceId), ["youtube:yt-1"]);
   assert.match(searchBody.hits[0].text, /<<<UNTRUSTED_DATA/u);
   assert.deepEqual(JSON.parse((await call(app, "GET", "/project/audience-search", undefined, { projectId: second.id, q: "lighting" })).body).hits, []);
-  const sessionPath = join(dataDir, "projects", "sessions", `${first.id}.json`);
-  assert.equal(existsSync(sessionPath), false, "a corpus-only project must not rewrite a whole session snapshot");
+  assert.deepEqual(readFileSync(sessionPath), initialSession, "corpus work must not rewrite the initial durable budget/session snapshot");
   const documentPath = join(dataDir, "projects", "sessions", `${first.id}.json.documents`, "audience-performance-corpus.json");
   assert.equal(existsSync(documentPath), true);
   assert.doesNotMatch(readFileSync(documentPath, "utf8"), /Studio lesson|Lighting walkthrough/u);

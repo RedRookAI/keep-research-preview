@@ -27,6 +27,14 @@ export interface WireParsed {
   readonly text: string;
   readonly model: string;
   readonly usage: TokenUsage;
+  readonly usageComplete?: boolean;
+  readonly providerRoute?: string;
+}
+
+/** Optional metadata keeps trusted custom dialects returning TokenUsage compatible.
+ * Built-in dialects explicitly distinguish observed counters from missing evidence. */
+export interface StreamUsage extends TokenUsage {
+  readonly usageComplete?: boolean;
   readonly providerRoute?: string;
 }
 
@@ -63,14 +71,16 @@ export interface WireDialect {
   buildEmbed(model: string, texts: readonly string[]): WireRequest;
   parseEmbed(json: unknown): EmbedWireParsed;
 
-  /** The SSE line that terminates a stream; a stream ending WITHOUT it is a truncation (fail-closed). */
+  /** Hard terminal line. An object stop may also finish a stream; see streamStopIsFinal. */
   readonly streamDoneSentinel: string;
   /** Extract a text delta from one parsed SSE "data:" payload (or "" if this event carries none). */
   streamDelta(dataJson: unknown): string;
   /** Detect the terminal event object form (Anthropic message_stop) in addition to the raw sentinel. */
   isStreamStop(dataJson: unknown): boolean;
+  /** Defaults to true. False allows usage-only events after an object stop until sentinel/EOF. */
+  readonly streamStopIsFinal?: boolean;
   /** Pull final usage from a stream's terminal/aggregated events, if present. */
-  streamUsage(events: readonly unknown[]): TokenUsage | undefined;
+  streamUsage(events: readonly unknown[]): StreamUsage | undefined;
 }
 
 function num(x: unknown, d = 0): number {
@@ -78,6 +88,9 @@ function num(x: unknown, d = 0): number {
 }
 function asObj(x: unknown): Record<string, unknown> {
   return x && typeof x === "object" ? (x as Record<string, unknown>) : {};
+}
+function tokenCount(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0;
 }
 
 // ── OpenAI-compatible dialect (also OpenRouter, vLLM, llama.cpp server, Mistral) ──
@@ -105,6 +118,7 @@ export const openAiDialect: WireDialect = {
       text: typeof msg["content"] === "string" ? (msg["content"] as string) : "",
       model: typeof o["model"] === "string" ? (o["model"] as string) : "unknown",
       usage: { freshInputTokens: Math.max(0, promptTokens - cached), cachedInputTokens: cached, outputTokens: num(usage["completion_tokens"]) },
+      usageComplete: [usage["prompt_tokens"], usage["completion_tokens"], asObj(usage["prompt_tokens_details"])["cached_tokens"] ?? 0].every(n => Number.isSafeInteger(n) && (n as number) >= 0) && cached <= promptTokens,
       ...(typeof o["provider"] === "string" ? { providerRoute: o["provider"] } : {}),
     };
   },
@@ -132,6 +146,7 @@ export const openAiDialect: WireDialect = {
     };
   },
   streamDoneSentinel: "[DONE]",
+  streamStopIsFinal: false,
   streamDelta(dataJson) {
     const o = asObj(dataJson);
     const choices = Array.isArray(o["choices"]) ? (o["choices"] as unknown[]) : [];
@@ -145,11 +160,17 @@ export const openAiDialect: WireDialect = {
   },
   streamUsage(events) {
     for (let i = events.length - 1; i >= 0; i--) {
-      const u = asObj(asObj(events[i])["usage"]);
-      if (u["completion_tokens"] != null || u["prompt_tokens"] != null) {
+      const event = asObj(events[i]);
+      // Null is normal on text chunks. A malformed non-null final report must
+      // not be replaced by older counters that happened to look complete.
+      if (event["usage"] != null) {
+        const u = asObj(event["usage"]);
         const promptTokens = num(u["prompt_tokens"]);
-        const cached = num(asObj(u["prompt_tokens_details"])["cached_tokens"]);
-        return { freshInputTokens: Math.max(0, promptTokens - cached), cachedInputTokens: cached, outputTokens: num(u["completion_tokens"]) };
+        const rawCached = asObj(u["prompt_tokens_details"])["cached_tokens"] ?? 0;
+        const cached = num(rawCached);
+        return { freshInputTokens: Math.max(0, promptTokens - cached), cachedInputTokens: cached, outputTokens: num(u["completion_tokens"]),
+          usageComplete: tokenCount(u["prompt_tokens"]) && tokenCount(u["completion_tokens"]) && tokenCount(rawCached) && cached <= promptTokens,
+          ...(typeof event["provider"] === "string" ? { providerRoute: event["provider"] } : {}) };
       }
     }
     return undefined;
@@ -198,6 +219,7 @@ export const anthropicDialect: WireDialect = {
       text,
       model: typeof o["model"] === "string" ? (o["model"] as string) : "unknown",
       usage: { freshInputTokens: num(usage["input_tokens"]), cachedInputTokens: cached, outputTokens: num(usage["output_tokens"]) },
+      usageComplete: [usage["input_tokens"], usage["output_tokens"], usage["cache_read_input_tokens"] ?? 0].every(n => Number.isSafeInteger(n) && (n as number) >= 0),
     };
   },
   buildEmbed() {
@@ -221,15 +243,27 @@ export const anthropicDialect: WireDialect = {
     return asObj(dataJson)["type"] === "message_stop";
   },
   streamUsage(events) {
-    let inTok = 0, outTok = 0, cached = 0, seen = false;
+    let inTok = 0, outTok = 0, cached = 0, sawInput = false, sawOutputDelta = false, valid = true;
     for (const e of events) {
       const o = asObj(e);
-      const msg = asObj(o["message"]);
-      const u = asObj(o["usage"] ?? msg["usage"]);
-      if (u["input_tokens"] != null) { inTok = num(u["input_tokens"]); cached = num(u["cache_read_input_tokens"]); seen = true; }
-      if (u["output_tokens"] != null) { outTok = num(u["output_tokens"]); seen = true; }
+      if (o["type"] === "message_start") {
+        const u = asObj(asObj(o["message"])["usage"]);
+        const rawCached = u["cache_read_input_tokens"] ?? 0;
+        valid &&= !sawInput && tokenCount(u["input_tokens"]) && tokenCount(rawCached);
+        inTok = num(u["input_tokens"]); cached = num(rawCached); sawInput = true;
+        // The start snapshot's output count is preliminary, not final usage.
+        if (u["output_tokens"] !== undefined) {
+          valid &&= tokenCount(u["output_tokens"]);
+          outTok = num(u["output_tokens"]);
+        }
+      } else if (o["type"] === "message_delta") {
+        const u = asObj(o["usage"]);
+        valid &&= sawInput && tokenCount(u["output_tokens"]) && num(u["output_tokens"]) >= outTok;
+        outTok = num(u["output_tokens"]); sawOutputDelta = true;
+      }
     }
-    return seen ? { freshInputTokens: inTok, cachedInputTokens: cached, outputTokens: outTok } : undefined;
+    return sawInput || sawOutputDelta ? { freshInputTokens: inTok, cachedInputTokens: cached, outputTokens: outTok,
+      usageComplete: valid && sawInput && sawOutputDelta && tokenCount(inTok + cached) } : undefined;
   },
 };
 

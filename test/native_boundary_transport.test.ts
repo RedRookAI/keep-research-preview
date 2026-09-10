@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { appendFileSync, chmodSync, cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, cpSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
@@ -308,7 +308,10 @@ test("A6 packaged client refuses a non-private replacement at the genuine socket
 test("A6 installed-copy client substitution is rejected before transport", async () => {
   const directory = mkdtempSync(join(tmpdir(), "keep-native-substitution-"));
   try {
-    cpSync(join(root, "dist"), join(directory, "dist"), { recursive: true });
+    // Installed test harnesses may resolve dist through a symlink. Materialize
+    // independent bytes before tampering; never copy an alias to the subject.
+    cpSync(join(root, "dist"), join(directory, "dist"), { recursive: true, dereference: true });
+    assert.notEqual(realpathSync(join(directory, "dist")), realpathSync(join(root, "dist")));
     writeFileSync(join(directory, "package.json"), '{"type":"module"}\n');
     appendFileSync(join(directory, "dist/native/linux-x64/keep-native-client"), Buffer.from([0]));
     const copied = await import(

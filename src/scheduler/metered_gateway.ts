@@ -1,16 +1,8 @@
 /**
- * Scheduler + Envelope: MeteredGateway + TokenVelocityBreaker (Increment 7b) — the enforcement point.
- *
- * SOTA basis (2026-08-04): enforcement, not alerts — "no further LLM calls until a human or policy
- * resumes" (Waxell 2026). The check lives at the gateway/proxy layer and the LLM CANNOT override it
- * (SupraWall). Rate-of-spend beats cumulative total for catching loops: "monitor tokens per minute,
- * not the total" (nexgismo); repetitive identical calls trip BEFORE the budget cap (SupraWall). So
- * the velocity breaker is a LEADING signal independent of the cumulative caps — the same
- * leading+confirming pattern as the Auto-Learning guard.
- *
- * MeteredGateway is a DECORATOR over the existing ModelGateway (everything behind a port). It reuses
- * the BudgetLedger (7a) for the deterministic willBreach() predicate + spend accounting, and the
- * killswitch CircuitBreaker pattern for velocity. Zero deps.
+ * MeteredGateway reserves projected token cost through the durable BudgetLedger.
+ * Prices, projection and provider results are trusted inputs with explicit limits.
+ * The repetition check runs before admission; the rate check runs after settlement.
+ * See docs/monetary-accounting.md for route coverage and migration behavior.
  */
 
 import type { ModelGateway, GenerateRequest, GenerateResult } from "../gateway/gateway.js";
@@ -18,7 +10,7 @@ import type { Spine } from "../spine/spine.js";
 import type { BudgetLedger, LoopClass, ModelTier, BreachKind } from "./authorization_envelope.js";
 import type { TokenUsage } from "../observability/cost_model.js";
 
-/** Thrown when a call would breach the envelope. Deterministic; not catchable-into-a-retry-loop by design. */
+/** A refused admission or a post-call velocity stop. Retrying does not clear ledger state. */
 export class BudgetExceeded extends Error {
   constructor(
     readonly kind: BreachKind | "velocity",
@@ -49,8 +41,8 @@ export interface VelocityThresholds {
 const DEFAULT_VELOCITY: VelocityThresholds = { maxUsdPerMinute: 5, maxRepeatedIdentical: 5 };
 
 /**
- * Token-velocity + repetitive-call breaker. Trips on rate-of-spend or identical-call bursts,
- * INDEPENDENT of the cumulative caps — catches a loop before the bill grows. Reusable across runs.
+ * Process-local repetition and reported-spend-rate checks, separate from durable
+ * cumulative accounting. Rate detection cannot prevent costs already incurred.
  */
 export class TokenVelocityBreaker {
   private readonly window: Array<{ ts: number; usd: number }> = [];
@@ -136,28 +128,37 @@ export class MeteredGateway {
   }
 
   /**
-   * The UNATTENDED path — enforced. Pre-call: repetition + willBreach hard-stops. Post-call: record
-   * real spend + rate check. A breach throws BEFORE any provider call is made (no spend on breach).
+   * Reserve projected exposure before entry. Entered failures retain their reservation.
+   * A post-call rate breach can occur after delivered work; it is not a pre-dispatch refusal.
    */
   async generateMetered(req: GenerateRequest, ctx: MeteredCallContext, model: string): Promise<GenerateResult> {
+    const request = Object.freeze({ ...req, maxTokens: req.maxTokens ?? ctx.projected.outputTokens, maxAttempts: 1 });
+    if (!Number.isSafeInteger(request.maxTokens) || request.maxTokens < 0 || request.maxTokens > ctx.projected.outputTokens) throw new BudgetExceeded("token-ceiling", "effective request exceeds its projection", ctx.runId);
+    request.signal?.throwIfAborted();
     if (this.breaker.isTripped) {
       throw new BudgetExceeded("velocity", "breaker already tripped — awaiting human reset", ctx.runId);
     }
     // Leading signal: repetitive-identical-call burst (checked before spend).
-    this.breaker.checkRepetition(req.prompt);
+    this.breaker.checkRepetition(request.prompt);
 
-    // Deterministic cap check BEFORE the call — the LLM cannot influence or override this.
-    const breach = this.ledger.willBreach(ctx.runId, ctx.cls, ctx.tier, model, ctx.projected);
+    // Admission includes pending reservations in the configured shared lock domain.
+    const { breach, reservation } = await this.ledger.reserve(ctx.runId, ctx.cls, ctx.tier, model, ctx.projected);
     if (breach.wouldBreach) {
       this.spine.stage({ type: "identity.action", actor: "scheduler", payload: { event: "call_hard_stopped", runId: ctx.runId, kind: breach.kind, reason: breach.reason } });
       throw new BudgetExceeded(breach.kind!, breach.reason!, ctx.runId);
     }
 
-    // Enforce the per-call token ceiling on the request itself (belt and suspenders — RelayPlane).
-    const result = await this.inner.generate(req);
+    if (!reservation) throw new Error("monetary admission returned no reservation");
+    if (request.signal?.aborted) {
+      await this.ledger.voidBeforeDispatch(reservation.id);
+      request.signal.throwIfAborted();
+    }
+    // An exception after this boundary cannot establish that no provider work occurred.
+    const result = await this.inner.generate(request);
+    if (result.usageComplete === false) throw new Error("provider usage incomplete; monetary reservation remains unresolved");
 
     const usage: TokenUsage = { freshInputTokens: result.tokensIn, cachedInputTokens: 0, outputTokens: result.tokensOut };
-    const cost = this.ledger.recordSpend(ctx.runId, model, usage);
+    const cost = await this.ledger.settle(reservation.id, usage);
     this.breaker.recordAndCheckRate(cost);
     return result;
   }

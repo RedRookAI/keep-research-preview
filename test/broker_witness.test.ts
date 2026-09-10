@@ -18,7 +18,7 @@ import { FileSpineStore, type DurableIO } from "../src/spine/store.js";
 import { InProcessLock } from "../src/lock/lock.js";
 import { SchemaRegistry } from "../src/spine/upcaster.js";
 import type { CanonicalValue } from "../src/eir/canonical.js";
-import { mkdtempSync, rmSync, openSync as nOpen, writeSync as nWrite, fsyncSync as nFsync, closeSync as nClose } from "node:fs";
+import { mkdtempSync, rmSync, fstatSync, openSync as nOpen, writeSync as nWrite, fsyncSync as nFsync, closeSync as nClose } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -362,9 +362,12 @@ test("durability: a newly-created data directory's parent entry is fsync'd (POSI
 test("durability: an operational dir-fsync error (EIO) PROPAGATES fail-closed; unsupported (EINVAL) is tolerated", () => {
   const baseDir = mkdtempSync(join(tmpdir(), "keep-witness-eio-"));
   try {
-    const throwingIO = (code: string): DurableIO => ({
+    const throwingIO = (code: string, target: "directory" | "file" = "directory"): DurableIO => ({
       openSync: (p, f) => nOpen(p, f), writeSync: (fd, b, o, l) => nWrite(fd, b, o, l), closeSync: (fd) => nClose(fd),
-      fsyncSync: () => { const e = new Error(code) as Error & { code: string }; e.code = code; throw e; },
+      fsyncSync: (fd) => {
+        if (fstatSync(fd).isDirectory() !== (target === "directory")) { nFsync(fd); return; }
+        const e = new Error(code) as Error & { code: string }; e.code = code; throw e;
+      },
     });
     // constructing in a NEW dir triggers a directory fsync; operational/permission errors must surface, only genuine
     // platform-unsupported codes are tolerated.
@@ -373,10 +376,12 @@ test("durability: an operational dir-fsync error (EIO) PROPAGATES fail-closed; u
     assert.throws(() => new FileSpineStore(join(baseDir, "eperm"), { fsync: true, io: throwingIO("EPERM") }), /EPERM/, "an EPERM denial must surface");
     assert.doesNotThrow(() => new FileSpineStore(join(baseDir, "einval"), { fsync: true, io: throwingIO("EINVAL") }), "a platform-unsupported dir fsync (EINVAL) is tolerated (named seam)");
     assert.doesNotThrow(() => new FileSpineStore(join(baseDir, "eisdir"), { fsync: true, io: throwingIO("EISDIR") }), "a platform-unsupported dir fsync (EISDIR) is tolerated");
+    assert.throws(() => new FileSpineStore(join(baseDir, "file-einval"), { fsync: true, io: throwingIO("EINVAL", "file") }), /EINVAL/, "file fsync failure must not be mistaken for unsupported directory flushing");
+    assert.throws(() => new FileSpineStore(join(baseDir, "file-eio"), { fsync: true, io: throwingIO("EIO", "file") }), /EIO/);
   } finally { rmSync(baseDir, { recursive: true, force: true }); }
 });
 
-test("durability: fsync:false never fsyncs (the non-durable path is byte-identical legacy behavior)", async () => {
+test("durability: fsync:false never invokes the configured IO flush", async () => {
   const dir = mkdtempSync(join(tmpdir(), "keep-witness-nodur-"));
   try {
     const { io, counts } = spyIO();

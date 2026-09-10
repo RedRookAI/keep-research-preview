@@ -12,12 +12,14 @@
  *  - chain:   append-only, sealed hash-chain blocks (leader/sealer writes only).
  */
 
-import { appendFileSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { randomBytes } from "node:crypto";
+import { appendFileSync, closeSync, constants, existsSync, ftruncateSync, linkSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { isUtf8 } from "node:buffer";
 import { dirname, join } from "node:path";
-import type { StagedEvent } from "./event.js";
-import { validateBlock, type SealedBlock } from "./hashchain.js";
+import { canonicalize, isWellFormedEvent, type StagedEvent } from "./event.js";
+import { blockByteLength, MAX_BLOCK_BYTES, validateBlock, type SealedBlock } from "./hashchain.js";
 import { NODE_IO, durableAppend, ensureDurableDir as durableMkdir, fsyncDir, type DurableIO } from "./durable_fs.js";
+import { withLogicalAppendLock } from "./logical_append_lock.js";
 
 export type { DurableIO } from "./durable_fs.js"; // re-export for back-compat (importers used store.js)
 
@@ -40,12 +42,24 @@ export interface SpineStore {
   readonly durable?: boolean;
   /** Confirm durability of currently visible event carriers after an ambiguous append. */
   confirmEventDurability?(): void;
+  /** Resolve abandoned append framing before the sealer derives its snapshot/head. */
+  prepareForSeal?(): void;
+}
+
+export class SpineLogRecoveryError extends Error {
+  readonly code = "KEEP_SPINE_LOG_RECOVERY_REQUIRED";
 }
 
 /**
  * Filesystem store: newline-delimited JSON (JSONL) append-only files.
- * - Appends are atomic per line on POSIX for the sizes we write.
- * - No external dependencies; runs anywhere Node runs.
+ * Logical appends are serialized, including short-write completion and abandoned
+ * tail recovery. Requires a coherent local filesystem/common process domain; no
+ * network-filesystem or hostile-directory-writer exclusion claim.
+ * The caller's sealer lock still owns cursor transaction ordering. These append
+ * locks do not make concurrent independent removeStaged calls a transaction.
+ * Keep .append-lock and .torn-* sidecars with runtime backups. A recovery-required
+ * error retains the affected bytes: stop writers and reconcile a copy against a
+ * known history/witness before deliberately repairing them; do not delete locks.
  */
 export class FileSpineStore implements SpineStore {
   private readonly stagingPath: string;
@@ -53,6 +67,7 @@ export class FileSpineStore implements SpineStore {
   private readonly chainPath: string;
   private readonly fsyncOnAppend: boolean;
   private readonly io: DurableIO;
+  private readonly appendWaitMs: number;
   /** MEASURED durability: appends are fsync-durable iff constructed with `{fsync:true}`. */
   get durable(): boolean { return this.fsyncOnAppend; }
 
@@ -69,25 +84,30 @@ export class FileSpineStore implements SpineStore {
    * `opts.fsync` (default false): flush each append to stable storage with `fsyncSync` before returning — the WAL
    * log-then-act durability the PRE-EFFECT WITNESS INTERLOCK (Increment 12a) depends on, so a `sealIntent` ack proves
    * the intent SURVIVES a process/OS crash, not merely that the write buffer accepted it. New directories/files have
-   * their directory entries fsync'd too (see durable_fs.ts). Default false keeps every existing non-witness caller
-   * byte-for-byte unchanged. `opts.io` injects the fs primitives (tests only) to verify the fsync + short-write loop.
+   * their directory entries fsync'd too (see durable_fs.ts). Default false keeps file-data and lock-metadata flushes
+   * disabled; it does not promise crash durability. `opts.io` injects data writes/flushes, not every filesystem
+   * operation. Lock publication uses its own filesystem primitives.
    */
-  constructor(dataDir: string, opts?: { fsync?: boolean; io?: DurableIO }) {
+  constructor(dataDir: string, opts?: { fsync?: boolean; io?: DurableIO; appendWaitMs?: number }) {
     this.stagingPath = join(dataDir, "staging.jsonl");
     this.stagingCursorPath = join(dataDir, "staging.cursor");
     this.chainPath = join(dataDir, "chain.jsonl");
     this.fsyncOnAppend = opts?.fsync === true;
     this.io = opts?.io ?? NODE_IO;
+    this.appendWaitMs = opts?.appendWaitMs ?? 30_000;
     for (const p of [this.stagingPath, this.chainPath, this.stagingCursorPath]) {
       const dir = dirname(p);
       if (this.fsyncOnAppend) durableMkdir(this.io, dir); // creates missing dirs AND fsyncs each new dir's parent
       else if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
       if (!existsSync(p)) {
-        writeFileSync(p, p === this.stagingCursorPath ? "0\n" : "");
-        if (this.fsyncOnAppend) {
-          const fd = openSync(p, "r+"); try { fsyncSync(fd); } finally { closeSync(fd); }
-          fsyncDir(this.io, dir);
-        }
+        // Publish the complete cursor, not an empty carrier another initializer
+        // might observe between open and write. The hard link never replaces data.
+        const temp = `${p}.init-${process.pid}-${randomBytes(12).toString("hex")}`;
+        try {
+          this.writePrivateFile(temp, Buffer.from(p === this.stagingCursorPath ? "0\n" : ""));
+          try { linkSync(temp, p); } catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; }
+          if (this.fsyncOnAppend) fsyncDir(this.io, dir);
+        } finally { try { unlinkSync(temp); } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; } }
       }
     }
   }
@@ -99,7 +119,108 @@ export class FileSpineStore implements SpineStore {
   }
 
   appendStaged(e: StagedEvent): void {
-    this.append(this.stagingPath, JSON.stringify(e) + "\n");
+    if (!isWellFormedEvent(e)) throw new Error("staged event envelope is malformed");
+    this.exclusive(this.stagingPath, () => {
+      const all = this.prepare(this.stagingPath) as StagedEvent[];
+      const prior = all.find(row => row.id === e.id);
+      if (prior !== undefined) {
+        if (canonicalize(prior) !== canonicalize(e)) throw new SpineLogRecoveryError("staged identity already has different content");
+        this.syncFile(this.stagingPath); return;
+      }
+      this.append(this.stagingPath, JSON.stringify(e) + "\n");
+    });
+  }
+
+  prepareForSeal(): void {
+    // Do not nest file locks; the sealer separately owns cursor transaction order.
+    this.exclusive(this.stagingPath, () => { this.prepare(this.stagingPath); });
+    this.exclusive(this.chainPath, () => { this.prepare(this.chainPath); });
+  }
+
+  private exclusive<T>(path: string, fn: () => T): T {
+    return withLogicalAppendLock(path, fn, { waitMs: this.appendWaitMs, durable: this.fsyncOnAppend });
+  }
+
+  private syncFile(path: string): void {
+    if (!this.fsyncOnAppend) return;
+    const fd = this.io.openSync(path, "r");
+    try { this.io.fsyncSync(fd); } finally { this.io.closeSync(fd); }
+  }
+
+  /** Complete a private unpublished carrier. The caller owns publication/cleanup. */
+  private writePrivateFile(path: string, bytes: Buffer): void {
+    writeFileSync(path, "", { flag: "wx", mode: 0o600 });
+    const fd = this.io.openSync(path, "r+");
+    try {
+      let off = 0;
+      while (off < bytes.length) {
+        const n = this.io.writeSync(fd, bytes, off, bytes.length - off);
+        if (!Number.isInteger(n) || n <= 0 || n > bytes.length - off) throw new Error("private carrier made invalid write progress");
+        off += n;
+      }
+      if (this.fsyncOnAppend) this.io.fsyncSync(fd);
+    } finally { this.io.closeSync(fd); }
+  }
+
+  /** Called only under this carrier's exclusive append lock. Readers never repair. */
+  private prepare(path: string): (StagedEvent | SealedBlock)[] {
+    const raw = readFileSync(path), end = raw.lastIndexOf(10) + 1;
+    const complete = raw.subarray(0, end), tail = raw.subarray(end);
+    const all: (StagedEvent | SealedBlock)[] = [];
+    const accept = (value: unknown): void => {
+      if (path === this.stagingPath) {
+        if (!isWellFormedEvent(value)) throw new SpineLogRecoveryError("invalid staged record; preserve log for explicit recovery");
+      } else {
+        const check = validateBlock(value as SealedBlock, all.at(-1) as SealedBlock | undefined);
+        if (!check.ok) throw new SpineLogRecoveryError(`invalid chain record: ${check.reason}; preserve log for explicit recovery`);
+      }
+      all.push(value as StagedEvent | SealedBlock);
+    };
+    if (!isUtf8(complete)) throw new SpineLogRecoveryError("complete log contains invalid UTF-8; explicit recovery required");
+    for (const line of complete.toString("utf8").split("\n")) {
+      if (line.trim() === "") continue;
+      let value: unknown;
+      try { value = JSON.parse(line); }
+      catch { throw new SpineLogRecoveryError("malformed complete log line; preserve log for explicit recovery"); }
+      accept(value);
+    }
+    if (tail.length === 0) {
+      if (path === this.stagingPath) this.readStagingCursor(all.length);
+      return all;
+    }
+    let value: unknown, parsed = false;
+    if (isUtf8(tail)) { try { value = JSON.parse(tail.toString("utf8")); parsed = true; } catch { /* incomplete write */ } }
+    if (parsed) {
+      // Only complete, well-formed OBJECT records qualify; e.g. truncated 1234 ->
+      // 12 is not a record. A chain tail must link to the validated complete prefix.
+      accept(value);
+      if (path === this.stagingPath) this.readStagingCursor(all.length);
+      this.append(path, "\n");
+    } else {
+      if (path === this.stagingPath) this.readStagingCursor(all.length);
+      this.preserveTail(path, end, tail);
+      const fd = openSync(path, constants.O_RDWR | constants.O_NOFOLLOW);
+      try { ftruncateSync(fd, end); if (this.fsyncOnAppend) this.io.fsyncSync(fd); }
+      finally { closeSync(fd); }
+    }
+    return all;
+  }
+
+  private preserveTail(path: string, offset: number, bytes: Buffer): void {
+    const digest = createHash("sha256").update(bytes).digest("hex");
+    const saved = `${path}.torn-${offset}-${digest}`;
+    if (!existsSync(saved)) {
+      const temp = `${path}.recovery-${process.pid}-${randomBytes(12).toString("hex")}`;
+      try {
+        // A failed temp write leaves the original untouched. Only a complete
+        // carrier is linked at the deterministic name, so retries can recover.
+        this.writePrivateFile(temp, bytes);
+        try { linkSync(temp, saved); } catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; }
+      } finally { try { unlinkSync(temp); } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; } }
+    }
+    if (!readFileSync(saved).equals(bytes)) throw new SpineLogRecoveryError("preserved tail content differs; explicit recovery required");
+    this.syncFile(saved);
+    if (this.fsyncOnAppend) fsyncDir(this.io, dirname(path));
   }
 
   readStaged(): StagedEvent[] {
@@ -134,11 +255,7 @@ export class FileSpineStore implements SpineStore {
     const dir = dirname(this.stagingCursorPath);
     const temp = `${this.stagingCursorPath}.tmp-${process.pid}-${randomBytes(8).toString("hex")}`;
     try {
-      writeFileSync(temp, `${value}\n`, { flag: "wx", mode: 0o600 });
-      if (this.fsyncOnAppend) {
-        const fd = openSync(temp, "r+");
-        try { fsyncSync(fd); } finally { closeSync(fd); }
-      }
+      this.writePrivateFile(temp, Buffer.from(`${value}\n`));
       renameSync(temp, this.stagingCursorPath);
       if (this.fsyncOnAppend) fsyncDir(this.io, dir);
     } finally {
@@ -147,24 +264,14 @@ export class FileSpineStore implements SpineStore {
   }
 
   appendBlock(b: SealedBlock): void {
-    // VALIDATE-ON-WRITE (writable iff verifiable). Run the SAME shared predicate that
-    // verifyChain re-checks at read time, over this block + its immediate predecessor,
-    // and REFUSE (throw, fail-closed) an ill-formed / mis-linked / out-of-sequence /
-    // non-recomputing block — so the chain file cannot come to contain a block that a
-    // later verifyChain would reject. `append succeeds ⇒ verifyChain passes` by construction.
-    //
-    // LOCAL and O(1) in the predicate: it compares only against `lastBlock()`, the single
-    // predecessor. (Reading the tail is the file tier's pre-existing cost, not a chain
-    // re-verification; a DB-backed store would fetch the head row directly.) Global /
-    // uniqueness concerns are deliberately NOT here — they belong to a reservation gate.
-    //
-    // This dogfoods the loop's own ledger.mjs discipline (append runs validateEntry, the
-    // same predicate verify uses) into Keep the product.
-    const check = validateBlock(b, this.lastBlock());
-    if (!check.ok) {
-      throw new Error(`FileSpineStore.appendBlock refused an unverifiable block (seq ${b?.seq}): ${check.reason}`);
-    }
-    this.append(this.chainPath, JSON.stringify(b) + "\n");
+    this.exclusive(this.chainPath, () => {
+      const all = this.prepare(this.chainPath) as SealedBlock[], prior = all.at(-1);
+      if (prior !== undefined && canonicalize(prior) === canonicalize(b)) { this.syncFile(this.chainPath); return; }
+      const check = validateBlock(b, prior);
+      if (!check.ok) throw new Error(`FileSpineStore.appendBlock refused an unverifiable block (seq ${b?.seq}): ${check.reason}`);
+      if (blockByteLength(b) > MAX_BLOCK_BYTES) throw new Error(`new spine block exceeds ${MAX_BLOCK_BYTES}-byte size bound`);
+      this.append(this.chainPath, JSON.stringify(b) + "\n");
+    });
   }
 
   readBlocks(): SealedBlock[] {
@@ -177,27 +284,18 @@ export class FileSpineStore implements SpineStore {
   }
 }
 
-function readJsonl<T>(path: string, durable: boolean): T[] {
+function readJsonl<T>(path: string, _durable: boolean): T[] {
   if (!existsSync(path)) return [];
   const raw = readFileSync(path, "utf8");
   const out: T[] = [];
   const lines = raw.split("\n");
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index]!;
+    if (index === lines.length - 1 && !raw.endsWith("\n")) break;
     const trimmed = line.trim();
     if (trimmed.length === 0) continue;
     try { out.push(JSON.parse(trimmed) as T); }
-    catch (error) {
-      // A crash can leave only the final append partially written. It cannot be a valid linked block/event and is
-      // safely discarded; malformed bytes anywhere else are tampering/corruption and remain a hard refusal.
-      const isUnterminatedTail = index === lines.length - 1 && !raw.endsWith("\n");
-      if (!isUnterminatedTail) throw error;
-      const lastNewline = raw.lastIndexOf("\n");
-      // Readers never mutate an append log. A concurrent durableAppend may be between short writes;
-      // ignoring its unterminated tail is safe, while truncating it would destroy another process's write.
-      // Crash-tail repair belongs to an exclusive recovery operation, not an ordinary projection read.
-      break;
-    }
+    catch { throw new SpineLogRecoveryError("malformed complete log line; preserve log for explicit recovery"); }
   }
   return out;
 }

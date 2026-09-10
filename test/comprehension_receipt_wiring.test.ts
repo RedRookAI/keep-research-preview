@@ -57,9 +57,10 @@ const model: ModelProvider = {
   async embed(): Promise<Embedding[]> { return []; },
 };
 
-async function run(extra: Record<string, unknown>, opts: Partial<SolveToPrOptions> = {}) {
+async function run(extra: Record<string, unknown>, opts: Partial<SolveToPrOptions> = {}, durable = true) {
   const work = setupRemote();
-  const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "b24ws-"))), new InProcessLock(), new SchemaRegistry());
+  const dataDir = mkdtempSync(join(tmpdir(), "b24ws-"));
+  const spine = new Spine(new FileSpineStore(dataDir, { fsync: durable }), new InProcessLock(), new SchemaRegistry());
   const tree = new InMemoryFileTree({ "src/calc.ts": BROKEN });
   const runner: TestRunner = {
     async run(): Promise<TestRunResult> {
@@ -75,8 +76,17 @@ async function run(extra: Record<string, unknown>, opts: Partial<SolveToPrOption
     pinnedGitDependencies(work, new InMemoryMergePort()),
     { autonomyLevel: "operator", ...opts },
   );
+  assert.deepEqual(new Spine(new FileSpineStore(dataDir, { fsync: durable }), new InProcessLock(), new SchemaRegistry()).currentEvents(),
+    spine.currentEvents(), "receipt and accounting records survive reconstruction");
   return { result, spine };
 }
+
+test("pipeline refuses non-durable accounting before any model call", async () => {
+  let calls = 0;
+  const countedModel: ModelProvider = { ...model, generate: async request => { calls++; return model.generate(request); } };
+  await assert.rejects(run({ model: countedModel }, {}, false), /spine cannot confirm event durability/);
+  assert.equal(calls, 0, "no model use is permitted without confirmed accounting storage");
+});
 
 /** A degraded default process floor → ceiling drops minimal→refuse-risky → a CONSEQUENTIAL human-merge. */
 function degradedFloorExecutor(): ProcessIsolationExecutor {

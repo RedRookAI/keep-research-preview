@@ -60,7 +60,7 @@ function auditedDetails(s: Spine): string[] {
 
 async function run(extra: Record<string, unknown>): Promise<{ details: string[] }> {
   const work = setupRemote();
-  const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "winws-"))), new InProcessLock(), new SchemaRegistry());
+  const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "winws-")), { fsync: true }), new InProcessLock(), new SchemaRegistry());
   const tree = new InMemoryFileTree({ "src/calc.ts": BROKEN });
   const runner: TestRunner = {
     async run(): Promise<TestRunResult> {

@@ -14,7 +14,7 @@
  * plugs in behind these seams; the security/audit behavior lives here and is tested.
  */
 
-import { boundedCapabilityOutput, type CapabilityAdapter, type CapabilityDescriptor, type CapabilityInvocation, type CapabilityResult, type CapabilityTrust } from "./capability_port.js";
+import { boundedCapabilityOutput, captureCapabilityInvocation, type CapabilityAdapter, type CapabilityDescriptor, type CapabilityInvocation, type CapabilityResult, type CapabilityTrust } from "./capability_port.js";
 import type { CapabilityEffect } from "../reference/reference_registry.js";
 import type { HostileMcpGateway, ToolDefinition, ToolDisposition } from "./hostile_mcp_gateway.js";
 
@@ -79,13 +79,23 @@ export class McpServerAdapter implements CapabilityAdapter {
 
   async invoke(inv: CapabilityInvocation, context?: { readonly effect: CapabilityEffect | "unknown"; readonly authorized: boolean }): Promise<CapabilityResult> {
     try {
+      // Direct callers need the hub's same check/use binding. Capture approval
+      // before JSON serialization can run trusted caller callbacks. This is an
+      // entry-time context value, not a live grant/revocation protocol.
+      let humanApproved: boolean;
+      try {
+        humanApproved = context?.authorized === true;
+        inv = captureCapabilityInvocation(inv);
+      } catch {
+        return { ok: false, error: "MCP invocation input is invalid" };
+      }
       const version = negotiateVersion(this.transport.serverProtocolVersion);
       if (!version.ok) return { ok: false, error: version.reason };
       if (!this.hostileGateway) return { ok: false, error: "MCP invocation requires the hostile definition-pin gateway" };
       const meta = inv.traceparent ? { traceparent: inv.traceparent } : undefined;
       const definition = await this.currentDefinition(inv.operation);
       if (!definition) return { ok: false, error: `MCP tool "${inv.operation}" is not currently advertised` };
-      const result = await this.hostileGateway.invoke(this.descriptor.id, definition, inv.args as Record<string, unknown>, () => this.transport.callTool(inv.operation, inv.args as Record<string, unknown>, meta), { humanApproved: context?.authorized === true });
+      const result = await this.hostileGateway.invoke(this.descriptor.id, definition, inv.args as Record<string, unknown>, () => this.transport.callTool(inv.operation, inv.args as Record<string, unknown>, meta), { humanApproved });
       return result.status === "ok" ? { ok: true, output: boundedCapabilityOutput(result.output, this.maxResultBytes) } : { ok: false, held: result.status === "gated", error: result.reason ?? result.status };
     } catch (err) {
       return { ok: false, error: (err as Error).message };

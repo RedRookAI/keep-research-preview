@@ -38,6 +38,44 @@ test("TEAM-02 deployment admission content-binds a complete disjoint roster inde
   assert.equal(Object.isFrozen(first.roots), true);
 });
 
+test("KEEP-09B-001: admitted tenant distinguishes inside detection-only witness from required outside export", async () => {
+  const a = roots("path-alpha"), b = roots("path-beta");
+  const solo = soloNonRegression(join(a.dataRoot, "solo-baseline.json"));
+  const config = {
+    dataDir: a.dataRoot,
+    runtimePaths: { repository: a.repositoryRoot, workspace: a.workspaceRoot },
+    workspace: new LocalFsWorkspace(a.workspaceRoot),
+    witnessExportDir: join(a.dataRoot, "..audit-reference"),
+    tenantDeployment: { tenantId: a.tenantId, peers: [b], soloNonRegression: { baselinePath: solo.baselinePath, current: solo.current } },
+  };
+  assert.throws(() => composeKeep({ ...config, requireIndependentWitness: true }), /out-of-write-set witness was required/);
+  const app = composeKeep({ ...config, requireIndependentWitness: false });
+  assert.equal(app.witnessExport.outOfWriteSet, false);
+  assert.equal(app.tenantDeployment?.rootAdmission.roots.witnessRoot, undefined,
+    "inside detection-only sink is not misrepresented as a separate admitted root");
+  app.spine.stage({ type: "generic", actor: "path-alpha", payload: { useful: true } });
+  await app.spine.seal();
+  assert.ok(app.witnessSink.history().length > 0);
+  const restored = composeKeep({ ...config, requireIndependentWitness: false });
+  assert.equal(restored.tenantDeployment?.rootAdmission.rosterDigest, app.tenantDeployment?.rootAdmission.rosterDigest);
+  assert.equal(restored.witnessExport.outOfWriteSet, false);
+
+  // A separate fresh tenant, so changing the durable roster is not silently blessed.
+  const c = roots("path-gamma"), d = roots("path-delta");
+  const soloC = soloNonRegression(join(c.dataRoot, "solo-baseline.json"));
+  const outside = composeKeep({ dataDir: c.dataRoot,
+    runtimePaths: { repository: c.repositoryRoot, workspace: c.workspaceRoot },
+    workspace: new LocalFsWorkspace(c.workspaceRoot),
+    witnessExportDir: c.witnessRoot!, requireIndependentWitness: true,
+    tenantDeployment: { tenantId: c.tenantId, peers: [d], soloNonRegression: { baselinePath: soloC.baselinePath, current: soloC.current } },
+  });
+  assert.equal(outside.witnessExport.outOfWriteSet, true);
+  assert.equal(outside.tenantDeployment?.rootAdmission.roots.witnessRoot, c.witnessRoot);
+  outside.spine.stage({ type: "generic", actor: "path-gamma", payload: { useful: true } });
+  await outside.spine.seal();
+  assert.ok(outside.witnessSink.history().length > 0);
+});
+
 test("TEAM-02 deployment admission rejects duplicate tenants and every own/cross-tenant nested root", () => {
   const a = roots("alpha"), b = roots("beta");
   const nested = join(a.dataRoot, "nested");

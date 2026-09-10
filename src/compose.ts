@@ -442,7 +442,12 @@ export interface KeepConfig {
   /** W3c: when set with a disk-backed workspace, the built-in solver runs its tests via this command INSIDE the process
    *  isolation boundary (confined cwd, scrubbed env, wall-clock + CPU limits, output caps). This RETIRES the fail-closed
    *  default on the real-repo path — the solver's tests actually execute, sandboxed. */
-  readonly testCommand?: { readonly command: string; readonly args: readonly string[]; readonly timeoutMs?: number; readonly cpuLimitSec?: number; readonly maxOutputBytes?: number; readonly envAllowlist?: readonly string[] };
+  readonly testCommand?: { readonly command: string; readonly args: readonly string[]; readonly timeoutMs?: number; readonly cpuLimitSec?: number; readonly maxOutputBytes?: number; readonly envAllowlist?: readonly string[];
+    /** true/omitted requests best effort; false permits fallback; required refuses unprotected setup. */
+    readonly namespaceJail?: boolean | "required";
+    readonly readOnlyPaths?: readonly string[];
+    readonly allowWritePaths?: readonly string[];
+    readonly allowNet?: boolean };
   /** Embedding backend info for the licensing guard (defaults to the local backend). */
   readonly embeddingInfo?: EmbeddingBackendInfo;
   /** Lock adapter. Omit -> in-process (single-node tier). */
@@ -1009,7 +1014,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
       persistence: {
         load: () => {
           const document = session.resolveDocumentVersioned(documentName);
-          if (document.value === undefined) return document.revision === 0 ? undefined : { revision: document.revision };
+          if (document.value === undefined) return document.revision === undefined ? undefined : { revision: document.revision };
           try { return { snapshot: JSON.parse(document.value) as unknown, revision: document.revision }; }
           catch { throw new Error("invalid persisted outcome adaptation"); }
         },
@@ -1123,18 +1128,24 @@ export function composeKeep(config: KeepConfig): KeepApp {
     return { effortKnob: family.effortKnob, timeoutClass: family.timeoutClass, asOf: view.asOf, freshness: view.state };
   } };
   // L7 (money-enforcement): the AUTOMATED solve paths (ingress + the autonomy loop) call the model through
-  // a metered provider under a granted budget envelope — willBreach HARD-STOPS an over-budget call BEFORE
-  // it is made (fail-closed), the velocity breaker trips on rate/repetition, real spend is recorded. The
+  // a metered provider under a granted budget envelope — durable reservations include pending calls,
+  // and settlement uses reported usage. Input projection/prices remain trusted estimates. The
   // INTERACTIVE CLI path keeps using `gateway.generate` directly (unmetered — the operator is present).
   // A generous default envelope never blocks the n=1 free path ($0 local cost); an operator tightens
   // `config.autonomyBudget` to bound autonomous spend. HONEST SEAM: ONE envelope bounds the whole
   // automated-solve subsystem; per-project-run envelope granularity is filed as L7b.
-  const meteringBudgetLedger = new BudgetLedger(spine, new LenientCostModel(priceFor));
+  const autonomyBudgetEnvelope = config.autonomyBudget ?? defaultAutonomyEnvelope();
+  // Bind the configured route to its pricing identity, not a decorated wrapper name.
+  // Only the explicitly local/development configuration has a declared zero token fee.
+  // Missing remote registry pricing remains unknown and cannot admit paid work.
+  const meteringCost = new LenientCostModel((name) => name === tracedProvider.name
+    ? selectedDescriptor ? priceFor(selectedDescriptor.model) : { inputPerM: 0, outputPerM: 0 }
+    : undefined);
+  const meteringBudgetLedger = new BudgetLedger(spine, meteringCost, Date.now, {
+    bootstrap: { envelope: autonomyBudgetEnvelope, runId: "autonomy-subsystem" },
+  });
   const autonomyVelocityBreaker = new TokenVelocityBreaker(spine, { maxRepeatedIdentical: 1000, maxUsdPerMinute: 100_000 });
   const autonomyMeteredGateway = new MeteredGateway(new ModelGateway(tracedProvider), meteringBudgetLedger, autonomyVelocityBreaker, spine);
-  const autonomyBudgetEnvelope = config.autonomyBudget ?? defaultAutonomyEnvelope();
-  meteringBudgetLedger.grant(autonomyBudgetEnvelope);
-  meteringBudgetLedger.beginRun("autonomy-subsystem", autonomyBudgetEnvelope.id);
   const baseMeteredProvider = new MeteredProvider(tracedProvider, autonomyMeteredGateway, {
     runId: "autonomy-subsystem",
     cls: "auto-research",
@@ -1213,6 +1224,10 @@ export function composeKeep(config: KeepConfig): KeepApp {
     if (ws && typeof ws.dir === "function" && tc) {
       const dirOf = (ref: string): string => ws.dir!(ref);
       const innerFor = sandboxedRunnerFor(dirOf, tc.command, tc.args, {
+        ...(tc.namespaceJail !== undefined ? { namespaceJail: tc.namespaceJail } : {}),
+        ...(tc.readOnlyPaths ? { readOnlyPaths: tc.readOnlyPaths } : {}),
+        ...(tc.allowWritePaths ? { allowWritePaths: tc.allowWritePaths } : {}),
+        ...(tc.allowNet !== undefined ? { allowNet: tc.allowNet } : {}),
         ...(tc.timeoutMs !== undefined ? { timeoutMs: tc.timeoutMs } : {}),
         ...(tc.cpuLimitSec !== undefined ? { cpuLimitSec: tc.cpuLimitSec } : {}),
         ...(tc.maxOutputBytes !== undefined ? { maxOutputBytes: tc.maxOutputBytes } : {}),
@@ -1720,6 +1735,10 @@ export function composeKeep(config: KeepConfig): KeepApp {
         const projectDir = currentDisposable(repoRef).dir;
         return new IsolatedTestRunner(
         new SandboxedCommandRunner({ command: test.command, args: test.args, projectDir,
+          ...(test.namespaceJail !== undefined ? { namespaceJail: test.namespaceJail } : {}),
+          ...(test.readOnlyPaths ? { readOnlyPaths: test.readOnlyPaths } : {}),
+          ...(test.allowWritePaths ? { allowWritePaths: test.allowWritePaths } : {}),
+          ...(test.allowNet !== undefined ? { allowNet: test.allowNet } : {}),
           ...(test.timeoutMs !== undefined ? { timeoutMs: test.timeoutMs } : {}),
           ...(test.cpuLimitSec !== undefined ? { cpuLimitSec: test.cpuLimitSec } : {}),
           ...(test.maxOutputBytes !== undefined ? { maxOutputBytes: test.maxOutputBytes } : {}),
@@ -1795,7 +1814,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
       projectId,
       ...(record.tenant === undefined ? {} : { tenant: record.tenant }),
       ingestion,
-      guard: (expectedDocumentRevision: number) => {
+      guard: (expectedDocumentRevision: number | undefined) => {
         const current = projectManager.list().find((candidate) => candidate.id === projectId);
         if (current === undefined || projectManager.quarantine(projectId) !== undefined) throw new Error("project audience corpus is unavailable");
         const observed = session.resolveDocumentVersioned(documentName).revision;

@@ -12,6 +12,8 @@ import { projectRepositoryTreeSha256 } from "./project_localization.js";
 import type { ProjectState } from "./project_state.js";
 import { RedactionGateway } from "../privacy/redaction_gateway.js";
 import { canonicalize } from "../spine/event.js";
+import { copyProcessIsolationObservation, type ProcessIsolationObservation } from "../infra/isolation_backend.js";
+import { executionStopReason, type ExecutionContext } from "../infra/execution_lifetime.js";
 
 const MAX_FAILURE_OUTPUT = 16 * 1024;
 const MAX_RESULT_CASES = 10_000;
@@ -46,6 +48,8 @@ export interface ProjectTestArtifact {
   readonly isolation: {
     readonly selectedTier: IsolationTier;
     readonly requiredTier: IsolationTier;
+    /** Actual local process observation; selected-tier admission is not project-jail proof. */
+    readonly processIsolation?: ProcessIsolationObservation;
     readonly requirementMet: boolean;
     readonly attempted: boolean;
     readonly executed: boolean;
@@ -132,20 +136,22 @@ type ProjectTestExecutionEvidence = Omit<ProjectTestArtifact, "issueId" | "taskI
 export function buildProjectTester(config: ProjectTestConfig): ProjectTester & { feedbackRunner(repoRef: string): TestRunner } {
   const command = Object.freeze({ executable: config.command, args: Object.freeze([...config.args]) });
   async function execute(repoRef: string, expectedTree: string, expectedExecutionManifest: string,
-    onResult?: (result: import("../solve/validate.js").TestRunResult) => void): Promise<ProjectTestExecutionEvidence> {
+    onResult?: (result: import("../solve/validate.js").TestRunResult) => void, execution?: ExecutionContext): Promise<ProjectTestExecutionEvidence> {
     const redactor = new RedactionGateway();
     const safe = (value: string): string => boundedTail(redactor.redact(value).redacted);
     const base = { schemaVersion: 1 as const, repositoryTreeSha256: expectedTree,
       repositoryExecutionManifestSha256: expectedExecutionManifest, command };
-    const unavailable = (reason: string, selectedTier = config.selectedTier, attempted = false): ProjectTestExecutionEvidence => Object.freeze({
+    const unavailable = (reason: string, selectedTier = config.selectedTier, attempted = false, processIsolation?: ProcessIsolationObservation): ProjectTestExecutionEvidence => Object.freeze({
       ...base, verdict: "unavailable" as const, passed: false,
-      isolation: Object.freeze({ selectedTier, requiredTier: config.requiredTier, requirementMet: false, attempted, executed: false, refusalReason: safe(reason) }),
+      isolation: Object.freeze({ selectedTier, requiredTier: config.requiredTier, requirementMet: false, attempted, executed: false, refusalReason: safe(reason),
+        ...(processIsolation ? { processIsolation: copyProcessIsolationObservation(processIsolation) } : {}) }),
       testsExecuted: false, testsPassed: false, discovered: 0, passedCount: 0,
       failures: Object.freeze([]), failureOutput: "", runnerError: safe(reason), reasons: Object.freeze([`test verification unavailable: ${safe(reason)}`]),
     });
     const finish = async (artifact: ProjectTestExecutionEvidence): Promise<ProjectTestExecutionEvidence> => {
       try { await config.disposeExecution?.(repoRef); }
-      catch (error) { return unavailable(`disposable verification cleanup failed: ${error instanceof Error ? error.message : String(error)}`); }
+      catch (error) { return unavailable(`disposable verification cleanup failed: ${error instanceof Error ? error.message : String(error)}`,
+        artifact.isolation.selectedTier, artifact.isolation.attempted, artifact.isolation.processIsolation); }
       return artifact;
     };
     let beforeTree: string;
@@ -216,7 +222,7 @@ export function buildProjectTester(config: ProjectTestConfig): ProjectTester & {
       if (realpathSync(actualCommand.projectDir) !== realpathSync(executionProjectDir)) return finish(unavailable("configured project-test runner cwd does not match the disposable source root"));
     } catch (error) { return finish(unavailable(error instanceof Error ? error.message : String(error))); }
     let outcome: Awaited<ReturnType<IsolatedTestRunner["runWithEvidence"]>>;
-    try { outcome = await runner.runWithEvidence(repoRef, true); }
+    try { outcome = await runner.runWithEvidence(repoRef, true, execution); }
     catch (error) { return finish(unavailable(error instanceof Error ? error.message : String(error))); }
     const result = outcome.result;
     const receipt = result ? verifiedMicrovmRunReceipt(result) : undefined;
@@ -234,19 +240,19 @@ export function buildProjectTester(config: ProjectTestConfig): ProjectTester & {
       afterTree = projectRepositoryTreeSha256(await config.snapshotFiles(repoRef));
       afterExecutionManifest = await computeMicrovmProjectSourceManifestSha256(canonicalProjectDir);
     }
-    catch (error) { return finish(unavailable(error instanceof Error ? error.message : String(error), outcome.tier, outcome.executed)); }
+    catch (error) { return finish(unavailable(error instanceof Error ? error.message : String(error), outcome.tier, outcome.executed, result?.processIsolation)); }
     const changedDuringRun = afterTree !== expectedTree || afterExecutionManifest !== expectedExecutionManifest;
     const allFailures = (resultRefusal === undefined ? result?.results ?? [] : []).filter((row) => !row.passed);
     const failures = Object.freeze(allFailures.slice(0, MAX_PERSISTED_FAILURES).map((row) => Object.freeze({
       name: safe(row.name).slice(0, 1_024), output: safe(row.output ?? "failed"),
     })));
     const guestOutput = receipt ? safe(`${receipt.guestResult.stdout}\n${receipt.guestResult.stderr}`.trim()) : "";
-    const runnerError = changedDuringRun
+    const runnerError = executionStopReason(execution) ?? (changedDuringRun
       ? "repository changed during independent verification"
       : result?.runnerError ?? (!outcome.executed ? outcome.refusedReason ?? "isolated execution refused"
         : !outcomeMet ? "isolated execution outcome is not verifier-owned or was already consumed"
         : !tierMet ? `selected isolation tier ${outcome.tier} did not satisfy configured ${config.selectedTier}/${config.requiredTier}`
-        : resultRefusal ?? (!receiptMet ? "microvm execution did not produce a fresh source-bound verified receipt" : undefined));
+        : resultRefusal ?? (!receiptMet ? "microvm execution did not produce a fresh source-bound verified receipt" : undefined)));
     const discovered = resultRefusal === undefined ? result?.results.length ?? 0 : 0;
     const passedCount = resultRefusal === undefined ? result?.results.filter((row) => row.passed).length ?? 0 : 0;
     const testsPassed = verifiedExecution && !changedDuringRun && !runnerError && discovered > 0 && failures.length === 0;
@@ -261,6 +267,7 @@ export function buildProjectTester(config: ProjectTestConfig): ProjectTester & {
       ...(result && resultRefusal === undefined ? { testRunResultSha256: digest("keep.project-test-result/v1", result) } : {}),
       isolation: Object.freeze({
         selectedTier: outcome.tier, requiredTier: config.requiredTier,
+        ...(result?.processIsolation ? { processIsolation: copyProcessIsolationObservation(result.processIsolation) } : {}),
         requirementMet: outcomeMet && tierMet && receiptMet, attempted: outcome.executed, executed: verifiedExecution,
         ...(outcome.refusedReason ? { refusalReason: safe(outcome.refusedReason) } : {}),
         ...(receipt ? { microvmReceipt: Object.freeze({
@@ -302,11 +309,12 @@ export function buildProjectTester(config: ProjectTestConfig): ProjectTester & {
             manifest = await computeMicrovmProjectSourceManifestSha256(config.canonicalProjectDirFor(repoRef));
           } catch { return { results: [], runnerError: "feedback source identity unavailable", failureKind: "harness" }; }
           let result: import("../solve/validate.js").TestRunResult | undefined;
-          const evidence = await execute(repoRef, tree, manifest, value => { result = value; });
+          const evidence = await execute(repoRef, tree, manifest, value => { result = value; }, execution);
           // Preserve actual test names and failures for repair; cleanup or provenance
           // failure cannot turn raw subprocess output into an accepted feedback result.
           if ((evidence.verdict === "passed" || evidence.verdict === "failed") && result) return result;
-          return { results: [], runnerError: evidence.runnerError ?? evidence.reasons.join("; "), failureKind: "harness" };
+          return { results: [], runnerError: evidence.runnerError ?? evidence.reasons.join("; "), failureKind: "harness",
+            ...(evidence.isolation.processIsolation ? { processIsolation: copyProcessIsolationObservation(evidence.isolation.processIsolation) } : {}) };
         },
       };
     },

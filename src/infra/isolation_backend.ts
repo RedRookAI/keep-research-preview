@@ -1,8 +1,8 @@
 /**
  * Cross-platform isolation port (hardening H1) — the enforcing sandbox was POSIX-only (bash, `ulimit`, process-group
  * kill via `process.kill(-pid)`), which SILENTLY fails on Windows (no `/usr/bin/bash`, no signals, no process groups).
- * This selects a platform-native backend and makes every control's availability EXPLICIT, so the sandbox never silently
- * under-enforces — it either enforces a control or reports it as degraded.
+ * This selects a platform-native backend and reports known availability limits.
+ * Spawn planning does not verify namespace mounts or rlimit setup in the child.
  *
  * SOTA basis (2026-08-08):
  *  - Windows has no POSIX signals and no process groups, so `process.kill(-pid)` does not work; the standard tree-kill is
@@ -18,7 +18,7 @@
 
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 
-/** What an isolation backend actually ENFORCES on the current platform. Reported honestly; never assumed. */
+/** Backend features/probe availability, not proof of effective controls in a particular run. */
 export interface PlatformCapabilities {
   readonly confinedCwd: boolean;
   readonly scrubbedEnv: boolean;
@@ -29,10 +29,8 @@ export interface PlatformCapabilities {
   readonly outputCap: boolean;
   readonly realpathJail: boolean;
   /**
-   * BUILD-ORDER 1.3 — a KERNEL mount+net+PID namespace jail (`unshare`) is available for the untrusted test
-   * PROCESS: the child cannot write outside the project on the real FILESYSTEM, cannot reach the network, and
-   * runs in its own PID namespace. Requires unprivileged user namespaces (Linux; `kernel.unprivileged_userns_clone`
-   * on, no AppArmor userns restriction). Detected by MEASUREMENT, never assumed; degrades honestly where absent.
+   * Whether the user/mount namespace probes succeed. This does not prove the
+   * configured child's mount setup, network denial or PID isolation succeeded.
    */
   readonly namespaceJail: boolean;
 }
@@ -53,18 +51,22 @@ export interface NamespaceSupport {
 }
 
 /**
- * BUILD-ORDER 1.3 — the operator-facing spec for the kernel namespace + rlimit jail around the untrusted child.
- * A HARD default (net-denied, filesystem-jailed to the project); `allowNet` / `allowWritePaths` are the opt-IN
- * operator-declared allowances (additive — never a weakened default).
+ * Namespace/rlimit request. Omitted mode uses the legacy best-effort wrapper;
+ * required mode uses a separate fail-fast Linux launcher. Availability flags do
+ * not replace that launcher's per-run result.
  */
 export interface NamespaceJailSpec {
-  /** The project dir — the SINGLE read-write island inside an otherwise read-only mount namespace. */
+  /** Explicit required Linux backend; omitted retains legacy best-effort behavior. */
+  readonly mode?: "required";
+  /** Project write island, plus any explicitly allowed write paths. */
   readonly projectDir: string;
   /** Operator opt-IN: keep the network reachable (skip the net namespace). Default false → network-denied. */
   readonly allowNet?: boolean;
   /** Operator opt-IN: extra absolute paths to bind read-WRITE (e.g. a declared scratch/tmp dir). Default none. */
   readonly allowWritePaths?: readonly string[];
-  /** RLIMIT_FSIZE (bytes) — bound a disk bomb / oversized allocation. */
+  /** Explicit additional read-only roots for required mode. */
+  readonly readOnlyPaths?: readonly string[];
+  /** Per-file RLIMIT_FSIZE in bytes; not aggregate disk consumption. */
   readonly maxFileSizeBytes?: number;
   /** RLIMIT_NPROC — bound process count (fork-bomb defense-in-depth atop the PID namespace + process-group kill). */
   readonly maxProcesses?: number;
@@ -83,6 +85,59 @@ export interface SpawnPlan {
   readonly degraded: readonly string[];
 }
 
+/** Local process/launcher observations, not a signed or independently measured jail.
+ * Empty degradation does NOT establish setup success. launcher-confirmed records
+ * the trusted launcher's completed protocol, not a universal containment guarantee.
+ */
+export interface ProcessIsolationObservation {
+  readonly version: 1;
+  readonly basis: "adapter-spawn-plan" | "missing-adapter-observation" | "policy-refusal" | "launcher-status";
+  readonly namespacePolicy: "best-effort" | "disabled" | "unsupported" | "required";
+  readonly requestedNamespaces: readonly string[];
+  readonly degraded: readonly string[];
+  /** unavailable means at least one requested namespace is unavailable. */
+  readonly namespaceSetup: "not-requested" | "unavailable" | "unverified" | "launcher-confirmed";
+  readonly requestedRlimits: readonly string[];
+  readonly rlimitSetup: "not-requested" | "unavailable" | "unverified" | "launcher-confirmed";
+}
+
+export function copyProcessIsolationObservation(value: ProcessIsolationObservation): ProcessIsolationObservation {
+  return Object.freeze({ version: 1, basis: value.basis, namespacePolicy: value.namespacePolicy,
+    requestedNamespaces: Object.freeze([...value.requestedNamespaces]), degraded: Object.freeze([...value.degraded]),
+    namespaceSetup: value.namespaceSetup, requestedRlimits: Object.freeze([...value.requestedRlimits]), rlimitSetup: value.rlimitSetup });
+}
+
+/** Trusted adapter ports can still be incomplete or buggy. Do not turn malformed
+ * reports into clean evidence or persist arbitrary extra fields from an adapter.
+ */
+export function readProcessIsolationObservation(value: unknown): ProcessIsolationObservation | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const row = value as Partial<ProcessIsolationObservation>;
+  const strings = (v: unknown): v is readonly string[] => Array.isArray(v) && v.length <= 32 && v.every(s => typeof s === "string" && s.length <= 128);
+  if (row.version !== 1 || !["adapter-spawn-plan", "missing-adapter-observation", "policy-refusal", "launcher-status"].includes(row.basis ?? "") ||
+      !["best-effort", "disabled", "unsupported", "required"].includes(row.namespacePolicy ?? "") ||
+      !["not-requested", "unavailable", "unverified", "launcher-confirmed"].includes(row.namespaceSetup ?? "") ||
+      !["not-requested", "unavailable", "unverified", "launcher-confirmed"].includes(row.rlimitSetup ?? "") ||
+      !strings(row.requestedNamespaces) || !strings(row.degraded) || !strings(row.requestedRlimits)) return undefined;
+  if ((row.namespaceSetup === "launcher-confirmed" || row.rlimitSetup === "launcher-confirmed") &&
+      (row.basis !== "launcher-status" || row.namespacePolicy !== "required")) return undefined;
+  return copyProcessIsolationObservation(row as ProcessIsolationObservation);
+}
+
+export function processPlanObservation(jail: NamespaceJailSpec | undefined, cpuLimitSec: number | undefined,
+  degraded: readonly string[], basis: ProcessIsolationObservation["basis"] = "adapter-spawn-plan"): ProcessIsolationObservation {
+  const requestedNamespaces = jail ? ["mount-ns", "pid-ns", ...(!jail.allowNet ? ["net-ns"] : [])] : [];
+  const requestedRlimits = [...(cpuLimitSec !== undefined ? ["cpuLimit"] : []),
+    ...(jail?.maxFileSizeBytes !== undefined ? ["file-size"] : []), ...(jail?.maxProcesses !== undefined ? ["process-count"] : []),
+    ...(jail?.maxOpenFiles !== undefined ? ["open-files"] : [])];
+  return copyProcessIsolationObservation({ version: 1, basis, namespacePolicy: jail?.mode === "required" ? "required" : jail ? "best-effort" : "disabled",
+    requestedNamespaces, degraded,
+    namespaceSetup: basis === "missing-adapter-observation" ? "unverified" : !jail ? "not-requested"
+      : requestedNamespaces.some(control => degraded.includes(control)) ? "unavailable" : "unverified",
+    requestedRlimits, rlimitSetup: basis === "missing-adapter-observation" ? "unverified" : requestedRlimits.length === 0 ? "not-requested"
+      : degraded.includes("rlimits") || degraded.includes("cpuLimit") ? "unavailable" : "unverified" });
+}
+
 export interface PlatformIsolation {
   readonly platform: string;
   readonly capabilities: PlatformCapabilities;
@@ -98,11 +153,10 @@ export interface PlatformIsolation {
  * BUILD-ORDER 1.3 — the FIXED jail script (a constant; command/args arrive as positional argv AFTER `shift 7`, so
  * shell metacharacters in them are inert — the argument-injection defense the whole isolation floor rests on).
  *
- * It runs INSIDE the unshared namespaces. When a mount namespace is active (`domount=1`), it makes the entire mount
- * tree read-only (so no absolute-path write outside the project can land) and re-opens ONLY the project (and any
- * operator-declared write paths) read-write. A global toolchain outside the project (`/usr/lib/node`) is still
- * READABLE (read-only mounts are readable), so a legitimate build that reads it is unaffected — the network + write
- * jail is the hard default; reads need no allowance. Then it applies the rlimits and execs the real command.
+ * When domount=1, this attempts readonly mounts and writable project/allowance
+ * binds inside a new mount namespace. The legacy script suppresses setup errors:
+ * neither a selected plan nor a successful command proves these attempts worked.
+ * It must not be used to satisfy a mandatory project-jail requirement.
  *
  * SAFETY: the mount operations run ONLY when `domount=1`, which the planner sets ONLY when `--mount` is in the
  * `unshare` flags — so the read-only remount can never touch the HOST filesystem, only this private namespace.

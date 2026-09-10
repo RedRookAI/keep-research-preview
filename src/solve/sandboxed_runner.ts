@@ -1,7 +1,8 @@
 /**
- * SandboxedCommandRunner (Increment 2.2) — a TestRunner that runs a REAL test command inside the hardened process
- * isolation boundary (confined cwd, scrubbed env, wall-clock + CPU limits, process-group kill, output caps, realpath
- * jail) and maps the result to a TestRunResult the solve pipeline consumes.
+ * SandboxedCommandRunner — a TestRunner for actual argv-only subprocesses with
+ * scoped cwd, scrubbed env, lifetime controls and output caps. Optional namespace
+ * setup is best-effort by default; explicit required mode refuses unsupported
+ * setup. processIsolation records the selected boundary alongside results.
  *
  * SOTA basis (2026-08-08): the process EXIT CODE is the universal, framework-agnostic pass/fail contract (node:test,
  * pytest, jest, vitest all exit non-zero on failure); TAP v13 is the zero-config structured format node:test emits when
@@ -12,7 +13,9 @@
  * Fail-safe: a run that could not COMPLETE (spawn error, timeout, signal-kill) returns a runnerError — never a green.
  */
 
-import type { TestRunner, TestRunResult, TestCaseResult } from "./validate.js";
+import type { TestRunner, TestRunResult, TestCaseResult, TestExecutionContext } from "./validate.js";
+import { executionStopReason } from "../infra/execution_lifetime.js";
+import { copyProcessIsolationObservation, processPlanObservation, readProcessIsolationObservation } from "../infra/isolation_backend.js";
 import { ProcessIsolationAdapter, resolvedWithinProject, type IsolationPolicy } from "../infra/process_isolation.js";
 import { installedEffectAdmission, INSTALLED_EFFECT_OWNERS, type InstalledEffectAdmission } from "../control/installed_effect_admission.js";
 
@@ -32,16 +35,19 @@ export interface SandboxedCommandConfig {
   /** Env vars allowed through to the child (secrets scoping). Default: none (only a minimal PATH). */
   readonly envAllowlist?: readonly string[];
   /**
-   * BUILD-ORDER 1.3 — the kernel namespace jail is ON BY DEFAULT (net-denied, filesystem-jailed to projectDir,
-   * resource-bounded). Set `false` to opt OUT (e.g. a trusted local run that must reach the network AND write
-   * outside the project — but prefer the narrower `allowNet`/`allowWritePaths` allowances). Default: true.
+   * Request best-effort namespaces by default. false explicitly selects process
+   * fallback. Neither policy guarantees filesystem/network containment; inspect
+   * processIsolation. "required" selects the qualified-binary Linux backend and
+   * refuses unsupported/unsafe setup instead of falling back.
    */
-  readonly namespaceJail?: boolean;
+  readonly namespaceJail?: boolean | "required";
+  /** Explicit readonly inputs/tool roots for the required Linux backend. */
+  readonly readOnlyPaths?: readonly string[];
   /** Operator opt-IN allowance: keep the network reachable for the child (default: network-DENIED). */
   readonly allowNet?: boolean;
   /** Operator opt-IN allowance: extra absolute paths the child may write to (default: only the project dir). */
   readonly allowWritePaths?: readonly string[];
-  /** RLIMIT_FSIZE (bytes) the child may create. Default: 1 GiB (bounds a disk bomb; normal artifacts unaffected). */
+  /** Per-file RLIMIT_FSIZE. Default 1 GiB; required mode rounds down to KiB. Not a total disk quota. */
   readonly maxFileSizeBytes?: number;
   /** RLIMIT_NPROC. Default: 512 (fork-bomb defense-in-depth; may not bite inside a user namespace — see backend). */
   readonly maxProcesses?: number;
@@ -52,7 +58,7 @@ export interface SandboxedCommandConfig {
   readonly effectAdmission?: InstalledEffectAdmission;
 }
 
-/** Default resource bounds for the namespace jail — generous enough for real builds, tight enough to bound a bomb. */
+/** Per-process/per-file limits, not aggregate memory, disk or process-tree quotas. */
 const DEFAULT_FSIZE_BYTES = 1024 * 1024 * 1024; // 1 GiB
 const DEFAULT_NPROC = 512;
 const DEFAULT_NOFILE = 8192;
@@ -70,22 +76,33 @@ export class SandboxedCommandRunner implements TestRunner {
     this.adapter = cfg.adapter ?? new ProcessIsolationAdapter();
     this.cfg = Object.freeze({ ...cfg, args: Object.freeze([...cfg.args]),
       ...(cfg.envAllowlist ? { envAllowlist: Object.freeze([...cfg.envAllowlist]) } : {}),
+      ...(cfg.readOnlyPaths ? { readOnlyPaths: Object.freeze([...cfg.readOnlyPaths]) } : {}),
       ...(cfg.allowWritePaths ? { allowWritePaths: Object.freeze([...cfg.allowWritePaths]) } : {}) });
     VERIFIED_COMMAND_CONFIG.set(this, Object.freeze({ command: this.cfg.command, args: this.cfg.args, projectDir: this.cfg.projectDir }));
   }
 
-  async run(repoRef: string, execution?: { readonly signal?: AbortSignal; readonly deadline?: number }): Promise<TestRunResult> {
-    if (execution?.signal?.aborted || (execution?.deadline !== undefined && Date.now() >= execution.deadline)) return { results: [], runnerError: "recovery deadline exhausted before test dispatch", failureKind: "harness" };
+  async run(repoRef: string, execution?: TestExecutionContext): Promise<TestRunResult> {
+    if (this.cfg.namespaceJail !== undefined && typeof this.cfg.namespaceJail !== "boolean" && this.cfg.namespaceJail !== "required") {
+      const missing = processPlanObservation(undefined, undefined, [], "policy-refusal");
+      return { results: [], runnerError: "unsupported namespaceJail policy: expected true, false or required",
+        failureKind: "harness", processCompletion: "not-started",
+        processIsolation: copyProcessIsolationObservation({ ...missing, namespacePolicy: "unsupported", namespaceSetup: "unverified" }) };
+    }
+    const precheck = executionStopReason(execution);
+    if (precheck) return { results: [], runnerError: `${precheck} before test dispatch`, failureKind: "harness", processCompletion: "not-started" };
+    if (this.cfg.namespaceJail === "required" && this.cfg.allowNet !== undefined && typeof this.cfg.allowNet !== "boolean") {
+      return { results: [], runnerError: "required-jail allowNet must be boolean", failureKind: "harness", processCompletion: "not-started" };
+    }
     // Jail: the repoRef must resolve within the confined project dir (realpath-resolved; defeats symlink-out/traversal).
     if (!resolvedWithinProject(this.cfg.projectDir, repoRef === "" || repoRef === "." ? this.cfg.projectDir : repoRef)) {
       return { results: [], runnerError: `test scope escapes the project dir (${repoRef}) — refusing to execute` };
     }
 
-    // BUILD-ORDER 1.3 — WIRING (ledger 298): the DEFAULT execution path binds the KERNEL namespace jail. With no
-    // configuration the child is network-denied, filesystem-jailed to the project dir, and resource-bounded. Neuter
-    // this (drop `namespaceJail` from the policy) → the child can write outside the project + reach the network again.
+    // Availability and setup are distinct; selecting this request does not prove
+    // that a child's filesystem or network access was confined.
     const jailOn = this.cfg.namespaceJail !== false;
     const policy: IsolationPolicy = {
+      ...execution,
       cwd: this.cfg.projectDir,
       timeoutMs: Math.min(this.cfg.timeoutMs ?? 60_000, execution?.deadline === undefined ? 60_000_000 : Math.max(1, execution.deadline - Date.now())),
       maxOutputBytes: this.cfg.maxOutputBytes ?? 1024 * 1024,
@@ -93,6 +110,8 @@ export class SandboxedCommandRunner implements TestRunner {
       ...(this.cfg.envAllowlist ? { envAllowlist: this.cfg.envAllowlist } : {}),
       ...(jailOn ? { namespaceJail: {
         projectDir: this.cfg.projectDir,
+        ...(this.cfg.namespaceJail === "required" ? { mode: "required" as const } : {}),
+        ...(this.cfg.readOnlyPaths ? { readOnlyPaths: this.cfg.readOnlyPaths } : {}),
         ...(this.cfg.allowNet ? { allowNet: true } : {}),
         ...(this.cfg.allowWritePaths ? { allowWritePaths: this.cfg.allowWritePaths } : {}),
         maxFileSizeBytes: this.cfg.maxFileSizeBytes ?? DEFAULT_FSIZE_BYTES,
@@ -102,25 +121,41 @@ export class SandboxedCommandRunner implements TestRunner {
     };
 
     (this.cfg.effectAdmission ?? installedEffectAdmission).admit(INSTALLED_EFFECT_OWNERS.testProcess.id);
+    const admittedStop = executionStopReason(execution);
+    if (admittedStop) return { results: [], runnerError: `${admittedStop} before test dispatch`, failureKind: "harness", processCompletion: "not-started" };
     const res = await this.adapter.run(this.cfg.command, this.cfg.args, policy);
+    const rawObservation = readProcessIsolationObservation(res.processIsolation);
+    const legacyDegraded = Array.isArray(res.degraded) ? res.degraded.filter(v => typeof v === "string").slice(0, 32).map(v => v.slice(0, 128)) : [];
+    const processIsolation = rawObservation ? copyProcessIsolationObservation({ ...rawObservation,
+      degraded: [...new Set([...rawObservation.degraded, ...legacyDegraded])] })
+      : processPlanObservation(policy.namespaceJail, policy.cpuLimitSec, legacyDegraded, "missing-adapter-observation");
+    const observed = { processIsolation, ...(res.completion ? { processCompletion: res.completion } : {}) };
 
     // Could-not-complete → runnerError (never a false green).
-    if (res.timedOut) return { results: [], runnerError: `test run exceeded ${policy.timeoutMs}ms and was killed` };
-    if (res.code === null) return { results: [], runnerError: `test process did not exit normally${res.signal ? ` (killed: ${res.signal})` : ""}` };
+    if (res.timedOut || res.cancelled || res.terminationError || res.completion === "unconfirmed" || executionStopReason(execution)) return {
+      ...observed, results: [], failureKind: "harness",
+      runnerError: `${res.timedOut ? `test run exceeded ${this.cfg.timeoutMs ?? 60_000}ms or earlier caller deadline` : res.terminationError ? "test process error" : "test run cancelled"}; ${res.completion === "direct-child-closed" ? "direct child closed; descendant termination unverified" : res.completion === "not-started" ? "process not started" : "termination unconfirmed; work may continue"}${res.terminationError ? ` (${res.terminationError})` : ""}`,
+    };
+    if (res.code === null) return { ...observed, results: [], failureKind: "harness", runnerError: `test process did not exit normally${res.signal ? ` (signal: ${res.signal})` : ""}` };
+    if (this.cfg.namespaceJail === "required" && (processIsolation.namespacePolicy !== "required" ||
+        processIsolation.basis !== "launcher-status" || processIsolation.namespaceSetup !== "launcher-confirmed" ||
+        processIsolation.rlimitSetup !== "launcher-confirmed" || processIsolation.degraded.length !== 0)) {
+      return { ...observed, results: [], failureKind: "harness", runnerError: "required-jail setup was not confirmed; command may have run" };
+    }
 
     const cases = parseTap(`${res.stdout}\n${res.stderr}`);
 
     // The EXIT CODE is authoritative for the overall verdict.
     if (res.code === 0) {
       // Passed. Use parsed cases if any; otherwise a single synthetic pass (results must be non-empty to count as passed).
-      return { results: cases.length > 0 ? cases : [{ name: `${this.cfg.command} ${this.cfg.args.join(" ")}`.trim(), passed: true }] };
+      return { ...observed, results: cases.length > 0 ? cases : [{ name: `${this.cfg.command} ${this.cfg.args.join(" ")}`.trim(), passed: true }] };
     }
 
     // Non-zero exit → failed. Prefer the parsed failing cases; else a synthetic failure carrying the output tail.
     const failing = cases.filter((c) => !c.passed);
-    if (failing.length > 0) return { results: cases };
+    if (failing.length > 0) return { ...observed, results: cases };
     const tail = (res.stderr || res.stdout).slice(-2000);
-    return { results: [{ name: `${this.cfg.command} ${this.cfg.args.join(" ")}`.trim(), passed: false, output: tail || `exit code ${res.code}` }] };
+    return { ...observed, results: [{ name: `${this.cfg.command} ${this.cfg.args.join(" ")}`.trim(), passed: false, output: tail || `exit code ${res.code}` }] };
   }
 }
 
@@ -154,7 +189,7 @@ export function sandboxedRunnerFor(
   projectDirOf: (repoRef: string) => string,
   command: string,
   args: readonly string[],
-  opts: { timeoutMs?: number; cpuLimitSec?: number; maxOutputBytes?: number; envAllowlist?: readonly string[]; namespaceJail?: boolean; allowNet?: boolean; allowWritePaths?: readonly string[]; adapter?: ProcessIsolationAdapter } = {},
+  opts: { timeoutMs?: number; cpuLimitSec?: number; maxOutputBytes?: number; envAllowlist?: readonly string[]; namespaceJail?: boolean | "required"; readOnlyPaths?: readonly string[]; allowNet?: boolean; allowWritePaths?: readonly string[]; adapter?: ProcessIsolationAdapter } = {},
 ): (repoRef: string) => TestRunner {
   return (repoRef: string) =>
     new SandboxedCommandRunner({
@@ -165,6 +200,7 @@ export function sandboxedRunnerFor(
       ...(opts.envAllowlist ? { envAllowlist: opts.envAllowlist } : {}),
       // BUILD-ORDER 1.3 — jail is default-ON; opt-out and opt-in allowances flow through unchanged.
       ...(opts.namespaceJail !== undefined ? { namespaceJail: opts.namespaceJail } : {}),
+      ...(opts.readOnlyPaths ? { readOnlyPaths: opts.readOnlyPaths } : {}),
       ...(opts.allowNet ? { allowNet: opts.allowNet } : {}),
       ...(opts.allowWritePaths ? { allowWritePaths: opts.allowWritePaths } : {}),
       ...(opts.adapter ? { adapter: opts.adapter } : {}),

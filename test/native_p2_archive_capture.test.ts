@@ -585,7 +585,11 @@ test("capture SDK admits the composed 128MiB source plus 128MiB carrier at the d
     const emptyCarrier = encodeCanonical({ schema: "keep.p2-d2-patch-byte-carrier-set", version: 1n, packageId: "curve25519-dalek@5.0.0", entries: rows.map(row => ({ path: row.path, operation: "replace", bytes: new Uint8Array() })) });
     // A 16MiB byte-string length takes five bytes, versus one for the empty string.
     assert.equal(statSync(join(root, "carrier.cbor")).size, 128 * 1024 * 1024 + emptyCarrier.length + 8 * 4);
-    const { sdk } = await sdkFixture(root);
+    // The deadline is a release-artifact contract. Use the SDK's actual staged
+    // release executable and manifest (produced by npm run build), not the
+    // unoptimized debug oracle copied by sdkFixture. No fallback or timeout
+    // override: missing/stale packaged bytes must fail the SDK's normal checks.
+    const sdk = await import("../src/platform/native_patch_capture.js");
     const start = performance.now();
     const result = await sdk.capturePackagedNativePatchInputsV1({
       schema: "keep.patch-input-capture", version: 1n, root, sourceKind: "directory", sourcePath: "source",
@@ -615,7 +619,11 @@ test("capture build gate still refuses an extra unsafe site and an undeclared au
     const native = join(captureSourceRoot, "native");
     cpSync(native, join(root, "native"), { recursive: true, filter: path => !["target", "vendor-p2", "p2-crypto-candidate"].some(name => path === join(native, name) || path.startsWith(`${join(native, name)}/`)) });
     const run = () => spawnSync(process.execPath, [join(captureSourceRoot, "tools/native_p1_gate.mjs"), root], {
-      cwd: root, env: { PATH: process.env.PATH ?? "/usr/bin:/bin", ...(process.env.KEEP_P1_TOOLCHAIN_ROOT ? { KEEP_P1_TOOLCHAIN_ROOT: process.env.KEEP_P1_TOOLCHAIN_ROOT } : {}) },
+      cwd: root, env: {
+        PATH: process.env.PATH ?? "/usr/bin:/bin",
+        ...(process.env.KEEP_P1_TOOLCHAIN_ROOT ? { KEEP_P1_TOOLCHAIN_ROOT: process.env.KEEP_P1_TOOLCHAIN_ROOT } : {}),
+        ...(process.env.RUSTUP_HOME ? { RUSTUP_HOME: process.env.RUSTUP_HOME } : {}),
+      },
       encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 30_000, killSignal: "SIGKILL",
     });
     const abi = join(root, "native/crates/linux-abi/src/lib.rs"), original = readFileSync(abi, "utf8");

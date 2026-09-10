@@ -80,7 +80,7 @@ export class CrossProjectAccessError extends Error {
 
 export class ProjectRegistry {
   private readonly records = new Map<ProjectId, ProjectRecord>();
-  private revision = 0;
+  private revision: number | undefined;
 
   /**
    * @param keys the shared CryptoShredKeyStore; each ProjectId becomes a key SUBJECT, so
@@ -130,8 +130,9 @@ export class ProjectRegistry {
     for (const [id, value] of replacement) this.records.set(id, value);
   }
 
-  /** Create a new project: mint a stable id, mint its per-project key, record it. */
-  create(name: string, lifecycle: Exclude<ProjectLifecycle, "deleted"> = "active", tenant?: string): ProjectRecord {
+  /** Prepare required state before publishing the record. The callback has no live namespace yet. */
+  create(name: string, lifecycle: Exclude<ProjectLifecycle, "deleted"> = "active", tenant?: string,
+    prepare?: (record: Readonly<ProjectRecord>) => void): ProjectRecord {
     if (typeof name !== "string" || name.length === 0 || Buffer.byteLength(name, "utf8") > 4_096 || /[\u0000-\u001f\u007f]/u.test(name)) {
       throw new Error("invalid project name");
     }
@@ -140,8 +141,27 @@ export class ProjectRegistry {
     this.keys.ensureKey(id); // per-project encryption key (SubjectId = ProjectId)
     const now = Date.now();
     const rec: ProjectRecord = { id, name, lifecycle, createdAt: now, updatedAt: now, ...(tenant === undefined ? {} : { tenant }) };
-    try { this.replace(rec); }
-    catch (error) { this.keys.shred(id); throw error; }
+    const expectedRevision = this.revision;
+    try {
+      prepare?.({ ...rec });
+      lifecycle === "active" ? this.commitForeground(rec) : this.replace(rec);
+    }
+    catch (error) {
+      // A save error can follow a committed rename. Never compensate by destroying
+      // a key while the corresponding project may already be visible to another reader.
+      let confirmedAbsent = this.store === undefined && !this.records.has(id);
+      if (this.store !== undefined) {
+        try {
+          const observed = this.store.load();
+          confirmedAbsent = observed.revision === expectedRevision && !observed.records.some(record => record.id === id);
+        } catch { /* unavailable reconciliation is unknown, not authority to shred */ }
+      }
+      if (confirmedAbsent) {
+        try { this.keys.shred(id); }
+        catch (cleanupError) { throw new AggregateError([error, cleanupError], "project creation and key cleanup could not be confirmed"); }
+      }
+      throw error;
+    }
     return { ...rec };
   }
 
@@ -180,10 +200,37 @@ export class ProjectRegistry {
     this.replace({ ...rec, name, updatedAt: Date.now() });
   }
 
-  /** Set lifecycle (active <-> background <-> archived). Delete goes through `remove`. */
+  /** Promote through tenant selection or park/archive. Archived state cannot be reactivated here. */
   setLifecycle(id: ProjectId, lifecycle: Exclude<ProjectLifecycle, "deleted">): void {
+    if (lifecycle === "active") { this.setForeground(id); return; }
     const rec = this.get(id);
+    if (rec.lifecycle === "archived" && lifecycle === "background") throw new Error(`project ${id} is archived and read-only`);
     this.replace({ ...rec, lifecycle, updatedAt: Date.now() });
+  }
+
+  /** Select within the target's tenant, committing sibling demotion and promotion together. */
+  setForeground(id: ProjectId): { outgoing?: ProjectId; incoming: ProjectId } {
+    const target = this.get(id);
+    if (target.lifecycle === "archived") throw new Error(`project ${id} is archived and read-only`);
+    return this.commitForeground(target);
+  }
+
+  /** Both creation and later promotion use the same complete-record commit. */
+  private commitForeground(target: ProjectRecord): { outgoing?: ProjectId; incoming: ProjectId } {
+    const active = [...this.records.values()].filter(record => record.tenant === target.tenant && record.lifecycle === "active");
+    const outgoing = active[0]?.id;
+    if (active.length === 1 && outgoing === target.id) return { incoming: target.id };
+    const replacement = new Map(this.records);
+    const now = Date.now();
+    for (const record of active) {
+      if (record.id !== target.id) replacement.set(record.id, { ...record, lifecycle: "background", updatedAt: now });
+    }
+    replacement.set(target.id, target.lifecycle === "active" ? { ...target } : { ...target, lifecycle: "active", updatedAt: now });
+    // No session callbacks or separate demotion writes in this revision-checked commit.
+    this.persist(replacement);
+    this.records.clear();
+    for (const [projectId, record] of replacement) this.records.set(projectId, record);
+    return outgoing !== undefined && outgoing !== target.id ? { outgoing, incoming: target.id } : { incoming: target.id };
   }
 
   /**

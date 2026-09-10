@@ -21,11 +21,80 @@ synthetic data and a local test outbox, with no live model or external service.
 - Paid-usage metering is incomplete across routes. Do not rely on it as a universal
   billing ceiling or attach unrestricted paid credentials.
 
+See [monetary accounting](docs/monetary-accounting.md) for durable reservations,
+legacy-state handling and incomplete coverage.
+
 Inspect [enforcement profiles](src/platform/enforcement_profile.ts) and the
 [demonstration limits](docs/research-preview.md#interpreting-the-result) and
 [evidence record](docs/evidence.md) for the exact boundaries.
 Run hostile code only in an appropriately isolated, explicitly authorized environment.
 Do not expose a gateway publicly merely because local authentication tests pass.
+
+## Opt-in required project boundary (experimental)
+
+The command runner's `namespaceJail: "required"` mode uses the existing Bubblewrap
+launcher and kernel namespaces. It refuses unsupported setup rather than falling
+back to an unrestricted command. Its current qualified-binary configuration is
+Linux x64 with the expected merged `/usr` layout and the exact launcher identity
+checked in [the implementation](src/infra/required_project_jail.ts). Other binaries
+or operating arrangements require qualification; a version string is insufficient.
+
+The task receives a read-only system tool tree, its project and explicitly allowed
+write directories, optional `readOnlyPaths`, and fresh temporary directories.
+Network access is off unless `allowNet: true` is explicitly selected. Unix socket
+creation is restricted, while private stream socketpairs support ordinary Node IPC.
+Developer home directories and other host paths are not automatically exposed.
+Network opt-in shares the network namespace; it does not supply resolver settings
+or certificate authorities. DNS/TLS may need operator-approved configuration in
+explicit `readOnlyPaths` directories. Only local numeric-address connectivity has
+been exercised in the current network checks.
+
+Supply quiescent, operator-owned working directories. Required mode refuses shared
+file inodes (hard links), special files, unprotected writable trees and nested host
+mounts in supplied roots. It does not detach links, copy or migrate operational
+data. The host kernel, system tools and absence of concurrent host-side changes
+remain trusted; directory scanning does not establish global exclusive ownership.
+An explicitly selected root may itself be a mounted volume; mounts below it are
+refused. Admission scans at most 100,000 entries across the supplied read/write
+trees, including dependencies, within the command's existing time limit. Larger
+trees or slow scans are refused before task entry, not partially admitted.
+
+`launcher-confirmed` records the trusted launcher's completed setup/exit protocol,
+not independent witnessing, a VM boundary or unrestricted production readiness.
+File-size limits are per file and rounded down to KiB; positive limits below one
+KiB are refused, while explicit zero remains zero. These are not a total disk
+quota. Process limits are per user and have privilege exceptions. This runner does
+not impose an aggregate memory ceiling. Use separately qualified outer resource
+controls for hostile workloads. Legacy `true`/default best-effort and explicit
+`false` behavior remain available and carry their weaker observations.
+
+Builder tests cover the selected Linux layout and useful-work/refusal controls.
+The pinned Bubblewrap version is affected by [GHSA-pxhw-h44j-8pfx](https://github.com/containers/bubblewrap/security/advisories/GHSA-pxhw-h44j-8pfx).
+The tested fixed layout avoids its setup-time directory-creation precondition; this
+is not a patched dependency or general clearance of other layouts. Changing the
+launcher or layout requires fresh qualification. The separate native build-tool
+launcher has source inspection only for this advisory.
+
+## Optional native refusal transport: installation prerequisites
+
+The packaged native client/supervisor currently provide a refusal-only development
+exchange. They do not launch workloads or grant production isolation authority.
+The introductory recovery demonstration does not require this transport.
+
+An ordinary npm installation preserves package contents but does not establish
+the native client's required custody. For this optional exchange, a separate
+administrator-controlled copy must have canonical, root-owned directory ancestry
+with no group/other write access. Its `dist/native/linux-x64` directory and client/
+supervisor executables must have mode `0555`; `keep-native-supervisor.sha256`
+must have mode `0444`. Verify all copied file bytes against the reviewed archive
+before and after staging. Do not run npm lifecycle scripts as root to establish
+these permissions, or change an existing application's data to satisfy them.
+
+These are namespace-relative ownership and mode checks, not protection from a
+host administrator, proof of a read-only filesystem, or adversarial attestation
+between same-user processes. An ordinary install that fails these checks must
+remain refused. Stream failures retain bounded client diagnostics; neither an
+error message nor a failed write proves whether a peer received an operation.
 
 ## Public test material
 

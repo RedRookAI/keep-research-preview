@@ -179,10 +179,10 @@ test("ADAPT-05: experiment state restarts exactly and stale handles cannot overw
   const persistence: OutcomeAdaptationPersistence = {
     load: () => durable === undefined ? undefined : structuredClone(durable),
     save: (snapshot, expectedRevision) => {
-      const current = durable?.revision ?? 0;
+      const current = durable?.revision;
       if (current !== expectedRevision) throw new Error(`CAS conflict ${expectedRevision}/${current}`);
-      durable = { snapshot: structuredClone(snapshot), revision: current + 1 };
-      return current + 1;
+      durable = { snapshot: structuredClone(snapshot), revision: (current ?? 0) + 1 };
+      return durable.revision;
     },
   };
   let serial = 0;
@@ -237,9 +237,9 @@ test("ADAPT-07: restored evidence is recomputed and malformed or contradictory s
   const persistence: OutcomeAdaptationPersistence = {
     load: () => durable === undefined ? undefined : structuredClone(durable),
     save: (snapshot, expectedRevision) => {
-      assert.equal(expectedRevision, durable?.revision ?? 0);
-      durable = { snapshot: structuredClone(snapshot), revision: expectedRevision + 1 };
-      return expectedRevision + 1;
+      assert.equal(expectedRevision, durable?.revision);
+      durable = { snapshot: structuredClone(snapshot), revision: (expectedRevision ?? 0) + 1 };
+      return durable.revision;
     },
   };
   let serial = 0;
@@ -287,7 +287,7 @@ test("ADAPT-09: pre-promotion live reports remain bounded and restartable", () =
   let durable: { snapshot?: unknown; revision: number } | undefined;
   const persistence: OutcomeAdaptationPersistence = {
     load: () => durable === undefined ? undefined : structuredClone(durable),
-    save: (snapshot, expectedRevision) => { assert.equal(expectedRevision, durable?.revision ?? 0); durable = { snapshot: structuredClone(snapshot), revision: expectedRevision + 1 }; return expectedRevision + 1; },
+    save: (snapshot, expectedRevision) => { assert.equal(expectedRevision, durable?.revision); durable = { snapshot: structuredClone(snapshot), revision: (expectedRevision ?? 0) + 1 }; return durable.revision; },
   };
   const first = new OutcomeAdaptation(behavior("v1"), policy, { persistence });
   for (let index = 0; index < 100; index++) assert.equal(first.observeLive({ outcomeId: `live-${index}`, observedAt: index, evidence: "observed-product", quality: 0, regressed: true }).kind, "observing");
@@ -302,8 +302,8 @@ test("ADAPT-10: failed persistence publishes no in-process mutation", () => {
     load: () => durable === undefined ? undefined : structuredClone(durable),
     save: (snapshot, expectedRevision) => {
       if (fail) throw new Error("disk full");
-      durable = { snapshot: structuredClone(snapshot), revision: expectedRevision + 1 };
-      return expectedRevision + 1;
+      durable = { snapshot: structuredClone(snapshot), revision: (expectedRevision ?? 0) + 1 };
+      return durable.revision;
     },
   };
   const adaptation = new OutcomeAdaptation(behavior("v1"), policy, { persistence });
@@ -320,8 +320,8 @@ test("ADAPT-10: failed persistence publishes no in-process mutation", () => {
     load: () => promotionDurable === undefined ? undefined : structuredClone(promotionDurable),
     save: (snapshot, expectedRevision) => {
       if (failPromotion) throw new Error("promotion disk full");
-      promotionDurable = { snapshot: structuredClone(snapshot), revision: expectedRevision + 1 };
-      return expectedRevision + 1;
+      promotionDurable = { snapshot: structuredClone(snapshot), revision: (expectedRevision ?? 0) + 1 };
+      return promotionDurable.revision;
     },
   };
   const promoting = new OutcomeAdaptation(behavior("v1"), policy, { persistence: promotionPersistence, clock: () => 20, id: () => `promotion-${++serial}`, random: () => 0.25 });
@@ -343,7 +343,7 @@ test("ADAPT-11: policy changes abandon an active epoch, tombstones retain CAS re
   let durable: { snapshot?: unknown; revision: number } | undefined = { revision: 3 };
   const persistence: OutcomeAdaptationPersistence = {
     load: () => structuredClone(durable),
-    save: (snapshot, expectedRevision) => { assert.equal(expectedRevision, durable?.revision); durable = { snapshot: structuredClone(snapshot), revision: expectedRevision + 1 }; return expectedRevision + 1; },
+    save: (snapshot, expectedRevision) => { assert.equal(expectedRevision, durable?.revision); durable = { snapshot: structuredClone(snapshot), revision: (expectedRevision ?? 0) + 1 }; return durable.revision; },
   };
   const first = new OutcomeAdaptation(behavior("v1"), policy, { persistence, clock: () => 10 });
   first.propose(behavior("v2"));
@@ -409,7 +409,7 @@ test("ADAPT-14: rollback abandons a newer experiment and remains restartable", (
   let durable: { snapshot?: unknown; revision: number } | undefined;
   const persistence: OutcomeAdaptationPersistence = {
     load: () => durable === undefined ? undefined : structuredClone(durable),
-    save: (snapshot, expectedRevision) => { assert.equal(expectedRevision, durable?.revision ?? 0); durable = { snapshot: structuredClone(snapshot), revision: expectedRevision + 1 }; return expectedRevision + 1; },
+    save: (snapshot, expectedRevision) => { assert.equal(expectedRevision, durable?.revision); durable = { snapshot: structuredClone(snapshot), revision: (expectedRevision ?? 0) + 1 }; return durable.revision; },
   };
   let serial = 0;
   const adaptation = new OutcomeAdaptation(behavior("v1"), policy, { persistence, clock: () => 100, id: () => `id-${++serial}`, random: () => 0.25 });
@@ -424,7 +424,7 @@ test("ADAPT-14: rollback abandons a newer experiment and remains restartable", (
   adaptation.propose(behavior("v3"));
   adaptation.assign("new-experiment-subject");
   let decision: import("../src/learning/outcome_adaptation.js").AdaptationDecision | undefined;
-  for (let index = 0; index < policy.minSamplesPerArm; index++) decision = adaptation.observeLive({ outcomeId: `regression-${index}`, observedAt: 101 + index, evidence: "observed-product", quality: 0.1, regressed: true });
+  for (let index = 0; index < policy.minSamplesPerArm; index++) decision = adaptation.observeLive({ windowId: adaptation.monitoring()!.windowId, outcomeId: `regression-${index}`, observedAt: 101 + index, evidence: "observed-product", quality: 0.1, regressed: true });
   assert.equal(decision?.kind, "rolled-back");
   assert.equal(adaptation.current().prompt.version, "v1");
   const restarted = new OutcomeAdaptation(behavior("v1"), policy, { persistence, clock: () => 110 });

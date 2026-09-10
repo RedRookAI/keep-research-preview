@@ -34,7 +34,7 @@ import {
 
 function newSpine(): Spine {
   const dir = mkdtempSync(join(tmpdir(), "keep-sched-"));
-  return new Spine(new FileSpineStore(dir), new InProcessLock(), new SchemaRegistry());
+  return new Spine(new FileSpineStore(dir, { fsync: true }), new InProcessLock(), new SchemaRegistry());
 }
 
 // A counting provider so we can prove NO call is made on a breach.
@@ -73,57 +73,57 @@ function envelope(over: Partial<AuthorizationEnvelope> = {}): AuthorizationEnvel
 
 // ── BudgetLedger: hard-stop BEFORE the call, per breach kind ─────────────────
 
-test("INVARIANT: ledger hard-stops on an expired envelope", () => {
+test("INVARIANT: ledger hard-stops on an expired envelope", async () => {
   const spine = newSpine();
   const ledger = new BudgetLedger(spine, costModelWithPricing());
-  ledger.grant(envelope({ expiresAt: Date.now() - 1000 }));
-  ledger.beginRun("r1", "env1");
+  await ledger.grant(envelope({ expiresAt: Date.now() - 1000 }));
+  await ledger.beginRun("r1", "env1");
   const check = ledger.willBreach("r1", "auto-research", "local", "test-model", { freshInputTokens: 1, cachedInputTokens: 0, outputTokens: 1 });
   assert.equal(check.wouldBreach, true);
   assert.equal(check.kind, "expired");
 });
 
-test("INVARIANT: ledger hard-stops on an unauthorized class", () => {
+test("INVARIANT: ledger hard-stops on an unauthorized class", async () => {
   const spine = newSpine();
   const ledger = new BudgetLedger(spine, costModelWithPricing());
-  ledger.grant(envelope());
-  ledger.beginRun("r1", "env1");
+  await ledger.grant(envelope());
+  await ledger.beginRun("r1", "env1");
   const check = ledger.willBreach("r1", "auto-training", "local", "test-model", { freshInputTokens: 1, cachedInputTokens: 0, outputTokens: 1 });
   assert.equal(check.kind, "class-not-authorized");
 });
 
-test("INVARIANT: ledger hard-stops on an unauthorized model tier", () => {
+test("INVARIANT: ledger hard-stops on an unauthorized model tier", async () => {
   const spine = newSpine();
   const ledger = new BudgetLedger(spine, costModelWithPricing());
-  ledger.grant(envelope());
-  ledger.beginRun("r1", "env1");
+  await ledger.grant(envelope());
+  await ledger.beginRun("r1", "env1");
   const check = ledger.willBreach("r1", "auto-research", "frontier", "test-model", { freshInputTokens: 1, cachedInputTokens: 0, outputTokens: 1 });
   assert.equal(check.kind, "tier-not-authorized");
 });
 
-test("INVARIANT: ledger hard-stops on the per-call token ceiling", () => {
+test("INVARIANT: ledger hard-stops on the per-call token ceiling", async () => {
   const spine = newSpine();
   const ledger = new BudgetLedger(spine, costModelWithPricing());
-  ledger.grant(envelope({ perCallTokenCeiling: 100 }));
-  ledger.beginRun("r1", "env1");
+  await ledger.grant(envelope({ perCallTokenCeiling: 100 }));
+  await ledger.beginRun("r1", "env1");
   const check = ledger.willBreach("r1", "auto-research", "local", "test-model", { freshInputTokens: 1, cachedInputTokens: 0, outputTokens: 500 });
   assert.equal(check.kind, "token-ceiling");
 });
 
-test("INVARIANT: ledger hard-stops on the per-run cap", () => {
+test("INVARIANT: ledger hard-stops on the per-run cap", async () => {
   const spine = newSpine();
   const ledger = new BudgetLedger(spine, costModelWithPricing());
-  ledger.grant(envelope({ perRunCapUsd: 0.0001 })); // any real call exceeds this
-  ledger.beginRun("r1", "env1");
+  await ledger.grant(envelope({ perRunCapUsd: 0.0001 })); // any real call exceeds this
+  await ledger.beginRun("r1", "env1");
   const check = ledger.willBreach("r1", "auto-research", "local", "test-model", { freshInputTokens: 1000, cachedInputTokens: 0, outputTokens: 500 });
   assert.equal(check.kind, "per-run-cap");
 });
 
-test("INVARIANT: ledger hard-stops on the daily cap (across runs)", () => {
+test("INVARIANT: ledger hard-stops on the daily cap (across runs)", async () => {
   const spine = newSpine();
   const ledger = new BudgetLedger(spine, costModelWithPricing());
-  ledger.grant(envelope({ dailyCapUsd: 0.0001, perRunCapUsd: 100 }));
-  ledger.beginRun("r1", "env1");
+  await ledger.grant(envelope({ dailyCapUsd: 0.0001, perRunCapUsd: 100 }));
+  await ledger.beginRun("r1", "env1");
   const check = ledger.willBreach("r1", "auto-research", "local", "test-model", { freshInputTokens: 1000, cachedInputTokens: 0, outputTokens: 500 });
   assert.equal(check.kind, "daily-cap");
 });
@@ -134,8 +134,8 @@ test("INVARIANT: MeteredGateway makes NO provider call when a cap would breach",
   const spine = newSpine();
   const { provider, calls } = countingProvider();
   const ledger = new BudgetLedger(spine, costModelWithPricing());
-  ledger.grant(envelope({ perRunCapUsd: 0.0001 }));
-  ledger.beginRun("r1", "env1");
+  await ledger.grant(envelope({ perRunCapUsd: 0.0001 }));
+  await ledger.beginRun("r1", "env1");
   const breaker = new TokenVelocityBreaker(spine);
   const mg = new MeteredGateway(new ModelGateway(provider), ledger, breaker, spine);
   const ctx: MeteredCallContext = { runId: "r1", cls: "auto-research", tier: "local", projected: { freshInputTokens: 1000, cachedInputTokens: 0, outputTokens: 500 } };
@@ -147,8 +147,8 @@ test("MeteredGateway records real spend on a successful metered call", async () 
   const spine = newSpine();
   const { provider, calls } = countingProvider();
   const ledger = new BudgetLedger(spine, costModelWithPricing());
-  ledger.grant(envelope({ perRunCapUsd: 100, dailyCapUsd: 100 }));
-  ledger.beginRun("r1", "env1");
+  await ledger.grant(envelope({ perRunCapUsd: 100, dailyCapUsd: 100 }));
+  await ledger.beginRun("r1", "env1");
   const breaker = new TokenVelocityBreaker(spine, { maxUsdPerMinute: 1e9 });
   const mg = new MeteredGateway(new ModelGateway(provider), ledger, breaker, spine);
   const ctx: MeteredCallContext = { runId: "r1", cls: "auto-research", tier: "local", projected: { freshInputTokens: 100, cachedInputTokens: 0, outputTokens: 50 } };
@@ -164,18 +164,19 @@ test("INVARIANT: velocity breaker trips on repetitive identical calls (loop) —
   const spine = newSpine();
   const { provider } = countingProvider();
   const ledger = new BudgetLedger(spine, costModelWithPricing());
-  ledger.grant(envelope({ perRunCapUsd: 1e9, dailyCapUsd: 1e9 })); // caps wide open
-  ledger.beginRun("r1", "env1");
+  await ledger.grant(envelope({ perRunCapUsd: 1e9, dailyCapUsd: 1e9 })); // caps wide open
+  await ledger.beginRun("r1", "env1");
   const breaker = new TokenVelocityBreaker(spine, { maxRepeatedIdentical: 3, maxUsdPerMinute: 1e9 });
   const mg = new MeteredGateway(new ModelGateway(provider), ledger, breaker, spine);
-  const ctx: MeteredCallContext = { runId: "r1", cls: "auto-research", tier: "local", projected: { freshInputTokens: 1, cachedInputTokens: 0, outputTokens: 1 } };
+  // Match the fixture's actual100/50 usage so this isolates repetition, not projection-overrun refusal.
+  const ctx: MeteredCallContext = { runId: "r1", cls: "auto-research", tier: "local", projected: { freshInputTokens: 100, cachedInputTokens: 0, outputTokens: 50 } };
   await mg.generateMetered({ prompt: "same" }, ctx, "test-model");
   await mg.generateMetered({ prompt: "same" }, ctx, "test-model");
   await assert.rejects(() => mg.generateMetered({ prompt: "same" }, ctx, "test-model"), (e) => e instanceof BudgetExceeded, "3rd identical trips the loop breaker");
   assert.equal(breaker.isTripped, true);
 });
 
-test("INVARIANT: velocity breaker stays tripped until human reset", () => {
+test("INVARIANT: velocity breaker stays tripped until human reset", async () => {
   const spine = newSpine();
   const breaker = new TokenVelocityBreaker(spine, { maxRepeatedIdentical: 2 });
   breaker.checkRepetition("x");
@@ -187,24 +188,24 @@ test("INVARIANT: velocity breaker stays tripped until human reset", () => {
 
 // ── Scheduler: envelope-gated, halts on breach, dead-letters unrecoverable ──
 
-function schedulerSetup() {
+async function schedulerSetup() {
   const spine = newSpine();
   const ledger = new BudgetLedger(spine, costModelWithPricing());
-  ledger.grant(envelope({ perRunCapUsd: 100, dailyCapUsd: 100 }));
+  await ledger.grant(envelope({ perRunCapUsd: 100, dailyCapUsd: 100 }));
   const dlq = new DeadLetterQueue(spine);
   const scheduler = new Scheduler({ spine, ledger, dlq });
   return { spine, ledger, dlq, scheduler };
 }
 
 test("INVARIANT: scheduler will not run without a valid enabled envelope", async () => {
-  const { scheduler } = schedulerSetup();
+  const { scheduler } = await schedulerSetup();
   const report = await scheduler.tick("prj1", []); // never enabled
   assert.equal(report.halted, true);
   assert.match(report.haltReason ?? "", /disabled/);
 });
 
 test("INVARIANT: scheduler dead-letters an unrecoverable task, never retries it", async () => {
-  const { scheduler, dlq } = schedulerSetup();
+  const { scheduler, dlq } = await schedulerSetup();
   scheduler.enable({ projectId: "prj1", enabledClasses: ["auto-research"], envelopeId: "env1" });
   let ran = false;
   const task: ScheduledTask = { id: "t1", projectId: "prj1", cls: "auto-research", priorFailures: 3, run: async () => { ran = true; return "x"; } };
@@ -215,10 +216,10 @@ test("INVARIANT: scheduler dead-letters an unrecoverable task, never retries it"
 });
 
 test("INVARIANT: a BudgetExceeded halts the WHOLE tick (enforcement), remaining tasks not run", async () => {
-  const { spine, ledger, dlq } = (() => {
+  const { spine, ledger, dlq } = await (async () => {
     const spine = newSpine();
     const ledger = new BudgetLedger(spine, costModelWithPricing());
-    ledger.grant(envelope({ perRunCapUsd: 0.0001, dailyCapUsd: 100 })); // any call breaches
+    await ledger.grant(envelope({ perRunCapUsd: 0.0001, dailyCapUsd: 100 })); // any call breaches
     const dlq = new DeadLetterQueue(spine);
     return { spine, ledger, dlq };
   })();
@@ -239,7 +240,7 @@ test("INVARIANT: a BudgetExceeded halts the WHOLE tick (enforcement), remaining 
 });
 
 test("scheduler returns proposals for human review — never auto-merges", async () => {
-  const { scheduler } = schedulerSetup();
+  const { scheduler } = await schedulerSetup();
   scheduler.enable({ projectId: "prj1", enabledClasses: ["auto-research"], envelopeId: "env1" });
   const task: ScheduledTask = { id: "t1", projectId: "prj1", cls: "auto-research", run: async () => "proposed: add caching to module X" };
   const report = await scheduler.tick("prj1", [task]);
@@ -281,7 +282,7 @@ test("INVARIANT: saga unwinds completed steps in LIFO on a partial failure", asy
 
 // ── NonPersistableRegistry: no checkpoint mid-side-effect ────────────────────
 
-test("INVARIANT: no checkpoint is allowed while a non-persistable region is open", () => {
+test("INVARIANT: no checkpoint is allowed while a non-persistable region is open", async () => {
   const spine = newSpine();
   const reg = new NonPersistableRegistry(spine);
   assert.equal(reg.canCheckpoint(), true);
@@ -298,7 +299,7 @@ test("INVARIANT: within() always exits the region even if the body throws", asyn
   assert.equal(reg.canCheckpoint(), true, "region exited despite throw — not stuck non-persistable");
 });
 
-test("INVARIANT: run-scoped regions block their own checkpoints without blocking independent runs", () => {
+test("INVARIANT: run-scoped regions block their own checkpoints without blocking independent runs", async () => {
   const reg = new NonPersistableRegistry(newSpine());
   reg.enter("run-a:implement", "run-a");
   assert.equal(reg.canCheckpoint("run-a"), false);

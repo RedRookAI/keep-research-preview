@@ -26,7 +26,7 @@ import { pinnedGitDependencies } from "./helpers/pinned_git_dependencies.js";
 import { makePublicationAttempt, publicationAttemptDigest, type MergeSpec, type PublishedMergeIdentity } from "../src/oversight/merge_executor.js";
 
 function newSpine(): Spine {
-  return new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "keep-66b-"))), new InProcessLock(), new SchemaRegistry());
+  return new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "keep-66b-")), { fsync: true }), new InProcessLock(), new SchemaRegistry());
 }
 
 function setupRemote(): { work: string; bare: string } {

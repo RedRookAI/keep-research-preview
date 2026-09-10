@@ -26,6 +26,7 @@ import { createServer, type IncomingMessage } from "node:http";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import type { KeepApp } from "../compose.js";
 import { projectRepositoryOutcomes } from "../solve/governed_local_merge.js";
+import { ProjectFinalizationError } from "../autonomy/project_loop.js";
 import { GOAL_PHASES, GOAL_WORK_DOCUMENT, type GoalWorkPhase } from "../session/project_goal_work.js";
 import { ALL_PERMISSIONS, can, OWNER, type Principal, type Permission } from "../identity/rbac.js";
 import { auditTrail } from "../review/review_core.js";
@@ -98,6 +99,17 @@ function json(status: number, obj: unknown): GatewayResponse {
   return { status, headers: { "content-type": "application/json", "cache-control": "no-store" }, body: JSON.stringify(obj) };
 }
 
+function projectFinalizationFailure(projectId: string, error: ProjectFinalizationError): GatewayResponse {
+  const state = error.result.state;
+  if (state.projectId !== projectId) throw new Error("finalization result project mismatch");
+  const implementation = state.artifacts["implement"] as { solve?: { proposalEvidence?: { rollback?: { patchSha256?: string } } } } | undefined;
+  const proposalDigest = implementation?.solve?.proposalEvidence?.rollback?.patchSha256;
+  return json(409, { error: error.message, projectId, runId: state.runId, revision: state.revision,
+    status: "reconciliation-required", taskStatus: state.status,
+    finalization: { phase: error.phase, confirmed: false, replayTask: false },
+    proposal: proposalDigest !== undefined, ...(proposalDigest ? { proposalDigest } : {}) });
+}
+
 /** Preserve a recognizable project label without letting a large or multiline goal violate the registry bound. */
 function projectNameFromGoal(goal: string): string {
   const normalized = goal.replace(/[\u0000-\u001f\u007f]+/gu, " ").replace(/\s+/gu, " ").trim() || "Keep project";
@@ -159,6 +171,16 @@ function buildInstallGate(app: KeepApp): (skill: DistilledSkill) => Promise<Gate
   }
   const monitor = new EnvelopeForbiddenSinkCheck();
   return async (skill) => { const bad = monitor.check(skill); return bad ? { ok: false, verdict: "rejected-unsafe", reason: bad } : { ok: true, verdict: "envelope-checked" }; };
+}
+
+/** Read-only lookup/projection boundary. Never wrap execution or retry a mutation here. */
+function readProjectProjection<T>(read: () => T): { ok: true; value: T } | { ok: false; response: GatewayResponse } {
+  try { return { ok: true, value: read() }; }
+  catch (error) {
+    if (!(error instanceof ProjectSessionConflictError)) throw error;
+    return { ok: false, response: json(409, { code: "project-state-conflict",
+      error: "Project state changed during lookup; inspect current state before proceeding.", replayTask: false }) };
+  }
 }
 
 export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, sec: GatewaySecurity): Promise<GatewayResponse> {
@@ -324,7 +346,8 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     if (app.projectManager === undefined || app.outcomeAdaptation === undefined) return json(501, { error: "project adaptation is not configured" });
     const body = req.method === "POST" ? parseBody(req.body) : undefined;
     if (req.method === "POST" && body === null) return json(400, { error: "invalid json" });
-    const requiredPermission = req.method === "GET" || (req.path === "/project/adaptation/present" && typeof body?.["assignmentId"] !== "string") ? "adaptation.read"
+    const requiredPermission = req.method === "GET" && req.path === "/project/adaptation/monitoring" ? "adaptation.observe"
+      : req.method === "GET" || (req.path === "/project/adaptation/present" && typeof body?.["assignmentId"] !== "string") ? "adaptation.read"
       : req.path === "/project/adaptation/propose" || req.path === "/project/adaptation/abandon" || req.path === "/project/adaptation/reset" ? "adaptation.manage"
       : "adaptation.observe";
     const adaptationDenied = gate(requiredPermission); if (adaptationDenied) return adaptationDenied;
@@ -335,9 +358,14 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     if (project === undefined) return json(404, { error: "project not found" });
     if (project.lifecycle === "archived" && req.method !== "GET") return json(409, { error: "project is archived and read-only" });
 
+    if (req.method === "GET" && req.path === "/project/adaptation/monitoring") {
+      try { return json(200, { projectId, monitoring: app.outcomeAdaptation(projectId).monitoring() ?? null }); }
+      catch (error) { return adaptationFailure(error); }
+    }
+
     if (req.method === "GET" && req.path === "/project/adaptation") {
-      const documentRevision = app.projectManager.session(projectId).resolveDocumentVersioned("outcome-adaptation").revision;
-      try { return json(200, { projectId, documentRevision, behavior: app.outcomeAdaptation(projectId).current(), regime: "fixed-horizon-one-sided-t95-with-variance-floor", outcomeProvenance: "delegated-observer-report-after-recorded-exposure", routing: { preferredModelAdvisory: true, effortIsRequestedAndCapabilityClamped: true } }); }
+      let documentRevision = app.projectManager.session(projectId).resolveDocumentVersioned("outcome-adaptation").revision ?? null;
+      try { const adaptation = app.outcomeAdaptation(projectId); documentRevision = app.projectManager.session(projectId).resolveDocumentVersioned("outcome-adaptation").revision ?? null; return json(200, { projectId, documentRevision, behavior: adaptation.current(), monitoring: adaptation.monitoring() ?? null, regime: "fixed-horizon-one-sided-t95-with-variance-floor", outcomeProvenance: "delegated-observer-report-after-recorded-exposure", routing: { preferredModelAdvisory: true, effortIsRequestedAndCapabilityClamped: true } }); }
       catch (error) { const failed = adaptationFailure(error); return json(failed.status, { ...(JSON.parse(failed.body) as Record<string, unknown>), documentRevision }); }
     }
     if (req.method === "POST" && req.path === "/project/adaptation/propose") {
@@ -390,9 +418,11 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
       if (!personalMode && principal.kind !== "agent") return json(403, { error: "forbidden", reason: "enterprise outcomes require a delegated product observer" });
       if (typeof body!["outcomeId"] !== "string" || typeof body!["observedAt"] !== "number" || typeof body!["quality"] !== "number" || typeof body!["regressed"] !== "boolean") return json(400, { error: "outcomeId, observedAt, quality, and regressed are required" });
       try {
-        const decision = app.outcomeAdaptation(projectId).observeLive({ outcomeId: body!["outcomeId"], observedAt: body!["observedAt"], quality: body!["quality"], regressed: body!["regressed"], evidence: "observed-product" });
+        const adaptation = app.outcomeAdaptation(projectId);
+        if (adaptation.monitoring() !== undefined && typeof body!["windowId"] !== "string") return json(400, { error: "windowId is required; GET /project/adaptation/monitoring for the current identity; do not relabel an old report" });
+        const decision = adaptation.observeLive({ ...(typeof body!["windowId"] === "string" ? { windowId: body!["windowId"] } : {}), outcomeId: body!["outcomeId"], observedAt: body!["observedAt"], quality: body!["quality"], regressed: body!["regressed"], evidence: "observed-product" });
         app.spine.stage({ type: "identity.action", actor: "outcome-adaptation", payload: { event: `adaptation.live-${decision.kind}`, projectId, outcomeIdDigest: app.projectAuditDigest!(projectId, "adaptation-live-outcome", body!["outcomeId"] as string), observer: principal.id, outcomeProvenance: "delegated-observer-report", reason: decision.reason } });
-        return json(200, { projectId, decision });
+        return json(200, { projectId, decision, monitoring: adaptation.monitoring() ?? null });
       } catch (error) { return adaptationFailure(error); }
     }
     if (req.method === "POST" && req.path === "/project/adaptation/present") {
@@ -400,8 +430,10 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
       if (body!["assignmentId"] !== undefined && typeof body!["assignmentId"] !== "string") return json(400, { error: "assignmentId must be a string" });
       try {
         const adaptation = app.outcomeAdaptation(projectId);
-        const behavior = typeof body!["assignmentId"] === "string" ? adaptation.expose(body!["assignmentId"]) : adaptation.current();
-        return json(200, { projectId, behaviorVersion: behavior.prompt.version, presentation: presentAdaptiveText(body!["content"], behavior.voice) });
+        const behavior = typeof body!["assignmentId"] === "string" ? adaptation.assignedBehavior(body!["assignmentId"]) : adaptation.current();
+        const presentation = presentAdaptiveText(body!["content"], behavior.voice);
+        if (typeof body!["assignmentId"] === "string") adaptation.expose(body!["assignmentId"], behavior);
+        return json(200, { projectId, behaviorVersion: behavior.prompt.version, presentation });
       } catch (error) { return adaptationFailure(error); }
     }
     return json(404, { error: "not found" });
@@ -671,6 +703,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
       run = await tracked.completion;
     } catch (error) {
       if (error instanceof TaskMemoryUnavailableError || error instanceof NativeProjectCommandUnavailableError) return json(409, { error: error.message });
+      if (error instanceof ProjectFinalizationError) return projectFinalizationFailure(project.id, error);
       if (!created && error instanceof Error && /already bound/u.test(error.message)) return json(409, { error: error.message });
       throw error;
     }
@@ -696,7 +729,9 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
       ...(capability && typeof capability["capability"] === "string" && typeof capability["evidenceId"] === "string" ? { capability: { capability: capability["capability"], evidenceId: capability["evidenceId"] } } : {}),
     };
     const runId = String(b["runId"] ?? "");
-    const project = app.projectManager.list().find((record) => visibleProject(record) && app.projectManager!.quarantine(record.id) === undefined && app.projectManager!.session(record.id).boundRunId() === runId);
+    const lookup = readProjectProjection(() => app.projectManager!.list().find((record) => visibleProject(record) && app.projectManager!.quarantine(record.id) === undefined && app.projectManager!.session(record.id).boundRunId() === runId));
+    if (!lookup.ok) return lookup.response;
+    const project = lookup.value;
     if (project === undefined) return json(404, { error: "project run is not bound to a durable project" });
     const denied = gate(app.autonomyLoop.resumePermission(runId, input)); if (denied) return denied;
     const memoryForResume = () => {
@@ -732,6 +767,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
           ...(memoryContext === undefined ? {} : { memoryContext }) });
       }, "autonomy project resume");
     } catch (error) {
+      if (error instanceof ProjectFinalizationError) return projectFinalizationFailure(project.id, error);
       if (error instanceof TaskMemoryUnavailableError || error instanceof NativeProjectCommandUnavailableError) return json(409, { error: error.message });
       throw error;
     }
@@ -744,19 +780,24 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     if (app.projectManager === undefined) return json(501, { error: "autonomy loop not composed" });
     const denied = gate("audit.view"); if (denied) return denied;
     const runId = String(req.query["runId"] ?? "");
-    const record = app.projectManager.list().find((row) => visibleProject(row) && app.projectManager!.quarantine(row.id) === undefined && app.projectManager!.session(row.id).boundRunId() === runId);
-    if (!record) return json(404, { error: "project not found" });
-    const project = app.projectManager.session(record.id).lastCheckpoint();
-    if (!project || project.runId !== runId) return json(404, { error: "project checkpoint not found" });
-    const implementation = project.artifacts["implement"] as { solve?: { proposalEvidence?: unknown } } | undefined;
-    const session = app.projectManager.session(record.id);
-    return json(200, {
-      projectId: record.id,
-      project,
-      proposal: implementation?.solve?.proposalEvidence ?? null,
-      repository: projectRepositoryOutcomes(app.spine, runId),
-      session: { record, history: session.history(), checkpoint: session.lastCheckpoint() ?? null, budget: { ...session.budget } },
+    const lookup = readProjectProjection(() => {
+      for (const record of app.projectManager!.list()) {
+        if (!visibleProject(record) || app.projectManager!.quarantine(record.id) !== undefined) continue;
+        const session = app.projectManager!.session(record.id);
+        if (session.boundRunId() !== runId) continue;
+        const view = session.inspect(), project = view.checkpoint;
+        if (!project || project.runId !== runId) return json(404, { error: "project checkpoint not found" });
+        const implementation = project.artifacts["implement"] as { solve?: { proposalEvidence?: unknown } } | undefined;
+        return json(200, {
+          projectId: record.id, project,
+          proposal: implementation?.solve?.proposalEvidence ?? null,
+          repository: projectRepositoryOutcomes(app.spine, runId),
+          session: { record, history: view.history, checkpoint: project, budget: view.budget },
+        });
+      }
+      return json(404, { error: "project not found" });
     });
+    return lookup.ok ? lookup.value : lookup.response;
   }
 
   if (req.method === "POST" && req.path === "/project/merge") {
@@ -766,7 +807,9 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     const decision = b["decision"];
     const proposalDigest = b["proposalDigest"];
     if (!runId || (decision !== "approve" && decision !== "veto") || typeof proposalDigest !== "string" || !/^[0-9a-f]{64}$/u.test(proposalDigest)) return json(400, { error: "runId, decision (approve|veto), and exact proposalDigest required" });
-    const record = app.projectManager.list().find((row) => visibleProject(row) && app.projectManager!.quarantine(row.id) === undefined && app.projectManager!.session(row.id).boundRunId() === runId);
+    const lookup = readProjectProjection(() => app.projectManager!.list().find((row) => visibleProject(row) && app.projectManager!.quarantine(row.id) === undefined && app.projectManager!.session(row.id).boundRunId() === runId));
+    if (!lookup.ok) return lookup.response;
+    const record = lookup.value;
     if (!record) return json(404, { error: "project not found" });
     if (record.lifecycle === "archived") return json(409, { error: "project is archived and read-only" });
     const denied = gate(decision === "approve" ? "review.approve" : "review.decline"); if (denied) return denied;
@@ -778,7 +821,9 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     const denied = gate("review.approve"); if (denied) return denied;
     const b = parseBody(req.body); if (b === null || typeof b["runId"] !== "string" || b["runId"].trim() === "") return json(400, { error: "runId required" });
     const runId = b["runId"].trim();
-    const record = app.projectManager.list().find((row) => visibleProject(row) && app.projectManager!.quarantine(row.id) === undefined && app.projectManager!.session(row.id).boundRunId() === runId);
+    const lookup = readProjectProjection(() => app.projectManager!.list().find((row) => visibleProject(row) && app.projectManager!.quarantine(row.id) === undefined && app.projectManager!.session(row.id).boundRunId() === runId));
+    if (!lookup.ok) return lookup.response;
+    const record = lookup.value;
     if (!record) return json(404, { error: "project not found" });
     if (record.lifecycle === "archived") return json(409, { error: "project is archived and read-only" });
     return json(200, await app.projectMerge.revert(runId));
@@ -787,30 +832,42 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
   if (req.method === "GET" && req.path === "/projects") {
     if (app.autonomyLoop === undefined) return json(200, { projects: [], active: null });
     const denied = gate("audit.view"); if (denied) return denied;
-    const projects = app.autonomyLoop.manager.list().filter(visibleProject).map((r) => {
-      const quarantined = app.autonomyLoop!.manager.quarantine(r.id) ?? null;
-      const session = quarantined === null ? app.autonomyLoop!.manager.session(r.id) : undefined;
-      const checkpoint = session?.lastCheckpoint();
-      const runId = session?.boundRunId() ?? null;
-      const firstGoal = quarantined === null
-        ? session!.history().find((entry) => entry.role === "user")?.text
-        : undefined;
-      const implementation = checkpoint?.artifacts["implement"] as { solve?: { proposalEvidence?: unknown } } | undefined;
-      const repository = projectRepositoryOutcomes(app.spine, runId ?? "");
-      const decision = repository.latestDecision;
-      const goal = app.projectRuntime !== undefined && session?.resolveDocumentVersioned(GOAL_WORK_DOCUMENT).value !== undefined
-        ? app.projectRuntime.goalWork(r.id) : undefined;
-      // A read-only projection of retained work, not execution or whole-goal completion.
-      const goalWork = goal === undefined ? undefined : {
-        active: goal.document.active, phase: goal.document.phase,
-        totalTasks: goal.document.definition.tasks.length, acceptedTasks: Object.keys(goal.document.accepted).length,
-        deferredTasks: goal.selection.deferred.length, heldTasks: Object.keys(goal.selection.held).length,
-        nextTaskId: goal.selection.selected ?? null,
-      };
-      return { id: String(r.id), name: firstGoal === undefined ? r.name : projectNameFromGoal(firstGoal), lifecycle: r.lifecycle, quarantined, runId, status: checkpoint?.status ?? null, proposal: implementation?.solve?.proposalEvidence !== undefined, decision, repository, ...(goalWork === undefined ? {} : { goalWork }) };
+    const lookup = readProjectProjection(() => {
+      const projects = app.autonomyLoop!.manager.list().filter(visibleProject).flatMap((r) => {
+        try {
+          const quarantined = app.autonomyLoop!.manager.quarantine(r.id) ?? null;
+          const session = quarantined === null ? app.autonomyLoop!.manager.session(r.id) : undefined;
+          const view = session?.inspect();
+          const checkpoint = view?.checkpoint;
+          const runId = view?.runId ?? null;
+          const firstGoal = quarantined === null
+            ? view!.history.find((entry) => entry.role === "user")?.text
+            : undefined;
+          const implementation = checkpoint?.artifacts["implement"] as { solve?: { proposalEvidence?: unknown } } | undefined;
+          const repository = projectRepositoryOutcomes(app.spine, runId ?? "");
+          const decision = repository.latestDecision;
+          const goal = app.projectRuntime !== undefined && session?.resolveDocumentVersioned(GOAL_WORK_DOCUMENT).value !== undefined
+            ? app.projectRuntime.goalWork(r.id) : undefined;
+          // A read-only projection of retained work, not execution or whole-goal completion.
+          const goalWork = goal === undefined ? undefined : {
+            active: goal.document.active, phase: goal.document.phase,
+            totalTasks: goal.document.definition.tasks.length, acceptedTasks: Object.keys(goal.document.accepted).length,
+            deferredTasks: goal.selection.deferred.length, heldTasks: Object.keys(goal.selection.held).length,
+            nextTaskId: goal.selection.selected ?? null,
+          };
+          return [{ id: String(r.id), name: firstGoal === undefined ? r.name : projectNameFromGoal(firstGoal), lifecycle: r.lifecycle, quarantined, runId, status: checkpoint?.status ?? null, proposal: implementation?.solve?.proposalEvidence !== undefined, decision, repository, ...(goalWork === undefined ? {} : { goalWork }) }];
+        } catch (error) {
+          // A sibling may delete a row after metadata was listed. Omit only a row
+          // now confirmed gone; do not disguise corruption or storage errors as absence.
+          const lifecycle = app.autonomyLoop!.manager.lifecycle(r.id);
+          if (lifecycle === undefined || lifecycle === "deleted") return [];
+          throw error;
+        }
+      });
+      const active = app.autonomyLoop!.manager.active(principal.tenant);
+      return json(200, { projects, active: active !== undefined && projects.some((project) => project.id === active) ? String(active) : null });
     });
-    const active = app.autonomyLoop.manager.active();
-    return json(200, { projects, active: active !== undefined && projects.some((project) => project.id === active) ? String(active) : null });
+    return lookup.ok ? lookup.value : lookup.response;
   }
 
   if ((req.method === "GET" && req.path === "/worker/status") || (req.method === "POST" && ["/worker/stop", "/worker/pause", "/worker/resume"].includes(req.path))) {
@@ -840,11 +897,34 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     if (app.projectRuntime === undefined) return json(503, { error: "durable project runtime not available" });
     const denied = gate("audit.view"); if (denied) return denied;
     const visibleIds = new Set(app.projectManager?.list().filter(visibleProject).map((record) => record.id) ?? []);
+    const projectFilter = req.query["projectId"];
+    if (projectFilter !== undefined) {
+      const selected = [...visibleIds].find(id => id === projectFilter);
+      if (selected === undefined) return json(404, { error: "project not found" });
+      visibleIds.clear(); visibleIds.add(selected);
+    }
     if (req.query["jobId"] !== undefined) {
       const job = app.projectRuntime.job(req.query["jobId"], visibleIds);
       return job === undefined ? json(404, { error: "job not found" }) : json(200, { job, activities: app.projectRuntime.activities(job.id, visibleIds) ?? [] });
     }
     return json(200, { jobs: app.projectRuntime.jobs(visibleIds), status: app.projectRuntime.status(visibleIds) });
+  }
+
+  if (req.method === "POST" && (req.path === "/project/switch" || req.path === "/project/background")) {
+    if (app.projectManager === undefined) return json(503, { error: "project manager not available" });
+    const denied = gate("config.write"); if (denied) return denied;
+    const body = parseBody(req.body);
+    if (body === null || typeof body["projectId"] !== "string") return json(400, { error: "invalid projectId" });
+    let projectId; try { projectId = asProjectId(body["projectId"]); } catch { return json(400, { error: "invalid projectId" }); }
+    const record = app.projectManager.list().find(candidate => candidate.id === projectId && visibleProject(candidate));
+    if (record === undefined) return json(404, { error: "project not found" });
+    if (record.lifecycle === "archived") return json(409, { error: "project is archived and read-only" });
+    try {
+      if (app.projectManager.quarantine(projectId) !== undefined) return json(409, { error: "project is quarantined" });
+      if (req.path === "/project/switch") return json(200, { ...app.projectManager.switch(projectId), projectId, lifecycle: "active", tenant: record.tenant ?? null });
+      app.projectManager.background(projectId);
+      return json(200, { projectId, lifecycle: "background", tenant: record.tenant ?? null });
+    } catch { return json(409, { error: "project selection could not be confirmed; inspect current state before retrying" }); }
   }
 
   if (req.method === "POST" && (req.path === "/project/archive" || req.path === "/project/delete")) {
@@ -964,8 +1044,17 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     const confirmed = b["confirmed"] === true, declassify = b["declassify"] === true;
     if ((confirmed || declassify) && principal.kind !== "human") return json(403, { error: "forbidden", reason: "only a human may confirm or declassify a fleet effect" });
     if (confirmed || declassify) { const confirmationDenied = gate("review.approve"); if (confirmationDenied) return confirmationDenied; }
+    const capabilityId = b["capabilityId"];
+    const invocation = capabilityId !== undefined;
+    if (invocation && (typeof capabilityId !== "string" || capabilityId.length === 0 || typeof b["operation"] !== "string"
+      || b["args"] === null || typeof b["args"] !== "object" || Array.isArray(b["args"]))) return json(400, { error: "invalid fleet capability invocation" });
     let mediation;
-    try { mediation = decideEffectMediation(b["capability"] as CapabilityIdentity, { confirmed }); }
+    try {
+      // The exact operation bound by the permit also owns its sink/tool classification.
+      mediation = decideEffectMediation((invocation ? b["operation"] : b["capability"]) as CapabilityIdentity, { confirmed });
+      if (invocation && b["capability"] !== undefined && decideEffectMediation(b["capability"] as CapabilityIdentity, { confirmed }).id !== mediation.id)
+        return json(400, { error: "fleet capability and operation disagree" });
+    }
     catch { return json(400, { error: "invalid capability identity" }); }
     let argsBytes: string;
     try { argsBytes = canonicalize(b["args"]); }
@@ -978,8 +1067,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     catch { return json(404, { error: "fleet provenance parent not found" }); }
     const provenance = [...upstream, { agent: principal.id, taint: "untrusted" as const, source: `gateway:${mediation.id}` }]
       .map((hop) => declassify && hop.taint === "untrusted" ? { ...hop, taint: "trusted" as const, declassifiedBy: principal.id } : hop);
-    const capabilityId = typeof b["capabilityId"] === "string" ? b["capabilityId"] : undefined;
-    const descriptor = capabilityId === undefined ? undefined : app.infra.capabilities.describe(capabilityId, tenant);
+    const descriptor = capabilityId === undefined ? undefined : app.infra.capabilities.describe(capabilityId as string, tenant);
     if (capabilityId !== undefined && descriptor === undefined) return json(404, { error: "fleet capability not found" });
     if (capabilityId !== undefined && descriptor?.fleet === undefined) return json(409, { error: "fleet capability lacks an admitted server-owned resource profile" });
     const profile = descriptor?.fleet;
@@ -993,7 +1081,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     const amount = profile?.admissionUnits ?? Math.max(1, Math.ceil(Buffer.byteLength(argsBytes, "utf8") / 4096));
     const effectDigest = descriptor === undefined
       ? createHash("sha256").update("keep.fleet-reservation/v1\0").update(canonicalize({ mediation: mediation.id, args: b["args"], tenant: tenant ?? PERSONAL_TENANT_SENTINEL })).digest("hex")
-      : capabilityInvocationDigest({ capabilityId: capabilityId!, operation: b["operation"] as string, args, auditArgs: "digest" }, descriptor, tenant);
+      : capabilityInvocationDigest({ capabilityId: capabilityId as string, operation: b["operation"] as string, args, auditArgs: "digest" }, descriptor, tenant);
     const parentDigest = createHash("sha256").update(canonicalize((parentHandles as readonly FleetAdmissionHandle[]).map((handle) => handle.admissionDigest))).digest("hex");
     let result;
     try {
@@ -1020,7 +1108,11 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     const handle = b["handle"] as FleetAdmissionHandle;
     if (handle === null || typeof handle !== "object" || handle.tenant !== (tenant ?? PERSONAL_TENANT_SENTINEL) || handle.agent !== principal.id) return json(404, { error: "fleet admission not found" });
     let settled;
-    try { settled = await app.fleetLifecycle.reconcile(handle, b["outcome"]); }
+    // Ordinary ownership does not confer operator disposition of uncertain effects.
+    // Preserve the lifecycle's claim/quarantine checks; human recovery is below.
+    try { settled = b["outcome"] === "commit"
+      ? await app.fleetLifecycle.commit(handle)
+      : await app.fleetLifecycle.release(handle); }
     catch (error) { if ((error as Error).message.startsWith("fleet settlement indeterminate:")) return json(503, { error: "fleet settlement indeterminate", operationId: handle.operationId }); throw error; }
     return settled ? json(200, { settled: true }) : json(404, { error: "fleet admission not found" });
   }

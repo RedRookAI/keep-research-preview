@@ -15,7 +15,9 @@ import type { Spine } from "../spine/spine.js";
 import { realpathSync } from "node:fs";
 import { selectTier, executionAllowed, TIER_STRENGTH, type IsolationTier, type IsolationCapabilities } from "./isolation_tier.js";
 import type { TestRunner, TestRunResult } from "../solve/validate.js";
+import { executionStopReason, withExecutionLifetime, type ExecutionContext } from "../infra/execution_lifetime.js";
 import { resolvedWithinProject } from "../infra/process_isolation.js";
+import { copyProcessIsolationObservation, type ProcessIsolationObservation } from "../infra/isolation_backend.js";
 import { SandboxedCommandRunner, verifiedSandboxedCommandConfig } from "../solve/sandboxed_runner.js";
 import type { FileTree } from "../solve/patch.js";
 import { detectContainerRuntime, buildContainerBoundaryRun, type ContainerRuntimeInfo, type ContainerBoundarySpec } from "../infra/container_boundary.js";
@@ -34,7 +36,10 @@ export interface ExecutionSpec {
 
 export interface IsolatedRunOutcome {
   readonly tier: IsolationTier;
+  /** Version 2: invocation occurred; success additionally requires a usable result. */
   readonly executed: boolean;
+  readonly lifecycleContractVersion?: 2;
+  readonly completion?: "not-started" | "returned" | "unconfirmed";
   readonly result?: TestRunResult;
   /** If not executed, why (e.g. tier forbids this risk). */
   readonly refusedReason?: string;
@@ -44,7 +49,7 @@ export interface IsolatedRunOutcome {
 export interface IsolatedExecutor {
   readonly tier: IsolationTier;
   /** Run the given TestRunner inside the isolation boundary. */
-  runIsolated(runner: TestRunner, spec: ExecutionSpec): Promise<IsolatedRunOutcome>;
+  runIsolated(runner: TestRunner, spec: ExecutionSpec, execution?: ExecutionContext): Promise<IsolatedRunOutcome>;
   /**
    * BUILD-ORDER 1.7 (BIND-EXECUTOR-TIER-ATTESTATION) — EMIT a signed attestation of the tier this executor
    * really ran, with its MEASURED evidence, using the run's attestor. The oversight router VERIFIES it
@@ -87,21 +92,30 @@ export class IsolatedTestRunner implements TestRunner {
     return this.inner instanceof SandboxedCommandRunner ? verifiedSandboxedCommandConfig(this.inner) : undefined;
   }
   /** Execute exactly once and expose the measured tier/refusal outcome for durable evidence. */
-  async runWithEvidence(_repoRef: string, requireVerifierOwned = false): Promise<IsolatedRunOutcome> {
+  async runWithEvidence(_repoRef: string, requireVerifierOwned = false, execution?: ExecutionContext): Promise<IsolatedRunOutcome> {
     // The inner runner executes the exact locally resolved project root. A ticket/provider repository
     // identifier is routing metadata, not an executable cwd, and must never select different bytes.
     if (requireVerifierOwned && !CANONICAL_EXECUTORS.has(this.executor)) return { tier: "none", executed: false, refusedReason: "isolated execution refused: executor is not a canonical enforcing implementation" };
     if (requireVerifierOwned && TIER_STRENGTH[this.executor.tier] <= TIER_STRENGTH.process && !(this.inner instanceof SandboxedCommandRunner)) {
       return { tier: "none", executed: false, refusedReason: "isolated execution refused: process-tier evidence requires the canonical argv-only sandboxed command runner" };
     }
-    const outcome = await this.executor.runIsolated(this.inner, { projectDir: this.projectDir, repoRef: this.projectDir, patchRisk: this.patchRisk() });
-    if (requireVerifierOwned) LIVE_ISOLATED_OUTCOMES.set(outcome, { projectDir: this.projectDir, ...(outcome.result ? { result: outcome.result } : {}), tier: outcome.tier });
+    const early = executionStopReason(execution);
+    if (early) return { tier: this.executor.tier, executed: false, lifecycleContractVersion: 2, completion: "not-started", refusedReason: early };
+    const outcome = await this.executor.runIsolated(this.inner, { projectDir: this.projectDir, repoRef: this.projectDir, patchRisk: this.patchRisk() }, execution);
+    const stopped = executionStopReason(execution);
+    if (stopped) return { ...outcome, result: { results: [], runnerError: stopped, failureKind: "harness",
+      ...(outcome.result?.processIsolation ? { processIsolation: copyProcessIsolationObservation(outcome.result.processIsolation) } : {}),
+      ...(outcome.result?.processCompletion ? { processCompletion: outcome.result.processCompletion } : {}) } };
+    // Ownership is not success: retain honest failed-run provenance. Unconfirmed
+    // work cannot provide completed-run evidence; result consumers still check errors.
+    if (requireVerifierOwned && outcome.completion !== "unconfirmed" && outcome.result?.processCompletion !== "unconfirmed") LIVE_ISOLATED_OUTCOMES.set(outcome, { projectDir: this.projectDir, ...(outcome.result ? { result: outcome.result } : {}), tier: outcome.tier });
     return outcome;
   }
-  async run(repoRef: string): Promise<TestRunResult> {
-    const outcome = await this.runWithEvidence(repoRef);
+  async run(repoRef: string, execution?: ExecutionContext): Promise<TestRunResult> {
+    const outcome = await this.runWithEvidence(repoRef, false, execution);
     if (!outcome.executed || !outcome.result) {
-      return { results: [], runnerError: outcome.refusedReason ?? "isolated execution refused" };
+      return { results: [], runnerError: outcome.refusedReason ?? "isolated execution refused", failureKind: "harness",
+        ...(outcome.result?.processIsolation ? { processIsolation: copyProcessIsolationObservation(outcome.result.processIsolation) } : {}) };
     }
     return outcome.result;
   }
@@ -127,7 +141,7 @@ export class MinimumTierExecutor implements IsolatedExecutor {
     return this.inner.attest?.(attestor, projectDir, ts);
   }
 
-  async runIsolated(runner: TestRunner, spec: ExecutionSpec): Promise<IsolatedRunOutcome> {
+  async runIsolated(runner: TestRunner, spec: ExecutionSpec, execution?: ExecutionContext): Promise<IsolatedRunOutcome> {
     if (TIER_STRENGTH[this.tier] < TIER_STRENGTH[this.requiredTier]) {
       const reason = `required ${this.requiredTier} isolation is unavailable; strongest measured enforcing tier is ${this.tier} — refusing execution`;
       this.spine?.stage({
@@ -136,7 +150,7 @@ export class MinimumTierExecutor implements IsolatedExecutor {
       });
       return { tier: this.tier, executed: false, refusedReason: reason };
     }
-    return this.inner.runIsolated(runner, spec);
+    return this.inner.runIsolated(runner, spec, execution);
   }
 }
 
@@ -163,7 +177,8 @@ export class ProcessIsolationExecutor implements IsolatedExecutor {
   /** BUILD-ORDER 1.7 — the process-floor evidence this executor attests to (recomputes to `process`). */
   private readonly evidence: IsolationEvidence;
   private completedEvidence: IsolationEvidence | undefined;
-  constructor(private readonly spine?: Spine, private readonly opts: { readonly timeoutMs?: number; readonly evidence?: IsolationEvidence } = {}) {
+  private activeRun: object | undefined;
+  constructor(private readonly spine?: Spine, private readonly opts: { readonly timeoutMs?: number; readonly terminationGraceMs?: number; readonly evidence?: IsolationEvidence } = {}) {
     CANONICAL_EXECUTORS.add(this);
     this.evidence = opts.evidence ?? processFloorEvidence();
   }
@@ -175,8 +190,9 @@ export class ProcessIsolationExecutor implements IsolatedExecutor {
       : undefined;
   }
 
-  async runIsolated(runner: TestRunner, spec: ExecutionSpec): Promise<IsolatedRunOutcome> {
+  async runIsolated(runner: TestRunner, spec: ExecutionSpec, execution?: ExecutionContext): Promise<IsolatedRunOutcome> {
     this.completedEvidence = undefined;
+    const runIdentity = {}; this.activeRun = runIdentity;
     const gate = executionAllowed(this.tier, spec.patchRisk);
     if (!gate.allowed) {
       this.audit(spec, false, gate.reason);
@@ -190,78 +206,69 @@ export class ProcessIsolationExecutor implements IsolatedExecutor {
       this.audit(spec, false, reason);
       return { tier: this.tier, executed: false, refusedReason: reason };
     }
-    // Bound the run ONLY when a timeout is CONFIGURED — then even an OPAQUE in-process runner cannot hang
-    // forever (fail-closed on timeout). With NO configured timeout (`this.opts.timeoutMs === undefined` — the
-    // DEFAULT production construction; no production caller passes one) the in-process branch runs UNBOUNDED:
-    // the inner runner is the operator's OWN test runner (an opaque long integration suite is legitimate and
-    // Keep cannot know its bound), so Keep does not impose a universal kill that would murder correct work.
-    // The honesty invariant (Z189): the audit records the bound ACTUALLY applied, never "time-bounded" on a
-    // run where no timeout was armed — a log that overstates the control is worse than no log. A command-based
-    // inner runner (SandboxedCommandRunner) is resource-bounded by its OWN wall-clock/CPU limits (default 60s)
-    // regardless of this executor's timeout, so that path is honestly "resource-bounded command" either way.
-    // An operator who WANTS the in-process kill passes `timeoutMs` (reusing the SAME raceTimeout seam below) —
-    // and only THEN does the audit truthfully say "time-bounded".
+    // A bound limits waiting and requests cancellation. An opaque callback can
+    // ignore that request; its work is then unconfirmed, never reported killed.
     const commandBounded = runner instanceof SandboxedCommandRunner;
-    const timeBounded = this.opts.timeoutMs !== undefined; // was a bound ACTUALLY applied by this executor?
-    let result: TestRunResult;
-    if (timeBounded) {
-      const raced = await raceTimeout(runner.run(spec.repoRef), this.opts.timeoutMs!);
-      if (raced === TIMED_OUT) {
-        const reason = `isolated execution exceeded ${this.opts.timeoutMs}ms — killed (fail-closed)`;
-        this.audit(spec, false, reason);
-        return { tier: this.tier, executed: false, refusedReason: reason };
-      }
-      result = raced;
-    } else {
-      result = await runner.run(spec.repoRef);
+    const timeBounded = this.opts.timeoutMs !== undefined || execution?.deadline !== undefined;
+    const grace = execution?.terminationGraceMs ?? this.opts.terminationGraceMs;
+    const life = await withExecutionLifetime(context => runner.run(spec.repoRef, context), {
+      ...execution, ...(grace !== undefined ? { terminationGraceMs: grace } : {}),
+    }, this.opts.timeoutMs);
+    if (life.stopReason || life.error || !life.value) {
+      const stopLabel = life.stopReason === "execution deadline exhausted" && this.opts.timeoutMs !== undefined
+        ? `isolated execution exceeded ${this.opts.timeoutMs}ms or earlier caller deadline` : life.stopReason;
+      const reason = `${stopLabel ?? life.error ?? "missing execution result"}; ${life.completion === "unconfirmed" ? "termination unconfirmed; work may continue" : life.completion === "not-started" ? "not dispatched" : life.error ? "runner threw before returning a result; descendant termination unverified" : "runner returned; descendant termination unverified"}`;
+      const result: TestRunResult = { results: [], runnerError: reason, failureKind: "harness", ...(life.value?.processCompletion ? { processCompletion: life.value.processCompletion } : {}),
+        ...(life.value?.processIsolation ? { processIsolation: copyProcessIsolationObservation(life.value.processIsolation) } : {}) };
+      this.audit(spec, life.invoked, reason, life.completion, life.value?.processCompletion, result.processIsolation);
+      return { tier: this.tier, executed: life.invoked, lifecycleContractVersion: 2, completion: life.completion, result, ...(!life.invoked ? { refusedReason: reason } : {}) };
     }
+    const result = life.value;
     const passed = !result.runnerError && result.results.length > 0 && result.results.every((r) => r.passed);
     // HONEST label: branch on the bound actually applied, NEVER on command-vs-in-process. A command runner is
-    // self-bounded; an in-process runner is "time-bounded" ONLY when this executor armed a timeout, else
-    // "UNBOUNDED" — so the tamper-evident audit can never record a bound that did not exist.
+    // self-bounded; an opaque in-process runner has a bounded wait only when this executor arms its
+    // timeout or receives a caller deadline. Neither mechanism enforces callback termination.
     const boundLabel = commandBounded
       ? "resource-bounded command"
-      : (timeBounded ? "in-process, time-bounded" : "in-process, UNBOUNDED (no timeout configured)");
-    this.audit(spec, true, `ran under process isolation (${boundLabel}); testsPassed=${passed}`);
+      : (timeBounded ? "in-process, time-bounded wait; callback termination not enforced" : "in-process, UNBOUNDED (no timeout configured)");
+    this.audit(spec, true, `ran under process isolation (${boundLabel}); testsPassed=${passed}; project containment not verified`, "returned", result.processCompletion, result.processIsolation);
     const runtimeDegradations = [
       ...this.evidence.degraded,
       ...(!commandBounded ? ["in-process"] : []),
       ...(!commandBounded && !timeBounded ? ["unbounded"] : []),
+      ...(result.processIsolation?.degraded ?? []),
+      // No current local process observation proves setup. A label, missing
+      // observation, disabled request or empty degradation list cannot buy it.
+      ...(commandBounded ? [result.processIsolation ? `namespace-setup-${result.processIsolation.namespaceSetup}` : "missing-process-isolation-observation"] : []),
     ];
-    this.completedEvidence = { ...this.evidence, degraded: [...new Set(runtimeDegradations)] };
-    return { tier: this.tier, executed: true, result };
+    if (this.activeRun === runIdentity && !result.runnerError) this.completedEvidence = { ...this.evidence, degraded: [...new Set(runtimeDegradations)] };
+    return { tier: this.tier, executed: true, lifecycleContractVersion: 2, completion: "returned", result };
   }
 
-  private audit(spec: ExecutionSpec, executed: boolean, detail: string): void {
+  private audit(spec: ExecutionSpec, executed: boolean, detail: string, completion: "not-started" | "returned" | "unconfirmed" = executed ? "returned" : "not-started", processCompletion?: TestRunResult["processCompletion"], processIsolation?: ProcessIsolationObservation): void {
     this.spine?.stage({
       type: "identity.action", actor: "keep-isolation",
-      payload: { event: "isolated_execution", tier: this.tier, projectDir: spec.projectDir, patchRisk: spec.patchRisk, executed, detail },
+      payload: { event: "isolated_execution", tier: this.tier, projectDir: spec.projectDir, patchRisk: spec.patchRisk, executed, detail, lifecycleContractVersion: 2, completion, ...(processCompletion ? { processCompletion } : {}),
+        ...(processIsolation ? { processIsolation: copyProcessIsolationObservation(processIsolation) } : {}) },
     });
   }
 }
 
-const TIMED_OUT = Symbol("timed-out");
-async function raceTimeout<T>(p: Promise<T>, ms: number): Promise<T | typeof TIMED_OUT> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<typeof TIMED_OUT>((resolve) => { timer = setTimeout(() => resolve(TIMED_OUT), ms); });
-  try { return await Promise.race([p, timeout]); }
-  finally { if (timer) clearTimeout(timer); }
-}
-
 /**
- * The fully-enforcing runner path: an IsolatedTestRunner (tier gate + realpath jail + audit + time-bound) wrapping a
- * SandboxedCommandRunner (argv-only spawn, confined cwd, scrubbed env, wall-clock + CPU limits, process-group kill,
- * output caps) — so an untrusted patch's tests run resource-bounded AND scope-jailed AND audited. This is the BUILT
- * in-environment enforcement; a microVM/gVisor boundary plugs in above via the same IsolatedExecutor port.
+ * Compose the process runner with scope admission, lifetime controls and audit.
+ * The historical function name does not imply verified filesystem containment;
+ * inspect processIsolation and use a separately qualified stronger boundary when required.
  */
 export function buildEnforcingRunner(
   projectDir: string,
   command: string,
   args: readonly string[],
-  opts: { spine?: Spine; timeoutMs?: number; cpuLimitSec?: number; envAllowlist?: readonly string[]; allowNet?: boolean; allowWritePaths?: readonly string[]; patchRisk?: () => "low" | "medium" | "high" } = {},
+  opts: { spine?: Spine; timeoutMs?: number; cpuLimitSec?: number; envAllowlist?: readonly string[]; namespaceJail?: boolean | "required"; readOnlyPaths?: readonly string[]; allowNet?: boolean; allowWritePaths?: readonly string[]; patchRisk?: () => "low" | "medium" | "high" } = {},
 ): TestRunner {
   const inner = new SandboxedCommandRunner({
     command, args, projectDir,
+    ...(opts.namespaceJail !== undefined ? { namespaceJail: opts.namespaceJail } : {}),
+    ...(opts.readOnlyPaths ? { readOnlyPaths: opts.readOnlyPaths } : {}),
     ...(opts.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : {}),
     ...(opts.cpuLimitSec !== undefined ? { cpuLimitSec: opts.cpuLimitSec } : {}),
     ...(opts.envAllowlist ? { envAllowlist: opts.envAllowlist } : {}),
@@ -280,10 +287,12 @@ export function buildEnforcingRunner(
  */
 export class BoundaryExecutor implements IsolatedExecutor {
   private completedRunEvidence: IsolationEvidence | undefined;
+  private activeRun: object | undefined;
+  private stoppedRun = false;
   constructor(
     readonly tier: IsolationTier,
     /** The host-provided boundary that actually runs code inside the VM/sandbox. Absent → seam not live. */
-    private readonly boundaryRun: ((runner: TestRunner, spec: ExecutionSpec) => Promise<TestRunResult>) | undefined,
+    private readonly boundaryRun: ((runner: TestRunner, spec: ExecutionSpec, execution?: ExecutionContext) => Promise<TestRunResult>) | undefined,
     private readonly spine?: Spine,
     /**
      * BUILD-ORDER 1.5 — the boundary MECHANISM label used in the audit detail (defaults to the tier). Two
@@ -303,13 +312,18 @@ export class BoundaryExecutor implements IsolatedExecutor {
 
   /** BUILD-ORDER 1.7 — emit the signed attestation of the tier + the measured evidence that backs it. */
   attest(attestor: IsolationAttestor, projectDir: string, ts: number): IsolationAttestation | undefined {
-    const evidence = TIER_STRENGTH[this.tier] > TIER_STRENGTH.process ? this.completedRunEvidence : this.evidence;
+    if (this.stoppedRun) return undefined;
+    const evidence = TIER_STRENGTH[this.tier] > TIER_STRENGTH.process ? this.completedRunEvidence
+      : this.completedRunEvidence ?? { ...this.evidence,
+        degraded: [...this.evidence.degraded, "missing-process-isolation-observation"] };
     if (!evidence) return undefined;
     return attestor.attest({ tier: this.tier, evidence, projectDir, ts, mechanism: "hmac-run-key" });
   }
 
-  async runIsolated(runner: TestRunner, spec: ExecutionSpec): Promise<IsolatedRunOutcome> {
+  async runIsolated(runner: TestRunner, spec: ExecutionSpec, execution?: ExecutionContext): Promise<IsolatedRunOutcome> {
     this.completedRunEvidence = undefined;
+    this.stoppedRun = true;
+    const runIdentity = {}; this.activeRun = runIdentity;
     const gate = executionAllowed(this.tier, spec.patchRisk);
     if (!gate.allowed) {
       this.audit(spec, false, gate.reason);
@@ -320,8 +334,26 @@ export class BoundaryExecutor implements IsolatedExecutor {
       this.audit(spec, false, reason);
       return { tier: this.tier, executed: false, refusedReason: reason };
     }
-    const result = await this.boundaryRun(runner, spec);
-    if (this.tier === "microvm") {
+    const life = await withExecutionLifetime(context => this.boundaryRun!(runner, spec, context), execution);
+    if (life.stopReason || life.error || !life.value) {
+      const reason = `${life.stopReason ?? life.error ?? "missing boundary result"}; boundary cancellation support unverified; ${life.completion === "unconfirmed" ? "termination unconfirmed; work may continue" : life.completion}`;
+      this.audit(spec, life.invoked, reason, life.completion, life.value?.processIsolation);
+      return { tier: this.tier, executed: life.invoked, lifecycleContractVersion: 2, completion: life.completion,
+        result: { results: [], runnerError: reason, failureKind: "harness",
+          ...(life.value?.processIsolation ? { processIsolation: copyProcessIsolationObservation(life.value.processIsolation) } : {}) }, ...(!life.invoked ? { refusedReason: reason } : {}) };
+    }
+    const result = life.value;
+    if (this.activeRun === runIdentity && !result.runnerError) this.stoppedRun = false;
+    if (TIER_STRENGTH[this.tier] <= TIER_STRENGTH.process && this.activeRun === runIdentity && !result.runnerError) {
+      // A host callback using the process floor must retain the same actual
+      // limitations as ProcessIsolationExecutor, not sign only its static probe.
+      // Missing observations and every currently unverified setup stay limiting.
+      this.completedRunEvidence = { ...this.evidence, degraded: [...new Set([
+        ...this.evidence.degraded, ...(result.processIsolation?.degraded ?? []),
+        result.processIsolation ? `namespace-setup-${result.processIsolation.namespaceSetup}` : "missing-process-isolation-observation",
+      ])] };
+    }
+    if (this.tier === "microvm" && this.activeRun === runIdentity && !result.runnerError) {
       const receipt = verifiedMicrovmRunReceipt(result);
       this.completedRunEvidence = receipt && verifiedMicrovmTestRunResultDigest(result) === receipt.testRunResultSha256
         ? {
@@ -337,14 +369,15 @@ export class BoundaryExecutor implements IsolatedExecutor {
         : undefined;
     }
     const passed = !result.runnerError && result.results.length > 0 && result.results.every((r) => r.passed);
-    this.audit(spec, true, `ran under ${this.label} boundary; testsPassed=${passed}`);
-    return { tier: this.tier, executed: true, result };
+    this.audit(spec, true, `ran under ${this.label} boundary; testsPassed=${passed}`, "returned", result.processIsolation);
+    return { tier: this.tier, executed: true, lifecycleContractVersion: 2, completion: "returned", result };
   }
 
-  private audit(spec: ExecutionSpec, executed: boolean, detail: string): void {
+  private audit(spec: ExecutionSpec, executed: boolean, detail: string, completion: "not-started" | "returned" | "unconfirmed" = executed ? "returned" : "not-started", processIsolation?: ProcessIsolationObservation): void {
     this.spine?.stage({
       type: "identity.action", actor: "keep-isolation",
-      payload: { event: "isolated_execution", tier: this.tier, projectDir: spec.projectDir, patchRisk: spec.patchRisk, executed, detail },
+      payload: { event: "isolated_execution", tier: this.tier, projectDir: spec.projectDir, patchRisk: spec.patchRisk, executed, detail, lifecycleContractVersion: 2, completion, cancellationSupport: "unverified-boundary-callback",
+        ...(processIsolation ? { processIsolation: copyProcessIsolationObservation(processIsolation) } : {}) },
     });
   }
 }

@@ -206,7 +206,7 @@ test("INVARIANT: pre-dispatch caller cancellation reaches no server and is never
     const fetchImpl: typeof fetch = (input, init) => { attempts += 1; return fetch(input, init); };
     const p = new HttpProvider({ baseUrl: s.url, apiKey: "k", model: "m", dialect: openAiDialect, sleep: noSleep, requestTimeoutMs: 10_000, fetchImpl });
     await assert.rejects(() => p.generate({ prompt: "already cancelled", signal: controller.signal }), (error: unknown) => error instanceof ProviderError && error.permanent && /cancelled/u.test(error.message));
-    assert.equal(attempts, 1, "the provider invokes the transport once and never retries cancellation");
+    assert.equal(attempts, 0, "an already-cancelled request is refused before invoking even the injected transport");
     assert.equal(hits, 0, "an already-cancelled request never reaches the server");
   } finally { s.server.closeAllConnections(); await s.close(); }
 });

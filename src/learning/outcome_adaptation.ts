@@ -46,6 +46,8 @@ export interface BoundAdaptationOutcome extends AdaptationOutcome {
 }
 
 export interface BoundLiveOutcome extends AdaptationOutcome {
+  /** Identity obtained when collecting this window's evidence; never replace it on retry. */
+  readonly windowId?: string;
   readonly outcomeId: string;
   readonly observedAt: number;
   readonly evidence: "observed-product";
@@ -53,7 +55,7 @@ export interface BoundLiveOutcome extends AdaptationOutcome {
 
 export interface OutcomeAdaptationPersistence {
   load(): { readonly snapshot?: unknown; readonly revision: number } | undefined;
-  save(snapshot: unknown, expectedRevision: number): number;
+  save(snapshot: unknown, expectedRevision: number | undefined): number;
 }
 
 export interface OutcomeAdaptationOptions {
@@ -97,29 +99,36 @@ export class OutcomeAdaptiveProvider implements ModelProvider {
   get name(): string { return this.inner.name; }
   get isLocal(): boolean { return this.inner.isLocal; }
   async generate(req: GenerateRequest): Promise<GenerateResult> {
+    const generate = this.inner.generate.bind(this.inner);
+    const prepared = this.prepare(req);
+    prepared.beforeDispatch();
+    return generate(prepared.request);
+  }
+  private prepare(req: GenerateRequest): { request: GenerateRequest; beforeDispatch: () => void } {
     const resolved = this.resolveAdaptation(req);
-    if (resolved === undefined) return this.inner.generate(req);
+    if (resolved === undefined) return { request: req, beforeDispatch: () => req.signal?.throwIfAborted() };
     const adaptation = resolved instanceof OutcomeAdaptation ? resolved : resolved.adaptation;
     const explicitAssignment = req.hints?.["adaptationAssignmentId"];
     const assignmentId = typeof explicitAssignment === "string" ? explicitAssignment : resolved instanceof OutcomeAdaptation || resolved.subjectId === undefined ? undefined : adaptation.assignOrGet(resolved.subjectId)?.assignmentId;
-    const behavior = assignmentId === undefined ? adaptation.current() : adaptation.expose(assignmentId);
+    const behavior = assignmentId === undefined ? adaptation.current() : adaptation.assignedBehavior(assignmentId);
     const capability = this.capabilities.current(behavior.routing.model, this.clock());
-    return this.inner.generate({
+    const request = {
       ...req,
       prompt: `${behavior.prompt.text.trim()}\n\n${req.prompt}`,
       hints: Object.freeze({ ...req.hints, ...(assignmentId === undefined ? {} : { adaptationAssignmentId: assignmentId }), adaptationVersion: behavior.prompt.version, preferredModel: behavior.routing.model, preferredModelAdvisory: true, requestedEffort: behavior.routing.effort, effortKnob: capability.effortKnob, timeoutClass: capability.timeoutClass, referenceAsOf: capability.asOf, referenceFreshness: capability.freshness }),
-    });
+    };
+    return { request, beforeDispatch: () => {
+      request.signal?.throwIfAborted();
+      if (assignmentId !== undefined) adaptation.expose(assignmentId, behavior);
+      else if (adaptation.current() !== behavior) throw new Error("adaptation behavior changed during preparation");
+    } };
   }
   async generateStream(req: GenerateRequest, onDelta?: (text: string) => void): Promise<GenerateResult> {
     if (!this.inner.generateStream) return this.generate(req);
-    const resolved = this.resolveAdaptation(req);
-    if (resolved === undefined) return this.inner.generateStream(req, onDelta);
-    const adaptation = resolved instanceof OutcomeAdaptation ? resolved : resolved.adaptation;
-    const explicitAssignment = req.hints?.["adaptationAssignmentId"];
-    const assignmentId = typeof explicitAssignment === "string" ? explicitAssignment : resolved instanceof OutcomeAdaptation || resolved.subjectId === undefined ? undefined : adaptation.assignOrGet(resolved.subjectId)?.assignmentId;
-    const behavior = assignmentId === undefined ? adaptation.current() : adaptation.expose(assignmentId);
-    const capability = this.capabilities.current(behavior.routing.model, this.clock());
-    return this.inner.generateStream({ ...req, prompt: `${behavior.prompt.text.trim()}\n\n${req.prompt}`, hints: Object.freeze({ ...req.hints, ...(assignmentId === undefined ? {} : { adaptationAssignmentId: assignmentId }), adaptationVersion: behavior.prompt.version, preferredModel: behavior.routing.model, preferredModelAdvisory: true, requestedEffort: behavior.routing.effort, effortKnob: capability.effortKnob, timeoutClass: capability.timeoutClass, referenceAsOf: capability.asOf, referenceFreshness: capability.freshness }) }, onDelta);
+    const generate = this.inner.generateStream.bind(this.inner);
+    const prepared = this.prepare(req);
+    prepared.beforeDispatch();
+    return generate(prepared.request, onDelta);
   }
   embed(texts: readonly string[]): Promise<Embedding[]> { return this.inner.embed(texts); }
 }
@@ -131,9 +140,14 @@ export type AdaptationDecision =
   | { readonly kind: "rolled-back"; readonly version: string; readonly reason: string };
 
 interface Aggregate { count: number; quality: number; regressions: number; variance: number; }
+interface MonitoringWindow { readonly id: string; readonly behaviorDigest: string; readonly policyDigest: string; }
+interface LiveEvidence { readonly outcomeId: string; readonly quality: number; readonly regressed: boolean; readonly observedAt: number; }
+interface LegacyMonitoring { readonly sourceSchema: string; readonly sampleLimit: number; readonly liveOutcomes: Aggregate; readonly liveEvidence: readonly LiveEvidence[]; }
 interface NormalizedAdaptationPolicy extends Required<AdaptationPolicy> {}
 interface ExperimentDisposition { readonly candidateDigest: string; readonly verdict: "rejected" | "abandoned"; readonly at: number; }
 const empty = (): Aggregate => ({ count: 0, quality: 0, regressions: 0, variance: 0 });
+// Policy fields are scalar values; caller property order is not a policy change.
+const policyEncoding = (policy: object): string => JSON.stringify(Object.fromEntries(Object.entries(policy).sort(([a], [b]) => a.localeCompare(b))));
 const ownKeys = (value: unknown, expected: readonly string[], label: string): Record<string, unknown> => {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError(`${label} must be an object`);
   const record = value as Record<string, unknown>;
@@ -171,6 +185,8 @@ export class OutcomeAdaptation {
   private candidateOutcomes = empty();
   private liveOutcomes = empty();
   private promotedQuality: number | undefined;
+  private liveWindow: MonitoringWindow | undefined;
+  private legacyMonitoring: LegacyMonitoring | undefined;
   private readonly policy: Readonly<NormalizedAdaptationPolicy>;
   private readonly scope: Readonly<AdaptationScope> | undefined;
   private readonly persistence: OutcomeAdaptationPersistence | undefined;
@@ -180,6 +196,7 @@ export class OutcomeAdaptation {
   private readonly allowUnboundOfflineEvidence: boolean;
   private readonly initialDigest: string;
   private revision = 0;
+  private persistencePresent = false;
   private experimentId: string | undefined;
   private readonly assignments = new Map<string, {
     readonly experimentId: string;
@@ -211,6 +228,7 @@ export class OutcomeAdaptation {
     this.allowUnboundOfflineEvidence = options.allowUnboundOfflineEvidence === true;
     const restored = this.persistence?.load();
     if (restored !== undefined) {
+      this.persistencePresent = true;
       if (restored.snapshot === undefined) this.revision = restored.revision;
       else this.restore(restored.snapshot, restored.revision, initial);
     }
@@ -218,16 +236,34 @@ export class OutcomeAdaptation {
 
   current(): AdaptiveBehavior { this.assertCurrent(); return this.live; }
 
-  /** Selects and durably records the exact arm exposed to a product call. */
-  expose(assignmentId: string): AdaptiveBehavior {
+  monitoring(): { readonly windowId: string; readonly behaviorVersion: string } | undefined {
+    this.assertCurrent();
+    return this.liveWindow === undefined ? undefined : Object.freeze({ windowId: this.liveWindow.id, behaviorVersion: this.live.prompt.version });
+  }
+
+  /** Read-only preparation. Selection alone is not exposure. */
+  assignedBehavior(assignmentId: string): AdaptiveBehavior {
+    this.assertCurrent();
+    const assignment = this.assignments.get(this.boundedId(assignmentId, "assignment id"));
+    if (assignment === undefined || assignment.experimentId !== this.experimentId || this.candidate === undefined) throw new Error("exposure has no assignment in the active experiment");
+    const now = this.validTime(this.clock(), "exposure time");
+    if (now < assignment.assignedAt || now - assignment.assignedAt > this.policy.assignmentTtlMs) throw new Error("adaptation assignment expired before exposure");
+    return assignment.arm === "baseline" ? this.live : this.candidate;
+  }
+
+  /** Records prepared presentation or provider-dispatch intent, not remote receipt or causal reliance.
+   * A crash between this synchronous durable write and provider entry remains uncertain. */
+  expose(assignmentId: string, expectedBehavior?: AdaptiveBehavior): AdaptiveBehavior {
     return this.transition(() => {
+      const behavior = this.assignedBehavior(assignmentId);
+      if (expectedBehavior !== undefined && behavior !== expectedBehavior) throw new Error("adaptation behavior changed during preparation");
       const id = this.boundedId(assignmentId, "assignment id");
       const assignment = this.assignments.get(id);
       if (assignment === undefined || assignment.experimentId !== this.experimentId || this.candidate === undefined) throw new Error("exposure has no assignment in the active experiment");
       const now = this.validTime(this.clock(), "exposure time");
       if (now < assignment.assignedAt || now - assignment.assignedAt > this.policy.assignmentTtlMs) throw new Error("adaptation assignment expired before exposure");
       if (assignment.exposedAt === undefined) assignment.exposedAt = now;
-      return assignment.arm === "baseline" ? this.live : this.candidate;
+      return behavior;
     });
   }
 
@@ -326,6 +362,7 @@ export class OutcomeAdaptation {
     return this.transition(() => {
       if (outcome.evidence !== "observed-product") throw new Error("only observed product outcomes can monitor live adaptation");
       if (this.promotedQuality === undefined) return { kind: "observing", reason: "no promoted adaptation is under live monitoring" };
+      if (this.liveWindow === undefined || this.boundedId(outcome.windowId, "live window id; read current monitoring identity") !== this.liveWindow.id) throw new Error("stale live monitoring window refused");
       const outcomeId = this.boundedId(outcome.outcomeId, "outcome id");
       if (this.liveEvidence.has(outcomeId)) throw new Error("duplicate live outcome refused");
       const observedAt = this.validTime(outcome.observedAt, "outcome time");
@@ -376,6 +413,7 @@ export class OutcomeAdaptation {
     this.clearExperiment();
     this.liveOutcomes = empty();
     this.liveEvidence.clear();
+    this.liveWindow = this.newMonitoringWindow();
     return { kind: "promoted", version: this.live.prompt.version, reason: `candidate improved measured quality by ${gain.toFixed(3)}` };
   }
 
@@ -389,6 +427,7 @@ export class OutcomeAdaptation {
     if (regressionRate <= this.policy.maxRegressionRate && qualityDrop < this.policy.rollbackQualityDrop) {
       this.liveOutcomes = empty();
       this.liveEvidence.clear();
+      this.liveWindow = this.newMonitoringWindow();
       return { kind: "observing", reason: "live adaptation window remains within regression bounds" };
     }
     if (this.candidate !== undefined) this.rememberDisposition(this.candidate, "abandoned");
@@ -397,6 +436,7 @@ export class OutcomeAdaptation {
     this.promotedQuality = undefined;
     this.liveOutcomes = empty();
     this.liveEvidence.clear();
+    this.liveWindow = undefined;
     return { kind: "rolled-back", version: this.live.prompt.version, reason: "live outcomes regressed; restored last safe behavior" };
   }
 
@@ -444,6 +484,11 @@ export class OutcomeAdaptation {
     return createHash("sha256").update("keep.outcome-adaptation-candidate/v1\0").update(JSON.stringify(behavior)).digest("hex");
   }
 
+  private monitoringPolicyDigest(): string { return createHash("sha256").update(policyEncoding(this.policy)).digest("hex"); }
+  private newMonitoringWindow(): MonitoringWindow {
+    return Object.freeze({ id: randomUUID(), behaviorDigest: this.behaviorDigest(this.live), policyDigest: this.monitoringPolicyDigest() });
+  }
+
   private oneSidedT95(df: number): number {
     const critical = [Infinity, 6.314, 2.92, 2.353, 2.132, 2.015, 1.943, 1.895, 1.86, 1.833, 1.812, 1.796, 1.782, 1.771, 1.761, 1.753, 1.746, 1.74, 1.734, 1.729, 1.725, 1.721, 1.717, 1.714, 1.711, 1.708, 1.706, 1.703, 1.701, 1.699, 1.697];
     return df < critical.length ? critical[df]! : df < 60 ? 1.671 : df < 120 ? 1.658 : 1.645;
@@ -472,7 +517,8 @@ export class OutcomeAdaptation {
   private snapshot(): unknown {
     if (this.assignments.size > this.policy.minSamplesPerArm * 2 || this.outcomeIds.size > this.policy.minSamplesPerArm * 2 || this.liveEvidence.size > this.policy.minSamplesPerArm || this.experimentHistory.length > 256) throw new Error("adaptation evidence exceeds durable bounds");
     return {
-      schema: "keep.outcome-adaptation/v5", initialDigest: this.initialDigest, scope: this.scope ?? null, policy: this.policy,
+      schema: "keep.outcome-adaptation/v6", initialDigest: this.initialDigest, scope: this.scope ?? null, policy: this.policy,
+      liveWindow: this.liveWindow ?? null, legacyMonitoring: this.legacyMonitoring ?? null,
       live: this.live, safe: this.safe, candidate: this.candidate ?? null, experimentId: this.experimentId ?? null,
       baselineOutcomes: { ...this.baselineOutcomes }, candidateOutcomes: { ...this.candidateOutcomes }, liveOutcomes: { ...this.liveOutcomes },
       promotedQuality: this.promotedQuality ?? null,
@@ -499,27 +545,32 @@ export class OutcomeAdaptation {
 
   private persist(): void {
     if (this.persistence === undefined) { this.revision++; return; }
-    this.revision = this.persistence.save(this.snapshot(), this.revision);
+    this.revision = this.persistence.save(this.snapshot(), this.persistencePresent ? this.revision : undefined);
+    this.persistencePresent = true;
   }
 
   private assertCurrent(): void {
     if (this.persistence === undefined) return;
     const stored = this.persistence.load();
-    const observed = stored?.revision ?? 0;
-    if (observed !== this.revision) throw new Error(`adaptation document conflict: expected ${this.revision}, found ${observed}`);
+    const observed = stored?.revision;
+    const expected = this.persistencePresent ? this.revision : undefined;
+    if (observed !== expected) throw new Error(`adaptation document conflict: expected ${expected}, found ${observed}`);
   }
 
   private restore(snapshot: unknown, revision: number, configuredInitial: AdaptiveBehavior): void {
     if (!Number.isSafeInteger(revision) || revision < 0 || typeof snapshot !== "object" || snapshot === null || Array.isArray(snapshot)) throw new Error("invalid persisted outcome adaptation");
     const row = snapshot as Record<string, unknown>;
     const schema = row["schema"];
-    const exact = ["assignments", "baselineOutcomes", "candidate", "candidateOutcomes", "experimentId", ...(["keep.outcome-adaptation/v4", "keep.outcome-adaptation/v5"].includes(String(schema)) ? ["experimentHistory"] : []), ...(schema === "keep.outcome-adaptation/v5" ? ["initialDigest"] : []), "live", "liveEvidence", "liveOutcomes", "outcomeIds", "policy", "promotedQuality", "safe", "schema", "scope"].sort();
-    if (Object.keys(row).sort().join(",") !== exact.join(",") || !["keep.outcome-adaptation/v3", "keep.outcome-adaptation/v4", "keep.outcome-adaptation/v5"].includes(String(schema))) throw new Error("invalid persisted outcome adaptation");
-    if (schema === "keep.outcome-adaptation/v5" && row["initialDigest"] !== this.initialDigest) throw new Error("persisted adaptation initial behavior disagrees with configuration");
+    const modern = schema === "keep.outcome-adaptation/v6";
+    const withHistory = ["keep.outcome-adaptation/v4", "keep.outcome-adaptation/v5", "keep.outcome-adaptation/v6"].includes(String(schema));
+    const withInitial = schema === "keep.outcome-adaptation/v5" || modern;
+    const exact = ["assignments", "baselineOutcomes", "candidate", "candidateOutcomes", "experimentId", ...(withHistory ? ["experimentHistory"] : []), ...(withInitial ? ["initialDigest"] : []), ...(modern ? ["liveWindow", "legacyMonitoring"] : []), "live", "liveEvidence", "liveOutcomes", "outcomeIds", "policy", "promotedQuality", "safe", "schema", "scope"].sort();
+    if (Object.keys(row).sort().join(",") !== exact.join(",") || !["keep.outcome-adaptation/v3", "keep.outcome-adaptation/v4", "keep.outcome-adaptation/v5", "keep.outcome-adaptation/v6"].includes(String(schema))) throw new Error("invalid persisted outcome adaptation");
+    if (withInitial && row["initialDigest"] !== this.initialDigest) throw new Error("persisted adaptation initial behavior disagrees with configuration");
     if (JSON.stringify(row["scope"]) !== JSON.stringify(this.scope ?? null)) throw new Error("persisted outcome adaptation binding disagrees with configuration");
     const persistedPolicy = row["policy"] as Partial<NormalizedAdaptationPolicy>;
     const normalizedPersistedPolicy = { ...persistedPolicy, assignmentTtlMs: persistedPolicy.assignmentTtlMs ?? 30 * 24 * 60 * 60 * 1_000 };
-    const policyChanged = JSON.stringify(normalizedPersistedPolicy) !== JSON.stringify(this.policy);
+    const policyChanged = policyEncoding(normalizedPersistedPolicy) !== policyEncoding(this.policy);
     const live = sanitize(row["live"] as AdaptiveBehavior), safe = sanitize(row["safe"] as AdaptiveBehavior);
     if (safe.prompt.version !== sanitize(configuredInitial).prompt.version && revision === 0) throw new Error("persisted adaptation initial behavior is invalid");
     const candidate = row["candidate"] === null ? undefined : sanitize(row["candidate"] as AdaptiveBehavior);
@@ -568,7 +619,7 @@ export class OutcomeAdaptation {
     const candidateAssignments = this.assignments.size - baselineAssignments;
     if (baselineAssignments > restoredHorizon || candidateAssignments > restoredHorizon) throw new Error("invalid persisted adaptation arm bounds");
     for (const value of row["outcomeIds"]) this.outcomeIds.add(this.boundedId(value, "outcome id"));
-    if (["keep.outcome-adaptation/v4", "keep.outcome-adaptation/v5"].includes(String(schema))) {
+    if (withHistory) {
       if (!Array.isArray(row["experimentHistory"]) || row["experimentHistory"].length > 256) throw new Error("invalid persisted adaptation experiment history");
       const digests = new Set<string>();
       for (const value of row["experimentHistory"]) {
@@ -592,13 +643,50 @@ export class OutcomeAdaptation {
     }
     const sameAggregate = (left: Aggregate, right: Aggregate) => left.count === right.count && left.regressions === right.regressions && Math.abs(left.quality - right.quality) < 1e-12 && Math.abs(left.variance - right.variance) < 1e-12;
     if (this.outcomeIds.size !== row["outcomeIds"].length || [...this.outcomeIds].some((id) => !restoredOutcomeIds.has(id)) || restoredOutcomeIds.size !== this.outcomeIds.size || !sameAggregate(this.baselineOutcomes, restoredBaseline) || !sameAggregate(this.candidateOutcomes, restoredCandidate) || !sameAggregate(this.liveOutcomes, restoredLive)) throw new Error("persisted adaptation evidence disagrees with assignments");
+    this.liveWindow = undefined; this.legacyMonitoring = undefined;
+    if (modern) {
+      if (row["liveWindow"] !== null) {
+        const window = ownKeys(row["liveWindow"], ["id", "behaviorDigest", "policyDigest"], "monitoring window");
+        const policyDigest = createHash("sha256").update(policyEncoding(normalizedPersistedPolicy)).digest("hex");
+        // The first private v6 candidate hashed insertion order. Validate those exact
+        // persisted fields before normalizing its digest; never change its window ID.
+        const orderedDigest = createHash("sha256").update(JSON.stringify(normalizedPersistedPolicy)).digest("hex");
+        if (window["behaviorDigest"] !== this.behaviorDigest(live) || (window["policyDigest"] !== policyDigest && window["policyDigest"] !== orderedDigest)) throw new Error("persisted monitoring window binding disagrees");
+        this.liveWindow = Object.freeze({ id: this.boundedId(window["id"], "window id"), behaviorDigest: String(window["behaviorDigest"]), policyDigest });
+      }
+      if ((this.liveWindow === undefined) !== (this.promotedQuality === undefined)) throw new Error("persisted monitoring window has no matching promoted behavior");
+      if (this.liveWindow === undefined && this.liveOutcomes.count !== 0) throw new Error("inactive monitoring contains active evidence");
+      if (row["legacyMonitoring"] !== null) {
+        const legacy = ownKeys(row["legacyMonitoring"], ["sourceSchema", "sampleLimit", "liveOutcomes", "liveEvidence"], "legacy monitoring");
+        if (!["keep.outcome-adaptation/v3", "keep.outcome-adaptation/v4", "keep.outcome-adaptation/v5"].includes(String(legacy["sourceSchema"])) || !Number.isInteger(legacy["sampleLimit"]) || (legacy["sampleLimit"] as number) < 4 || !Array.isArray(legacy["liveEvidence"]) || legacy["liveEvidence"].length > (legacy["sampleLimit"] as number)) throw new Error("invalid legacy monitoring history");
+        const legacyAggregate = aggregate(legacy["liveOutcomes"]), recomputed = empty(), ids = new Set<string>();
+        const evidence = legacy["liveEvidence"].map(value => {
+          const e = ownKeys(value, ["outcomeId", "quality", "regressed", "observedAt"], "legacy live evidence");
+          const outcomeId = this.boundedId(e["outcomeId"], "legacy outcome id");
+          if (ids.has(outcomeId) || typeof e["quality"] !== "number" || typeof e["regressed"] !== "boolean") throw new Error("invalid legacy live evidence");
+          ids.add(outcomeId);
+          const record = { outcomeId, quality: e["quality"], regressed: e["regressed"], observedAt: this.validTime(e["observedAt"], "legacy outcome time") };
+          this.add(recomputed, record); return record;
+        });
+        if (!sameAggregate(legacyAggregate, recomputed)) throw new Error("legacy monitoring aggregate disagrees with evidence");
+        this.legacyMonitoring = { sourceSchema: String(legacy["sourceSchema"]), sampleLimit: legacy["sampleLimit"] as number, liveOutcomes: legacyAggregate, liveEvidence: evidence };
+      }
+    } else {
+      // Old closed windows have no retained IDs. Preserve remaining old evidence as
+      // history, never silently qualify it under a fresh replay-protected window.
+      this.legacyMonitoring = { sourceSchema: String(schema), sampleLimit: restoredHorizon, liveOutcomes: { ...this.liveOutcomes },
+        liveEvidence: [...this.liveEvidence].map(([outcomeId, value]) => ({ outcomeId, ...value })) };
+      this.liveOutcomes = empty(); this.liveEvidence.clear();
+      if (this.promotedQuality !== undefined) this.liveWindow = this.newMonitoringWindow();
+    }
     this.revision = revision;
     if (policyChanged) {
       if (this.candidate !== undefined) this.rememberDisposition(this.candidate, "abandoned");
       this.clearExperiment();
       this.liveOutcomes = empty(); this.liveEvidence.clear();
+      this.liveWindow = this.promotedQuality === undefined ? undefined : this.newMonitoringWindow();
       this.persist();
     }
-    else if (schema !== "keep.outcome-adaptation/v5") this.persist();
+    else if (!modern) this.persist();
   }
 }

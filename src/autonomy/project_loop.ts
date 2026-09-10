@@ -115,6 +115,16 @@ export interface LoopRunResult {
   readonly feasibility?: FeasibilityReport;
 }
 
+/** Work returned a result, but its session bookkeeping is not fully confirmed.
+ * The result is observation, not permission to repeat the work or waive acceptance. */
+export class ProjectFinalizationError extends Error {
+  override readonly name = "ProjectFinalizationError";
+  constructor(readonly result: LoopRunResult,
+    readonly phase: "projection" | "session" | "budget" | "checkpoint" | "history", options?: ErrorOptions) {
+    super("task returned a result but session finalization requires reconciliation", options);
+  }
+}
+
 export interface ResumeProjectInput {
   readonly addSteps?: number;
   readonly approval?: { readonly decisionId: string; readonly approved: boolean };

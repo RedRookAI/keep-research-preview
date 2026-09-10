@@ -64,7 +64,8 @@ function sortDeep(value: unknown): unknown {
   if (value === null || typeof value !== "object") return value;
   if (Array.isArray(value)) return value.map(sortDeep);
   const obj = value as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
+  // JSON own keys are data, including __proto__; do not invoke an inherited setter.
+  const out: Record<string, unknown> = Object.create(null);
   for (const key of Object.keys(obj).sort()) {
     out[key] = sortDeep(obj[key]);
   }

@@ -6,8 +6,8 @@
  * onto that existing registry — compose, not a new server. Each tool routes through `handleGatewayRequest`, so the
  * MCP surface, the CLI, the web page, and the chat channel all drive the SAME engine.
  *
- * A real stdio/HTTP MCP transport is a THIN adapter over `handleMcpToolCall` (reusing the `mcp_stdio_transport`
- * JSON-RPC pattern) — all tool logic, auth, and schema honesty are proven here without a transport.
+ * A real stdio/HTTP MCP transport must authenticate its caller and translate this internal result
+ * to the negotiated wire protocol. These handlers do not establish transport/OAuth qualification.
  *
  * Four hard properties (each disproof-backed):
  *   - COMPOSED: every tool routes through `handleGatewayRequest`; no engine behavior is re-implemented.
@@ -17,7 +17,7 @@
  *   - SCHEMA-HONEST: `list_tools` advertises EXACTLY the tools that are registered and dispatch — no phantom tools.
  */
 
-import { handleGatewayRequest, type GatewayRequest } from "../gateway/http_gateway.js";
+import { handleGatewayRequest, type GatewayRequest, type GatewaySecurity } from "../gateway/http_gateway.js";
 import type { KeepApp } from "../compose.js";
 import { KeepMcpServer } from "../ecosystem/mcp.js";
 
@@ -32,20 +32,22 @@ export interface McpToolCall {
   readonly args: Record<string, unknown>;
   /** The caller's token — checked against the server's before any dispatch. */
   readonly token: string;
+  /** Keep session credential from the transport, never a tool argument or claimed principal. */
+  readonly session?: string;
 }
 
 export interface McpToolResult {
   readonly ok: boolean;
   readonly content?: unknown;
   readonly error?: string;
+  /** Tool execution failure; a wire adapter must preserve this distinction. */
+  readonly isError?: boolean;
 }
 
-export interface McpSecurity {
-  readonly token: string;
-}
+export type McpSecurity = GatewaySecurity;
 
-function gwReq(method: string, path: string, token: string, body?: unknown): GatewayRequest {
-  return { method, path, query: {}, headers: { authorization: `Bearer ${token}` }, body: body !== undefined ? JSON.stringify(body) : "" };
+function gwReq(method: string, path: string, token: string, session: string | undefined, body?: unknown): GatewayRequest {
+  return { method, path, query: {}, headers: { authorization: `Bearer ${token}`, ...(session === undefined ? {} : { "x-keep-session": session }) }, body: body !== undefined ? JSON.stringify(body) : "" };
 }
 
 /** The advertised tool schemas — the SINGLE SOURCE registered below, so `list_tools` can never drift from dispatch. */
@@ -59,16 +61,39 @@ const TOOL_DEFS: ReadonlyArray<McpToolSchema & { route: (a: Record<string, unkno
 ];
 
 /** COMPOSE: register the gateway-backed tools onto the EXISTING KeepMcpServer registry. */
-export function buildGatewayMcpServer(app: KeepApp, token: string): KeepMcpServer {
+export function buildGatewayMcpServer(app: KeepApp, security: string | McpSecurity, session?: string): KeepMcpServer {
+  // Capture deployment configuration, not a resolved principal. Session expiry,
+  // revocation and injected principal resolution still run at the gateway per call.
+  const configured = typeof security === "string" ? { token: security } : { ...security };
+  const appIdentity = app.identity;
+  const conflictingIdentity = appIdentity !== undefined && (
+    (configured.identity !== undefined && configured.identity !== appIdentity) || configured.principalFor !== undefined
+  );
+  const sec: GatewaySecurity = { ...configured, ...(appIdentity === undefined ? {} : { identity: appIdentity }) };
   const server = new KeepMcpServer();
   for (const def of TOOL_DEFS) {
     server.registerTool({
       name: def.name,
       description: def.description,
       handler: async (args: Record<string, unknown>) => {
-        const { method, path, body } = def.route(args);
-        const r = await handleGatewayRequest(app, gwReq(method, path, token, body), { token });
-        return JSON.parse(r.body);
+        if (typeof sec.token !== "string" || sec.token.trim().length === 0) throw new Error("unauthorized");
+        if (conflictingIdentity || app.identity !== appIdentity) throw new Error("gateway identity configuration changed or conflicts");
+        let r;
+        try {
+          const { method, path, body } = def.route(args);
+          r = await handleGatewayRequest(app, gwReq(method, path, sec.token, session, body), sec);
+        } catch {
+          // An exception is not proof that nothing happened. Do not retry here or
+          // leak arbitrary exception/provider text, credentials or stack traces.
+          throw new Error("gateway request failed; outcome not established");
+        }
+        if (r.status < 200 || r.status >= 300) throw new Error(`gateway request failed (HTTP ${r.status})`);
+        let payload: unknown;
+        try { payload = JSON.parse(r.body); }
+        catch { throw new Error("gateway returned an invalid response"); }
+        if (payload === null || typeof payload !== "object" || Array.isArray(payload)) throw new Error("gateway returned an invalid response");
+        if ((payload as Record<string, unknown>)["ok"] === false) throw new Error(`gateway operation refused (HTTP ${r.status})`);
+        return payload;
       },
     });
   }
@@ -83,8 +108,9 @@ export function listGatewayMcpTools(): readonly McpToolSchema[] {
 /** The pure, token-authed MCP entrypoint. A transport parses JSON-RPC into this and formats the result back. */
 export async function handleMcpToolCall(app: KeepApp, call: McpToolCall, sec: McpSecurity): Promise<McpToolResult> {
   // TOKEN-AUTHED: a tool call with the wrong/absent token never drives a gateway call.
-  if (call.token !== sec.token) return { ok: false, error: "unauthorized" };
-  const server = buildGatewayMcpServer(app, sec.token);
+  if (typeof sec.token !== "string" || sec.token.trim().length === 0 || call.token !== sec.token) return { ok: false, isError: true, error: "unauthorized" };
+  // Each entrypoint call gets its own session-bound handlers. No cross-caller cache.
+  const server = buildGatewayMcpServer(app, sec, call.session);
   const r = await server.callTool(call.name, call.args);
-  return r.ok ? { ok: true, content: r.output } : { ok: false, error: r.error ?? "tool failed" };
+  return r.ok ? { ok: true, content: r.output } : { ok: false, isError: true, error: r.error ?? "tool failed" };
 }

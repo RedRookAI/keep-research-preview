@@ -114,9 +114,11 @@ function routingArgs(policy: ExternalRoutingPolicy | undefined): CanonicalValue 
   return policy === undefined ? undefined : { zeroDataRetention: true, dataCollection: "deny", allowFallbacks: false, providers: [...policy.providers] };
 }
 function reqToArgs(req: GenerateRequest, cancellationId?: string, routing?: ExternalRoutingPolicy): CanonicalValue {
-  const r = (req ?? {}) as { prompt?: unknown; maxTokens?: unknown; hints?: unknown };
+  const r = (req ?? {}) as { prompt?: unknown; maxTokens?: unknown; maxAttempts?: unknown; hints?: unknown };
+  if (r.maxTokens !== undefined && (typeof r.maxTokens !== "number" || !Number.isSafeInteger(r.maxTokens) || r.maxTokens < 0)) throw new EgressDeniedError("invalid output ceiling");
+  if (r.maxAttempts !== undefined && (typeof r.maxAttempts !== "number" || !Number.isSafeInteger(r.maxAttempts) || r.maxAttempts < 1)) throw new EgressDeniedError("invalid attempt ceiling");
   const structuredOutput = r.hints !== null && typeof r.hints === "object" && (r.hints as Record<string, unknown>)["structuredOutput"] === true;
-  return { kind: "generate", prompt: String(r.prompt ?? ""), maxTokens: toCount(Number(r.maxTokens ?? 0)), structuredOutput, ...(routing === undefined ? {} : { routing: routingArgs(routing)! }), ...(cancellationId === undefined ? {} : { cancellationId }) };
+  return { kind: "generate", prompt: String(r.prompt ?? ""), ...(r.maxTokens === undefined ? {} : { maxTokens: BigInt(r.maxTokens as number) }), ...(r.maxAttempts === undefined ? {} : { maxAttempts: BigInt(r.maxAttempts as number) }), structuredOutput, ...(routing === undefined ? {} : { routing: routingArgs(routing)! }), ...(cancellationId === undefined ? {} : { cancellationId }) };
 }
 function embedToArgs(texts: readonly string[]): CanonicalValue {
   return { kind: "embed", texts: (Array.isArray(texts) ? texts : []).map((t) => String(t)) };
@@ -134,7 +136,10 @@ function resultFromOutput(v: CanonicalValue): GenerateResult {
   if (o === null || typeof o !== "object" || typeof o.text !== "string" || typeof o.model !== "string" || typeof o.tokensIn !== "bigint" || typeof o.tokensOut !== "bigint") {
     throw new EgressDeniedError("brokered egress returned a malformed result");
   }
-  return { text: o.text, model: o.model, tokensIn: fromCount(o.tokensIn), tokensOut: fromCount(o.tokensOut) };
+  const valid = [o.tokensIn, o.tokensOut].every(n => (n as bigint) >= 0n && (n as bigint) <= BigInt(Number.MAX_SAFE_INTEGER));
+  if (o.usageComplete !== undefined && typeof o.usageComplete !== "boolean") throw new EgressDeniedError("invalid usage evidence status");
+  return { text: o.text, model: o.model, tokensIn: fromCount(o.tokensIn), tokensOut: fromCount(o.tokensOut), usageComplete: valid && o.usageComplete !== false,
+    ...(typeof o.providerRoute === "string" ? { providerRoute: o.providerRoute } : {}) };
 }
 
 /** The net EXECUTOR (the OWNER) — the ONLY place the real transport is invoked. Bound to the inner provider ONCE at
@@ -162,10 +167,11 @@ function makeNetExecutor(inner: ModelProvider, cancellations: ReadonlyMap<string
       if (!admitted || admitted.zeroDataRetention !== true || admitted.dataCollection !== "deny" || admitted.allowFallbacks !== false || !Array.isArray(admitted.providers) || admitted.providers.length !== routing.providers.length || admitted.providers.some((value, index) => value !== routing.providers[index])) throw new Error("external routing policy is absent or differs from the admitted broker object");
     }
     const signal = cancellationId === undefined ? undefined : cancellations.get(cancellationId);
-    const req: GenerateRequest = { prompt: String(a.prompt ?? ""), ...(a.maxTokens !== undefined && a.maxTokens !== 0n ? { maxTokens: Number(a.maxTokens) } : {}), ...(a.structuredOutput === true ? { hints: { structuredOutput: true } } : {}), ...(signal === undefined ? {} : { signal }) };
+    const req: GenerateRequest = { prompt: String(a.prompt ?? ""), ...(a.maxTokens === undefined ? {} : { maxTokens: Number(a.maxTokens) }), ...(a.maxAttempts === undefined ? {} : { maxAttempts: Number(a.maxAttempts) }), ...(a.structuredOutput === true ? { hints: { structuredOutput: true } } : {}), ...(signal === undefined ? {} : { signal }) };
     const r = await inner.generate(req);
     if (routing !== undefined && (typeof r.providerRoute !== "string" || !routing.providers.includes(r.providerRoute))) throw new Error("external provider route was absent or outside the admitted allowlist");
-    return { text: String(r.text ?? ""), model: String(r.model ?? ""), tokensIn: toCount(r.tokensIn), tokensOut: toCount(r.tokensOut), ...(r.providerRoute === undefined ? {} : { providerRoute: r.providerRoute }) };
+    const usageComplete = r.usageComplete !== false && [r.tokensIn, r.tokensOut].every(n => Number.isSafeInteger(n) && n >= 0);
+    return { text: String(r.text ?? ""), model: String(r.model ?? ""), tokensIn: toCount(r.tokensIn), tokensOut: toCount(r.tokensOut), usageComplete, ...(r.providerRoute === undefined ? {} : { providerRoute: r.providerRoute }) };
   };
 }
 

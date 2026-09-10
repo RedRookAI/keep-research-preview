@@ -14,6 +14,9 @@
  */
 
 import type { ValidationOutcome } from "./issue_model.js";
+import { executionStopReason, type ExecutionContext } from "../infra/execution_lifetime.js";
+import { copyProcessIsolationObservation, type ProcessIsolationObservation } from "../infra/isolation_backend.js";
+export type TestExecutionContext = ExecutionContext;
 
 /** One test's result. */
 export interface TestCaseResult {
@@ -29,11 +32,13 @@ export interface TestRunResult {
   /** Any runner-level error (compile failure, crash) that prevented tests from running at all. */
   readonly runnerError?: string;
   readonly failureKind?: ValidationOutcome["failureKind"];
+  readonly processCompletion?: "not-started" | "direct-child-closed" | "unconfirmed";
+  readonly processIsolation?: ProcessIsolationObservation;
 }
 
 /** The test-runner port: run the repo's tests and report per-case results. */
 export interface TestRunner {
-  run(repoRef: string, options?: { readonly signal?: AbortSignal; readonly deadline?: number }): Promise<TestRunResult>;
+  run(repoRef: string, options?: TestExecutionContext): Promise<TestRunResult>;
 }
 
 /** Optional extra gates layered on top of the test oracle. */
@@ -47,11 +52,16 @@ export interface ValidateGates {
  * gate, and return a structured outcome. testsPassed is true ONLY if the runner ran cleanly AND every
  * test passed — never inferred from anything the model said.
  */
-export async function validate(repoRef: string, runner: TestRunner, gates: ValidateGates = {}, execution?: { readonly signal?: AbortSignal; readonly deadline?: number }): Promise<ValidationOutcome> {
+export async function validate(repoRef: string, runner: TestRunner, gates: ValidateGates = {}, execution?: TestExecutionContext): Promise<ValidationOutcome> {
+  let processIsolation: ProcessIsolationObservation | undefined;
+  const stopped = () => ({ testsPassed: false, passedCount: 0, passedTests: [], failureKind: "harness" as const, failures: ["<runner-error>"], vettingCleared: false, detail: executionStopReason(execution) ?? "execution stopped", ...(processIsolation ? { processIsolation } : {}) });
+  if (executionStopReason(execution)) return stopped();
   const run = await runner.run(repoRef, execution);
+  processIsolation = run.processIsolation ? copyProcessIsolationObservation(run.processIsolation) : undefined;
+  if (executionStopReason(execution)) return stopped();
 
   if (run.runnerError) {
-    return { testsPassed: false, passedCount: 0, passedTests: [], failureKind: run.failureKind ?? "unknown", failures: ["<runner-error>"], vettingCleared: false, detail: `runner error: ${run.runnerError}` };
+    return { testsPassed: false, passedCount: 0, passedTests: [], failureKind: run.failureKind ?? "unknown", failures: ["<runner-error>"], vettingCleared: false, detail: `runner error: ${run.runnerError}`, ...(processIsolation ? { processIsolation } : {}) };
   }
 
   const failures = run.results.filter((r) => !r.passed);
@@ -61,6 +71,7 @@ export async function validate(repoRef: string, runner: TestRunner, gates: Valid
   let vettingCleared = testsPassed;
   if (testsPassed && gates.vet) {
     vettingCleared = await gates.vet(repoRef);
+    if (executionStopReason(execution)) return stopped();
   }
 
   const failureDetail = failures.map((f) => `${f.name}: ${f.output ?? "failed"}`).join("\n");
@@ -71,6 +82,7 @@ export async function validate(repoRef: string, runner: TestRunner, gates: Valid
       : `${failures.length}/${run.results.length} tests failing:\n${failureDetail}`;
 
   return {
+    ...(processIsolation ? { processIsolation } : {}),
     testsPassed,
     passedCount: run.results.filter((result) => result.passed).length,
     passedTests: run.results.filter((result) => result.passed).map(result => result.name),

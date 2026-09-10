@@ -15,6 +15,7 @@ import { join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { captureAuthenticatedCrateArchive } from "./native_p2_archive_snapshot.mjs";
+import { orderCompilationUnits } from "./native_compilation_units.mjs";
 
 const repositoryRoot = resolve(
   process.argv.find((arg, index) => index > 1 && !arg.startsWith("--")) ??
@@ -903,6 +904,10 @@ try {
       path: "tools/native_p2_archive_snapshot.mjs",
       sha256: sha(readFileSync(archiveSnapshotHelperPath)),
     },
+    compilationOrderHelperIdentity: {
+      path: "tools/native_compilation_units.mjs",
+      sha256: sha(readFileSync(fileURLToPath(new URL("native_compilation_units.mjs", import.meta.url)))),
+    },
     toolchain,
     target: "x86_64-unknown-linux-musl",
     curveBackend: "fiat",
@@ -934,7 +939,7 @@ try {
     procMacros,
     activeProcMacros,
     packageResolutionRoles: compilationRoles,
-    compiledUnits,
+    compiledUnits: orderCompilationUnits(compiledUnits),
     unsafeFiles,
     packageLevelUnsafeCandidates,
     activeUnsafeDiagnostics,

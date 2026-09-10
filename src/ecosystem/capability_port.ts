@@ -347,7 +347,7 @@ export class CapabilityHub {
     try {
       // Snapshot caller-owned JSON and scalars before any asynchronous authority check.
       // The same bounded immutable value reaches hashing, audit and the adapter.
-      inv = Object.freeze({ ...inv, args: captureInvocationArgs(inv.args) });
+      inv = captureCapabilityInvocation(inv);
       opts = Object.freeze({ ...opts, ...(opts.fleetPermit === undefined ? {} : { fleetPermit: Object.freeze({ ...opts.fleetPermit }) }) });
       const adapter = this.adapters.get(this.adapterKey(inv.capabilityId, opts.tenant));
       if (!adapter) {
@@ -440,6 +440,16 @@ export class CapabilityHub {
       },
     });
   }
+}
+
+/**
+ * Capture caller-owned values before an asynchronous check. Preserve live handles
+ * such as AbortSignal by reference; only JSON arguments are copied/deep-frozen.
+ * Serialization can execute trusted getters/toJSON and is not a JS sandbox.
+ */
+export function captureCapabilityInvocation(inv: CapabilityInvocation): CapabilityInvocation {
+  const captured = { ...inv };
+  return Object.freeze({ ...captured, args: captureInvocationArgs(captured.args) });
 }
 
 function captureInvocationArgs(args: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {

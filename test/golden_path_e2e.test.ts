@@ -22,7 +22,7 @@ import { KeepPipeline } from "../src/pipeline/keep_pipeline.js";
 
 function newMemory(): MemoryStore {
   const dir = mkdtempSync(join(tmpdir(), "keep-19-mem-"));
-  const spine = new Spine(new FileSpineStore(dir), new InProcessLock(), new SchemaRegistry());
+  const spine = new Spine(new FileSpineStore(dir, { fsync: true }), new InProcessLock(), new SchemaRegistry());
   return new MemoryStore(spine, new ModelGateway(new LocalProvider()));
 }
 
@@ -107,7 +107,7 @@ test("golden path D: the captured goal becomes a ticket that runs the WHOLE spin
   // Back of house: the goal drives a real ticket through the pipeline to a human-gated PR on a real remote.
   const { work, bare } = setupRemote("src/calc.ts", "export function add(a, b) { return a - b; }\n");
   const dir = mkdtempSync(join(tmpdir(), "keep-19-spine-"));
-  const spine = new Spine(new FileSpineStore(dir), new InProcessLock(), new SchemaRegistry());
+  const spine = new Spine(new FileSpineStore(dir, { fsync: true }), new InProcessLock(), new SchemaRegistry());
   const files: RepoFile[] = [{ path: "src/calc.ts", content: "export function add(a, b) { return a - b; }" }];
   const tree = new InMemoryFileTree({ "src/calc.ts": "export function add(a, b) { return a - b; }" });
   const runner: TestRunner = {
@@ -152,7 +152,7 @@ test("golden path F: composeKeep exposes a working scheduler — grant → enabl
   assert.ok(app.scheduler && app.budgetLedger && app.deadLetterQueue, "scheduler cluster is wired onto the app");
 
   // Operator grants a one-time envelope (the F2 authorization), then toggles the cadence ON.
-  app.budgetLedger.grant({
+  await app.budgetLedger.grant({
     id: "envF", projectId: "projF", allowedClasses: ["auto-research"], allowedTiers: [],
     dailyCapUsd: 5, perRunCapUsd: 1, perCallTokenCeiling: 2048,
     expiresAt: Date.now() + 3_600_000, grantedReason: "e2e wire test",
@@ -205,7 +205,7 @@ test("golden path H: composeKeep exposes an inert durable project lane without s
   const bare = composeKeep({ dataDir: mkdtempSync(join(tmpdir(), "keep-al-0-")) });
   assert.ok(bare.autonomyLoop, "dataDir-only n=1 exposes the durable project lane");
   assert.deepEqual(bare.autonomyLoop!.manager.list(), [], "composition creates no implicit project");
-  assert.equal(bare.autonomyLoop!.manager.active(), undefined, "composition activates no project");
+  assert.equal(bare.autonomyLoop!.manager.active(undefined), undefined, "composition activates no project");
   assert.equal(bare.autonomyLoop!.supportsStrategy(), false, "software execution remains unavailable without its seam");
 
   // With a solve seam: the implement stage delegates to it, and the FSM runs to done.

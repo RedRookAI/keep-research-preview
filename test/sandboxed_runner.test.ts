@@ -89,7 +89,7 @@ test("END-TO-END: buildDefaultSolver runs its tests INSIDE the sandbox via Local
   assert.equal(out.solveResult.validation?.testsPassed, true, "the REAL test passed inside the boundary");
 });
 
-test("COMPOSE WIRE: composeKeep(testCommand + disk workspace) runs the solver's tests sandboxed via runProject", async () => {
+for (const namespaceJail of [undefined, false, "required"] as const) test(`COMPOSE WIRE: runProject preserves ${namespaceJail === "required" ? "required setup" : namespaceJail === false ? "explicit fallback" : "default best-effort"} observations`, async () => {
   const { composeKeep } = await import("../src/compose.js");
   const base = mkdtempSync(join(tmpdir(), "keep-sbx-compose-"));
   const repo = join(base, "proj");
@@ -118,20 +118,26 @@ test("COMPOSE WIRE: composeKeep(testCommand + disk workspace) runs the solver's 
     developmentProvider: model,
     workspace: new LocalFsWorkspace(base),
     repoRef: "proj",
-    testCommand: { command: "node", args: ["--test"], timeoutMs: 30_000 }, // sandboxed real execution, no fail-closed
+    testCommand: { command: "node", args: ["--test"], timeoutMs: 30_000, ...(namespaceJail !== undefined ? { namespaceJail } : {}) },
   });
 
   const run = await app.autonomyLoop!.runProject("fix add() in src/math.mjs so it returns a+b", { runId: "rSbx", stepBudget: 50 });
   assert.ok(run.feasibility?.proceed, "feasible");
   assert.deepEqual(roles, ["repository_edit", "goal_test"]);
-  const independent = run.state.artifacts["vet_artifact"] as { schemaVersion?: unknown; verdict?: unknown; repositoryTreeSha256?: unknown; testsExecuted?: unknown };
+  const independent = run.state.artifacts["vet_artifact"] as { schemaVersion?: unknown; verdict?: unknown; repositoryTreeSha256?: unknown; testsExecuted?: unknown;
+    isolation?: { processIsolation?: { namespacePolicy?: string; namespaceSetup?: string } } };
   assert.ok(independent, JSON.stringify(run.state));
   assert.equal(independent.schemaVersion, 1);
   assert.equal(independent.verdict, "passed", "the installed composition persisted an independent post-implementation verdict");
   assert.equal(independent.testsExecuted, true);
+  const expectedPolicy = namespaceJail === "required" ? "required" : namespaceJail === false ? "disabled" : "best-effort";
+  assert.equal(independent.isolation?.processIsolation?.namespacePolicy, expectedPolicy);
+  if (namespaceJail === "required") assert.equal(independent.isolation?.processIsolation?.namespaceSetup, "launcher-confirmed");
   assert.match(String(independent.repositoryTreeSha256), /^[0-9a-f]{64}$/);
   await app.spine.seal();
   // the sandboxed isolated_execution + the governed decision are both on the trail
   const payloads = app.spine.replay().map((e: any) => e.payload as Record<string, unknown>);
   assert.ok(payloads.some((p) => p?.["event"] === "merge_authority"), "a governed decision was made after sandboxed tests");
+  assert.ok(payloads.some(p => p["event"] === "isolated_execution" &&
+    (p["processIsolation"] as { namespacePolicy?: string } | undefined)?.namespacePolicy === expectedPolicy));
 });

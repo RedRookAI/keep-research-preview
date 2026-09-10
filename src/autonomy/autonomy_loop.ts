@@ -11,7 +11,7 @@
  * rebuilding it; the loop adds the resumable project envelope + sessions on top.
  */
 
-import { ProjectLoop, type AuthorityPosture, type ProjectState, type ProjectLoopConfig, type LoopRunResult, type ResumeProjectInput, type StageExecutors, type ProjectPermissionPolicy } from "./project_loop.js";
+import { ProjectLoop, ProjectFinalizationError, type AuthorityPosture, type ProjectState, type ProjectLoopConfig, type LoopRunResult, type ResumeProjectInput, type StageExecutors, type ProjectPermissionPolicy } from "./project_loop.js";
 import type { DomainWorkflowKind, GoalLifecycleArtifactV1, GoalLifecycleRequestV1, ProjectStrategy } from "./project_state.js";
 import { InMemoryProjectCheckpointStore, type ProjectCheckpointStore } from "./project_checkpoint_store.js";
 import { ProgressNarrator } from "./progress_narrator.js";
@@ -212,6 +212,32 @@ export function buildAutonomyLoop(cfg: AutonomyLoopConfig): AutonomyLoop {
     try{const current=store.load(projectId),published=publishEngineeringStatusProjectionV1(input,store,current?.projection_digest??null);if(published.ok)return published.projection;if(published.code==="STALE_PROJECTION")return store.load(projectId);return undefined;}catch{return undefined;}
   }
   async function refreshDecompositionProjection(state:ProjectState,bundle:DecompositionAuthorityReplayBundleV1):Promise<void>{await refreshEngineeringProjection(state,bundle);}
+  async function finalizeManagedResult(projectId: ProjectId, result: LoopRunResult): Promise<LoopRunResult> {
+    let phase: ProjectFinalizationError["phase"] = "projection";
+    try {
+      const projection = await refreshEngineeringProjection(result.state);
+      // The task/projection may have awaited a sibling writer. Obtain a current
+      // session, not a rebased stale object, and retain all normal write guards.
+      phase = "session";
+      const current = manager.runnableSession(projectId);
+      if (current.boundRunId() !== result.state.runId) throw new Error("finalization run binding changed");
+      phase = "budget"; reconcileProjectBudget(current, cfg.spine, result.state.runId, cfg.tracer);
+      phase = "checkpoint"; current.checkpoint(result.state, projection);
+      phase = "history";
+      if (result.visited.length > 0) {
+        // checkpoint() can accept a verified sibling winner while fencing current.
+        // Append to a fresh guarded object, preserving the winner's other state.
+        // This reports the returned result's revision, not necessarily today's latest.
+        const history = manager.runnableSession(projectId);
+        if (history.boundRunId() !== result.state.runId) throw new Error("finalization history run binding changed");
+        history.append("event", `Project status: ${result.state.status}${result.state.note ? ` — ${result.state.note}` : ""} (run ${result.state.runId}, revision ${result.state.revision})`);
+      }
+      return result;
+    } catch (cause) {
+      // Never re-execute the task to repair a projection, accounting or write error.
+      throw new ProjectFinalizationError(result, phase, { cause });
+    }
+  }
   const resolve =
     cfg.resolve ??
     ((state: ProjectState): { issue: Issue; files: readonly RepoFile[] } => ({
@@ -742,10 +768,7 @@ export function buildAutonomyLoop(cfg: AutonomyLoopConfig): AutonomyLoop {
         const execute = () => api.runProject(goal, { ...opts, runId });
         const result = cfg.runInProjectContext === undefined ? await execute() : await cfg.runInProjectContext(projectId, runId, execute);
         if (result.state.projectId !== projectId) throw new Error(`run ${runId} lost its project ownership binding`);
-        reconcileProjectBudget(session, cfg.spine, runId, cfg.tracer);
-        session.checkpoint(result.state,await refreshEngineeringProjection(result.state));
-        if (result.visited.length > 0) session.append("event", `Project status: ${result.state.status}${result.state.note ? ` — ${result.state.note}` : ""}`);
-        return result;
+        return await finalizeManagedResult(projectId, result);
       } finally { managedOwners.delete(runId); }
     },
     async resumeProject(runId, input = {}, control = {}): Promise<LoopRunResult> {
@@ -786,10 +809,7 @@ export function buildAutonomyLoop(cfg: AutonomyLoopConfig): AutonomyLoop {
       try {
         const result = await api.resumeProject(runId, input, control);
         if (result.state.projectId !== projectId) throw new Error(`run ${runId} belongs to a different project`);
-        reconcileProjectBudget(session, cfg.spine, runId, cfg.tracer);
-        session.checkpoint(result.state,await refreshEngineeringProjection(result.state));
-        if (result.visited.length > 0) session.append("event", `Project status: ${result.state.status}${result.state.note ? ` — ${result.state.note}` : ""}`);
-        return result;
+        return await finalizeManagedResult(projectId, result);
       } finally { managedOwners.delete(runId); }
     },
   };

@@ -5,9 +5,10 @@ export interface KeepClientOptions { readonly origin: string; readonly token: st
 export interface ProjectSummary { readonly id: string; readonly name: string; readonly lifecycle: string; }
 export interface ProjectList { readonly projects: readonly ProjectSummary[]; readonly active: string | null; }
 export interface ReviewList { readonly reviews: readonly unknown[]; }
-export interface ProjectRunResult { readonly runId?: string; readonly status: string; readonly note: string | null; }
+export interface ProjectRunResult { readonly runId?: string; readonly projectId?: string; readonly revision?: number; readonly proposalDigest?: string; readonly status: string; readonly note: string | null; }
 
-export class KeepClientError extends Error { constructor(readonly status: number, message: string) { super(message); this.name = "KeepClientError"; } }
+/** details is untrusted parsed gateway data, not a successful result or replay authority. */
+export class KeepClientError extends Error { constructor(readonly status: number, message: string, readonly details?: unknown) { super(message); this.name = "KeepClientError"; } }
 
 export function normalizeGatewayOrigin(value: string): string {
   const url = new URL(value);
@@ -28,15 +29,20 @@ export class KeepClient {
   decision(id: string): Promise<{ readonly view: unknown }> { return this.#request("GET", `/decision?id=${encodeURIComponent(id)}`); }
   message(message: string): Promise<{ readonly result: unknown }> { return this.#request("POST", "/message", true, { message }); }
   startProject(goal: string): Promise<ProjectRunResult> { return this.#request("POST", "/project", true, { goal }); }
-  resumeProject(runId: string, stepBudget?: number): Promise<ProjectRunResult> { return this.#request("POST", "/project/resume", true, { runId, ...(stepBudget === undefined ? {} : { stepBudget }) }); }
+  /** A positive safe-integer top-up is a fresh grant, not an idempotent retry. */
+  resumeProject(runId: string, addSteps?: number): Promise<ProjectRunResult> { return this.#request("POST", "/project/resume", true, { runId, ...(addSteps === undefined ? {} : { addSteps }) }); }
   projectTurn(runId: string, goal: string, stepBudget?: number): Promise<ProjectRunResult> { return this.#request("POST", "/project/turn", true, { runId, goal, ...(stepBudget === undefined ? {} : { stepBudget }) }); }
+  /** Select within the project's tenant; no execution/compaction. projects().active uses the caller's scope (personal for a local owner). */
   switchProject(projectId: string): Promise<unknown> { return this.#request("POST", "/project/switch", true, { projectId }); }
+  /** Park the selection; does not enqueue, cancel, or grant a run more authority or budget. */
   backgroundProject(projectId: string): Promise<unknown> { return this.#request("POST", "/project/background", true, { projectId }); }
   backgroundTurn(projectId: string, goal: string, stepBudget: number): Promise<ProjectRunResult> { return this.#request("POST", "/project/background/turn", true, { projectId, goal, stepBudget }); }
-  backgroundJobs(projectId?: string): Promise<unknown> { return this.#request("GET", `/project/background/jobs${projectId === undefined ? "" : `?projectId=${encodeURIComponent(projectId)}`}`); }
+  /** Lists visible tracked jobs (including foreground jobs), optionally for one project. */
+  backgroundJobs(projectId?: string): Promise<unknown> { return this.#request("GET", `/project/jobs${projectId === undefined ? "" : `?projectId=${encodeURIComponent(projectId)}`}`); }
   archiveProject(projectId: string): Promise<unknown> { return this.#request("POST", "/project/archive", true, { projectId }); }
   deleteProject(projectId: string, confirmProjectId: string): Promise<unknown> { return this.#request("POST", "/project/delete", true, { projectId, confirmProjectId }); }
-  mergeProject(runId: string, decision: "approve" | "veto"): Promise<unknown> { return this.#request("POST", "/project/merge", true, { runId, decision }); }
+  /** Names the exact durable proposal; never substitutes a newer digest or proves human review. */
+  mergeProject(runId: string, decision: "approve" | "veto", proposalDigest: string): Promise<unknown> { return this.#request("POST", "/project/merge", true, { runId, decision, proposalDigest }); }
   revertProject(runId: string): Promise<unknown> { return this.#request("POST", "/project/revert", true, { runId }); }
   approve(id: string): Promise<{ readonly ok: boolean; readonly runnable: boolean }> { return this.#request("POST", "/veto/approve", true, { id }); }
   decline(id: string): Promise<{ readonly ok: boolean }> { return this.#request("POST", "/veto/decline", true, { id }); }
@@ -44,7 +50,7 @@ export class KeepClient {
     const headers: Record<string, string> = { accept: "application/json" }; if (authenticated) headers["authorization"] = `Bearer ${this.#token}`; if (body !== undefined) headers["content-type"] = "application/json";
     const response = await this.#transport({ method, url: `${this.#origin}${path}`, headers, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
     let payload: unknown; try { payload = JSON.parse(response.body); } catch { throw new KeepClientError(response.status, "gateway returned invalid JSON"); }
-    if (response.status < 200 || response.status >= 300) { const detail = typeof payload === "object" && payload !== null && "error" in payload ? String((payload as { error: unknown }).error) : `gateway request failed (${response.status})`; throw new KeepClientError(response.status, detail); }
+    if (response.status < 200 || response.status >= 300) { const detail = typeof payload === "object" && payload !== null && "error" in payload ? String((payload as { error: unknown }).error) : `gateway request failed (${response.status})`; throw new KeepClientError(response.status, detail, payload); }
     return payload as T;
   }
 }

@@ -17,9 +17,9 @@
 import { randomUUID } from "node:crypto";
 import type { SpineStore } from "./store.js";
 import type { StagedEvent, EventType } from "./event.js";
-import { CURRENT_SCHEMA_VERSION, canonicalize } from "./event.js";
+import { CURRENT_SCHEMA_VERSION, canonicalize, isWellFormedEvent } from "./event.js";
 import type { SealedBlock, VerifyResult, ChainWitness, WitnessCheck } from "./hashchain.js";
-import { sealBlock, verifyChain, makeWitness, verifyAgainstWitness } from "./hashchain.js";
+import { blockByteLength, MAX_BLOCK_BYTES, sealBlock, verifyChain, makeWitness, verifyAgainstWitness } from "./hashchain.js";
 import type { WitnessSink } from "./witness_sink.js";
 import { reconcileWithWitness, extractAttestations, type ReconcileVerdict } from "./witness_reconcile.js";
 import type { DistributedLock } from "../lock/lock.js";
@@ -106,27 +106,24 @@ export class Spine {
       actor: input.actor,
       payload: input.payload,
     };
+    this.requireSealableEvent(e);
     this.store.appendStaged(e);
     return e.id;
   }
 
   /**
-   * Seal all currently-staged events into a single new block, under the sealer
-   * lock. Returns the sealed block, or undefined if there was nothing to seal.
+   * Seal the entire entry snapshot into bounded ordered blocks under the sealer
+   * lock. Returns the final newly sealed block, or undefined if none was needed.
+   * A throw may leave a committed prefix: it never establishes non-execution.
    */
   async seal(): Promise<SealedBlock | undefined> {
     return this.lock.withLock("spine.sealer", async () => {
+      this.store.prepareForSeal?.();
       let staged = this.store.readStaged();
-      let prev = this.store.lastBlock();
+      const prev = this.store.lastBlock();
       if (this.recoverCommittedStagingPrefix(staged, prev) > 0) staged = this.store.readStaged();
       if (staged.length === 0) return undefined;
-      prev = this.store.lastBlock();
-      const block = sealBlock(prev, staged, this.clock());
-      this.store.appendBlock(block);
-      this.store.removeStaged(staged.length);
-      // L4: publish the new head to the independent witness so truncation/fork are detectable.
-      if (this.witnessSink) this.emitWitness(this.witnessSink);
-      return block;
+      return this.drainSnapshot(staged);
     });
   }
 
@@ -137,11 +134,11 @@ export class Spine {
    */
   async checkpoint(actor: string): Promise<SealedBlock> {
     return this.lock.withLock("spine.sealer", async () => {
-      let prev = this.store.lastBlock();
+      this.store.prepareForSeal?.();
+      const prev = this.store.lastBlock();
       const priorRoot = prev ? prev.cumulativeRoot : "0".repeat(64);
       let staged = this.store.readStaged();
       if (this.recoverCommittedStagingPrefix(staged, prev) > 0) staged = this.store.readStaged();
-      prev = this.store.lastBlock();
       const marker: StagedEvent = {
         id: randomUUID(),
         schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -150,14 +147,55 @@ export class Spine {
         actor,
         payload: { attestsRootUpTo: priorRoot },
       };
-      const events = [...staged, marker];
-      const block = sealBlock(prev, events, this.clock());
-      this.store.appendBlock(block);
-      this.store.removeStaged(staged.length);
-      // L4: witness the checkpoint head to the independent sink (same as seal()).
-      if (this.witnessSink) this.emitWitness(this.witnessSink);
-      return block;
+      // The marker attests the root at checkpoint entry, not a promise that every
+      // pending event and the marker fit in one block. Validate it before writes.
+      this.requireSealableEvent(marker);
+      return this.drainSnapshot(staged, marker)!;
     });
+  }
+
+  private requireSealableEvent(event: StagedEvent): void {
+    if (!isWellFormedEvent(event)) throw new Error("spine event envelope is malformed");
+    // The genesis template includes three full-width hashes and one-digit seq/ts.
+    // JSON finite doubles need at most 25 characters each (including negative
+    // fixed-point values near 1e-6): reserve (25-1)*2 for
+    // a later head/clock. All event fields (including actor/escapes) already count.
+    if (blockByteLength(sealBlock(undefined, [event], 0)) + 48 > MAX_BLOCK_BYTES) {
+      throw new Error(`spine event ${event.id} exceeds the 1 MiB block envelope bound`);
+    }
+  }
+
+  /** Caller holds spine.sealer. Appenders may only extend the staging tail. Each
+   * block->cursor pair is recoverable; the multi-block drain is not one atomic
+   * transaction. The captured end prevents a busy producer from extending it. */
+  private drainSnapshot(staged: readonly StagedEvent[], marker?: StagedEvent): SealedBlock | undefined {
+    const events = marker ? [...staged, marker] : staged;
+    const sizes = events.map(event => Buffer.byteLength(canonicalize(event), "utf8"));
+    let offset = 0;
+    let last: SealedBlock | undefined;
+    while (offset < events.length) {
+      const prev = this.store.lastBlock(), now = this.clock();
+      let size = blockByteLength(sealBlock(prev, [], now));
+      let end = offset;
+      while (end < events.length) {
+        const next = sizes[end]! + (end > offset ? 1 : 0);
+        if (size + next > MAX_BLOCK_BYTES) break;
+        size += next;
+        end++;
+      }
+      if (end === offset) throw new Error(`staged event ${events[offset]!.id} cannot fit the ${MAX_BLOCK_BYTES}-byte block bound; retained for explicit recovery`);
+      const block = sealBlock(prev, events.slice(offset, end), now);
+      if (blockByteLength(block) > MAX_BLOCK_BYTES) throw new Error("assembled spine block exceeds its byte bound");
+      this.store.appendBlock(block);
+      // The optional synthesized marker is not a staged row.
+      const consumed = Math.min(end, staged.length) - Math.min(offset, staged.length);
+      if (consumed > 0) this.store.removeStaged(consumed);
+      last = block;
+      offset = end;
+    }
+    // Partial failure may leave an unwitnessed prefix; do not report full success.
+    if (last && this.witnessSink) this.emitWitness(this.witnessSink);
+    return last;
   }
 
   /**

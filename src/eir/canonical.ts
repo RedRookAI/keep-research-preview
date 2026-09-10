@@ -37,6 +37,11 @@ class CanonicalError extends Error {
   constructor(msg: string) { super(`EIR-canonical: ${msg}`); this.name = "CanonicalError"; }
 }
 
+/** A caller-selected wire-size limit, distinct from malformed canonical bytes. */
+export class CanonicalByteLimitError extends CanonicalError {
+  constructor() { super("encoded-size bound violated"); this.name = "CanonicalByteLimitError"; }
+}
+
 /**
  * True iff `s` is well-formed UTF-16 — NO unpaired surrogates. This is a HARD injectivity requirement (frontier
  * review, GPT-5.6): `TextEncoder` maps a lone surrogate to U+FFFD, so a string with a lone \uD800 and the string
@@ -54,8 +59,12 @@ export function isWellFormedText(s: string): boolean {
   return true;
 }
 
+// The encoder can materialize output or compare it against an owned wire snapshot.
+// Key buffers remain concrete arrays: sorting is independent of the destination.
+interface ByteSink { push(...bytes: number[]): void; }
+
 /** Push a CBOR head: major type (0..7) + argument, in SHORTEST form (deterministic requirement). */
-function pushHead(out: number[], major: number, arg: bigint): void {
+function pushHead(out: ByteSink, major: number, arg: bigint): void {
   const mt = major << 5;
   if (arg < 0n) throw new CanonicalError("internal: negative head argument");
   if (arg < 24n) out.push(mt | Number(arg));
@@ -70,7 +79,7 @@ function pushHead(out: number[], major: number, arg: bigint): void {
   } else throw new CanonicalError("integer exceeds 64-bit CBOR argument range");
 }
 
-function encInto(v: CanonicalValue, out: number[], depth: number): void {
+function encInto(v: CanonicalValue, out: ByteSink, depth: number): void {
   if (depth > MAX_DEPTH) throw new CanonicalError(`structure deeper than ${MAX_DEPTH} — rejected`);
   if (v === null) { out.push(0xf6); return; }                       // simple(22) = null
   const t = typeof v;
@@ -262,6 +271,10 @@ function readHead(b: Uint8Array, p: number): { major: number; arg: bigint; next:
   return { major, arg: a, next: p + 1 + len };
 }
 
+// Verification below deliberately does not recapture this graph. Every return
+// must remain owned plain data: primitives, copied plain Uint8Arrays, plain arrays
+// and null-prototype data maps. Tags/custom objects/user callbacks are forbidden;
+// adding a new return shape requires reconsidering that verification invariant.
 function decodeAt(b: Uint8Array, p: number, depth: number): { v: CanonicalValue; next: number } {
   if (depth > MAX_DEPTH) throw new CanonicalError("too deep");
   const ib = b[p];
@@ -299,6 +312,20 @@ function decodeAt(b: Uint8Array, p: number, depth: number): { v: CanonicalValue;
  * SharedArrayBuffer-backed / concurrently-mutated input cannot diverge between validation and use (frontier review).
  */
 export function decodeCanonical(bytes: Uint8Array): CanonicalValue {
+  return decodeCanonicalSnapshot(bytes).value;
+}
+
+/**
+ * Decode and verify one owned snapshot. The returned value and bytes are separate
+ * caller-owned mutable data, not an approval token. Wire consumers can set a
+ * positive safe-integer byte bound, checked before copying. Without maxBytes this
+ * has the same unbounded input-size contract as decodeCanonical; it is not a
+ * general memory/resource limit for arbitrary decoded structures.
+ * Large decoded byte strings can still exhaust memory if passed to encodeCanonical,
+ * eirDigest or canonicalEqual: their strict hostile-object capture enumerates index
+ * properties. Use the verified snapshot bytes for wire identity, not those APIs.
+ */
+export function decodeCanonicalSnapshot(bytes: unknown, maxBytes?: number): { value: CanonicalValue; bytes: Uint8Array } {
   // Strict input typing (frontier review, GPT-5.6): `Uint8Array.from` COERCES any iterable — from([502]) yields
   // [246] = 0xf6, so a plain array [502] would validate as canonical null (fail-open). Require a real Uint8Array
   // (Proxies rejected — they can spoof instanceof) and copy byte-by-byte through the indexed getter, which returns
@@ -306,13 +333,28 @@ export function decodeCanonical(bytes: Uint8Array): CanonicalValue {
   if (types.isProxy(bytes)) throw new CanonicalError("input must not be a Proxy");
   if (!(bytes instanceof Uint8Array)) throw new CanonicalError("input must be a Uint8Array");
   const n = assertLiveBytes(bytes); // TRUE length; rejects detached/out-of-bounds/SAB input (shadow-proof)
+  if (maxBytes !== undefined) {
+    if (typeof maxBytes !== "number" || !Number.isSafeInteger(maxBytes) || maxBytes <= 0)
+      throw new CanonicalError("maxBytes must be a positive safe integer");
+    if (n === 0 || n > maxBytes) throw new CanonicalByteLimitError();
+  }
   const b = new Uint8Array(n);
   for (let i = 0; i < n; i++) b[i] = bytes[i]!; // owned copy — one consistent snapshot for decode + re-encode check
   const { v, next } = decodeAt(b, 0, 0);
   if (next !== b.length) throw new CanonicalError("trailing bytes — not canonical");
-  const re = encodeCanonical(v); // re-encode the decoded value; canonical iff byte-identical to the snapshot
-  if (re.length !== b.length || !re.every((x, i) => x === b[i])) throw new CanonicalError("input is not the canonical encoding of its decoding");
-  return v;
+  // v has never escaped decodeAt: its plain graph/bytes are already owned. Keep
+  // the exact re-encode check without re-capturing millions of byte index names
+  // or materializing a second number[] proportional to the payload.
+  let emitted = 0;
+  encInto(v, { push(...chunk: number[]): void {
+    for (const byte of chunk) {
+      if (emitted >= b.length || byte !== b[emitted])
+        throw new CanonicalError("input is not the canonical encoding of its decoding");
+      emitted++;
+    }
+  } }, 0);
+  if (emitted !== b.length) throw new CanonicalError("input is not the canonical encoding of its decoding");
+  return { value: v, bytes: b };
 }
 
 /** True iff `bytes` is EXACTLY the canonical encoding of its own decoding — rejects every non-canonical form. */

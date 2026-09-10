@@ -23,7 +23,7 @@ export class StdioMcpTransport implements McpTransport {
   private child?: ChildProcess;
   private nextId = 1;
   private readonly pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void; timer: NodeJS.Timeout }>();
-  private buffer = "";
+  private buffer: Buffer = Buffer.alloc(0);
   private startupError: Error | undefined;
   private closedError: Error | undefined;
   private _serverProtocolVersion = MCP_PROTOCOL_VERSION;
@@ -93,15 +93,18 @@ export class StdioMcpTransport implements McpTransport {
   }
 
   private onData(buf: Buffer): void {
-    this.buffer += buf.toString("utf8");
-    if (Buffer.byteLength(this.buffer, "utf8") > (this.options.maxResponseBytes ?? 1024 * 1024)) {
+    // Bound raw pending bytes (including incomplete characters and delimiters)
+    // before allocating. This remains a pending-batch bound, not per-line quota.
+    if (this.buffer.length + buf.length > (this.options.maxResponseBytes ?? 1024 * 1024)) {
       const error = new Error("MCP response exceeded configured byte bound");
-      this.buffer = ""; for (const { reject } of this.pending.values()) reject(error); this.pending.clear(); this.child?.kill("SIGKILL"); return;
+      this.buffer = Buffer.alloc(0); for (const { reject } of this.pending.values()) reject(error); this.pending.clear(); this.child?.kill("SIGKILL"); return;
     }
-    let nl: number;
-    while ((nl = this.buffer.indexOf("\n")) >= 0) {
-      const line = this.buffer.slice(0, nl).trim();
-      this.buffer = this.buffer.slice(nl + 1);
+    this.buffer = Buffer.concat([this.buffer, buf]);
+    let nl: number, consumed = 0;
+    while ((nl = this.buffer.indexOf(0x0a, consumed)) >= 0) {
+      // ASCII LF cannot be a UTF8 continuation byte. Only decode complete lines.
+      const line = this.buffer.toString("utf8", consumed, nl).trim();
+      consumed = nl + 1;
       if (!line) continue;
       let msg: JsonRpcResponse;
       try {
@@ -109,12 +112,15 @@ export class StdioMcpTransport implements McpTransport {
       } catch {
         continue; // ignore non-JSON lines (server logging)
       }
+      if (msg === null || typeof msg !== "object" || Array.isArray(msg) || typeof msg.id !== "number") continue;
       const waiter = this.pending.get(msg.id);
       if (!waiter) continue;
       this.pending.delete(msg.id);
       if (msg.error) waiter.reject(new Error(`MCP error ${msg.error.code}: ${msg.error.message}`));
       else waiter.resolve(msg.result);
     }
+    // Compact once per chunk, so a tiny residual does not retain a large batch.
+    if (consumed > 0) this.buffer = Buffer.from(this.buffer.subarray(consumed));
   }
 
   private request(method: string, params: Record<string, unknown>): Promise<unknown> {

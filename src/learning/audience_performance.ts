@@ -55,12 +55,12 @@ export interface PerformanceAnalysis {
 }
 export interface GenerationCandidate { readonly id: string; readonly text: string; readonly attributes?: readonly string[]; }
 export interface RankedCandidate extends GenerationCandidate { readonly score: number; readonly reasons: readonly string[]; readonly evidence: "none" | "exploratory" | "measured"; }
-export interface AudiencePerformancePersistence { load(): { readonly snapshot: unknown; readonly revision: number }; save(snapshot: unknown, expectedRevision: number): number; }
+export interface AudiencePerformancePersistence { load(): { readonly snapshot: unknown; readonly revision: number | undefined }; save(snapshot: unknown, expectedRevision: number | undefined): number; }
 export interface AudiencePerformanceContext {
   readonly projectId: string;
   readonly tenant?: string;
   readonly ingestion: IngestionPipeline;
-  readonly guard?: (expectedDocumentRevision: number) => void;
+  readonly guard?: (expectedDocumentRevision: number | undefined) => void;
 }
 
 const SOURCES = new Set<AudienceSource>(AUDIENCE_SOURCES);
@@ -128,11 +128,14 @@ export class AudiencePerformanceCorpus {
   readonly #items = new Map<string, StoredPerformanceItem>();
   readonly #sanitizer = new ContentSanitizer();
   #revision: number;
+  #persistencePresent: boolean;
   constructor(private readonly context: AudiencePerformanceContext, private readonly persistence?: AudiencePerformancePersistence, private readonly clock: () => number = Date.now, private readonly minimumEvidence = MIN_MEASURED_OBSERVATIONS) {
     if (!Number.isSafeInteger(minimumEvidence) || minimumEvidence < 2 || minimumEvidence > 10_000) throw new Error("audience evidence floor must be between 2 and 10000");
-    const loaded = persistence?.load() ?? { snapshot: undefined, revision: 0 };
-    this.#revision = loaded.revision;
+    const loaded = persistence?.load() ?? { snapshot: undefined, revision: undefined };
+    this.#revision = loaded.revision ?? 0;
+    this.#persistencePresent = loaded.revision !== undefined;
     if (loaded.snapshot === undefined) return;
+    if (!Number.isSafeInteger(loaded.revision) || loaded.revision! < 0) throw new Error("invalid persisted audience-performance revision");
     const persisted = loaded.snapshot;
     if (persisted === null || typeof persisted !== "object" || Array.isArray(persisted)) throw new Error("invalid persisted audience-performance corpus");
     const row = persisted as Record<string, unknown>;
@@ -156,7 +159,7 @@ export class AudiencePerformanceCorpus {
     }
   }
 
-  private guard(): void { this.context.guard?.(this.#revision); }
+  private guard(): void { this.context.guard?.(this.#persistencePresent ? this.#revision : undefined); }
 
   ingest(item: PerformanceItem, ingestedBy: AudienceIngestPrincipal): { readonly items: number; readonly replaced: boolean; readonly itemDigest: string; readonly priorDigest?: string; readonly platformAttested: false; readonly observedAt: number; readonly remainingBytes: number } {
     this.guard();
@@ -170,10 +173,11 @@ export class AudiencePerformanceCorpus {
     const snapshot = Object.freeze({ schemaVersion: 1 as const, items: Object.freeze([...next.values()].sort((a, b) => `${a.source}:${a.id}`.localeCompare(`${b.source}:${b.id}`))) });
     const snapshotBytes = Buffer.byteLength(JSON.stringify(snapshot), "utf8");
     if (snapshot.items.length > MAX_ITEMS || snapshotBytes > MAX_CORPUS_BYTES) throw new Error("audience-performance corpus exceeds the durable bound");
-    const nextRevision = this.persistence?.save(snapshot, this.#revision) ?? this.#revision;
+    const nextRevision = this.persistence?.save(snapshot, this.#persistencePresent ? this.#revision : undefined) ?? this.#revision;
     if (prior !== undefined) this.context.ingestion.eraseSource(key);
     this.context.ingestion.ingest({ sourceId: key, text: `${normalized.title ?? ""}\n${normalized.text}\n${normalized.attributes.join(" ")}`, purpose: normalized.purpose, lawfulBasis: normalized.lawfulBasis, baseTier: normalized.sensitivityTier });
     this.#revision = nextRevision;
+    if (this.persistence !== undefined) this.#persistencePresent = true;
     this.#items.clear(); for (const [id, value] of next) this.#items.set(id, value);
     return Object.freeze({ items: this.#items.size, replaced, itemDigest: normalized.itemDigest, ...(prior ? { priorDigest: prior.itemDigest } : {}), platformAttested: false, observedAt: normalized.observedAt, remainingBytes: MAX_CORPUS_BYTES - snapshotBytes });
   }
@@ -247,8 +251,9 @@ export class AudiencePerformanceCorpus {
     const key = `${source}:${cleanId}`; if (!this.#items.has(key)) return { removed: false, items: this.#items.size, remainingBytes: MAX_CORPUS_BYTES - Buffer.byteLength(JSON.stringify({ schemaVersion: 1, items: [...this.#items.values()] }), "utf8") };
     const next = new Map(this.#items); next.delete(key);
     const snapshot = Object.freeze({ schemaVersion: 1 as const, items: Object.freeze([...next.values()].sort((a, b) => `${a.source}:${a.id}`.localeCompare(`${b.source}:${b.id}`))) });
-    const nextRevision = this.persistence?.save(snapshot, this.#revision) ?? this.#revision;
+    const nextRevision = this.persistence?.save(snapshot, this.#persistencePresent ? this.#revision : undefined) ?? this.#revision;
     this.context.ingestion.eraseSource(key); this.#revision = nextRevision; this.#items.delete(key);
+    if (this.persistence !== undefined) this.#persistencePresent = true;
     return { removed: true, items: this.#items.size, remainingBytes: MAX_CORPUS_BYTES - Buffer.byteLength(JSON.stringify(snapshot), "utf8") };
   }
 

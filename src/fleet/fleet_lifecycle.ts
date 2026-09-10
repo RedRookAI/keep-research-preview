@@ -116,8 +116,8 @@ export class FleetAdmissionLifecycle {
         if (active.length >= this.policy.maxActive) reasons.push("fleet-active-limit");
         if (tenantActive.length >= this.policy.maxActivePerTenant) reasons.push("tenant-active-limit");
         reasons.push(...jointReversibilityReasons(
-          { id: captured.operationId, agent: captured.agent, writeSet: captured.writeSet, inverseDependsOn: captured.inverseDependsOn },
-          active.map((row): Effect => ({ id: row.operationId, agent: row.agent, writeSet: row.writeSet, inverseDependsOn: row.inverseDependsOn })),
+          { id: operationKey(captured.tenant, captured.operationId), agent: captured.agent, writeSet: captured.writeSet, inverseDependsOn: captured.inverseDependsOn },
+          active.map((row): Effect => ({ id: operationKey(row.tenant, row.operationId), agent: row.agent, writeSet: row.writeSet, inverseDependsOn: row.inverseDependsOn })),
         ).map(reasonClass));
         const flow = checkCrossAgentFlow({ agent: captured.agent, externalSink: captured.externalSink, chain: { hops: captured.provenance } });
         if (!flow.clean) reasons.push(reasonClass(flow.reason));

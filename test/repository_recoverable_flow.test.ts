@@ -380,7 +380,8 @@ test("SOLVE-08: configured-graph CLI/API repository journey reconstructs exact p
   assert.equal(reconstructed.session.record.lifecycle, "background", "completed work may remain safely backgrounded across restart");
   assert.deepEqual(reconstructed.session.checkpoint, state);
   assert.deepEqual(reconstructed.session.history.map(({ role, text }) => ({ role, text })), [
-    { role: "user", text: "fix add in calc.js so it adds" }, { role: "event", text: "Project status: completed" },
+    { role: "user", text: "fix add in calc.js so it adds" },
+    { role: "event", text: `Project status: completed (run ${state.runId}, revision ${state.revision})` },
   ], "the wrapped project key decrypts the same installed session after reconstruction");
   assert.equal(reconstructed.session.budget.spentTokensToday, 4, "reconstruction retains one synthetic input/output token pair for each of the proposal and goal-test calls");
   const sessionAtRest = JSON.parse(readFileSync(join(root, "state", "projects", "sessions", `${boundaryView.projectId}.json`), "utf8")) as { history: unknown };

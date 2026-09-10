@@ -1,19 +1,9 @@
 /**
- * BOUND-THE-DEFAULT-INPROCESS-PATH (Z189) — the DEFAULT in-process isolation path must NEVER audit a
- * "time-bounded" bound it did not apply. MEASURED: all three production constructions of
- * ProcessIsolationExecutor pass NO timeoutMs (keep_pipeline.ts:370, isolated_executor.ts:348/:352), and the
- * production inner runner is the operator's OPAQUE `deps.runner` (keep_pipeline.ts:444) — so the default path
- * runs UNBOUNDED (isolated_executor.ts:137) yet used to audit "in-process, time-bounded". DECISION (evidence-
- * bound): HONEST-THE-CLAIM — a universal default timeout would murder a legitimately-long opaque operator
- * suite, so arming stays opt-in via the EXISTING opts.timeoutMs->raceTimeout seam; the audit branches on the
- * bound ACTUALLY applied, never on command-vs-in-process.
- *
- * DISPROOF (each neuter isolates ONE property):
- *   HONEST-(a): revert the in-process label back to always "time-bounded" -> the UNBOUNDED default audit
- *               claims a bound it never applied -> RED (assertion #a fails).
- *   HONEST-(b): drop the "in-process, time-bounded" label on a genuinely-armed run -> RED (#b fails).
- *   WIRING (ledger 298): the PRODUCTION default pipeline path (no caps, opaque operator runner) must audit
- *               its in-process run as UNBOUNDED — reverting the label reddens the end-to-end default path.
+ * An opaque runner's audit must describe the bound actually applied. A direct call with no timeout or
+ * caller deadline remains unbounded. The pipeline now supplies its operation deadline even when the
+ * executor has no timeout option. These useful-work tests inspect that forwarding and its audit label;
+ * process_cancellation_audit.test.ts separately exercises timeout, continued work and late results.
+ * A bounded wait and cancellation signal are not enforced termination of an arbitrary callback.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -32,11 +22,11 @@ import { KeepPipeline } from "../src/pipeline/keep_pipeline.js";
 import { InMemoryMergePort } from "./helpers/in_memory_merge_port.js";
 import { pinnedGitDependencies } from "./helpers/pinned_git_dependencies.js";
 import type { ModelProvider, GenerateResult, Embedding } from "../src/gateway/gateway.js";
-import type { TestRunner, TestRunResult } from "../src/solve/validate.js";
+import type { TestRunner, TestRunResult, TestExecutionContext } from "../src/solve/validate.js";
 import type { RepoFile } from "../src/solve/localize.js";
 
 function newSpine(): Spine {
-  return new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "keep-ibh-"))), new InProcessLock(), new SchemaRegistry());
+  return new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "keep-ibh-")), { fsync: true }), new InProcessLock(), new SchemaRegistry());
 }
 function isoDetails(s: Spine): string[] {
   return s.replay()
@@ -50,7 +40,7 @@ const opaqueGreen: TestRunner = { async run(): Promise<TestRunResult> { return {
 test("HONEST-(a): the DEFAULT (unarmed) in-process run is audited UNBOUNDED, NEVER 'time-bounded'", async () => {
   const base = mkdtempSync(join(tmpdir(), "keep-ibh-a-"));
   const s = newSpine();
-  // The EXACT production floor construction (keep_pipeline.ts:370 / isolated_executor.ts:348/:352): no timeout.
+  // Neither an executor timeout nor a caller deadline is supplied to this direct call.
   const exec = new ProcessIsolationExecutor(s);
   const out = await exec.runIsolated(opaqueGreen, { projectDir: base, repoRef: ".", patchRisk: "medium" });
   await s.seal();
@@ -71,10 +61,11 @@ test("HONEST-(b): a genuinely ARMED in-process run IS audited 'time-bounded' (th
   assert.equal(out.executed, true, "the in-bounds run completed normally — an armed bound does not change a normal outcome");
   const details = isoDetails(s);
   assert.ok(details.some((d) => /in-process, time-bounded/.test(d)), `an armed in-process run must be audited time-bounded; got: ${JSON.stringify(details)}`);
+  assert.ok(details.some((d) => /time-bounded wait; callback termination not enforced/.test(d)));
   assert.ok(!details.some((d) => /UNBOUNDED/.test(d)), "an armed run is not UNBOUNDED");
 });
 
-// ---- WIRING (ledger 298): the PRODUCTION default pipeline path audits UNBOUNDED, end-to-end ----
+// Pipeline wiring: the inherited operation deadline is part of the actual execution context.
 const BROKEN = "export function add(a, b) { return a - b; }";
 function setupRemote(): string {
   const root = mkdtempSync(join(tmpdir(), "ibh-w-"));
@@ -96,13 +87,15 @@ const model: ModelProvider = {
   async embed(): Promise<Embedding[]> { return []; },
 };
 
-test("WIRING (ledger 298): the DEFAULT pipeline path audits its in-process run UNBOUNDED, never 'time-bounded'", async () => {
+test("WIRING: default pipeline forwards its operation deadline and reports bounded waiting, not callback termination", async () => {
   const work = setupRemote();
   const spine = newSpine();
   const tree = new InMemoryFileTree({ "src/calc.ts": BROKEN });
+  const observed: { context: TestExecutionContext | undefined; startedAt: number }[] = [];
   // The operator's OWN runner — opaque (NOT a SandboxedCommandRunner), exactly the production `deps.runner`.
   const runner: TestRunner = {
-    async run(): Promise<TestRunResult> {
+    async run(_repoRef, context): Promise<TestRunResult> {
+      observed.push({ context, startedAt: Date.now() });
       const c = (await tree.read("src/calc.ts")) ?? "";
       const ok = c.includes("a + b");
       return { results: [{ name: "add", passed: ok, ...(ok ? {} : { output: "expected +" }) }] };
@@ -110,7 +103,7 @@ test("WIRING (ledger 298): the DEFAULT pipeline path audits its in-process run U
   };
   const files: RepoFile[] = [{ path: "src/calc.ts", content: BROKEN }];
   // No isolationCapabilities, no injected isolationExecutor -> resolveIsolationExecutor() builds the process
-  // floor with NO timeout (the exact production default), wrapping the opaque runner above.
+  // floor with no timeout option. SolvePipeline must still forward its operation's deadline and signal.
   await new KeepPipeline({ spine, tree, runner, model } as never).solveIssueToPR(
     { id: "IBH", text: "add() in calc.ts subtracts instead of adds", repoRef: "e2e" },
     files,
@@ -118,8 +111,14 @@ test("WIRING (ledger 298): the DEFAULT pipeline path audits its in-process run U
     { autonomyLevel: "operator" },
   );
   await spine.seal();
+  assert.ok(observed.length > 0, "the useful-work oracle actually ran");
+  for (const { context, startedAt } of observed) {
+    assert.ok(context?.signal instanceof AbortSignal, "the actual runner receives cancellation notification");
+    assert.ok(Number.isFinite(context?.deadline), "the actual runner receives a finite deadline");
+    assert.ok(context!.deadline! > startedAt, "the runner was admitted before its deadline");
+  }
   const details = isoDetails(spine);
   assert.ok(details.length > 0, "the default path audited an isolated execution");
-  assert.ok(details.some((d) => /UNBOUNDED/.test(d)), `the production default in-process run must audit UNBOUNDED; got: ${JSON.stringify(details)}`);
-  assert.ok(!details.some((d) => /time-bounded/.test(d)), "the production default path must NEVER claim a bound it did not apply");
+  assert.ok(details.some((d) => /time-bounded wait; callback termination not enforced/.test(d)), JSON.stringify(details));
+  assert.ok(!details.some((d) => /UNBOUNDED/.test(d)), "an actual inherited deadline must not be reported absent");
 });

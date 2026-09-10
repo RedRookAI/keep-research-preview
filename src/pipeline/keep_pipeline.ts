@@ -493,7 +493,7 @@ export class KeepPipeline {
     }
 
     // ── Stage 1: authorization (deny-by-default; synthesize default restrictive envelope at N=1) ──
-    const authz = this.safetyRail.authorize(agentId, opts.envelope, issue.repoRef);
+    const authz = await this.safetyRail.authorize(agentId, opts.envelope, issue.repoRef);
     if (authz.outcome === "deny") {
       return { solveResult: gaveUp(issue.id, authz.reason), safety: { refusedBeforeSolve: authz } };
     }

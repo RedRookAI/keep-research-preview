@@ -58,7 +58,7 @@ function auditedTiers(s: Spine): string[] {
 
 async function run(extra: Record<string, unknown>): Promise<{ tiers: string[] }> {
   const work = setupRemote();
-  const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "stws-"))), new InProcessLock(), new SchemaRegistry());
+  const spine = new Spine(new FileSpineStore(mkdtempSync(join(tmpdir(), "stws-")), { fsync: true }), new InProcessLock(), new SchemaRegistry());
   const tree = new InMemoryFileTree({ "src/calc.ts": BROKEN });
   const runner: TestRunner = {
     async run(): Promise<TestRunResult> {
