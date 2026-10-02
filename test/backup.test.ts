@@ -74,8 +74,9 @@ test("INVARIANT: LocalBackup is idempotent on identical content", async () => {
 
 test("INVARIANT: LocalBackup REFUSES to overwrite a differing snapshot at the same id (immutability)", async () => {
   const backup = new LocalBackup();
-  const fakeA: Snapshot = { contentRoot: "aaa", blocks: [], blockCount: 0, eventCount: 0, takenAt: 1, id: "snap_x" };
-  const fakeB: Snapshot = { contentRoot: "bbb", blocks: [], blockCount: 0, eventCount: 0, takenAt: 2, id: "snap_x" }; // same id, diff content
+  const { spine } = await sealedChain(2);
+  const fakeA: Snapshot = buildSnapshot([], sha256, 1);
+  const fakeB: Snapshot = { ...buildSnapshot(blocksOf(spine), sha256, 2), id: fakeA.id }; // valid different history, same requested id
   await backup.put(fakeA);
   await assert.rejects(() => backup.put(fakeB), /immutability violation/, "cannot silently overwrite history");
 });

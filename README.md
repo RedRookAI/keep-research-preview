@@ -1,92 +1,57 @@
 # Keep
 
-Keep is a self-hosted platform for AI agents working on ongoing projects. It combines
-a native execution runtime with persistent knowledge, reusable procedures, and
-controls for permissions, acceptance, and recovery. Red Rook AI is developing Keep
-for individual operators and organizations coordinating several agents.
+Keep is a self-hosted platform for AI agents working on ongoing projects. It combines persistent knowledge, reusable skills and a native execution runtime with controls for permissions, acceptance and recovery. Security is at the heart of its approach to autonomy: useful work should preserve the operator's control over data, resources and effects.
 
-Our proposed research focuses on securing capable agents: preventing attacks,
-containing compromises, and preserving people's control while agents do useful work.
-The [security research brief](docs/security-experiments.md) sets out the proposed studies.
-Software development is the most developed workflow today. Keep can inspect a repository, obtain a
-model-proposed change, run checks in a work area, and apply the configured acceptance
-and merge policy.
+## Install and try it
 
-Keep is under active development. The first public research preview includes the
-implementation and a Linux x64 demonstration of resource accounting and recovery
-when an operation's response is lost. The demonstration requires no model account
-or paid service.
+**Linux x64, Node.js 22 with npm. No Rust or C toolchain is needed to install the binary package.** The qualified Node version for this release is 22.23.2.
 
-Download [maintenance preview 2026-09-10.2](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-09-10.2).
-The [release record](KEEP_RELEASE.md) identifies the reviewed source, prepared
-archives, checksums, and qualification results.
+Download `keep-0.0.4-preview.1.tgz` from the [0.0.4-preview.1 release](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-02.1), verify its SHA256 against the release record, then install:
 
-The [maintenance notes](docs/maintenance-2026-09-10.2.md) describe the corrections
-and remaining limits. **Before upgrading existing data, read the
-[skill-registry upgrade instructions](docs/skill-registry.md#upgrading-data-from-the-september-9-research-preview)
-and retain a private offline backup.**
+```sh
+npm i -g ./keep-0.0.4-preview.1.tgz
+```
 
-Start with the [preview guide](docs/research-preview.md) to install the package and
-run the experiment. The [security research brief](docs/security-experiments.md)
-describes proposed studies, the threats they address, and relevant prior work.
+If your npm global directory is not writable, use the user-local installation in the [five-minute quickstart](docs/quickstart.md). The archive bundles its existing JavaScript runtime dependency and the real native transport binaries. Installation does not compile native code or download a replacement transport.
 
-**Use the preview with synthetic data and isolated test resources. It is not ready
-for unattended production use.** Keep production credentials and unrestricted paid
-resources out of the introductory setup; see [Security](SECURITY.md).
+Run the no-key recovery experiment:
 
-## Start with the no-key experiment
+```sh
+keep version
+keep demo recovery
+```
 
-The demonstration compares a durable local outbox with Keep's resource accounting.
-It injects failed acknowledgments, restarts processes and tests reused dispatch
-permits. Benign controls exercise work that should still proceed.
+Expected output:
 
-The preview guide identifies the supported environment, current release record,
-commands and [known test limitations](docs/evidence.md#known-test-status). It also explains how to inspect the outbox
-instead of relying only on Keep's success message.
+```text
+keep 0.0.4-preview.1
+Recovery experiment passed: 24 checks; 0 model calls.
+Detailed results: /tmp/keep-installed-fleet-uncertainty-<generated-id>/report.json
+```
 
-## Build and inspect
+Only the generated results-directory suffix varies. The experiment records local outbox effects, loses acknowledgments and restarts processes. It checks that uncertain work stays accounted for and that permitted work can still proceed. It uses synthetic data, makes no model calls and requires no account or paid service.
 
-The first supported introductory configuration is Linux x64 with Node.js 22.23.2
-and npm 10.9.8. Building native code also needs the pinned Rust toolchain and host
-C build tools described in the preview guide. A binary-package consumer does not
-need Rust.
+The native transport is included exactly through Keep's source-build packaging mechanism. Its optional refusal-only exchange has separate custody requirements; the introductory experiment exercises the installed accounting and recovery API. See [Security](SECURITY.md#optional-native-refusal-transport-installation-prerequisites).
 
-From a source checkout:
+## What this preview offers
 
-~~~sh
-npm ci
-npm run test:fast
-npm run test:notices
-~~~
+Keep has CLI, gateway and client interfaces, project and memory storage, skill validation, governed coding workflows and resource-accounting mechanisms. The supported first-run result is the installed recovery experiment above. Provider-backed coding, enterprise identity and host isolation require their own configuration and qualification.
 
-These commands install locked dependencies, typecheck TypeScript and check notices;
-they do not execute the behavioral suite. See [Contributing](WORKFLOW.md) for the
-build and test commands and the preview guide for installed-demo instructions.
-
-## Explore the implementation
-
-| Area | Starting points |
-| --- | --- |
-| Coding | [Native observation/proposal loop](src/solve/edit_planner.ts), [governed merge and revert](src/solve/governed_local_merge.ts) |
-| Memory | [Source-linked task context](src/memory/task_context.ts), [semantic retrieval and retention configuration](docs/semantic-memory.md) |
-| Skills | [Distillation](src/loop/skill_distiller.ts), [comparative evaluation](src/loop/skill_evaluator.ts), [registry lifecycle](src/registry/skill_registry.ts) |
-| Fleet | [Joint admission](src/fleet/fleet_gate.ts), [durable resource and effect lifecycle](src/fleet/fleet_lifecycle.ts) |
-| Deployment controls | [Enforcement profiles](src/platform/enforcement_profile.ts), [capability/evidence graph](src/graph/capability_graph_v2.ts) |
-| Audit | [Pre-effect witnessing](src/witness/pre_effect_witness.ts), [evidence export](src/witness/witness_export.ts) |
-| Authority | [Delegation](src/identity/delegation_registry.ts), [merge decisions](src/oversight/merge_authority.ts) |
-
-Keep supports native execution and has CLI, gateway, client and integration
-interfaces. Qualification differs by route; these interfaces are not a promise of
-compatibility with every provider or external coding agent. OpenClaw skill intake
-currently handles static intent/specification material. Signed desktop/mobile
-applications are not part of this preview.
+This remains a research preview. Use synthetic data and isolated test resources while evaluating it. It is not qualified for unattended consequential production work, universal spending enforcement or exactly-once effects across arbitrary remote services. [Known limitations](docs/research-preview.md#interpreting-the-result) describe those boundaries.
 
 ## Read further
 
-- [Preview and installation](docs/research-preview.md)
+- [Five-minute quickstart](docs/quickstart.md)
+- [Release changes and upgrade guidance](docs/maintenance-2026-10-02.md)
+- [Installation details and limitations](docs/research-preview.md)
+- [Release record and qualification evidence](KEEP_RELEASE.md)
 - [Proposed security research](docs/security-experiments.md)
-- [Results, artifacts and known test status](docs/evidence.md)
-- [Contributing and tests](WORKFLOW.md)
+- [Semantic memory](docs/semantic-memory.md), [skills](docs/skill-registry.md) and [backups](docs/backup.md)
+- [Contributing and source builds](WORKFLOW.md)
 - [Security and private reporting](SECURITY.md)
 - [Licensing and attribution](docs/licensing.md)
-- [Semantic memory configuration](docs/semantic-memory.md)
+
+## Source contributors
+
+Binary-package users can skip source builds. Contributors need Node/npm, Git, the pinned Rust toolchain and host C build tools for native compilation. The source includes the locked dependencies and build instructions; see [Contributing](WORKFLOW.md).
+

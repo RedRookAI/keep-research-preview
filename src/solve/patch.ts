@@ -7,7 +7,7 @@
  * is rejected; it never silently applies to the wrong place. This engine enforces that: each edit must
  * match its search block EXACTLY and UNIQUELY, or it is reported not-found / ambiguous and NOT applied.
  *
- * Edits go against a real working tree (an injected FileTree port — a real filesystem on Hetzner, an
+ * Edits go against a real working tree (an injected FileTree port — a real filesystem on configured host, an
  * in-memory tree in tests). Every applied plan is one reversible RollbackLedger action whose undo
  * restores the exact original file contents. Zero deps.
  */
@@ -16,7 +16,7 @@ import type { RollbackLedger } from "../control/rollback.js";
 import { runMediatedWith, WriteGrant } from "./mediated_tree.js";
 import type { EditPlan, PatchApplyResult, SearchReplaceEdit } from "./issue_model.js";
 
-/** The working-tree port: read/write files. Real fs on Hetzner; in-memory in tests. */
+/** The working-tree port: read/write files. Real fs on configured host; in-memory in tests. */
 export interface FileTree {
   read(path: string): Promise<string | undefined>;
   write(path: string, content: string): Promise<void>;

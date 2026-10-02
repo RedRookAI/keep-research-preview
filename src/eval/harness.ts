@@ -5,16 +5,16 @@
  * validate→repair→PR proposal), then execute the fail-to-pass + pass-to-pass tests against the patched
  * tree and judge via the two-part oracle (16a). Records cost + trajectory to the spine (tamper-evident,
  * auditable — Keep's differentiator vs a leaderboard boast). Benchmark-agnostic: the synthetic suite
- * runs it here under the replay model; real SWE-bench Verified/Pro adapters run it on Hetzner behind the
+ * runs it here under the replay model; real SWE-bench Verified/Pro adapters run it on configured host behind the
  * same TaskSource port. Latency-to-first-patch + failure class are recorded (variance/cost signals the
  * 2026 SOTA says matter more than peak score). Zero deps.
  */
 
 import type { Spine } from "../spine/spine.js";
 import type { SolveResult } from "../solve/issue_model.js";
-import { judgeResolution, type EvalTask, type TestExecution, type ResolutionVerdict } from "./swebench_task.js";
+import { judgeResolution, testPopulationError, type EvalTask, type TestExecution, type ResolutionVerdict } from "./swebench_task.js";
 
-/** How the harness runs an instance's solve + tests. Provided by the suite (synthetic) or Hetzner adapter. */
+/** How the harness runs an instance's solve + tests. Provided by the suite (synthetic) or configured host adapter. */
 export interface InstanceRunner {
   /**
    * Solve the task (run the SolvePipeline against an instance-scoped tree/runner/model) and return the
@@ -51,6 +51,8 @@ export interface InstanceRun {
 
 /** Run a single instance end-to-end and record it to the spine. */
 export async function runInstance(task: EvalTask, runner: InstanceRunner, spine: Spine, now: () => number = () => Date.now()): Promise<InstanceRun> {
+  const invalid = testPopulationError(task);
+  if (invalid) throw new Error(`cannot evaluate ${task.instanceId}: ${invalid}`);
   const started = now();
 
   const solveResult = await runner.solve(task);
@@ -120,6 +122,12 @@ function classify(verdict: ResolutionVerdict, solved: boolean): FailureClass {
 
 /** Run a whole suite of instances (sequentially — deterministic, auditable). */
 export async function runSuite(tasks: readonly EvalTask[], runner: InstanceRunner, spine: Spine, now: () => number = () => Date.now()): Promise<InstanceRun[]> {
+  // Reject an unscorable suite before starting any instance, rather than throwing
+  // after earlier instances have consumed work and dropping their returned runs.
+  for (const task of tasks) {
+    const invalid = testPopulationError(task);
+    if (invalid) throw new Error(`cannot evaluate suite: ${task.instanceId}: ${invalid}`);
+  }
   const runs: InstanceRun[] = [];
   for (const task of tasks) runs.push(await runInstance(task, runner, spine, now));
   return runs;

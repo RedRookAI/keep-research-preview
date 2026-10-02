@@ -52,10 +52,10 @@ test("PATH ESCAPE: a repoRef outside the project dir is refused", async () => {
   assert.match(r.runnerError ?? "", /escape/i, "an out-of-project scope is refused");
 });
 
-test("parseTap: ok/not ok/SKIP handling", () => {
-  const cases = parseTap(["ok 1 - alpha", "not ok 2 - beta", "ok 3 - gamma # SKIP not ready", "noise line"].join("\n"));
-  assert.equal(cases.length, 3);
-  assert.deepEqual(cases.map((c) => c.passed), [true, false, true]); // SKIP is non-failing
+test("parseTap: complete plan, failures retained and SKIP excluded from execution evidence", () => {
+  const cases = parseTap(["TAP version 13", "ok 1 - alpha", "not ok 2 - beta", "ok 3 - gamma # SKIP not ready", "# diagnostic comment", "1..3"].join("\n"));
+  assert.equal(cases.length, 2);
+  assert.deepEqual(cases.map((c) => c.passed), [true, false]);
   assert.equal(cases[1]!.name, "beta");
 });
 

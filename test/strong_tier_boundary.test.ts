@@ -59,7 +59,7 @@ test("(a) STRONG TIER: an absolute-path write OUTSIDE the project does NOT land 
   if (DOCKER_OK) {
     const boundaryRun = buildContainerBoundaryRun(RT, {
       projectDir: proj, image: "busybox:latest", command: "sh",
-      args: ["-c", `echo pwned > ${outside} 2>/dev/null; echo 'ok 1 - tried'`], timeoutMs: 30_000,
+      args: ["-c", `echo pwned > ${outside} 2>/dev/null; echo 'ok 1 - tried'; echo '1..1'`], timeoutMs: 30_000,
     });
     await boundaryRun(noopRunner, execSpec(proj));
     // REAL kernel/filesystem effect: the out-of-project write must NOT exist on the HOST filesystem.
@@ -81,7 +81,7 @@ test("(b) STRONG TIER: an in-project write + a normal passing test stay GREEN (n
   if (DOCKER_OK) {
     const boundaryRun = buildContainerBoundaryRun(RT, {
       projectDir: proj, image: "busybox:latest", command: "sh",
-      args: ["-c", "echo hi > ./in.txt && echo 'ok 1 - inproject write'"], timeoutMs: 30_000,
+      args: ["-c", "echo hi > ./in.txt && echo 'ok 1 - inproject write' && echo '1..1'"], timeoutMs: 30_000,
     });
     const r = await boundaryRun(noopRunner, execSpec(proj));
     assert.equal(r.runnerError, undefined, "a legitimate in-project run has no runner error");
@@ -125,7 +125,7 @@ test("(d) STRONG TIER: network egress from the child is refused (--network none;
   if (DOCKER_OK) {
     const boundaryRun = buildContainerBoundaryRun(RT, {
       projectDir: proj, image: "busybox:latest", command: "sh",
-      args: ["-c", "wget -T 4 -q -O- http://1.1.1.1 >/dev/null 2>&1 && echo 'ok 1 - EGRESS_REACHED' || echo 'ok 1 - EGRESS_DENIED'"], timeoutMs: 30_000,
+      args: ["-c", "wget -T 4 -q -O- http://1.1.1.1 >/dev/null 2>&1 && echo 'ok 1 - EGRESS_REACHED' || echo 'ok 1 - EGRESS_DENIED'; echo '1..1'"], timeoutMs: 30_000,
     });
     const r = await boundaryRun(noopRunner, execSpec(proj));
     const out = r.results.map((c) => c.name + " " + (c.output ?? "")).join(" ");

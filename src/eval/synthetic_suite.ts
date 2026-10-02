@@ -6,7 +6,7 @@
  * task through a real SolvePipeline under a scripted/replay model, then runs the tests against the
  * patched in-memory tree. No Docker, no dataset, no network — the whole harness contract is provable
  * in the sandbox. Real SWE-bench Verified/Pro adapters replace this suite behind the same TaskSource +
- * InstanceRunner ports on Hetzner. Zero deps.
+ * InstanceRunner ports on configured host. Zero deps.
  */
 
 import { mkdtempSync } from "node:fs";
@@ -180,7 +180,7 @@ export class SyntheticSuite implements TaskSource {
   readonly name = "synthetic-planted-bugs";
   async load(): Promise<readonly EvalTask[]> { return INSTANCES.map((i) => i.task); }
   caveats(): readonly string[] {
-    return ["synthetic suite — proves the harness contract; not a real-world resolution number (that is the Hetzner seam)"];
+    return ["synthetic suite — proves the harness contract; not a real-world resolution number (that is the configured host seam)"];
   }
 }
 
@@ -257,7 +257,7 @@ export class SyntheticInstanceRunner implements InstanceRunner {
   }
 
   costUsd(_task: EvalTask, result: SolveResult): number {
-    // Synthetic cost proxy: a small fixed cost per stage run (real cost comes from the gateway on Hetzner).
+    // Synthetic cost proxy: a small fixed cost per stage run (real cost comes from the gateway on configured host).
     return result.stagesRun.length * 0.001;
   }
 }

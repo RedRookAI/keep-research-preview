@@ -75,9 +75,9 @@ export const KEEP_SOLVE_IDENTITY_ID = "keep-solve";
 
 export interface KeepPipelineDeps {
   readonly spine: Spine;
-  /** The working tree (in-memory here; a real git worktree on Hetzner — same port). */
+  /** The working tree (in-memory here; a real git worktree on configured host — same port). */
   readonly tree: FileTree;
-  /** The test oracle (scripted here; a process-spawning runner on Hetzner — same port). */
+  /** The test oracle (scripted here; a process-spawning runner on configured host — same port). */
   readonly runner: TestRunner;
   /** The planning/repair model (replay/local/http behind the gateway). */
   readonly model: ModelProvider;

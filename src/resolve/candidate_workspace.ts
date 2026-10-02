@@ -1,6 +1,7 @@
 import type { Issue } from "../solve/issue_model.js";
 import { InMemoryWorkspace, type Workspace } from "../solve/workspace.js";
 import type { CandidateExecution, CandidateSolver } from "./best_of_n.js";
+import { captureSolveResult, withCandidateCleanup } from "./candidate_snapshot.js";
 
 export interface CandidateWorkspaceLease {
   readonly workspaceId: string;
@@ -10,6 +11,7 @@ export interface CandidateWorkspaceLease {
 }
 
 export interface CandidateWorkspaceFactory {
+  /** executionId is scoped to resolutionId; factories must not share leases across resolutions. */
   allocate(issue: Issue, execution: CandidateExecution): Promise<CandidateWorkspaceLease>;
   finishResolution?(resolutionId: string): void | Promise<void>;
 }
@@ -39,11 +41,8 @@ export function isolateCandidateSolver(sample: CandidateSolver, factory: Candida
     if (!execution) throw new Error("candidate execution identity is required for workspace isolation");
     const lease = await factory.allocate(issue, execution);
     if (!lease.workspaceId || !lease.repoRef || !lease.workspace) throw new Error("candidate workspace factory returned an invalid lease");
-    try {
-      return await sample({ ...issue, repoRef: lease.repoRef }, sampleIndex, { ...execution, workspace: lease.workspace, repoRef: lease.repoRef });
-    } finally { await lease.release(); }
+    return withCandidateCleanup(async () => captureSolveResult(await sample({ ...issue, repoRef: lease.repoRef }, sampleIndex, { ...execution, workspace: lease.workspace, repoRef: lease.repoRef })), () => lease.release());
   };
-  isolated.finishResolution = (resolutionId) => factory.finishResolution?.(resolutionId);
+  isolated.finishResolution = (resolutionId) => withCandidateCleanup(async () => { await sample.finishResolution?.(resolutionId); }, () => factory.finishResolution?.(resolutionId));
   return isolated;
 }
-

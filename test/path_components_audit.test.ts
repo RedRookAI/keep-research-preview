@@ -103,7 +103,7 @@ test("KEEP-11A-004: real runner permits contained dot-prefix scope and refuses o
   const { root, data } = paths();
   const marker = join(data, "ran.txt");
   const runner = new SandboxedCommandRunner({ command: process.execPath,
-    args: ["-e", "require('node:fs').appendFileSync('ran.txt','entry\\n');console.log('ok 1 - useful work')"],
+    args: ["-e", "require('node:fs').appendFileSync('ran.txt','entry\\n');console.log('ok 1 - useful work\\n1..1')"],
     projectDir: data, namespaceJail: false, timeoutMs: 2000 });
   const result = await runner.run(join(data, "..cache"));
   assert.equal(result.runnerError, undefined);

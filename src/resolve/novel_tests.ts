@@ -1,23 +1,13 @@
 /**
- * Novel-test generation (Increment R3) — strengthen the verifier by generating DISCRIMINATING tests, and turn R2's
- * static approach-clustering into behavioral pass-profile clustering. The model that generates tests and the runner
- * that executes them are SEAMS; the pass-matrix ANALYSIS here is deterministic, zero-dep, and fully tested.
+ * Generated tests provide sampled behavioral comparisons among candidates that
+ * already passed the configured patch checks. Generation and execution are trusted
+ * host ports; immutable candidate/test snapshots preserve what those observations
+ * describe. A digest identifies content, not correct execution or truthful results.
  *
- * SOTA basis (2026-08-06):
- *  - Neither code nor tests are guaranteed correct — "we need reliable tests to judge code and reliable code to
- *    judge tests, but have neither" (ACES, arXiv 2604.03922). So generated tests are HYPOTHESES, not ground truth
- *    (Nexus 2510.26423; TOGLL; TianPan): they inform selection + escalation, they can never auto-approve, and the
- *    SOUND floor (R1 verifyPatch) stays primary.
- *  - Weight tests by DISCRIMINATIVE POWER, not uniformly — a test's value tracks its pass-rate variance p(1-p)
- *    (ACES): a test everyone passes carries no signal; one that splits the pool ~50/50 is maximally informative.
- *  - A test that NO candidate passes is likely wrong / over-constrained → discard ("who tests the tests", ACES).
- *  - Behavioral evidence beats aggregation rules — cluster candidates by pass-profile (SemanticVote 2605.08680,
- *    +19–52 pts over output-pattern voting; CodeT consensus sets).
- *  - A behavioral fork among verified candidates → ESCALATE to a human; differential testing surfaces the fork
- *    (arXiv 2605.20473), but a majority can be confidently wrong (SEP 2604.06485), so Keep does not auto-pick it.
- *
- * What would change it: with a sandbox, the executor runs the tests for real (here it is injected); a multi-agent
- * deliberation-validation oracle (Nexus/CANDOR) can strengthen the generator behind the same port.
+ * Pass-profile clustering is a heuristic, not proof that a test is valid or that
+ * candidates are equivalent. An all-fail row can expose a shared bug, not only a
+ * defective test. The reported fork informs downstream review; this library does
+ * not itself enforce a human approval or authorize a merge.
  */
 
 import type { Issue, SolveResult } from "../solve/issue_model.js";
@@ -26,6 +16,7 @@ import { makeHybridSelector } from "./selector.js";
 import type { PatchVerifierInput, PatchVerdict } from "../pipeline/patch_verifier.js";
 import type { Spine } from "../spine/spine.js";
 import { randomUUID } from "node:crypto";
+import { captureCandidateData, captureSolveResult, candidateDataSha256, withCandidateCleanup } from "./candidate_snapshot.js";
 
 export interface GeneratedTest {
   readonly id: string;
@@ -116,12 +107,13 @@ export function analyzePassMatrix(tests: readonly GeneratedTest[], candidateIndi
 
 /** Run the generator + executor seams to build the pass-matrix for a set of candidates. */
 export async function buildPassMatrix(gen: TestGenerator, exec: TestExecutor, issue: Issue, candidates: readonly { readonly index: number; readonly result: SolveResult }[]): Promise<{ tests: readonly GeneratedTest[]; candidateIndices: number[]; matrix: TestResult[][] }> {
-  const tests = await gen.generate(issue, candidates.map((c) => c.result));
-  const candidateIndices = candidates.map((c) => c.index);
+  const captured = captureCandidateData(candidates);
+  const tests = captureCandidateData(await gen.generate(issue, Object.freeze(captured.map((c) => c.result))));
+  const candidateIndices = captured.map((c) => c.index);
   const matrix: TestResult[][] = [];
   for (const test of tests) {
     const row: TestResult[] = [];
-    for (const c of candidates) row.push(await exec.run(test, c.result, c.index));
+    for (const c of captured) row.push(await exec.run(test, c.result, c.index));
     matrix.push(row);
   }
   return { tests, candidateIndices, matrix };
@@ -148,6 +140,8 @@ export interface TestsResolveResult {
   readonly behavioralFork: boolean;
   readonly analysis: PassMatrixAnalysis | null;
   readonly sampled: number;
+  /** Inert JSON-content identities, not proof that a supplied executor is trustworthy. */
+  readonly candidateDigests: readonly { readonly index: number; readonly sha256: string }[];
 }
 
 /**
@@ -159,13 +153,14 @@ export async function selectBestOfNWithTests(deps: TestsResolveDeps, issue: Issu
   const n = Math.max(1, opts.n);
   const results: SolveResult[] = [];
   const resolutionId = randomUUID();
-  try {
+  await withCandidateCleanup(async () => {
     for (let i = 0; i < n; i++) {
-      results.push(await deps.sample(issue, i, n === 1 ? undefined : {
+      results.push(captureSolveResult(await deps.sample(issue, i, {
         executionId: `${issue.id}:candidate:${i}`, sampleIndex: i, resolutionId,
-      })); // no early-stop: need all for differential testing
+      }))); // no early-stop: need all for differential testing
     }
-  } finally { await deps.sample.finishResolution?.(resolutionId); }
+  }, () => deps.sample.finishResolution?.(resolutionId));
+  const candidateDigests = Object.freeze(results.map((result, index) => Object.freeze({ index, sha256: candidateDataSha256(result) })));
   const scored = scoreAll(results, { ...(deps.verify ? { verify: deps.verify } : {}), ...(opts.issueText ? { issueText: opts.issueText } : {}), ...(opts.maxEdits !== undefined ? { maxEdits: opts.maxEdits } : {}) });
   const cleared = scored.filter((s) => s.cleared);
 
@@ -198,6 +193,7 @@ export async function selectBestOfNWithTests(deps: TestsResolveDeps, issue: Issu
       cleared: cleared.length,
       selectedIndex: winner.index,
       winnerCleared: winner.cleared,
+      candidateDigests,
       behavioralFork,
       validatedTests: analysis ? analysis.stats.filter((s) => s.validated).length : 0,
       discardedTests: analysis ? analysis.stats.filter((s) => !s.validated).length : 0,
@@ -206,5 +202,5 @@ export async function selectBestOfNWithTests(deps: TestsResolveDeps, issue: Issu
     },
   });
 
-  return { winner: winner.result, winnerCleared: winner.cleared, selectedIndex: winner.index, behavioralFork, analysis, sampled: scored.length };
+  return { winner: winner.result, winnerCleared: winner.cleared, selectedIndex: winner.index, behavioralFork, analysis, sampled: scored.length, candidateDigests };
 }

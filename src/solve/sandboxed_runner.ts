@@ -4,16 +4,16 @@
  * setup is best-effort by default; explicit required mode refuses unsupported
  * setup. processIsolation records the selected boundary alongside results.
  *
- * SOTA basis (2026-08-08): the process EXIT CODE is the universal, framework-agnostic pass/fail contract (node:test,
- * pytest, jest, vitest all exit non-zero on failure); TAP v13 is the zero-config structured format node:test emits when
- * stdout is piped (our case), so we parse `ok`/`not ok` lines for per-CASE detail — but the exit code decides the overall
- * verdict. What would change it: a project whose runner needs a JSON/JUnit reporter for detail can supply a different
- * parser behind the same seam; the exit-code contract still governs pass/fail.
+ * Declared TAP must provide complete, eligible test evidence. Skips and TODOs are
+ * not passing executions. Other reporters provide a named command-exit check,
+ * not a measured test count. See command_test_evidence.ts for the shared contract.
  *
  * Fail-safe: a run that could not COMPLETE (spawn error, timeout, signal-kill) returns a runnerError — never a green.
  */
 
-import type { TestRunner, TestRunResult, TestCaseResult, TestExecutionContext } from "./validate.js";
+import type { TestRunner, TestRunResult, TestExecutionContext } from "./validate.js";
+import { interpretCommandTests } from "./command_test_evidence.js";
+export { parseTap } from "./command_test_evidence.js";
 import { executionStopReason } from "../infra/execution_lifetime.js";
 import { copyProcessIsolationObservation, processPlanObservation, readProcessIsolationObservation } from "../infra/isolation_backend.js";
 import { ProcessIsolationAdapter, resolvedWithinProject, type IsolationPolicy } from "../infra/process_isolation.js";
@@ -143,41 +143,8 @@ export class SandboxedCommandRunner implements TestRunner {
       return { ...observed, results: [], failureKind: "harness", runnerError: "required-jail setup was not confirmed; command may have run" };
     }
 
-    const cases = parseTap(`${res.stdout}\n${res.stderr}`);
-
-    // The EXIT CODE is authoritative for the overall verdict.
-    if (res.code === 0) {
-      // Passed. Use parsed cases if any; otherwise a single synthetic pass (results must be non-empty to count as passed).
-      return { ...observed, results: cases.length > 0 ? cases : [{ name: `${this.cfg.command} ${this.cfg.args.join(" ")}`.trim(), passed: true }] };
-    }
-
-    // Non-zero exit → failed. Prefer the parsed failing cases; else a synthetic failure carrying the output tail.
-    const failing = cases.filter((c) => !c.passed);
-    if (failing.length > 0) return { ...observed, results: cases };
-    const tail = (res.stderr || res.stdout).slice(-2000);
-    return { ...observed, results: [{ name: `${this.cfg.command} ${this.cfg.args.join(" ")}`.trim(), passed: false, output: tail || `exit code ${res.code}` }] };
+    return { ...observed, ...interpretCommandTests(`${this.cfg.command} ${this.cfg.args.join(" ")}`.trim(), { ...res, code: res.code }) };
   }
-}
-
-/**
- * Parse TAP v13 `ok` / `not ok` lines into per-case results. Lenient: ignores non-TAP noise, treats `# SKIP`/`# TODO`
- * directives as non-failing, and returns [] when the output isn't TAP (the caller falls back to the exit code).
- */
-export function parseTap(output: string): TestCaseResult[] {
-  const cases: TestCaseResult[] = [];
-  for (const raw of output.split(/\r?\n/)) {
-    const line = raw.trim();
-    const m = /^(ok|not ok)\b\s*(\d+)?\s*-?\s*(.*)$/.exec(line);
-    if (!m) continue;
-    const isOk = m[1] === "ok";
-    let name = (m[3] ?? "").trim();
-    // A `# SKIP` / `# TODO` directive on a `not ok` is not a real failure.
-    const directive = /#\s*(SKIP|TODO)\b/i.test(name);
-    name = name.replace(/\s*#\s*(SKIP|TODO)\b.*$/i, "").trim() || "test";
-    const passed = isOk || directive;
-    cases.push({ name, passed, ...(passed ? {} : { output: line })});
-  }
-  return cases;
 }
 
 /**

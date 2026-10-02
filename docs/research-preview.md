@@ -2,153 +2,21 @@
 
 ## This release
 
-**Keep 0.0.3-preview.1 — maintenance research preview keep-preview-2026-09-10.2.**
+Keep 0.0.4-preview.1 provides a prebuilt Linux x64 package and the no-key recovery experiment. Start with the [five-minute quickstart](quickstart.md). The primary installation is `npm i -g ./keep-0.0.4-preview.1.tgz`; source builds are for contributors.
 
-Download the named assets from the
-[GitHub release](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-09-10.2).
-The [release record](../KEEP_RELEASE.md) connects the originating development revision
-with the public snapshot commit and unchanged prepared archive checksums.
+The release identity is `keep-preview-2026-10-02.1`. The [release record](../KEEP_RELEASE.md) supplies artifact hashes and the exact qualification results. It is a companion to the archives rather than a file inside an archive whose hash it records.
 
-The distribution consists of `keep-source-preview-2026-09-10.2.tar.gz` (the complete selected
-source) and `keep-0.0.3-preview.1.tgz` (the installable package). The accompanying
-`KEEP_RELEASE.md` is the single current release record: it names the source revision,
-both archive hashes, supported configuration, checks actually performed and remaining
-limitations. It is supplied alongside the archives, not embedded inside an archive
-whose hash it records. Do not substitute a historical hash from this guide.
+The binary package contains compiled JavaScript, its bundled existing runtime dependency and three static Linux x64 native binaries. Installing it does not need Rust or a C toolchain. Node 22.23.2 is the qualified runtime. Native source compilation still uses Rust 1.97.1, the musl target and host C build tools.
 
-The introductory configuration is Linux x64, Node.js 22.23.2 and npm 10.9.8.
-Source builds additionally use the pinned Rust and C toolchain described below.
-The installed demonstration needs no model account, GPU or paid service.
-Tests use synthetic local effects and injected tenant identity; they do not establish
-production enterprise authentication or outside replication.
+## Verify the downloaded archive
 
-Use synthetic data and isolated test resources. Do not attach production credentials
-or unrestricted paid services. See [Security](../SECURITY.md).
-
-### Known test status
-
-The introductory demonstration and the broader experimental suite have separate
-results. A historical portable run recorded **4,497 passes and 11 failures**, including
-five repository-flow failures that persisted after the workspace prerequisite was
-supplied. Those historical results retain their original identities. Read the
-[known failures and their scope](evidence.md#known-test-status) before using other
-workflows; a passing introductory demo does not qualify general coding.
-
-This maintenance update includes targeted corrections and regression tests, not
-completion of the ongoing audit. Its exact installation and test results are in
-the [release record](../KEEP_RELEASE.md); see the
-[maintenance notes](maintenance-2026-09-10.2.md) for included work and limitations.
-Before opening existing data, follow the
-[skill-registry upgrade and backup instructions](skill-registry.md#upgrading-data-from-the-september-9-research-preview).
-Also read the [current upgrade notes](maintenance-2026-09-10.2.md#upgrade-and-recovery)
-for project snapshots, event history, accounting and client compatibility.
-
-## First supported experiment
-
-Suppose an operation consumes one unit of a shared resource. The adapter performs
-the effect but its acknowledgment fails. An exception does not tell the runtime
-whether the effect occurred. If it releases the reservation, another operation can
-exceed a capacity limit even with a different operation ID.
-
-The [installed accounting experiment](../acceptance/installed_sg32_resources.mjs)
-uses an append-only, fsynced local outbox as a payment/mail-like synthetic sink. It
-compares those actual sink rows with Keep's committed and reserved capacity. No real
-payment, message, provider request or private data is involved. The test provider
-throws if called. Fault labels go to the test adapter, not to Keep's decision logic.
-
-| Schedule/control | What the evaluator checks |
-| --- | --- |
-| Effect followed by an exception or unsuccessful result | The possible obligation remains reserved and blocks excess work after restart |
-| Exception before the effect, but after entering the adapter | Keep conservatively retains uncertainty; the harness's hidden answer is not runtime evidence |
-| Actual refusal before invoking the adapter | No effect occurs and unused capacity can be released |
-| Successful acknowledgment | One committed effect is accounted once |
-| Capacity remains for another target | Useful work succeeds; the mechanism is not a deny-everything box |
-| Concurrent or restarted reuse of an active dispatch permit | At most one adapter entry consumes that permit |
-| Durable claim followed by no adapter entry | No effect, but the claim remains an unresolved obligation across restart |
-
-The harness runs personal and injected-tenant configurations. Injected tenant
-identity exercises scope distinctions, not a production identity provider. Fresh
-child processes exercise restart. Concurrent entry cases are not an entire
-heterogeneous autonomous fleet or an abrupt-power-loss experiment.
-
-## Source build prerequisites
-
-The intended first native target is Linux x64. Recent development used Node.js
-22.23.2 and npm 10.9.8. Git is required for broader repository tests. A host C
-compiler available as `cc`, its linker and development libraries are also required:
-Cargo compiles host-side dependency build scripts even when Keep's target binaries
-use the bundled Rust linker. The isolated build check uses the existing GCC 13.3.0
-and GNU binutils 2.42. These are build prerequisites, not extra services or binary
-package runtime requirements. Their identities are not covered by the Rust inventory;
-do not interpret that inventory as a complete attestation of the build machine.
-The native source build selects Rust 1.97.1 with host x86_64-unknown-linux-gnu, target
-x86_64-unknown-linux-musl and rustfmt. Exact inputs are recorded in
-[toolchain-lock.json](../native/toolchain-lock.json) and
-[toolchain-inventory.json](../native/toolchain-inventory.json).
-
-The complete source includes the native crates, vendor trees, build scripts and
-inventory. A binary npm tarball is not a complete source-build distribution.
-Set KEEP_P1_TOOLCHAIN_ROOT to an absolute installation of the matching toolchain,
-or RUSTUP_HOME to its rustup installation root. Without an override, tools look in
-the current user's `.rustup/toolchains` directory. An explicit toolchain root takes
-precedence over the rustup root for the documented build and P1 inventory checks. Do not
-copy a maintainer's private path into your environment. Selecting a directory does
-not bypass the pinned compiler and library checks.
-
-Separate P2 dependency/candidate probes and Firecracker host qualification still have
-deployment-specific paths or pinned host executables. They are retained experimental
-source, not qualified commands for this portable entry point. Do not replace their
-expected digests or relax their isolation assertions to make them run on another host.
-
-If rustup is already installed, the selected toolchain can be obtained explicitly:
-
-```sh
-rustup toolchain install 1.97.1-x86_64-unknown-linux-gnu --profile minimal --component rustfmt --target x86_64-unknown-linux-musl
-keep_preview_rustc="$(rustup which --toolchain 1.97.1-x86_64-unknown-linux-gnu rustc)"
-export KEEP_P1_TOOLCHAIN_ROOT="${keep_preview_rustc%/bin/rustc}"
-```
-
-This installs build tools, not a Keep runtime requirement for binary-package users.
-Do not run installation commands without authority on the target machine. Consult
-the official [rustup installation instructions](https://rust-lang.github.io/rustup/installation/other.html)
-if rustup is absent. The [minimal profile](https://rust-lang.github.io/rustup/concepts/profiles.html)
-does not include rustfmt, hence the explicit component above. Keep's build still
-checks the pinned compiler/library inventory; a matching version label alone is
-not sufficient. A differing inventory is a diagnostic to investigate, not permission
-to regenerate the lock to match an arbitrary compiler.
-
-From the source root, after obtaining the required tools:
-
-```sh
-npm ci
-npm run test:fast
-npm run test:notices
-npm run build
-npm pack
-```
-
-The explicit build is useful while developing; npm pack also builds, so omit the
-separate build when only producing an archive. Installation and packing use their
-ordinary scripts-enabled paths. The current release record identifies the exact
-build inputs and checks; earlier toolchain-acquisition results are in the [evidence history](evidence.md#evidence-history).
-
-## Run the demonstration
-
-Obtain the package and its accompanying `KEEP_RELEASE.md` from the same release.
-Copy the **package** SHA256 from that record into the environment variable below;
-do not calculate the expected value from the downloaded package itself.
-
-~~~sh
-export KEEP_RELEASE_SHA256='PASTE_PACKAGE_SHA256_FROM_KEEP_RELEASE_MD'
-~~~
-
-Then run this block from the directory containing `keep-0.0.3-preview.1.tgz`:
+Set `KEEP_RELEASE_SHA256` to the published package checksum. This block stops before installation if the archive is absent or its checksum does not match, then runs the experiment against the installed package and verified archive:
 
 ~~~sh
 (
   set -eu
-  : "${KEEP_RELEASE_SHA256:?Set KEEP_RELEASE_SHA256 to the package SHA256 from KEEP_RELEASE.md}"
-  keep_demo_archive="$(realpath keep-0.0.3-preview.1.tgz)"
+  : "${KEEP_RELEASE_SHA256:?Set KEEP_RELEASE_SHA256 to the published package checksum}"
+  keep_demo_archive="$(realpath keep-0.0.4-preview.1.tgz)"
   printf '%s  %s\n' "$KEEP_RELEASE_SHA256" "$keep_demo_archive" |
     sha256sum --check --status
   keep_demo_consumer="$(mktemp -d)"
@@ -158,47 +26,40 @@ Then run this block from the directory containing `keep-0.0.3-preview.1.tgz`:
 )
 ~~~
 
-The block stops before creating the consumer or invoking npm when the expected
-checksum is absent, malformed or mismatched, or the archive cannot be read.
-The outer parentheses contain the failure handling without closing the caller's
-shell. A checksum compares bytes; it does not independently authenticate the publisher.
+## First supported experiment
 
-Installation needs registry access or cached locked dependencies. The experiment
-uses no model or external service and writes synthetic state into a new temporary
-directory. Keep the printed report location when reporting results. The consumer and
-report are not automatically deleted. The source checkout's `demo:recovery` command
-runs the same experiment; it is not the separate illustrative `npm run demo`.
+```sh
+keep demo recovery
+```
 
-## Inspect evidence instead of trusting the success label
+The [installed experiment](../acceptance/installed_sg32_resources.mjs) writes an append-only, fsynced local outbox, injects lost acknowledgments and starts fresh processes. It compares actual sink effects with committed and reserved capacity. No real payment, mail, model request or private data is involved. Its provider throws if called.
 
-Read the outbox JSONL rows for actual local effects. Then compare the per-phase
-committed/reserved counts, invocation counts and Keep events in the report and child
-logs. The outbox is a separate outcome oracle, but it is administered by the same
-test operator—not an independent institution or remote provider.
+The 24 checks cover acknowledged work, uncertainty after adapter entry, unsuccessful results, pre-entry refusal, useful work when capacity remains, restarted/concurrent permit reuse and a durable claim with no adapter entry. The same cases run under personal and injected-tenant configurations.
 
-The controls distinguish intended, attempted, observed and unresolved work. Repeated
-operation IDs, shared capacity and single-entry dispatch are different properties.
-An audit-chain verification result establishes structural integrity under its trust
-assumptions; it does not prove that all external events were observed. An unresolved
-outcome is a legitimate result, not a failure to print a convincing success message.
+For artifact-specific verification, the harness also retains its original interface:
+
+```sh
+node acceptance/installed_sg32_resources.mjs /absolute/installed/keep /absolute/keep-0.0.4-preview.1.tgz PACKAGE_SHA256
+```
+
+The CLI demonstration invokes the installed-only form and reports the local checks. The release qualification separately verifies the exact archive and installed bytes.
 
 ## Interpreting the result
 
-The result covers these gateway accounting and permit-entry schedules with a trusted
-in-process adapter and a durable local test sink. It does not establish arbitrary
-remote-service finality, abrupt in-flight crash recovery, or a combined guarantee
-under memory and permission revocation. Personal and injected-tenant configurations
-are tested separately; the latter does not qualify a production identity provider.
-See the [evidence record](evidence.md) for exact results and broader failures, and
-[Security](../SECURITY.md) before using other execution arrangements.
+A passing experiment demonstrates the named synthetic accounting and restart behaviors. It is builder-administered evidence, not independent replication, production identity verification, authoritative confirmation of remote effects or proof of general coding quality. A possibly executed obligation remains reserved until supported reconciliation; unknown obligations do not automatically expire.
 
-## Release preparation
+The native client/supervisor exchange is currently refusal-only development functionality. Shipping its genuine binaries does not imply that they launch arbitrary workloads or provide production isolation. Its custody checks remain unchanged; see [Security](../SECURITY.md).
 
-The owner approved publication of the reviewed whole-source snapshot in this new
-repository. The existing private repositories and their histories remain private.
-The release tag and two prepared archives preserve the reviewed bytes; documentation
-inside those archives retains its preparation-time status wording. Main-branch
-publication-status documentation and the companion release record identify what
-has since been published and enabled, without relabeling the archived results.
-GitHub private reporting is enabled; notification delivery remains unverified.
-See [Security](../SECURITY.md) for the reporting route.
+Broader source qualification uses a separately defined portable profile. It excludes native-specific tests and the designated-host complete-artifact test. The exact current results appear in [the release record](../KEEP_RELEASE.md); earlier results remain historical in [the evidence record](evidence.md#known-test-status).
+
+Use synthetic data and isolated resources. Production credentials, unrestricted paid services, outside identity providers, Firecracker hosts and required project jails require their own supported setup and qualification. No automatic native fallback or universal provider compatibility is promised.
+
+## Upgrading existing data
+
+Stop writers and retain a verified private backup of the complete data directory before opening it with this version. Do not change schema labels or mix operational files from different releases. Review [skill-registry upgrades](skill-registry.md#upgrading-data-from-the-september-9-research-preview), [backup guidance](backup.md) and [the current maintenance notes](maintenance-2026-10-02.md).
+
+## Build from source
+
+Contributors use the complete source export, not the binary package, for compilation and tests. Install locked npm dependencies, configure the pinned Rust 1.97.1 toolchain with the `x86_64-unknown-linux-musl` target, and provide host C build tools. `RUSTUP_HOME` or `KEEP_P1_TOOLCHAIN_ROOT` selects the already acquired toolchain; the build verifies its identities and does not fetch replacements. See [Contributing](../WORKFLOW.md).
+
+Optional Firecracker fixture qualification takes explicit `KEEP_FIRECRACKER_RUNTIME_DIR`, `KEEP_FIRECRACKER_IMAGES_DIR`, `KEEP_FIRECRACKER_ASSETS_DIR` and `KEEP_NATIVE_FIXTURE_BUILD_DIR` paths. The non-authorizing historical P2 dependency inventory normalizes maintainer paths; regenerate it with the current collector before claiming a newly qualified optional P2 closure. This does not affect the introductory binary transport build or recovery experiment.

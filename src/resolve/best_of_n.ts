@@ -1,25 +1,12 @@
 /**
- * Best-of-N resolution (Increment R1) — the foundation of the resolution moat. Generate N candidate solutions for
- * an issue, score each with Keep's DETERMINISTIC verifier, and select the best by verification evidence — never by
- * model self-confidence.
+ * Sample candidates under one resolution, apply the configured patch checks, and
+ * choose by their evidence and deterministic tie-breaks. Checks and test results
+ * depend on trusted configured ports; a cleared candidate is not proof of semantic
+ * correctness. A least-bad result remains explicitly non-cleared.
  *
- * SOTA basis (2026-08-06):
- *  - Rule-based / execution-grounded verifiers are more objective than preference/reward-model scoring and free of
- *    inductive bias (arXiv 2503.24320; 2602.07670). Keep selects on `verifyPatch` (its SOUND tier-1 checks), the
- *    same verifier used by the safety gate — "training/selecting with the same verifier used at test time is
- *    critical" (arXiv 77gQUdQhE7).
- *  - Naive best-of-N DEGRADES via reward hacking when the verifier is imperfect (OpenReview QnjfkhrbYK; arXiv
- *    2604.04648). Mitigation here: score PRIMARILY on SOUND checks (hard to game — no-test-modification,
- *    no-secrets, edits-well-formed); heuristic flags are tie-breakers only; and selection is PESSIMISTIC — among
- *    equally-verified candidates the SAFER one (smaller blast radius, tests passed) wins.
- *  - Compute-optimal test-time scaling = sample for DIVERSITY + intelligent selection, not sharpening toward
- *    high-confidence modes (arXiv 2602.07670). N is bounded and we early-stop once a candidate is verified-clean.
- *
- * Best-of-N chooses WHICH candidate is proposed; it never decides whether a human reviews. The winner still flows
- * through the oversight tiering + the permanent human merge gate. Zero deps.
- *
- * What would change it: a trained reward/verifier model can be added as a tier-2 seam behind the same selection,
- * but SOUND deterministic checks stay primary (anti-hacking); a learned selector is R2 (hybrid), layered on top.
+ * All started samples settle before resolution cleanup. Candidate data is captured
+ * before scoring; extension callbacks cannot rewrite the retained checked content.
+ * Selection does not authorize source delivery or human approval.
  */
 
 import type { Issue, SolveResult } from "../solve/issue_model.js";
@@ -27,6 +14,7 @@ import { verifyPatch, type PatchVerdict, type PatchVerifierInput } from "../pipe
 import type { Spine } from "../spine/spine.js";
 import type { Workspace } from "../solve/workspace.js";
 import { randomUUID } from "node:crypto";
+import { captureCandidateData, captureSolveResult, withCandidateCleanup } from "./candidate_snapshot.js";
 
 /** The N-sampling seam: produce the i-th candidate solution. A real provider samples at temperature for diversity. */
 export interface CandidateExecution {
@@ -153,25 +141,26 @@ function selectFromCleared(selector: CandidateSelector | undefined, cleared: rea
 
 const WORST = Number.POSITIVE_INFINITY;
 
-function scoreCandidate(index: number, result: SolveResult, verify: (i: PatchVerifierInput) => PatchVerdict, issueText: string | undefined, maxEdits: number | undefined): ScoredCandidate {
+function scoreCandidate(index: number, input: SolveResult, verify: (i: PatchVerifierInput) => PatchVerdict, issueText: string | undefined, maxEdits: number | undefined): ScoredCandidate {
+  const result = captureSolveResult(input);
   if (!result.solved || !result.prProposal) {
     // No patch produced — sorts last; cannot be verified.
-    return { index, result, verdict: null, soundFailures: WORST, flags: WORST, cleared: false, testsPassed: false, editCount: WORST, repairRounds: result.repairRounds ?? 0 };
+    return Object.freeze({ index, result, verdict: null, soundFailures: WORST, flags: WORST, cleared: false, testsPassed: false, editCount: WORST, repairRounds: result.repairRounds ?? 0 });
   }
-  const verdict = verify({ solveResult: result, ...(issueText ? { issueText } : {}), ...(maxEdits !== undefined ? { maxEdits } : {}) });
+  const verdict = captureCandidateData(verify({ solveResult: result, ...(issueText ? { issueText } : {}), ...(maxEdits !== undefined ? { maxEdits } : {}) }));
   let soundFailures = 0, flags = 0;
   for (const c of verdict.checks) {
     if (c.sound && c.decision === "fail") soundFailures++;
     if (c.decision === "flag") flags++;
   }
-  return {
+  return Object.freeze({
     index, result, verdict,
     soundFailures, flags,
     cleared: verdict.cleared,
     testsPassed: result.prProposal.testsPassed,
     editCount: result.prProposal.edits.length,
     repairRounds: result.repairRounds ?? 0,
-  };
+  });
 }
 
 const outcomeRank = (v: PatchVerdict | null): number => (v?.outcome === "pass" ? 0 : v?.outcome === "escalate-human" ? 1 : 2);
@@ -217,10 +206,10 @@ export async function selectBestOfN(deps: BestOfNDeps, issue: Issue, opts: BestO
   const sampleCost: Array<{ usd: number; basis: string } | undefined> = [];
 
   const sampleOne = async (i: number): Promise<SolveResult> => {
-    if (n !== 1) return deps.sample(issue, i, { executionId: `${issue.id}:candidate:${i}`, sampleIndex: i, resolutionId });
+    if (n !== 1) return captureSolveResult(await deps.sample(issue, i, { executionId: `${issue.id}:candidate:${i}`, sampleIndex: i, resolutionId }));
     const now = deps.now ?? (() => performance.now()); const started = now();
     const before = deps.spine?.currentEvents().length ?? 0;
-    const result = await deps.sample(issue, i, { executionId: `${issue.id}:candidate:${i}`, sampleIndex: i, resolutionId });
+    const result = captureSolveResult(await deps.sample(issue, i, { executionId: `${issue.id}:candidate:${i}`, sampleIndex: i, resolutionId }));
     sampleLatency[i] = Math.max(0, now() - started);
     const explicit = deps.measureCostUsd?.(issue, result);
     if (explicit !== undefined && Number.isFinite(explicit) && explicit >= 0) sampleCost[i] = { usd: explicit, basis: "configured candidate cost meter" };
@@ -231,7 +220,7 @@ export async function selectBestOfN(deps: BestOfNDeps, issue: Issue, opts: BestO
     return result;
   };
 
-  try {
+  await withCandidateCleanup(async () => {
     if (stopWhenClean) {
       for (let i = 0; i < n; i++) {
         const result = await sampleOne(i);
@@ -241,24 +230,31 @@ export async function selectBestOfN(deps: BestOfNDeps, issue: Issue, opts: BestO
       }
     } else {
       const concurrency = Math.max(1, Math.min(n, opts.concurrency ?? n));
-      let next = 0;
+      let next = 0, stopped = false;
+      const errors: unknown[] = [];
       const workers = Array.from({ length: concurrency }, async () => {
-        while (next < n) {
+        while (!stopped && next < n) {
           const i = next++;
-          const result = await sampleOne(i);
-          scored[i] = scoreCandidate(i, result, verify, opts.issueText, opts.maxEdits);
+          try {
+            const result = await sampleOne(i);
+            scored[i] = scoreCandidate(i, result, verify, opts.issueText, opts.maxEdits);
+          } catch (error) { stopped = true; errors.push(error); }
         }
       });
+      // Each worker catches its failure, stops assignment and drains its lease.
+      // Promise.all alone would reject early and finalize a still-live resolution.
       await Promise.all(workers);
+      if (errors.length === 1) throw errors[0];
+      if (errors.length > 1) throw new AggregateError(errors, "candidate workers failed", { cause: errors[0] });
     }
-  } finally { await deps.sample.finishResolution?.(resolutionId); }
+  }, () => deps.sample.finishResolution?.(resolutionId));
 
   const cleared = scored.filter((s) => s.cleared);
   let winner: ScoredCandidate;
   let selectionRationale: string;
   if (cleared.length > 0) {
     // Floor enforced: the selector only ever sees VERIFIED candidates, so it cannot override verification (R2).
-    const sel = selectFromCleared(deps.selector, cleared);
+    const sel = selectFromCleared(deps.selector, Object.freeze([...cleared]));
     winner = cleared[sel.index]!;
     selectionRationale = sel.rationale;
   } else {
@@ -278,7 +274,7 @@ export async function selectBestOfN(deps: BestOfNDeps, issue: Issue, opts: BestO
   };
   let n1Baseline: N1BaselineRecord | undefined;
   if (n === 1) {
-    const fidelity = deps.measureTaskFidelity?.(issue, winner.result); const cost = sampleCost[winner.index];
+    const fidelity = captureCandidateData(deps.measureTaskFidelity?.(issue, winner.result)); const cost = sampleCost[winner.index];
     n1Baseline = Object.freeze({
       candidateCount: 1,
       correctness: Object.freeze({ solved: winner.result.solved, verifierCleared: winner.cleared, testsPassed: winner.testsPassed, soundFailures: winner.soundFailures === WORST ? -1 : winner.soundFailures }),
@@ -313,4 +309,3 @@ export async function selectBestOfN(deps: BestOfNDeps, issue: Issue, opts: BestO
 export function makeBestOfNSolver(deps: BestOfNDeps, opts: BestOfNOptions): (issue: Issue) => Promise<SolveResult> {
   return async (issue: Issue) => (await selectBestOfN(deps, issue, opts)).winner;
 }
-

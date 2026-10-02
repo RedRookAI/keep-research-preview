@@ -29,7 +29,7 @@ function setup(track: string, namespaceJail = true) {
   const root = mkdtempSync(join(tmpdir(), `keep-iso-report-${track}-`)), dir = join(root, "project"), outside = join(root, "sibling");
   mkdirSync(dir); const adapter = new UnavailableNamespaceAdapter();
   const spine = new Spine(new FileSpineStore(join(root, "state")), new InProcessLock(), new SchemaRegistry());
-  const command = new SandboxedCommandRunner({ command: process.execPath, args: ["-e", "require('fs').writeFileSync(process.argv[1],'synthetic');console.log('ok 1 - useful')", outside],
+  const command = new SandboxedCommandRunner({ command: process.execPath, args: ["-e", "require('fs').writeFileSync(process.argv[1],'synthetic');console.log('useful command completed')", outside],
     projectDir: dir, namespaceJail, adapter, timeoutMs: 2000 });
   return { root, dir, outside, adapter, spine, command };
 }
@@ -87,7 +87,7 @@ test("KEEP-11A-001 missing custom-adapter observation is unknown, not clean cont
   const f = setup("missing");
   class MissingObservation extends ProcessIsolationAdapter {
     override async run(): Promise<IsolatedRunResult> {
-      return { code: 0, signal: null, stdout: "ok 1 - synthetic", stderr: "", timedOut: false, truncated: false, durationMs: 0 };
+      return { code: 0, signal: null, stdout: "TAP version 13\nok 1 - synthetic\n1..1\n", stderr: "", timedOut: false, truncated: false, durationMs: 0 };
     }
   }
   const runner = new SandboxedCommandRunner({ command: "synthetic", args: [], projectDir: f.dir, adapter: new MissingObservation() });
@@ -120,7 +120,7 @@ test("KEEP-11A-001 allowNet changes the request, never certifies effective netwo
 for (const factory of ["runnerFor", "buildEnforcingRunner"]) {
   test(`KEEP-11A-001 ${factory} preserves explicit useful fallback`, async () => {
     const f = setup(factory);
-    const args = ["-e", "require('fs').writeFileSync(process.argv[1],'useful');console.log('ok 1 - fallback')", f.outside];
+    const args = ["-e", "require('fs').writeFileSync(process.argv[1],'useful');console.log('fallback command completed')", f.outside];
     const runner = factory === "runnerFor"
       ? sandboxedRunnerFor(() => f.dir, process.execPath, args, { namespaceJail: false })(f.dir)
       : buildEnforcingRunner(f.dir, process.execPath, args, { namespaceJail: false });
@@ -134,7 +134,7 @@ for (const kind of ["product-failure", "missing-command", "timeout"]) {
   test(`KEEP-11A-001 ${kind} retains its available process observations`, async () => {
     const f = setup(kind);
     const runner = new SandboxedCommandRunner({ command: kind === "missing-command" ? join(f.dir, "no-command") : process.execPath,
-      args: ["-e", kind === "timeout" ? "setTimeout(()=>{},5000)" : "console.log('not ok 1 - failed');process.exit(1)"],
+      args: ["-e", kind === "timeout" ? "setTimeout(()=>{},5000)" : "console.log('TAP version 13\\nnot ok 1 - failed\\n1..1');process.exit(1)"],
       projectDir: f.dir, namespaceJail: false, timeoutMs: kind === "timeout" ? 40 : 2000 });
     const result = await validate(f.dir, new IsolatedTestRunner(runner, new ProcessIsolationExecutor(f.spine), f.dir));
     assert.equal(result.testsPassed, false); assert.equal(result.processIsolation?.namespacePolicy, "disabled");
@@ -183,7 +183,7 @@ test("KEEP-11A-001 malformed adapter observation cannot claim verified containme
   const f = setup("malformed");
   class MalformedObservation extends ProcessIsolationAdapter {
     override async run(): Promise<IsolatedRunResult> {
-      return { code: 0, signal: null, stdout: "ok 1 - synthetic", stderr: "", timedOut: false, truncated: false, durationMs: 0,
+      return { code: 0, signal: null, stdout: "TAP version 13\nok 1 - synthetic\n1..1\n", stderr: "", timedOut: false, truncated: false, durationMs: 0,
         degraded: ["mount-ns"], processIsolation: { namespaceSetup: "verified", privateExtra: "do-not-persist" } as never };
     }
   }
@@ -199,7 +199,7 @@ test("KEEP-11A-001 real host default reports unavailable or unverified, never es
   const f = setup("host-default");
   // Real host probe and real command, no injected support map. This only checks
   // honest reporting; it is not a successful nested-jail qualification.
-  const runner = new SandboxedCommandRunner({ command: process.execPath, args: ["-e", "console.log('ok 1 - host')"], projectDir: f.dir, timeoutMs: 2000 });
+  const runner = new SandboxedCommandRunner({ command: process.execPath, args: ["-e", "console.log('host command completed')"], projectDir: f.dir, timeoutMs: 2000 });
   const result = await validate(f.dir, new IsolatedTestRunner(runner, new ProcessIsolationExecutor(f.spine), f.dir));
   assert.equal(result.testsPassed, true);
   assert.equal(result.processIsolation?.basis, "adapter-spawn-plan");

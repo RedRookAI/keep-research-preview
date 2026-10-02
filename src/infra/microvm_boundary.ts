@@ -45,9 +45,9 @@ import type { Stats } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { types } from "node:util";
-import type { TestRunner, TestRunResult, TestCaseResult } from "../solve/validate.js";
+import type { TestRunner, TestRunResult } from "../solve/validate.js";
 import { ProcessIsolationAdapter, resolvedWithinProject } from "./process_isolation.js";
-import { parseTap } from "../solve/sandboxed_runner.js";
+import { interpretCommandTests } from "../solve/command_test_evidence.js";
 import type { ExecutionSpec } from "../isolation/isolated_executor.js";
 import type { IsolationTier } from "../isolation/isolation_tier.js";
 import {
@@ -1149,15 +1149,10 @@ export function buildMicrovmBoundaryRun(
         const serialTail = Buffer.from(res.stdout, "utf8").subarray(-2000).toString("base64");
         return { results: [], runnerError: `${(error as Error).message}; serialTailBase64=${serialTail}; jailer stderr=${res.stderr.slice(-1000)}` };
       }
-      const cases: TestCaseResult[] = parseTap(`${guest.stdout}\n${guest.stderr}`);
-      if (guest.exitCode === 0) {
-        result = { results: cases.length > 0 ? cases : [{ name: `${guestRequest.command} ${guestRequest.args.join(" ")}`.trim(), passed: true }] };
-      } else {
-        const failing = cases.filter((c) => !c.passed);
-        result = failing.length > 0
-          ? { results: cases }
-          : { results: [{ name: `${guestRequest.command} ${guestRequest.args.join(" ")}`.trim(), passed: false, output: (guest.stderr || guest.stdout).slice(-2000) || `exit code ${guest.exitCode}` }] };
-      }
+      const interpreted = interpretCommandTests(`${guestRequest.command} ${guestRequest.args.join(" ")}`.trim(), { ...guest, code: guest.exitCode });
+      // Receipt v3 binds only these fields. Do not attach an unbound routing
+      // classification to the verified result; the bound refusal reason remains.
+      result = { results: interpreted.results, ...(interpreted.runnerError === undefined ? {} : { runnerError: interpreted.runnerError }) };
       const testRunResultSha256 = exactTestRunResultDigest(result);
       receipt = {
         schema: "keep.verified-microvm-run-receipt/v3",

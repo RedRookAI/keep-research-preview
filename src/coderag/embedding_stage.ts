@@ -8,7 +8,7 @@
  * embedding stage is ONE ADDITIVE RRF LIST on top of the interpretable BM25 + graph base — never
  * dense-only. Behind an Embedder port: a deterministic hash-embedder here (proves the plumbing,
  * offline, zero-dep), a real small local model (EmbeddingGemma-300M class — runs on modest hardware,
- * good for sovereign/free-tier users) or hosted embeddings on Hetzner.
+ * good for sovereign/free-tier users) or hosted embeddings on configured host.
  *
  * What would change it: a cross-encoder reranker as a final precision stage (hybrid→rerank gave
  * +17.4% Recall@5 in 2026 benchmarks) behind a Reranker port. Zero deps.
@@ -32,7 +32,7 @@ export interface Embedder {
  * A deterministic, offline, zero-dep embedder for testing the retrieval plumbing here. Hashes tokens
  * into a fixed-dim bag-of-hashed-tokens vector — NOT semantic, but deterministic and dependency-free,
  * so the RRF fusion + localizer pipeline is fully provable in the sandbox. Real semantic embeddings
- * (a local EmbeddingGemma-class model, or hosted) replace it behind the same port on Hetzner.
+ * (a local EmbeddingGemma-class model, or hosted) replace it behind the same port on configured host.
  */
 export class DeterministicHashEmbedder implements Embedder {
   readonly name = "deterministic-hash";

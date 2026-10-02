@@ -14,7 +14,7 @@ Run these commands from a source checkout, not inside an installed package.
 | npm ci | Install locked dependencies; no native compile hook | Node/npm and registry access or a populated cache |
 | npm run test:fast | TypeScript typecheck only | Installed locked dependencies |
 | npm run test:notices | Check the retained attribution bundle | Complete vendor trees and installed locked dependencies |
-| npm run test:portable | Compile and run the selected portable test profile | Node and Git; see known failures in the preview guide |
+| npm run test:portable | Compile and run the selected portable test profile | Node, Git and the qualified Linux test environment described below |
 | npm run build | Compile TypeScript and verify/build native outputs | Pinned Linux x64 Rust toolchain and host C build tools |
 | npm test | Build and run the selected full test profile | Native prerequisites and isolated CPU/RAM/disk capacity |
 | npm pack | Check notices, build and produce an npm archive | Same source-build prerequisites |
@@ -30,6 +30,8 @@ After compilation, a focused test can be run directly:
 ~~~sh
 node --test --test-concurrency=1 dist/test/release_licensing.test.js
 ~~~
+
+The Linux portable profile includes required-project-jail regressions. These need the existing pinned non-setuid Bubblewrap executable (digest in `src/infra/required_project_jail.ts`), Python 3, the qualified merged-`/usr` layout and kernel permission to create the tested namespaces. Its KVM-presence probe expects a real `/dev/kvm` character device. A restricted container without these prerequisites cannot qualify the full profile. These are contributor test requirements; the binary recovery quickstart needs none of them. Launcher advisory limits remain in [Security](SECURITY.md).
 
 The full runner defaults to one worker. Its --phase option is a partial check,
 not full qualification. The --portable profile excludes native tests and the

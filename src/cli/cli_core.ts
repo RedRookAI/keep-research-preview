@@ -96,7 +96,7 @@ export async function runGatewayCli(argv: readonly string[], io: CliIO, deps: Ga
   } catch (error) { io.write(`Gateway operation failed: ${(error as Error).message}. A failed observation is not permission to repeat a mutation under a new key.`); return { command, exitCode: 1 }; }
 }
 
-export const DEFAULT_VERSION = "0.1.0-pre-hetzner";
+export const DEFAULT_VERSION = "0.0.4-preview.1";
 
 export const USAGE = `keep — safe, auditable, self-hostable build automation
 
@@ -149,6 +149,7 @@ Commands:
   monitor              Show every ticket in flight — what's solving, stuck, or needs your decision.
   calibration [...]    See/authorize reduced-escalation proposals (authorize needs --step-up); record outcomes.
   audit <id>           Show the plain-language history of a change.
+  demo recovery        Run the no-key local recovery experiment.
   version              Print the Keep version.
   help                 Show this help.
 

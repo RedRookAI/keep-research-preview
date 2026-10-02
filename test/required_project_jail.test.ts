@@ -33,7 +33,7 @@ for (const label of ["personal", "alpha-local"]) test(`required project boundary
     a.throws(()=>fs.writeFileSync(${JSON.stringify(join(r.sibling, "unchanged"))},'wrong'));
     a.throws(()=>fs.writeFileSync(${JSON.stringify(join(r.project, "outside-link"))},'wrong'));
     a.throws(()=>fs.writeFileSync(${JSON.stringify(join(r.input, "value"))},'wrong'));
-    console.log('ok 1 - useful bounded work');`;
+    console.log('ok 1 - useful bounded work\\n1..1');`;
   const result = await runner(r.project, code, { allowWritePaths: [r.scratch], readOnlyPaths: [r.input] }).run(".");
   assert.equal(result.runnerError, undefined, JSON.stringify(result));
   assert.ok(result.results.length > 0 && result.results.every(row => row.passed));
@@ -61,7 +61,7 @@ test("required project boundary refuses shared writable inode without detaching 
 
 test("required boundary distinguishes a failed command from failed sandbox setup", async () => {
   const r = roots();
-  const result = await runner(r.project, "console.log('not ok 1 - deliberate task failure');process.exitCode=7").run(".");
+  const result = await runner(r.project, "console.log('not ok 1 - deliberate task failure\\n1..1');process.exitCode=7").run(".");
   assert.equal(result.runnerError, undefined, JSON.stringify(result));
   assert.ok(result.results.some(row => !row.passed));
   assert.equal(result.processIsolation?.namespaceSetup, "launcher-confirmed");
@@ -181,7 +181,7 @@ test("required command keeps allowlisted shell startup input out of the outer la
   const value = `synthetic 'value'; $(not-a-command)\nsecond line`;
   process.env["BASH_ENV"] = startup; process.env["KEEP_REQUIRED_TEST"] = value;
   try {
-    const result = await runner(r.project, `const a=require('node:assert/strict');a.equal(process.env.KEEP_REQUIRED_TEST,${JSON.stringify(value)});console.log('ok 1 - environment')`, {
+    const result = await runner(r.project, `const a=require('node:assert/strict');a.equal(process.env.KEEP_REQUIRED_TEST,${JSON.stringify(value)});console.log('ok 1 - environment\\n1..1')`, {
       envAllowlist: ["BASH_ENV", "KEEP_REQUIRED_TEST"],
     }).run(".");
     assert.equal(result.runnerError, undefined, JSON.stringify(result));
@@ -213,8 +213,8 @@ test("required mode denies local network access unless the operator explicitly a
     for (const allowNet of [false, true]) {
       const code: string = `const net=require('node:net'),a=require('node:assert/strict');const s=net.createConnection({host:'127.0.0.1',port:${address.port}});
 let data='';s.setTimeout(1000,()=>s.destroy(new Error('bounded-connect-timeout')));s.on('data',x=>data+=x);
-s.on('error',()=>{a.equal(${allowNet},false);console.log('ok 1 - network refused')});
-s.on('end',()=>{a.equal(${allowNet},true);a.equal(data,'42');console.log('ok 1 - permitted local service')});`;
+s.on('error',()=>{a.equal(${allowNet},false);console.log('ok 1 - network refused\\n1..1')});
+s.on('end',()=>{a.equal(${allowNet},true);a.equal(data,'42');console.log('ok 1 - permitted local service\\n1..1')});`;
       const result = await runner(r.project, code, { allowNet }).run('.');
       assert.equal(result.runnerError, undefined, JSON.stringify(result));
       assert.ok(result.results.every(row => row.passed), JSON.stringify(result));

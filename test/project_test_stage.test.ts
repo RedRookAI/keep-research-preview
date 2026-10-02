@@ -56,7 +56,7 @@ function config(f: Awaited<ReturnType<typeof fixture>>, script: string, opts: { 
 
 test("independent verification persists a bounded, redacted, content-bound failure", async () => {
   const f = await fixture();
-  const script = `console.log("not ok 1 - regression alice@example.com 30 !== 33"); process.exit(1)`;
+  const script = `console.log("not ok 1 - regression alice@example.com 30 !== 33"); console.log("1..1"); process.exit(1)`;
   const artifact = await buildProjectTester(config(f, script)).run(issue, f.state);
   assert.equal(artifact.repositoryTreeSha256, f.treeDigest);
   assert.equal(artifact.verdict, "failed");
@@ -72,7 +72,7 @@ test("independent verification persists a bounded, redacted, content-bound failu
 
 test("a clean non-empty enforcing run passes", async () => {
   const f = await fixture();
-  const artifact = await buildProjectTester(config(f, `console.log("ok 1 - regression")`)).run(issue, f.state);
+  const artifact = await buildProjectTester(config(f, `console.log("ok 1 - regression"); console.log("1..1")`)).run(issue, f.state);
   assert.equal(artifact.isolation.processIsolation?.namespacePolicy, "best-effort");
   assert.notEqual(artifact.isolation.processIsolation?.namespaceSetup, undefined);
   assert.equal(artifact.verdict, "passed");
@@ -106,7 +106,7 @@ test("stale canonical bytes and a mismatched disposable copy both refuse before 
 
 test("test writes remain confined to the disposable copy and cannot contaminate canonical source", async () => {
   const f = await fixture();
-  const script = `require("node:fs").writeFileSync("src/value.ts", "tampered\\n"); console.log("ok 1 - pass")`;
+  const script = `require("node:fs").writeFileSync("src/value.ts", "tampered\\n"); console.log("ok 1 - pass"); console.log("1..1")`;
   const artifact = await buildProjectTester(config(f, script)).run(issue, f.state);
   assert.equal(artifact.verdict, "passed");
   assert.equal(await f.canonical.tree("repo").read("src/value.ts"), "export const value = 2;\n");
@@ -179,7 +179,7 @@ test("a forged implementation digest disagreement with the edit receipt is refus
 
 test("failure evidence is capped without hiding the total discovered failure count", async () => {
   const f = await fixture();
-  const script = `process.stdout.write(Array.from({length:1005}, (_,i) => "not ok " + (i+1) + " - failure-" + (i+1)).join("\\n") + "\\n", () => process.exit(1))`;
+  const script = `process.stdout.write(Array.from({length:1005}, (_,i) => "not ok " + (i+1) + " - failure-" + (i+1)).join("\\n") + "\\n1..1005\\n", () => process.exit(1))`;
   const artifact = await buildProjectTester(config(f, script)).run(issue, f.state);
   assert.equal(artifact.verdict, "failed");
   assert.equal(artifact.discovered, 1005);
@@ -190,7 +190,7 @@ test("failure evidence is capped without hiding the total discovered failure cou
 test("every terminal outcome releases its disposable execution source", async () => {
   const f = await fixture();
   let disposals = 0;
-  const cfg = { ...config(f, `console.log("ok 1 - pass")`), disposeExecution: () => { disposals += 1; } };
+  const cfg = { ...config(f, `console.log("ok 1 - pass"); console.log("1..1")`), disposeExecution: () => { disposals += 1; } };
   assert.equal((await buildProjectTester(cfg).run(issue, f.state)).verdict, "passed");
   assert.equal(disposals, 1);
 
@@ -202,7 +202,7 @@ test("every terminal outcome releases its disposable execution source", async ()
 test("solver feedback preserves actual failures and confines test writes to the disposable root", async t => {
   const f = await fixture(); t.after(() => rmSync(f.root, { recursive: true, force: true }));
   let disposals = 0;
-  const script = `require("node:fs").writeFileSync("src/value.ts", "test-generated\\n"); console.log("ok 1 - retained behavior"); console.log("not ok 2 - actual regression"); process.exit(1)`;
+  const script = `require("node:fs").writeFileSync("src/value.ts", "test-generated\\n"); console.log("ok 1 - retained behavior"); console.log("not ok 2 - actual regression"); console.log("1..2"); process.exit(1)`;
   const runner = buildProjectTester({ ...config(f, script), disposeExecution: () => { disposals++; } }).feedbackRunner("repo");
   const result = await runner.run("repo");
   assert.equal(result.runnerError, undefined);
@@ -214,7 +214,7 @@ test("solver feedback preserves actual failures and confines test writes to the 
 
 test("feedback returns a true pass only after provenance and cleanup pass", async t => {
   const f = await fixture(); t.after(() => rmSync(f.root, { recursive: true, force: true }));
-  const cfg = config(f, `console.log("ok 1 - actual pass")`);
+  const cfg = config(f, `console.log("ok 1 - actual pass"); console.log("1..1")`);
   const passed = await buildProjectTester(cfg).feedbackRunner("repo").run("repo");
   assert.deepEqual(passed.results, [{ name: "actual pass", passed: true }]);
   const cleanupFailed = await buildProjectTester({ ...cfg, disposeExecution: () => { throw Error("cleanup unavailable"); } }).feedbackRunner("repo").run("repo");

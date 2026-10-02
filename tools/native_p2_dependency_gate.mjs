@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { captureAuthenticatedCrateArchive } from "./native_p2_archive_snapshot.mjs";
 import { orderCompilationUnits } from "./native_compilation_units.mjs";
@@ -327,7 +327,7 @@ const attributionBytes = Buffer.from(
   "utf8",
 );
 
-const rustupHome = process.env.RUSTUP_HOME ?? "/root/.keep-build/rustup";
+const rustupHome = process.env.RUSTUP_HOME ?? join(homedir(), ".rustup");
 const toolchain = "1.97.1-x86_64-unknown-linux-gnu";
 const toolchainRoot = realpathSync(join(rustupHome, "toolchains", toolchain));
 execFileSync(

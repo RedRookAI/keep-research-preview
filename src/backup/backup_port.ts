@@ -1,19 +1,14 @@
 /**
- * Backup: BackupPort + content-addressed snapshot + LocalBackup adapter (Increment 9a).
- *
- * SOTA basis (2026-08-04): the modern standard is 3-2-1-1-0 — 3 copies, 2 media, 1 off-site, +1
- * immutable/air-gapped, +0 verified restores (AvePoint/Barracuda/CISA #StopRansomware 2026). The
- * decisive threat (Eon 2026): an AI coding agent deleted a production DB *and its backups* in nine
- * seconds because "three copies behind one set of permissions is one copy with extra steps." Keep IS
- * an autonomous coding agent, so this is our threat model: the backup target must be immutable-by-
- * default — append-only, keyed by content hash — so the routine that manages the instance cannot
- * silently overwrite or delete it. The spine's append-only hash-chain already provides the +1
- * immutability primitive; a snapshot captures its cumulativeRoot so a restore is provably complete.
- *
- * The `BackupPort` is one interface with local/git/s3 adapters behind it (no lock-in, air-gap
- * default). LocalBackup (copy #1) runs from first-run with NO prompt. Zero deps. */
+ * Content-addressed event snapshots and the backup target interface.
+ * Snapshot ownership prevents adapter/caller references from modifying source or
+ * stored history. Chain verification checks integrity against an expected root;
+ * it does not establish source truth, immutable storage or independent custody.
+ * LocalBackup is memory-only. Durable/off-machine adapters require their own
+ * implementation and qualification. No network or external service is used here.
+ */
 
-import type { SealedBlock } from "../spine/hashchain.js";
+import { verifyChain, type SealedBlock } from "../spine/hashchain.js";
+import { normalizePlainData } from "../spine/witness_reconcile.js";
 
 /** A hasher seam (default wired to node:crypto sha256 by the caller) — keeps this module dep-free. */
 export type Hasher = (data: string) => string;
@@ -60,6 +55,8 @@ export interface BackupPort {
 
 /** Build a content-addressed snapshot from the spine's sealed blocks. */
 export function buildSnapshot(blocks: readonly SealedBlock[], hasher: Hasher, now: number): Snapshot {
+  // The source retains its own live chain; adapters must never receive that reference.
+  blocks = normalizePlainData(blocks);
   const last = blocks.length > 0 ? blocks[blocks.length - 1] : undefined;
   const contentRoot = last ? last.cumulativeRoot : "0".repeat(64);
   const eventCount = blocks.reduce((n, b) => n + b.events.length, 0);
@@ -69,7 +66,7 @@ export function buildSnapshot(blocks: readonly SealedBlock[], hasher: Hasher, no
 }
 
 /**
- * LocalBackup — copy #1, runs from first-run, no prompt, no account (air-gap safe). Append-only:
+ * LocalBackup — an in-memory adapter, not durable or off-machine storage. Append-only:
  * storing a snapshot whose id already exists is a no-op IF the content matches, and a THROW if a
  * different content is offered at the same id (immutability: never silently overwrite history).
  */
@@ -79,14 +76,17 @@ export class LocalBackup implements BackupPort {
   private readonly store = new Map<string, Snapshot>();
 
   async put(snapshot: Snapshot): Promise<SnapshotRef> {
+    snapshot = normalizePlainData(snapshot);
     const existing = this.store.get(snapshot.id);
     if (existing) {
       // Immutability guard: same id must mean same content (content-addressed).
       if (existing.contentRoot !== snapshot.contentRoot) {
         throw new Error(`backup immutability violation: snapshot ${snapshot.id} already exists with a different content root`);
       }
+      validateSnapshot(snapshot);
       return refOf(existing);
     }
+    validateSnapshot(snapshot);
     this.store.set(snapshot.id, snapshot);
     return refOf(snapshot);
   }
@@ -96,7 +96,18 @@ export class LocalBackup implements BackupPort {
   }
 
   async get(id: string): Promise<Snapshot | undefined> {
-    return this.store.get(id);
+    const stored = this.store.get(id);
+    return stored === undefined ? undefined : normalizePlainData(stored);
+  }
+}
+
+/** Validate owned snapshot data before retaining it. No claim of publisher authenticity. */
+function validateSnapshot(snapshot: Snapshot): void {
+  const chain = verifyChain(snapshot.blocks);
+  const root = snapshot.blocks.at(-1)?.cumulativeRoot ?? "0".repeat(64);
+  if (!chain.ok || snapshot.contentRoot !== root || snapshot.blockCount !== snapshot.blocks.length ||
+      snapshot.eventCount !== snapshot.blocks.reduce((n, b) => n + b.events.length, 0)) {
+    throw new Error("backup snapshot has invalid chain, content root or counts");
   }
 }
 

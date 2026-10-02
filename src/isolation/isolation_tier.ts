@@ -73,7 +73,7 @@ export interface IsolationSelection {
  */
 export function selectTier(caps: IsolationCapabilities): IsolationSelection {
   if (caps.kvmAvailable) {
-    return { tier: "microvm", strongestAvailable: true, summary: "microVM (dedicated kernel, hardware-enforced) — strongest; front-of-house Hetzner/KVM." };
+    return { tier: "microvm", strongestAvailable: true, summary: "microVM (dedicated kernel, hardware-enforced) — strongest; front-of-house configured host/KVM." };
   }
   if (caps.gvisorAvailable) {
     return { tier: "gvisor", strongestAvailable: true, summary: "gVisor (user-space kernel, syscall interception) — strong; no KVM present." };

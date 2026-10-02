@@ -1,27 +1,11 @@
 /**
- * Budget-aware resolution cascade (Increment R4) — spend compute in proportion to a ticket's proven difficulty.
- * Try the cheapest resolution tier first; escalate to a stronger/larger tier ONLY when the cheap attempt provably
- * fails (no candidate cleared the deterministic verifier) or surfaces an R3 behavioral fork. Never escalate past a
- * fixed budget. When tiers or budget are exhausted, defer to the human — the permanent final fallback.
+ * Try configured candidate-selection tiers, escalating on missing patch evidence
+ * or behavioral disagreement. Required generated-test ports are checked before any
+ * tier runs; the retained winner keeps its own disagreement status.
  *
- * This is what makes the whole R-track affordable on a free tier / a single API key (the sovereignty case): an easy
- * ticket costs one cheap attempt; a hard ticket escalates only as far as the budget allows, then goes to a person.
- *
- * SOTA basis (2026-08-06):
- *  - Cheap→expensive cascade, stop as soon as a draw is VERIFIED correct (FrugalGPT; "Resample or Reroute",
- *    arXiv 2607.08665). Escalate on a PROVABLE check, not model confidence — LLM confidence is miscalibrated and
- *    makes routing thresholds brittle (CascadeDebate 2604.12262; UCCI 2605.18796; CP-Router; Conformal Cascade).
- *    Keep's escalation signal is its deterministic verifier (R1 floor) — binary and provable, so no threshold to
- *    miscalibrate.
- *  - Difficulty-aware allocation: don't waste compute on easy tickets; give hard ones more, under a FIXED total
- *    budget honored a priori (UAB, arXiv 2605.26849). Optional complexity pre-routing skips a doomed cheap attempt
- *    for obviously-hard tickets (Firewall routing; "Cluster, Route, Escalate", arXiv 2606.27457).
- *  - Human experts as the final fallback of the cascade (CascadeDebate). Escalation rate is a COST VARIABLE to
- *    monitor, not fire-and-forget (provider_router's own principle) — every tier + escalation is audited.
- *
- * The cascade chooses HOW MUCH to spend + WHICH candidate; it never decides WHETHER a human reviews. Zero deps.
- * What would change it: a calibrated deferral policy (conformal prediction) could tune thresholds — unnecessary
- * here because the escalation trigger is deterministic verification, not a confidence score.
+ * Costs here are supplied estimates and a trusted canAfford/record port, not a
+ * demonstrated provider-billing ceiling. A verified stop means configured checks
+ * cleared without a reported fork, not proof of correctness or approval to merge.
  */
 
 import type { Issue, SolveResult } from "../solve/issue_model.js";
@@ -79,20 +63,21 @@ function startIndex(complexity: TaskComplexity | undefined, nTiers: number): num
 export async function resolveCascade(deps: CascadeDeps, issue: Issue, opts: { issueText?: string; maxEdits?: number } = {}): Promise<CascadeResult> {
   const tiers = deps.tiers;
   if (tiers.length === 0) throw new Error("resolveCascade requires at least one resolution tier");
+  if (tiers.some(tier => tier.useTests) && (!deps.generator || !deps.executor)) throw new Error("generated-test tier requires both generator and executor");
 
   const start = startIndex(deps.complexity?.(issue), tiers.length);
   const tiersUsed: string[] = [];
   let escalations = 0;
   let best: SolveResult | undefined;
   let bestCleared = false;
-  let lastFork = false;
+  let bestFork = false;
 
   for (let i = start; i < tiers.length; i++) {
     const tier = tiers[i]!;
     // Budget gate — never spend what we can't afford. Graceful degradation (sovereignty).
     if (deps.budget && !deps.budget.canAfford(tier.estCostUsd)) {
       deps.spine?.stage({ type: "identity.action", actor: "cascade", payload: { event: "resolve.cascade.budget_stop", issueId: issue.id, tier: tier.name, estCostUsd: tier.estCostUsd, ts: Date.now() } });
-      return finish(deps, issue, best, bestCleared, tiersUsed, escalations, "budget", lastFork);
+      return finish(deps, issue, best, bestCleared, tiersUsed, escalations, "budget", bestFork);
     }
 
     deps.spine?.stage({ type: "identity.action", actor: "cascade", payload: { event: "resolve.cascade.tier", issueId: issue.id, tier: tier.name, n: tier.n, estCostUsd: tier.estCostUsd, ts: Date.now() } });
@@ -109,9 +94,8 @@ export async function resolveCascade(deps: CascadeDeps, issue: Issue, opts: { is
     deps.budget?.record(tier.estCostUsd);
 
     // Keep the best verified result seen (a later cheap-fail shouldn't lose an earlier verified win).
-    if (cleared && !bestCleared) { best = winner; bestCleared = true; }
-    else if (!bestCleared && best === undefined) { best = winner; }
-    lastFork = fork;
+    if (cleared && !bestCleared) { best = winner; bestCleared = true; bestFork = fork; }
+    else if (!bestCleared && best === undefined) { best = winner; bestFork = fork; }
 
     // Success = a verified candidate AND no behavioral fork. Stop (early exit).
     if (cleared && !fork) {
@@ -124,7 +108,7 @@ export async function resolveCascade(deps: CascadeDeps, issue: Issue, opts: { is
     }
   }
 
-  return finish(deps, issue, best, bestCleared, tiersUsed, escalations, "exhausted", lastFork);
+  return finish(deps, issue, best, bestCleared, tiersUsed, escalations, "exhausted", bestFork);
 }
 
 function finish(deps: CascadeDeps, issue: Issue, winner: SolveResult | undefined, cleared: boolean, tiersUsed: string[], escalations: number, stoppedReason: CascadeStop, fork: boolean): CascadeResult {
@@ -138,6 +122,6 @@ function finish(deps: CascadeDeps, issue: Issue, winner: SolveResult | undefined
     stoppedReason,
     behavioralFork: fork,
   };
-  deps.spine?.stage({ type: "identity.action", actor: "cascade", payload: { event: "resolve.cascade.done", issueId: issue.id, tiersUsed, escalations, stoppedReason, escalateToHuman, winnerCleared: cleared, ts: Date.now() } });
+  deps.spine?.stage({ type: "identity.action", actor: "cascade", payload: { event: "resolve.cascade.done", issueId: issue.id, tiersUsed, escalations, stoppedReason, escalateToHuman, winnerCleared: cleared, behavioralFork: fork, ts: Date.now() } });
   return result;
 }

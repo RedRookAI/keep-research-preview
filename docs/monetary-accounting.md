@@ -1,7 +1,7 @@
 # Monetary accounting on metered model calls
 
-This describes the September 10.2 maintenance implementation. Historical release
-results and assets retain their original identities.
+This describes the corrected development implementation. It does not change the
+results or contents of the historical research-preview release.
 
 `MeteredProvider` and `MeteredGateway.generateMetered` reserve projected token cost
 before entering the provider. Outstanding reservations count against the run and

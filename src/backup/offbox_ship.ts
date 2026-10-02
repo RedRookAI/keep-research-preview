@@ -34,6 +34,7 @@
 import type { SealedBlock } from "../spine/hashchain.js";
 import type { Snapshot, SnapshotRef, BackupPort, Hasher } from "./backup_port.js";
 import { buildSnapshot } from "./backup_port.js";
+import { normalizePlainData } from "../spine/witness_reconcile.js";
 import { verifyRestore, type RestoreVerification } from "./verify_restore.js";
 
 /** What a "verified restore" proves — and, honestly, what it does NOT (the labeled seam). */
@@ -144,12 +145,17 @@ export class OffboxShipDriver {
   async shipOnce(now: number = this.clock()): Promise<ShipOutcome> {
     this._ships++;
     this._lastShipAt = now;
-    const snapshot = buildSnapshot(this.source(), this.hasher, now);
+    let snapshot: Snapshot;
+    try { snapshot = buildSnapshot(this.source(), this.hasher, now); }
+    catch (e) { return this.fail(`snapshot FAILED: ${msg(e)}`); }
+    const expected = Object.freeze({ id: snapshot.id, contentRoot: snapshot.contentRoot, blockCount: snapshot.blockCount, eventCount: snapshot.eventCount });
 
     // (1) SHIP — write the snapshot to the off-box sink. Never trust the ack that follows.
     let ref: SnapshotRef;
     try {
-      ref = await this.sink.put(snapshot);
+      ref = Object.freeze({ ...await this.sink.put(snapshot) });
+      if (ref.id !== expected.id || ref.contentRoot !== expected.contentRoot || ref.blockCount !== expected.blockCount)
+        return this.fail("backup target acknowledgement does not match the supplied snapshot");
     } catch (e) {
       return this.fail(`ship FAILED to ${this.sink.name}: ${msg(e)}`);
     }
@@ -158,7 +164,8 @@ export class OffboxShipDriver {
     //     the sink accepted bytes, not that a complete, untampered object is now durably at rest.
     let fetched: Snapshot | undefined;
     try {
-      fetched = await this.sink.get(ref.id);
+      const value = await this.sink.get(expected.id);
+      fetched = value === undefined ? undefined : normalizePlainData(value);
     } catch (e) {
       return this.fail(`re-fetch FAILED after ship (${ref.id}) from ${this.sink.name}: ${msg(e)}`);
     }
@@ -169,14 +176,20 @@ export class OffboxShipDriver {
     // (3) RE-VERIFY the FETCHED bytes with the EXISTING verifyRestore predicate, against the SOURCE
     //     (expected) root — chain re-verify + content-root match. A copy that lands but does not
     //     verify is NOT a durable backup.
-    const verification = verifyRestore(fetched.blocks, snapshot.contentRoot, this.hasher, now);
-    if (!verification.ok) {
-      return this.fail(`shipped copy FAILED verifyRestore on ${this.sink.name}: ${verification.reason}`, verification);
-    }
+    let verification: RestoreVerification;
+    try {
+      verification = verifyRestore(fetched.blocks, expected.contentRoot, this.hasher, now);
+      if (!verification.ok)
+        return this.fail(`shipped copy FAILED verifyRestore on ${this.sink.name}: ${verification.reason}`, verification);
+      if (fetched.id !== expected.id || fetched.contentRoot !== expected.contentRoot || fetched.blockCount !== expected.blockCount ||
+          fetched.eventCount !== expected.eventCount || fetched.blocks.length !== expected.blockCount ||
+          fetched.blocks.reduce((n, b) => n + b.events.length, 0) !== expected.eventCount)
+        return this.fail("fetched snapshot metadata does not match the supplied snapshot", verification);
+    } catch (e) { return this.fail(`shipped copy verification FAILED: ${msg(e)}`); }
 
     // (4) HEALTHY — only now, after a re-fetched-and-re-verified round-trip.
     this._verifiedShips++;
-    this._lastShippedId = ref.id;
+    this._lastShippedId = expected.id;
     this._lastVerifiedAt = now;
     this._lastError = undefined;
     this._healthy = true;

@@ -1,6 +1,6 @@
 {
   "name": "keep",
-  "version": "0.0.3-preview.1",
+  "version": "0.0.4-preview.1",
   "description": "Self-hostable, provider-agnostic build orchestrator with consequence-gated autonomy",
   "main": "dist/src/index.js",
   "scripts": {
@@ -67,19 +67,22 @@
     "README.md",
     "docs/semantic-memory.md",
     "docs/skill-registry.md",
+    "docs/monetary-accounting.md",
+    "docs/backup.md",
+    "docs/candidate-selection.md",
+    "docs/security-experiments.md",
     "LICENSE",
     "NOTICE",
     "THIRD_PARTY_NOTICES.txt",
     "docs/licensing.md",
     "docs/research-preview.md",
+    "docs/research.md",
     "docs/evidence.md",
     "acceptance/installed_sg32_resources.mjs",
     "WORKFLOW.md",
     "SECURITY.md",
-    "docs/security-experiments.md",
-    "docs/maintenance-2026-09-10.md",
-    "docs/monetary-accounting.md",
-    "docs/maintenance-2026-09-10.2.md"
+    "docs/quickstart.md",
+    "docs/maintenance-2026-10-02.md"
   ],
   "exports": {
     ".": "./dist/src/index.js",
@@ -89,5 +92,17 @@
   "directories": {
     "doc": "docs",
     "test": "test"
-  }
+  },
+  "engines": {
+    "node": ">=22.23.2 <23"
+  },
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "bundleDependencies": [
+    "typescript"
+  ]
 }

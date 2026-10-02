@@ -20,7 +20,7 @@ export type RestoreSigningReport =
 
 export interface InstalledBackupRestoreRequest {
   readonly capture: InstalledBackupCapture;
-  /** Absolute absent directory; restored product/ and state/ are published beneath it by one rename. */
+  /** Absolute absent directory; staged product/ and state/ are renamed separately, followed by a completion marker. */
   readonly targetRoot: string;
   readonly signing?: RestoreSigningInput;
   /** Required when the capture contains protected credential material; the authority/key is external to the archive. */
@@ -49,6 +49,11 @@ export interface InstalledBackupRestoreReport {
 
 /** Restore through fresh sibling staging directories, verify bytes and inventory, then publish by rename. */
 export async function restoreInstalledBackup(request: InstalledBackupRestoreRequest): Promise<InstalledBackupRestoreReport> {
+  // Async target/opener callbacks must not replace the archive already approved.
+  // Keep callbacks/KeyObjects intact; own the transported values and limits.
+  request = { ...request, capture: structuredClone(request.capture),
+    ...(request.limits ? { limits: { ...request.limits } } : {}),
+    ...(request.signing ? { signing: { ...request.signing, protectedBackup: structuredClone(request.signing.protectedBackup) } } : {}) };
   const targetRoot = validateFreshTarget(request.targetRoot);
   const signing = await signingReport(request.capture, request.signing);
   if (signing.status === "verification-failed") throw new Error(signing.limitation);

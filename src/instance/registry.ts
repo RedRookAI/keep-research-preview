@@ -7,7 +7,7 @@
  * <home>/runtime.json, so the dashboard/CLI reads the real target instead of guessing.
  *
  * The registry is the fleet catalog: <base>/registry.json tracks every instance so N
- * projects on one Hetzner box coexist and are discoverable, and starting a new
+ * projects on one configured host box coexist and are discoverable, and starting a new
  * top-level project just mints a fresh id. Updates prune dead entries (PID liveness)
  * and are written atomically (temp-then-rename) to survive concurrent writers.
  * Zero deps.

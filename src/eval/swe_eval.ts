@@ -42,12 +42,23 @@ function writeTree(dir: string, files: Readonly<Record<string, string>>): void {
 
 /** Run node --test in the repo (sandboxed) and map each requested test name → passed (via TAP per-case parsing). */
 async function runNamedTests(projectDir: string, testNames: readonly string[]): Promise<TestExecution> {
-  const runner = new SandboxedCommandRunner({ command: "node", args: ["--test"], projectDir, timeoutMs: 30_000 });
+  const runner = new SandboxedCommandRunner({ command: "node", args: ["--test", "--test-reporter=tap"], projectDir, timeoutMs: 30_000 });
   const res = await runner.run(projectDir);
-  const passed: Record<string, boolean> = {};
+  return mapNamedTestResults(testNames, res);
+}
+
+/** Missing evidence stays false; duplicate occurrences must all pass. A harness
+ * error cannot lend its partial results to the named-test resolution oracle. */
+export function mapNamedTestResults(testNames: readonly string[], res: { readonly results: readonly { readonly name: string; readonly passed: boolean }[]; readonly runnerError?: string }): TestExecution {
+  const passed: Record<string, boolean> = Object.create(null);
   for (const name of testNames) passed[name] = false; // default: not-run ⇒ fail
+  if (res.runnerError) return { passed };
+  const seen = new Set<string>();
   // SandboxedCommandRunner already parses TAP per-case; map the requested test names to their pass/fail.
-  for (const c of res.results) if (c.name in passed) passed[c.name] = c.passed;
+  for (const c of res.results) if (Object.hasOwn(passed, c.name)) {
+    passed[c.name] = (seen.has(c.name) ? passed[c.name] === true : true) && c.passed === true;
+    seen.add(c.name);
+  }
   return { passed };
 }
 

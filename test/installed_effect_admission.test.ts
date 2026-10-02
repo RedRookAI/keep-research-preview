@@ -40,7 +40,7 @@ test("SAFE-02: real workspace, process, git, and publication owners cross admiss
   const adapter = new ProcessIsolationAdapter();
   (adapter as unknown as { run: () => Promise<IsolatedRunResult> }).run = async () => {
     processCalled = true;
-    return { code: 0, signal: null, stdout: "ok 1 - admitted\n", stderr: "", timedOut: false, truncated: false, durationMs: 1 };
+    return { code: 0, signal: null, stdout: "TAP version 13\nok 1 - admitted\n1..1\n", stderr: "", timedOut: false, truncated: false, durationMs: 1 };
   };
   await new SandboxedCommandRunner({ command: "node", args: ["--test"], projectDir: repo, namespaceJail: false, adapter, effectAdmission: gate }).run(".");
   assert.equal(processCalled, true);
@@ -81,4 +81,3 @@ test("SAFE-02: a holding boundary prevents the underlying process adapter from r
   await assert.rejects(() => runner.run("."), /held by admission/);
   assert.equal(processCalled, false);
 });
-

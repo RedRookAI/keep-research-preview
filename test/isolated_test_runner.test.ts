@@ -19,7 +19,7 @@ const events = (s: Spine) => s.currentEvents().map((e) => (e.payload as Record<s
 test("ISO: a normal run executes inside process isolation and emits a signed audit event", async () => {
   const s = spine();
   const dir = mkdtempSync(join(tmpdir(), "keep-iso-project-"));
-  const inner = new SandboxedCommandRunner({ command: "node", args: ["-e", `console.log("ok 1 - t")`], projectDir: dir });
+  const inner = new SandboxedCommandRunner({ command: "node", args: ["-e", `console.log("ok 1 - t");console.log("1..1")`], projectDir: dir });
   const runner = new IsolatedTestRunner(inner, new ProcessIsolationExecutor(s), dir, () => "medium");
   const r = await runner.run("proj/pkg");
   assert.equal(r.results[0]!.passed, true, "the inner tests ran");
@@ -29,7 +29,7 @@ test("ISO: a normal run executes inside process isolation and emits a signed aud
 test("ISO SAFETY: ticket repository metadata cannot redirect execution away from the resolved project root", async () => {
   const s = spine();
   const dir = mkdtempSync(join(tmpdir(), "keep-iso-project-"));
-  const check = `if (process.cwd() !== ${JSON.stringify(dir)}) process.exit(9); console.log("ok 1 - rooted")`;
+  const check = `if (process.cwd() !== ${JSON.stringify(dir)}) process.exit(9); console.log("ok 1 - rooted");console.log("1..1")`;
   const runner = new IsolatedTestRunner(new SandboxedCommandRunner({ command: "node", args: ["-e", check], projectDir: dir }), new ProcessIsolationExecutor(s), dir, () => "low");
   const r = await runner.run("../../etc/passwd");
   assert.equal(r.results[0]!.passed, true);

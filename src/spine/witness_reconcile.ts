@@ -160,7 +160,7 @@ export interface RestorationVerifier {
  * guarantee end-to-end immutability of the verified artifact. Restore inputs are persisted JSON, so legitimate
  * blocks/witness/attestations are always plain data; anything else is an attack surface and is refused fail-closed.
  */
-function normalizePlainData<T>(value: T): T {
+export function normalizePlainData<T>(value: T): T {
   const norm = (v: unknown): unknown => {
     if (v === null) return null;
     const t = typeof v;

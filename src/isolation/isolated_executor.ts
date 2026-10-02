@@ -3,7 +3,7 @@
  *
  * The solve pipeline runs the project's tests on a patch Keep wrote. That execution must happen inside the
  * selected isolation tier. This defines the port + a runnable process-isolation FLOOR (the back-of-house
- * default) + declared VERIFIED-SEAM backends (microVM/gVisor/container — same port, need Hetzner + KVM /
+ * default) + declared VERIFIED-SEAM backends (microVM/gVisor/container — same port, need configured host + KVM /
  * gVisor / a runtime to run for real).
  *
  * SOTA basis (2026-08-05): scope the filesystem to the PROJECT dir only, never home; resist path traversal
@@ -283,7 +283,7 @@ export function buildEnforcingRunner(
 /**
  * A VERIFIED-SEAM backend for a hardware/kernel-isolated tier (microVM / gVisor / container). It declares
  * the tier and the same port; the actual boundary is provided by the host (Firecracker/Kata/runsc/runtime)
- * on Hetzner. Here it delegates to a provided real-boundary runner (the seam) or refuses if none is wired.
+ * on configured host. Here it delegates to a provided real-boundary runner (the seam) or refuses if none is wired.
  */
 export class BoundaryExecutor implements IsolatedExecutor {
   private completedRunEvidence: IsolationEvidence | undefined;
@@ -330,7 +330,7 @@ export class BoundaryExecutor implements IsolatedExecutor {
       return { tier: this.tier, executed: false, refusedReason: gate.reason };
     }
     if (!this.boundaryRun) {
-      const reason = `${this.tier} isolation declared but no host boundary wired (VERIFIED-SEAM: needs Hetzner + ${this.tier}) — refusing rather than running unisolated`;
+      const reason = `${this.tier} isolation declared but no host boundary wired (VERIFIED-SEAM: needs configured host + ${this.tier}) — refusing rather than running unisolated`;
       this.audit(spec, false, reason);
       return { tier: this.tier, executed: false, refusedReason: reason };
     }

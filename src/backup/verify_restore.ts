@@ -16,7 +16,6 @@
 import type { SealedBlock, VerifyResult } from "../spine/hashchain.js";
 import { verifyChain } from "../spine/hashchain.js";
 import type { Snapshot, BackupPort, Hasher } from "./backup_port.js";
-import { buildSnapshot } from "./backup_port.js";
 
 export interface RestoreVerification {
   readonly ok: boolean;
@@ -32,26 +31,29 @@ export interface RestoreVerification {
 }
 
 /**
- * Verify a restore is provably complete + untampered (the +0 property). Runs BOTH checks:
+ * Verify restored chain integrity against a caller-supplied expected root:
  *  1. chain integrity via verifyChain (seq gaps/truncation, broken links, event & block tampering);
- *  2. content-root match: recompute the snapshot from the restored blocks and confirm its root equals
- *     the expected root. A mismatch means the restore is incomplete or altered → NOT ok.
+ *  2. compare the final root, checked by that fold, with the expected root.
+ * This does not establish source truth or custody. hasher/now remain accepted for
+ * call-site compatibility; verification uses the chain's existing hash algorithm.
  */
 export function verifyRestore(restored: readonly SealedBlock[], expectedRoot: string, hasher: Hasher, now = Date.now()): RestoreVerification {
   const chain = verifyChain(restored);
-  const recomputed = buildSnapshot(restored, hasher, now);
-  const rootMatches = recomputed.contentRoot === expectedRoot;
+  // verifyChain already recomputes the event roots. Do not allocate another owned
+  // snapshot just to read the final root (or invoke a supplied hasher needlessly).
+  const recomputedRoot = restored.at(-1)?.cumulativeRoot ?? "0".repeat(64);
+  const rootMatches = recomputedRoot === expectedRoot;
 
   const ok = chain.ok && rootMatches;
   let reason: string;
   if (!chain.ok) {
     reason = `chain integrity FAILED at block ${chain.failedAt}: ${chain.reason}`;
   } else if (!rootMatches) {
-    reason = `content root mismatch: restored ${recomputed.contentRoot.slice(0, 16)}… ≠ expected ${expectedRoot.slice(0, 16)}… (incomplete or altered restore)`;
+    reason = `content root mismatch: restored ${recomputedRoot.slice(0, 16)}… ≠ expected ${expectedRoot.slice(0, 16)}… (incomplete or altered restore)`;
   } else {
     reason = `restore verified: ${restored.length} blocks, chain intact, content root matches`;
   }
-  return { ok, recomputedRoot: recomputed.contentRoot, expectedRoot, rootMatches, chain, reason };
+  return { ok, recomputedRoot, expectedRoot, rootMatches, chain, reason };
 }
 
 /**

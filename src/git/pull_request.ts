@@ -10,7 +10,7 @@
  * the manifest surfaces intent (the issue) vs executed (the edits + test results) explicitly.
  *
  * LocalPullRequest implements the port against a local bare remote (real, testable here). A hosted
- * GitHubPrAdapter/GitLabPrAdapter implements the same port on Hetzner. Zero deps.
+ * GitHubPrAdapter/GitLabPrAdapter implements the same port on configured host. Zero deps.
  */
 
 import type { PrProposal } from "../solve/issue_model.js";

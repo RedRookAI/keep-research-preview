@@ -14,7 +14,7 @@
  *   - HONEST: loading tasks is not running them. `LoadResult.caveats` carries the "a real run needs a real provider" note.
  */
 
-import type { EvalTask } from "./swebench_task.js";
+import { testPopulationError, type EvalTask } from "./swebench_task.js";
 import { decontaminate, type DecontaminationPolicy, type DecontaminationResult } from "./decontamination.js";
 
 /** The real SWE-bench record shape (as published on HF / in the JSONL). FAIL_TO_PASS/PASS_TO_PASS may be a JSON string OR an array. */
@@ -77,6 +77,8 @@ export function parseRecord(record: SwebenchRecord): { task: EvalTask } | { reas
   if (failToPass === null || failToPass.length === 0) return { reason: `${instanceId}: FAIL_TO_PASS missing/malformed (a task with no fail-to-pass test cannot be scored)` };
   const passToPass = parseTestList(record.PASS_TO_PASS);
   if (passToPass === null) return { reason: `${instanceId}: PASS_TO_PASS malformed` };
+  const invalid = testPopulationError({ failToPass, passToPass });
+  if (invalid) return { reason: `${instanceId}: ${invalid}` };
 
   const goldPatch = typeof record.patch === "string" ? record.patch : undefined;
   const testPatch = typeof record.test_patch === "string" && record.test_patch.length > 0 ? record.test_patch : undefined;

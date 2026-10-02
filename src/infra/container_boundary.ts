@@ -27,9 +27,9 @@
  */
 
 import { spawnSync } from "node:child_process";
-import type { TestRunner, TestRunResult, TestCaseResult } from "../solve/validate.js";
+import type { TestRunner, TestRunResult } from "../solve/validate.js";
 import { ProcessIsolationAdapter, resolvedWithinProject } from "./process_isolation.js";
-import { parseTap } from "../solve/sandboxed_runner.js";
+import { interpretCommandTests } from "../solve/command_test_evidence.js";
 import type { ExecutionSpec } from "../isolation/isolated_executor.js";
 import type { IsolationTier } from "../isolation/isolation_tier.js";
 
@@ -204,14 +204,7 @@ export function buildContainerBoundaryRun(
     if (res.timedOut) return { results: [], runnerError: `strong-tier (${runtime.tier}) run exceeded ${spec.timeoutMs ?? 60_000}ms and was killed` };
     if (res.code === null) return { results: [], runnerError: `strong-tier (${runtime.tier}) run did not exit normally${res.signal ? ` (killed: ${res.signal})` : ""}` };
 
-    const cases: TestCaseResult[] = parseTap(`${res.stdout}\n${res.stderr}`);
-    if (res.code === 0) {
-      return { results: cases.length > 0 ? cases : [{ name: `${spec.command} ${spec.args.join(" ")}`.trim(), passed: true }] };
-    }
-    const failing = cases.filter((c) => !c.passed);
-    if (failing.length > 0) return { results: cases };
-    const tail = (res.stderr || res.stdout).slice(-2000);
-    return { results: [{ name: `${spec.command} ${spec.args.join(" ")}`.trim(), passed: false, output: tail || `exit code ${res.code}` }] };
+    return interpretCommandTests(`${spec.command} ${spec.args.join(" ")}`.trim(), { ...res, code: res.code });
   };
 }
 

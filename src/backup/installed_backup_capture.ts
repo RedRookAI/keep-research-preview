@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { isAbsolute, join, relative, sep } from "node:path";
 
 export type BackupScope = "product" | "state";
+/** maxFiles bounds total inventory entries, including directories and exclusions. */
 export interface BackupLimits { readonly maxFiles?: number; readonly maxFileBytes?: number; readonly maxTotalBytes?: number }
 
 export interface BackupDirectoryEntry { readonly scope: BackupScope; readonly path: string; readonly mode: number }
@@ -90,7 +91,7 @@ interface ScanResult {
 
 interface SourceIdentity { readonly scope: BackupScope; readonly path: string; readonly size: number; readonly mode: number; readonly sha256: string }
 
-/** Capture once and perform exactly one independent reread; a changing or incomplete tree is refused. */
+/** Two inventory reads detect changes; callers must quiesce writers. This is not an atomic filesystem snapshot. */
 export async function captureInstalledBackup(request: InstalledBackupCaptureRequest): Promise<InstalledBackupCapture> {
   const limits = {
     maxFiles: positive(request.maxFiles, DEFAULT_MAX_FILES, "maxFiles"),
@@ -100,7 +101,8 @@ export async function captureInstalledBackup(request: InstalledBackupCaptureRequ
   const roots = resolveRoots(request.installedRoot, request.stateRoot);
   const first = await scan(roots, limits, request.credentialProtector);
   const verification = await scan(roots, limits, request.credentialProtector);
-  if (first.sourceDigest !== verification.sourceDigest) throw new Error("backup capture changed during verification; no snapshot was produced");
+  if (first.sourceDigest !== verification.sourceDigest || first.contentInventoryDigest !== verification.contentInventoryDigest)
+    throw new Error("backup capture changed during verification; no snapshot was produced");
   const takenAtMs = request.nowMs ?? Date.now();
   if (!Number.isSafeInteger(takenAtMs) || takenAtMs < 0) throw new Error("backup capture timestamp must be a non-negative safe integer");
   const credentialProtection = request.credentialProtector === undefined ? "best-effort" as const : "all-state" as const;
@@ -128,7 +130,7 @@ export function verifyInstalledBackup(capture: InstalledBackupCapture, requested
   try {
     if (capture.schemaVersion !== 1 || capture.verified !== true || !Number.isSafeInteger(capture.takenAtMs) || capture.takenAtMs < 0) return false;
     const limits = { maxFiles: positive(requestedLimits.maxFiles, DEFAULT_MAX_FILES, "maxFiles"), maxFileBytes: positive(requestedLimits.maxFileBytes, DEFAULT_MAX_FILE_BYTES, "maxFileBytes"), maxTotalBytes: positive(requestedLimits.maxTotalBytes, DEFAULT_MAX_TOTAL_BYTES, "maxTotalBytes") };
-    if (capture.files.length + (capture.protectedFiles?.length ?? 0) > limits.maxFiles || capture.totalBytes > limits.maxTotalBytes) return false;
+    if (capture.files.length + (capture.protectedFiles?.length ?? 0) + (capture.directories?.length ?? 0) + capture.exclusions.length > limits.maxFiles || capture.totalBytes > limits.maxTotalBytes) return false;
     let totalBytes = 0;
     const seen = new Set<string>();
     for (const file of capture.files) {
@@ -194,6 +196,8 @@ async function scan(roots: Readonly<Record<BackupScope, string>>, limits: { maxF
     if (!own.isDirectory()) throw new Error(`backup root/tree entry is not a directory: ${scope}:${rel || "."}`);
     if (!isRoot && hasGitMarker(absolute)) { exclusions.push({ scope, path: rel, reason: "nested-repository" }); return; }
     for (const dirent of readdirSync(absolute, { withFileTypes: true }).sort((a, b) => lexical(a.name, b.name))) {
+      if (files.length + protectedFiles.length + directories.length + exclusions.length >= limits.maxFiles)
+        throw new Error("backup capture exceeds maxFiles inventory-entry limit");
       const childRel = rel === "" ? dirent.name : `${rel}/${dirent.name}`;
       if (dirent.name === ".git") { exclusions.push({ scope, path: childRel, reason: "git-control" }); continue; }
       const credentialByPath = credentialPath(childRel);
@@ -212,7 +216,6 @@ async function scan(roots: Readonly<Record<BackupScope, string>>, limits: { maxF
       if ((credentialByPath || credentialByContent) && !credentialProtector) { exclusions.push({ scope, path: childRel, reason: credentialByPath ? "credential-path" : "credential-content" }); continue; }
       totalBytes += bytes.length;
       if (totalBytes > limits.maxTotalBytes) throw new Error("backup capture exceeds maxTotalBytes");
-      if (files.length + protectedFiles.length >= limits.maxFiles) throw new Error("backup capture exceeds maxFiles");
       const sourceIdentity = Object.freeze({ scope, path: childRel, size: bytes.length, mode: meta.mode & 0o7777, sha256: digest(bytes) });
       sourceIdentities.push(sourceIdentity);
       if (credentialProtector && (scope === "state" || credentialByPath || credentialByContent)) {

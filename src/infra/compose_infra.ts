@@ -2,7 +2,7 @@
  * Infra composition root (infra) — the single swap-in point for live adapters.
  *
  * `composeInfra` assembles the real infra adapters behind their ports from a policy
- * config. On the connected (Hetzner) environment, this is the ONE place to replace
+ * config. On the connected (configured host) environment, this is the ONE place to replace
  * local/stub adapters with live ones (HTTP provider, git remote, real semgrep,
  * microVM isolation, HTTP MCP/A2A) — domain code keeps depending only on the ports.
  */

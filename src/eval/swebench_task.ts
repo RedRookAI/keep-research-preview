@@ -39,6 +39,21 @@ export interface TestExecution {
   readonly passed: Readonly<Record<string, boolean>>;
 }
 
+/** Generic tasks need at least one distinct, nonblank required test. The dataset
+ * loader may impose stricter rules; regression-only generic tasks remain valid. */
+export function testPopulationError(task: Pick<EvalTask, "failToPass" | "passToPass">): string | undefined {
+  if (!Array.isArray(task.failToPass) || !Array.isArray(task.passToPass)) return "required test populations must be arrays";
+  const names = [...task.failToPass, ...task.passToPass];
+  if (names.length === 0) return "required test population is empty";
+  if (names.some(name => typeof name !== "string" || name.trim().length === 0)) return "required test names must be nonblank strings";
+  if (new Set(names).size !== names.length) return "required test names must be unique across both populations";
+  return undefined;
+}
+
+function executedPass(execution: TestExecution, name: string): boolean {
+  return !!execution.passed && Object.hasOwn(execution.passed, name) && execution.passed[name] === true;
+}
+
 /** The oracle's verdict for one task. */
 export interface ResolutionVerdict {
   readonly instanceId: string;
@@ -60,18 +75,19 @@ export interface ResolutionVerdict {
  * didn't run is not a pass — mirrors validate.ts's "0 tests is not a pass" rule).
  */
 export function judgeResolution(task: EvalTask, afterPatch: TestExecution): ResolutionVerdict {
-  const passed = afterPatch.passed;
+  const invalid = testPopulationError(task);
+  if (invalid) return { instanceId: task.instanceId, resolved: false, failToPassCleared: [], failToPassMissed: [], passToPassRegressed: [], reason: `unresolved: ${invalid}` };
 
   const failToPassCleared: string[] = [];
   const failToPassMissed: string[] = [];
   for (const t of task.failToPass) {
-    if (passed[t] === true) failToPassCleared.push(t);
+    if (executedPass(afterPatch, t)) failToPassCleared.push(t);
     else failToPassMissed.push(t);
   }
 
   const passToPassRegressed: string[] = [];
   for (const t of task.passToPass) {
-    if (passed[t] !== true) passToPassRegressed.push(t);
+    if (!executedPass(afterPatch, t)) passToPassRegressed.push(t);
   }
 
   const resolved = failToPassMissed.length === 0 && passToPassRegressed.length === 0;
@@ -123,10 +139,10 @@ export function judgeResolutionStable(task: EvalTask, runs: readonly TestExecuti
   const perRunResolved = runs.map((r) => judgeResolution(task, r).resolved);
 
   // A relevant test is FLAKY if its passed-value is not identical across every rerun.
-  const relevant = [...task.failToPass, ...task.passToPass];
+  const relevant = testPopulationError(task) ? [] : [...task.failToPass, ...task.passToPass];
   const flakyTests: string[] = [];
   for (const t of relevant) {
-    const vals = runs.map((r) => r.passed[t] === true);
+    const vals = runs.map((r) => executedPass(r, t));
     if (vals.length > 1 && !vals.every((v) => v === vals[0])) flakyTests.push(t);
   }
   const flaky = flakyTests.length > 0;
@@ -152,7 +168,7 @@ export function judgeResolutionStable(task: EvalTask, runs: readonly TestExecuti
 
 /**
  * A source of eval tasks — the generic port. The synthetic suite implements it here; real SWE-bench
- * Verified / Pro / Terminal-Bench 2.0 adapters implement it on Hetzner (load dataset + Docker/env-free
+ * Verified / Pro / Terminal-Bench 2.0 adapters implement it on configured host (load dataset + Docker/env-free
  * runner). Keeps the harness benchmark-agnostic.
  */
 export interface TaskSource {

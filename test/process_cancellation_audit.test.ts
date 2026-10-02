@@ -32,7 +32,7 @@ function setup(track: string, delayMs = 0, outerTimeout?: number) {
   let admissions = 0;
   const command = new SandboxedCommandRunner({
     command: process.execPath,
-    args: ["-e", "const fs=require('node:fs');fs.writeFileSync(process.argv[1],String(process.pid));setTimeout(()=>{fs.writeFileSync(process.argv[2],'finished');console.log('ok 1 - useful work')},Number(process.argv[3]));", start, finish, String(delayMs)],
+    args: ["-e", "const fs=require('node:fs');fs.writeFileSync(process.argv[1],String(process.pid));setTimeout(()=>{fs.writeFileSync(process.argv[2],'finished');console.log('ok 1 - useful work\\n1..1')},Number(process.argv[3]));", start, finish, String(delayMs)],
     projectDir: dir, namespaceJail: false, timeoutMs: 2000, maxOutputBytes: 1024, adapter,
     effectAdmission: new InstalledEffectAdmission(() => { admissions++; }),
   });
@@ -119,7 +119,7 @@ test("KEEP-11A-003 minimum tier forwards cancellation and boundary refuses befor
 
 test("KEEP-11A-003 abort during admission is refused before adapter entry", async () => {
   const f = setup("admit"), controller = new AbortController();
-  const command = new SandboxedCommandRunner({ command: process.execPath, args: ["-e", "console.log('ok 1')"], projectDir: f.dir,
+  const command = new SandboxedCommandRunner({ command: process.execPath, args: ["-e", "console.log('ok 1\\n1..1')"], projectDir: f.dir,
     namespaceJail: false, adapter: f.adapter, effectAdmission: new InstalledEffectAdmission(() => controller.abort()) });
   const result = await command.run(f.dir, { signal: controller.signal });
   assert.ok(result.runnerError); assert.equal(result.processCompletion, "not-started");
@@ -191,7 +191,7 @@ test("KEEP-11A-003 child close/cancel ordering cannot accept output after caller
       const result = await super.run(command, args, policy); controller.abort(); return result;
     }
   }
-  const command = new SandboxedCommandRunner({ command: process.execPath, args: ["-e", "console.log('ok 1 - passed')"], projectDir: f.dir, namespaceJail: false, adapter: new CancelAfterReturn() });
+  const command = new SandboxedCommandRunner({ command: process.execPath, args: ["-e", "console.log('ok 1 - passed\\n1..1')"], projectDir: f.dir, namespaceJail: false, adapter: new CancelAfterReturn() });
   const result = await command.run(f.dir, { signal: controller.signal });
   assert.ok(result.runnerError); assert.equal(result.results.length, 0);
   assert.equal(result.processCompletion, "direct-child-closed");

@@ -1260,17 +1260,20 @@ pub mod candidate_probe {
         let root = Path::new(WORK_ROOT).join(secrets.attempt_id.as_str());
         let cleanup = CandidateFixtureRoot(root.clone());
 
-        let runtime = PinnedDirectory::open(Path::new(
-            "/root/keep-infra/firecracker/release-v1.16.1-x86_64",
-        ))?;
-        let images = PinnedDirectory::open(Path::new("/root/keep-infra/firecracker"))?;
+        let runtime_root = std::env::var("KEEP_FIRECRACKER_RUNTIME_DIR")
+            .map_err(|_| "KEEP_FIRECRACKER_RUNTIME_DIR is required for this host fixture")?;
+        let images_root = std::env::var("KEEP_FIRECRACKER_IMAGES_DIR")
+            .map_err(|_| "KEEP_FIRECRACKER_IMAGES_DIR is required for this host fixture")?;
+        let runtime = PinnedDirectory::open(Path::new(&runtime_root))?;
+        let images = PinnedDirectory::open(Path::new(&images_root))?;
         let tools = PinnedDirectory::open(Path::new("/usr/sbin"))?;
         let configuration = PinnedDirectory::open(Path::new("/etc"))?;
-        let repository_assets =
-            PinnedDirectory::open(Path::new("/root/keep-canonical/keep/assets/microvm"))?;
-        let native_candidate_build = PinnedDirectory::open(Path::new(
-            "/root/keep-canonical/keep/native/target/x86_64-unknown-linux-musl/debug",
-        ))?;
+        let assets_root = std::env::var("KEEP_FIRECRACKER_ASSETS_DIR")
+            .map_err(|_| "KEEP_FIRECRACKER_ASSETS_DIR is required for this host fixture")?;
+        let build_root = std::env::var("KEEP_NATIVE_FIXTURE_BUILD_DIR")
+            .map_err(|_| "KEEP_NATIVE_FIXTURE_BUILD_DIR is required for this host fixture")?;
+        let repository_assets = PinnedDirectory::open(Path::new(&assets_root))?;
+        let native_candidate_build = PinnedDirectory::open(Path::new(&build_root))?;
         for (destination, source_root, source, maximum, mode, expected_sha256) in [
             (
                 "jailer",

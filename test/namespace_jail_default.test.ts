@@ -62,7 +62,7 @@ test("(b) DEFAULT: an in-project write + a normal passing test stay GREEN (jail 
   const runner = new SandboxedCommandRunner({
     command: "node",
     // write a file INSIDE the project, then a passing assertion — exit 0.
-    args: ["-e", `const fs=require('fs');fs.writeFileSync('in.txt','ok');process.stdout.write('ok 1 - inproject write\\n')`],
+    args: ["-e", `const fs=require('fs');fs.writeFileSync('in.txt','ok');process.stdout.write('TAP version 13\\nok 1 - inproject write\\n1..1\\n')`],
     projectDir: proj, timeoutMs: 20_000,
   });
   const r = await runner.run(".");
@@ -126,7 +126,7 @@ test("WIRING: with NO configuration the SandboxedCommandRunner binds the namespa
   // A recording adapter: capture the policy the DEFAULT runner builds, without spawning.
   const spy = new ProcessIsolationAdapter();
   (spy as unknown as { run: (c: string, a: readonly string[], p: IsolationPolicy) => Promise<IsolatedRunResult> }).run =
-    async (_c, _a, p) => { captured = p; return { code: 0, signal: null, stdout: "ok 1 - x\n", stderr: "", timedOut: false, truncated: false, durationMs: 1 }; };
+    async (_c, _a, p) => { captured = p; return { code: 0, signal: null, stdout: "TAP version 13\nok 1 - x\n1..1\n", stderr: "", timedOut: false, truncated: false, durationMs: 1 }; };
   const runner = new SandboxedCommandRunner({ command: "node", args: ["--test"], projectDir: proj, adapter: spy });
   await runner.run(".");
   // The wiring: neutering it (sandboxed_runner drops `namespaceJail` from the policy) makes this undefined → RED.

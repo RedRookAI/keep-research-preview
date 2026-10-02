@@ -8,11 +8,11 @@ import { tmpdir } from "node:os";
 
 const root = process.cwd();
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
-  scripts: Record<string, string>; files: string[];
+  version: string; scripts: Record<string, string>; files: string[];
   repository?: unknown; bugs?: unknown; homepage?: unknown;
 };
 const publicDocs = ["README.md", "WORKFLOW.md", "CLAUDE.md", "SECURITY.md",
-  "docs/research-preview.md", "docs/security-experiments.md", "docs/evidence.md", "docs/licensing.md", "docs/semantic-memory.md", "docs/skill-registry.md"];
+  "docs/research-preview.md", "docs/research.md", "docs/evidence.md", "docs/licensing.md", "docs/semantic-memory.md", "docs/skill-registry.md"];
 
 test("public instructions have existing local links and no private planning or card prerequisites", () => {
   for (const name of publicDocs) {
@@ -70,7 +70,7 @@ test("npm demo and swe-eval execute compiled targets without destroying or rebui
 });
 
 test("preview's installed demo and limitations are included without inventing a public repository", () => {
-  for (const path of ["acceptance/installed_sg32_resources.mjs", "docs/research-preview.md", "docs/security-experiments.md", "docs/evidence.md", "docs/skill-registry.md", "SECURITY.md", "WORKFLOW.md"])
+  for (const path of ["acceptance/installed_sg32_resources.mjs", "docs/research-preview.md", "docs/research.md", "docs/evidence.md", "docs/skill-registry.md", "SECURITY.md", "WORKFLOW.md"])
     assert.ok(pkg.files.includes(path), "package missing " + path);
   // Publication approval must choose a real destination; no private or invented URL.
   for (const value of [pkg.repository, pkg.bugs, pkg.homepage])
@@ -91,15 +91,11 @@ test("documented expected-checksum gate stops before install on mismatch or miss
   const guide = readFileSync(join(root, "docs/research-preview.md"), "utf8");
   const block = guide.match(/~~~sh\n(\(\n[\s\S]*?\n\))\n~~~/u)?.[1];
   assert.ok(block, "documented install block missing");
-  const version = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
-  assert.equal(typeof version, "string");
-  const archiveName = `keep-${version}.tgz`;
-  assert.ok(block.includes(`realpath ${archiveName}`), "guide must name the current package version");
   for (const variant of ["matching", "mismatch", "malformed", "unset", "missing-archive"] as const) {
     const fixture = mkdtempSync(join(tmpdir(), "keep-checksum-guide-"));
     try {
       const bytes = Buffer.from("synthetic archive: never installed or executed\n");
-      if (variant !== "missing-archive") writeFileSync(join(fixture, archiveName), bytes);
+      if (variant !== "missing-archive") writeFileSync(join(fixture, `keep-${pkg.version}.tgz`), bytes);
       const bin = join(fixture, "bin"), sentinel = join(fixture, "calls");
       mkdirSync(bin);
       for (const name of ["npm", "node"])

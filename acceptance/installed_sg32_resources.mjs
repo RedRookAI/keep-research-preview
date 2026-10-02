@@ -1,5 +1,5 @@
 // Bounded installed SG32 accounting regression, NOT whole-ticket qualification.
-// Usage: node acceptance/installed_sg32_resources.mjs INSTALLED_ROOT ARCHIVE SHA256
+// Usage: node acceptance/installed_sg32_resources.mjs INSTALLED_ROOT [ARCHIVE SHA256]
 // The outbox is an independent local oracle; no real mail/payment/model is used.
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, openSync, writeSync, fsyncSync, closeSync, existsSync } from 'node:fs';
@@ -69,9 +69,14 @@ if (process.argv[2] === '--entry-child') {
     evidence: replay.events.filter(e => e.actor === 'fleet-lifecycle' || e.payload.event === 'capability.traffic') }) + '\n');
 } else {
   const [installed, archive, archiveSha] = process.argv.slice(2);
-  assert.equal(process.argv.length, 5);
-  assert.ok(isAbsolute(installed) && isAbsolute(archive));
-  assert.equal(createHash('sha256').update(readFileSync(archive)).digest('hex'), archiveSha);
+  assert.ok(isAbsolute(installed));
+  if (archive !== undefined || archiveSha !== undefined) {
+    assert.equal(process.argv.length, 5);
+    assert.ok(isAbsolute(archive));
+    assert.equal(createHash('sha256').update(readFileSync(archive)).digest('hex'), archiveSha);
+  } else {
+    assert.equal(process.argv.length, 3);
+  }
   const root = mkdtempSync(join(tmpdir(), 'keep-installed-fleet-uncertainty-')), results = [];
   for (const track of ['owner', 'injected-tenant']) for (const [mode, cap] of [
     ['acknowledged', 1], ['commit-then-throw', 1], ['throw-before-effect', 1], ['returned-failure', 1], ['forged-hold', 1], ['response-audit-failure', 1], ['hub-refusal', 1], ['commit-then-throw', 2],

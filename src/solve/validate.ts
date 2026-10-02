@@ -10,7 +10,7 @@
  * specific failures, and validation is decided by the TestRunner port, not the model.
  *
  * The TestRunner is a port: an in-memory scripted runner here (deterministic), a real process-
- * spawning runner on Hetzner behind the same interface. Zero deps.
+ * spawning runner on configured host behind the same interface. Zero deps.
  */
 
 import type { ValidationOutcome } from "./issue_model.js";

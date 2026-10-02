@@ -35,6 +35,7 @@ import { applyProviderProfile, defaultProviderProfilePath, loadProviderProfile, 
 import { loadInstalledOrganizationRuntime } from "./organization_runtime.js";
 import { FileGatewayTokenStore } from "./gateway_token_store.js";
 import { configuredSemanticEncoder, encoderProfileDescriptor, encoderProfileFromArgs, loadEncoderProfile, writeEncoderProfile } from "./encoder_profile.js";
+import { runRecoveryDemo } from "./recovery_demo.js";
 import { loadMemoryRetentionProfile, memoryRetentionProfileFromArgs, writeMemoryRetentionProfile } from "./memory_retention_profile.js";
 
 const SYSTEM_RELEASE_TRUST_ROOT = "/etc/keep/release-root.cbor";
@@ -50,6 +51,10 @@ export function executingPackageRoot(): string {
 }
 
 export async function main(argv: readonly string[]): Promise<number> {
+  if (argv[0] === "demo" && argv[1] === "recovery") {
+    if (argv.length !== 2) { process.stderr.write("Usage: keep demo recovery\n"); return 2; }
+    return runRecoveryDemo(executingPackageRoot());
+  }
   const staticResult = runStaticCli(argv, (text) => process.stdout.write(`${text}\n`));
   if (staticResult) return staticResult.exitCode;
   if (argv[0]?.toLowerCase() === "memory-retention" && argv[1]?.toLowerCase() === "configure") {
