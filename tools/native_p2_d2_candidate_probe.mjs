@@ -17,7 +17,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { captureAuthenticatedCrateArchive } from "./native_p2_archive_snapshot.mjs";
@@ -79,7 +79,7 @@ const BASE_DIGEST = "b5eed333089e2e1c1ac8c6c0398e5e2497b4c9926ca6d0365ed1e099afa
 const PACKAGE_ID = "curve25519-dalek@5.0.0";
 const PREFIX = "curve25519-dalek-5.0.0/";
 const toolchain = "1.97.1-x86_64-unknown-linux-gnu";
-const rustupHome = process.env.RUSTUP_HOME ?? join(homedir(), ".rustup");
+const rustupHome = "/root/.keep-build/rustup";
 const toolchainRoot = realpathSync(join(rustupHome, "toolchains", toolchain));
 const cargo = join(toolchainRoot, "bin/cargo");
 const buildCell = join(repositoryRoot, "native/target/x86_64-unknown-linux-musl/release/keep-native-p2-d2-build-cell");

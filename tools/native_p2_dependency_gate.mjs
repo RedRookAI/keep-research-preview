@@ -504,7 +504,8 @@ try {
     .filter(Boolean)
     .map((line) => JSON.parse(line));
   const normalizeBuildPath = (path) =>
-    path.replaceAll(scratch, "$SCRATCH").replaceAll(repositoryRoot, "$REPOSITORY");
+    path.replaceAll(scratch, "$SCRATCH").replaceAll(repositoryRoot, "$REPOSITORY")
+      .replaceAll(rustupHome, "$RUSTUP_HOME");
   const compiledUnits = messages
     .filter((row) => row.reason === "compiler-artifact")
     .map((row) => ({
@@ -732,6 +733,7 @@ try {
       .replace(/^\d+\s+/, "")
       .replaceAll(scratch, "$SCRATCH")
       .replaceAll(repositoryRoot, "$REPOSITORY")
+      .replaceAll(rustupHome, "$RUSTUP_HOME")
       .replace(/(\$SCRATCH\/trace-target(?:\/x86_64-unknown-linux-musl)?)[A-Za-z0-9]{6}(?=\/CACHEDIR\.TAG)/g, "$1RANDOM")
       .replace(/\/tmp\/cc[A-Za-z0-9]+/g, "/tmp/ccRANDOM")
       .replace(/\/(?:rmeta|rustc)[A-Za-z0-9]{6}(?=\/|\")/g, "/RUSTC-RANDOM")
