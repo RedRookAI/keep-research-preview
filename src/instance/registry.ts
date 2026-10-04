@@ -9,7 +9,7 @@
  * The registry is the fleet catalog: <base>/registry.json tracks every instance so N
  * projects on one configured host box coexist and are discoverable, and starting a new
  * top-level project just mints a fresh id. Updates prune dead entries (PID liveness)
- * and are written atomically (temp-then-rename) to survive concurrent writers.
+ * and serialize each read/modify/write under a common-host logical lock before atomic rename.
  * Zero deps.
  */
 
@@ -17,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { keepBaseDir } from "./instance_home.js";
 import type { BoundListener } from "./bind_strategy.js";
+import { withLogicalAppendLock } from "../spine/logical_append_lock.js";
 
 export interface RunInfo {
   readonly kind: BoundListener["kind"];
@@ -87,29 +88,39 @@ function readRegistry(baseDirOverride?: string): RegistryEntry[] {
 
 /**
  * Register (or update) this instance in the fleet catalog, pruning any dead entries.
- * Last-write-wins on the id; atomic write survives concurrent updates.
+ * Last-write-wins on the id within a serialized synchronous transaction. All registry
+ * writers require a coherent local filesystem and common host/process identity domain.
  */
 export function registerInstance(entry: RegistryEntry, baseDirOverride?: string): RegistryEntry[] {
-  const current = readRegistry(baseDirOverride);
-  const live = current.filter((e) => e.id !== entry.id && pidAlive(e.run.pid));
-  const next = [...live, entry];
-  atomicWrite(registryPath(baseDirOverride), next);
-  return next;
+  const target = registryPath(baseDirOverride);
+  return withLogicalAppendLock(target, () => {
+    const current = readRegistry(baseDirOverride);
+    const live = current.filter((e) => e.id !== entry.id && pidAlive(e.run.pid));
+    const next = [...live, entry];
+    atomicWrite(target, next);
+    return next;
+  }, { waitMs: 5_000 });
 }
 
 /** Remove this instance from the catalog (on clean shutdown). */
 export function deregisterInstance(id: string, baseDirOverride?: string): void {
-  const current = readRegistry(baseDirOverride);
-  const next = current.filter((e) => e.id !== id);
-  atomicWrite(registryPath(baseDirOverride), next);
+  const target = registryPath(baseDirOverride);
+  withLogicalAppendLock(target, () => {
+    const current = readRegistry(baseDirOverride);
+    const next = current.filter((e) => e.id !== id);
+    atomicWrite(target, next);
+  }, { waitMs: 5_000 });
 }
 
 /** List all LIVE instances (dead ones pruned) — the "what projects are running" view. */
 export function listInstances(baseDirOverride?: string): RegistryEntry[] {
-  const current = readRegistry(baseDirOverride);
-  const live = current.filter((e) => pidAlive(e.run.pid));
-  if (live.length !== current.length) atomicWrite(registryPath(baseDirOverride), live); // prune
-  return live;
+  const target = registryPath(baseDirOverride);
+  return withLogicalAppendLock(target, () => {
+    const current = readRegistry(baseDirOverride);
+    const live = current.filter((e) => pidAlive(e.run.pid));
+    if (live.length !== current.length) atomicWrite(target, live); // prune
+    return live;
+  }, { waitMs: 5_000 });
 }
 
 /** Mint a fresh, collision-resistant instance id for a new top-level project. */

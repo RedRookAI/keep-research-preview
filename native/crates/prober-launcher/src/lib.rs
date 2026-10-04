@@ -1321,7 +1321,7 @@ pub mod candidate_probe {
                 "keep-native-prober-vmm-shim.installed",
                 8 * 1024 * 1024,
                 0o500,
-                "ab8f351884cb8ddaefaf6177ccd7ce703bf53a1f989fbce659a1bdebdcc5148c",
+                "2fbf4165b6c14a7602a56004bb5a27bbb1413a367bd4fa2cff1be047e8ec207a",
             ),
             (
                 "vmlinux",

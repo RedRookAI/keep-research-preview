@@ -83,6 +83,16 @@ if (process.argv[2] === "--append-worker") {
     assert.equal(saved.length, 1); assert.deepEqual(fs.readFileSync(join(dir, saved[0]!)), torn);
   });
 
+  test("capacity refusal preflights both seal carriers before repairing a torn staging tail", () => {
+    const dir = fixture();
+    try {
+      const store = new FileSpineStore(dir, { fsync: true, maxHistoryBytes: 256 }), staging = join(dir, "staging.jsonl"), chain = join(dir, "chain.jsonl"), cursor = join(dir, "staging.cursor");
+      const torn = Buffer.from('{"id":"unfinished'); fs.writeFileSync(staging, torn); fs.writeFileSync(chain, " ".repeat(257)); const before = fs.readFileSync(chain), consumed = fs.readFileSync(cursor);
+      assert.throws(() => store.prepareForSeal(), error => (error as { code?: string }).code === "KEEP_SPINE_HISTORY_CAPACITY");
+      assert.deepEqual(fs.readFileSync(staging), torn); assert.deepEqual(fs.readFileSync(chain), before); assert.deepEqual(fs.readFileSync(cursor), consumed); assert.equal(fs.readdirSync(dir).some(path => path.includes(".torn-")), false);
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  });
+
   test("partial block append cannot corrupt the next acknowledged seal or consume its pending records", async () => {
     const dir = fixture(), base = core(new FileSpineStore(dir, { fsync: true }));
     base.stage(input("first")); await base.seal(); base.stage(input("second"));

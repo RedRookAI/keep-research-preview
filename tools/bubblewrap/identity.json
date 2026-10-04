@@ -1,0 +1,9 @@
+{
+  "version": "0.13.0",
+  "path": "/opt/keep/bubblewrap/0.13.0/bwrap",
+  "sha256": "e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f",
+  "sourceUrl": "https://github.com/containers/bubblewrap/releases/download/v0.13.0/bubblewrap-0.13.0.tar.xz",
+  "sourceSha256": "4734237473c0e5d695e4e9034a34e43b2dbf5164655bd13fa59ae376b2b7a765",
+  "advisory": "GHSA-pxhw-h44j-8pfx",
+  "qualification": "candidate; scoped build and admission checks only"
+}

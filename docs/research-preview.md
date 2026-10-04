@@ -1,22 +1,32 @@
 # Research preview: install, run and inspect
 
-## This release
+## This source checkpoint
 
-Keep 0.0.4-preview.1 provides a prebuilt Linux x64 package and the no-key recovery experiment. Start with the [five-minute quickstart](quickstart.md). The primary installation is `npm i -g ./keep-0.0.4-preview.1.tgz`; source builds are for contributors.
+Keep **0.0.5-preview.1** is the October 4 public source checkpoint. Use the
+[source quickstart](quickstart.md). It includes the audit remedies and the
+measured Bubblewrap 0.13.0 pin. Node.js 22.23.2 is the qualified development
+runtime; source compilation uses the pinned Rust 1.97.1 toolchain, musl target
+and host C build tools.
 
-The release identity is `keep-preview-2026-10-02.1`. The [release record](../KEEP_RELEASE.md) supplies artifact hashes and the exact qualification results. It is a companion to the archives rather than a file inside an archive whose hash it records.
+There is no new downloadable binary. The existing 0.0.4-preview.1 package keeps
+its original checksum, results and affected launcher pin. The
+[checkpoint record](../KEEP_RELEASE.md) distinguishes that historical artifact,
+the development qualification, and checks performed on this public export.
 
-The binary package contains compiled JavaScript, its bundled existing runtime dependency and three static Linux x64 native binaries. Installing it does not need Rust or a C toolchain. Node 22.23.2 is the qualified runtime. Native source compilation still uses Rust 1.97.1, the musl target and host C build tools.
+## Verify a matching archive before installation
 
-## Verify the downloaded archive
-
-Set `KEEP_RELEASE_SHA256` to the published package checksum. This block stops before installation if the archive is absent or its checksum does not match, then runs the experiment against the installed package and verified archive:
+If you have a separately reviewed matching 0.0.5-preview.1 archive, set
+`KEEP_RELEASE_SHA256` to its trusted artifact-record checksum. No such public
+binary release is claimed by this source checkpoint. Do not rename the older
+archive or use a file's own hash as publisher authentication. The following block
+refuses before installation when the archive or required checksum is absent or
+mismatched, then runs the installed experiment:
 
 ~~~sh
 (
   set -eu
   : "${KEEP_RELEASE_SHA256:?Set KEEP_RELEASE_SHA256 to the published package checksum}"
-  keep_demo_archive="$(realpath keep-0.0.4-preview.1.tgz)"
+  keep_demo_archive="$(realpath keep-0.0.5-preview.1.tgz)"
   printf '%s  %s\n' "$KEEP_RELEASE_SHA256" "$keep_demo_archive" |
     sha256sum --check --status
   keep_demo_consumer="$(mktemp -d)"
@@ -39,7 +49,7 @@ The 24 checks cover acknowledged work, uncertainty after adapter entry, unsucces
 For artifact-specific verification, the harness also retains its original interface:
 
 ```sh
-node acceptance/installed_sg32_resources.mjs /absolute/installed/keep /absolute/keep-0.0.4-preview.1.tgz PACKAGE_SHA256
+node acceptance/installed_sg32_resources.mjs /absolute/installed/keep /absolute/keep-0.0.5-preview.1.tgz PACKAGE_SHA256
 ```
 
 The CLI demonstration invokes the installed-only form and reports the local checks. The release qualification separately verifies the exact archive and installed bytes.
@@ -50,13 +60,17 @@ A passing experiment demonstrates the named synthetic accounting and restart beh
 
 The native client/supervisor exchange is currently refusal-only development functionality. Shipping its genuine binaries does not imply that they launch arbitrary workloads or provide production isolation. Its custody checks remain unchanged; see [Security](../SECURITY.md).
 
-Broader source qualification uses a separately defined portable profile. It excludes native-specific tests and the designated-host complete-artifact test. The exact current results appear in [the release record](../KEEP_RELEASE.md); earlier results remain historical in [the evidence record](evidence.md#known-test-status).
+The completed development checkpoint ran all ordinary, release/security and native phases.
+That result belongs to its exact development inputs; it does not automatically
+qualify this exported source or a new archive. Public export checks and historical
+artifact results appear separately in [the checkpoint record](../KEEP_RELEASE.md)
+and [the evidence record](evidence.md#known-test-status).
 
 Use synthetic data and isolated resources. Production credentials, unrestricted paid services, outside identity providers, Firecracker hosts and required project jails require their own supported setup and qualification. No automatic native fallback or universal provider compatibility is promised.
 
 ## Upgrading existing data
 
-Stop writers and retain a verified private backup of the complete data directory before opening it with this version. Do not change schema labels or mix operational files from different releases. Review [skill-registry upgrades](skill-registry.md#upgrading-data-from-the-september-9-research-preview), [backup guidance](backup.md) and [the current maintenance notes](maintenance-2026-10-02.md).
+Stop writers and retain a verified private backup of the complete data directory before opening it with this version. Do not change schema labels or mix operational files from different releases. Review [skill-registry upgrades](skill-registry.md#upgrading-data-from-the-september-9-research-preview), [backup guidance](backup.md) and [the current checkpoint notes](maintenance-2026-10-04.txt).
 
 ## Build from source
 

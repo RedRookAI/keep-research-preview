@@ -10,6 +10,8 @@ import {
   copyFileSync,
   fsyncSync,
   lstatSync,
+  linkSync,
+  symlinkSync,
   mkdtempSync,
   openSync,
   readFileSync,
@@ -445,6 +447,20 @@ try {
     try { verifyInstalledShim(mutant, expectedMatch[1]); } catch { mutantRefused = true; }
     rmSync(mutant, { force: true });
     if (!mutantRefused) fail("installed-shim substitution mutant was accepted");
+    for (const kind of ["mode", "symlink", "hardlink"]) {
+      const metadataMutant = `${installedShim}.mutant-${kind}`;
+      if (existsSync(metadataMutant)) fail("owned shim metadata-mutant path is occupied");
+      try {
+        if (kind === "symlink") symlinkSync(installedShim, metadataMutant);
+        else if (kind === "hardlink") linkSync(installedShim, metadataMutant);
+        else { copyFileSync(installedShim, metadataMutant, constants.COPYFILE_EXCL); chmodSync(metadataMutant, 0o444); }
+        let refused = false;
+        try { verifyInstalledShim(metadataMutant, expectedMatch[1]); } catch { refused = true; }
+        if (!refused) fail(`installed-shim ${kind} substitution mutant was accepted`);
+      } finally { rmSync(metadataMutant, { force: true }); }
+    }
+    verifyInstalledShim(installedShim, expectedMatch[1]);
+    console.log("[native-p1-gate] installed-shim substitutions refused: byte/mode/symlink/hardlink");
     run(
       [
         "build", "--locked", "--offline", "--frozen", "--target", lock.target,

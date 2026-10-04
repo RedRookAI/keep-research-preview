@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -44,6 +44,16 @@ if (process.argv[2] === "--backlog-restart") {
     const restored = restart(dir);
     assert.equal(restored.ok, true); assert.deepEqual(restored.ids, ids); assert.deepEqual(restored.pending, []);
     assert.ok(restored.sizes.every(n => n <= MAX_BLOCK_BYTES));
+  });
+
+  test("history capacity retains scoped replay and cursor sealing below the bound", async () => {
+    const dir = fixture();
+    try {
+      const store = new FileSpineStore(dir, { fsync: true, maxHistoryBytes: 8192 }), spine = core(store);
+      const ids = ["owner", "alpha-agent"].map(actor => spine.stage({ type: "generic", actor, payload: { data: "bounded", ...(actor === "alpha-agent" ? { tenant: "alpha" } : {}) } }));
+      await spine.seal(); assert.deepEqual(spine.replay().map(row => row.id), ids); assert.equal(spine.pending().length, 0);
+      assert.equal(readFileSync(join(dir, "staging.cursor"), "utf8"), "2\n"); assert.deepEqual(restart(dir).ids, ids);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 
   test("admission includes event/block envelopes, escapes and multibyte bytes", async () => {

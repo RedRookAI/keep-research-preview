@@ -55,6 +55,7 @@ import { ProjectSessionConflictError } from "../session/project_session_persiste
 import { ProjectSubmissionConflictError } from "../session/project_job_journal.js";
 import { ProjectSubmissionUncertainError, type ProjectJobContext } from "../session/project_runtime.js";
 import type { IdentityLayer } from "../review/review_web.js";
+import { SessionCapacityError, type SessionReservation } from "../identity/session_store.js";
 
 export interface GatewayRequest {
   readonly method: string;
@@ -209,8 +210,13 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     const principal = resolvedEnterprisePrincipal(sec.identity.registry.resolve(verified));
     if (principal === undefined) return json(403, { error: "verified identity has no admitted organization principal" });
     if (boundTenant !== undefined && principal.tenant !== boundTenant) return refuseTenantBoundary(403);
-    const session = sec.identity.sessions.create(principal, Date.now());
-    return json(200, { session: session.id, expiresByPolicy: true });
+    try {
+      const session = sec.identity.sessions.create(principal, Date.now());
+      return json(200, { session: session.id, expiresByPolicy: true });
+    } catch (error) {
+      if (error instanceof SessionCapacityError) return json(503, { code: error.code, error: error.message });
+      throw error;
+    }
   }
 
   // PRINCIPAL-AWARE: the token maps to a principal (n=1 → OWNER, zero-friction; org → the resolver's principal).
@@ -243,11 +249,24 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     const body = parseBody(req.body); if (body === null) return json(400, { error: "invalid json" });
     const agentId = body["agentId"], grantId = body["grantId"], expiresAt = body["expiresAt"], permissions = body["permissions"];
     if (typeof agentId !== "string" || typeof grantId !== "string" || !Number.isSafeInteger(expiresAt) || !Array.isArray(permissions) || permissions.length < 1 || permissions.some((value) => typeof value !== "string" || !ALL_PERMISSIONS.includes(value as Permission))) return json(400, { error: "bounded agentId, grantId, expiresAt and permissions are required" });
+    let slot: SessionReservation;
+    try {
+      slot = sec.identity.sessions.reserve(Date.now());
+    } catch (error) {
+      if (error instanceof SessionCapacityError) return json(503, { code: error.code, error: error.message });
+      throw error;
+    }
     try {
       const agent = await app.authorization.issue(principal, agentId, permissions as Permission[], Number(expiresAt), Date.now(), grantId);
-      const session = sec.identity.sessions.create(agent, Date.now());
+      const session = slot.create(agent, Date.now());
       return json(200, { grantId: agent.grantId, agentId: agent.id, session: session.id, expiresAt });
-    } catch (error) { return json(400, { error: error instanceof Error ? error.message : "delegation refused" }); }
+    } catch (error) {
+      return json(400, { error: error instanceof Error ? error.message : "delegation refused" });
+    } finally {
+      // Release only our unused slot. An issuance exception does not prove no grant effect;
+      // this capacity boundary must not retry issuance or blindly revoke authority.
+      slot.release();
+    }
   }
   if (req.method === "POST" && req.path === "/delegation/revoke") {
     if (personalMode) return json(404, { error: "not found" });

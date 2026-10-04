@@ -61,8 +61,15 @@ export function startReviewServer(app: KeepApp, opts: ReviewServerOptions = {}):
     })().catch(() => { if (!res.headersSent) { res.writeHead(500, { "Content-Type": "text/plain" }); res.end("Internal error."); } });
   });
 
-  return new Promise((resolve) => {
-    server.listen(opts.port ?? 7777, host, () => {
+  return new Promise((resolve, reject) => {
+    // These listeners own startup only; successful startup retains normal runtime error semantics.
+    const cleanup = () => {
+      server.removeListener("error", onError);
+      server.removeListener("listening", onListening);
+    };
+    const onError = (error: Error) => { cleanup(); reject(error); };
+    const onListening = () => {
+      cleanup();
       const addr = server.address();
       const port = typeof addr === "object" && addr ? addr.port : 0;
       const origin = `http://${host}:${port}`;
@@ -70,7 +77,11 @@ export function startReviewServer(app: KeepApp, opts: ReviewServerOptions = {}):
         url: `${origin}/?token=${token}`, origin, port, token,
         close: () => new Promise<void>((r) => server.close(() => r())),
       });
-    });
+    };
+    server.once("error", onError);
+    server.once("listening", onListening);
+    try { server.listen(opts.port ?? 7777, host); }
+    catch (error) { cleanup(); reject(error); }
   });
 }
 

@@ -258,3 +258,21 @@ test("A6 P1 toolchain location honors explicit root and rustup root without fall
     assert.match(invalidOverride.stderr, /absent-toolchain/u);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+
+test("A6 P1 gate refuses a rebuilt shim that disagrees with the frozen launcher measurement", () => {
+  const root = fixture();
+  try {
+    const launcher = join(root, "native/crates/prober-launcher/src/lib.rs");
+    const source = readFileSync(launcher, "utf8");
+    const measurement = /("keep-native-prober-vmm-shim\.installed"[\s\S]{0,300}?")([0-9a-f]{64})(")/u;
+    assert.ok(measurement.test(source), "fixture has the existing installed-shim measurement");
+    writeFileSync(launcher, source.replace(measurement, (_all, before: string, _digest: string, after: string) => before + "0".repeat(64) + after));
+    const result = spawnSync(process.execPath, [gate, root, "--verify"], {
+      encoding: "utf8", timeout: 30_000, env: process.env,
+    });
+    assert.equal(result.error, undefined, "gate should refuse rather than time out");
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /installed shim digest is not joined to launcher measurement/u);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});

@@ -12,7 +12,7 @@
  *  - chain:   append-only, sealed hash-chain blocks (leader/sealer writes only).
  */
 
-import { appendFileSync, closeSync, constants, existsSync, ftruncateSync, linkSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, closeSync, constants, existsSync, ftruncateSync, fstatSync, readSync, linkSync, mkdirSync, openSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
 import { isUtf8 } from "node:buffer";
 import { dirname, join } from "node:path";
@@ -50,6 +50,31 @@ export class SpineLogRecoveryError extends Error {
   readonly code = "KEEP_SPINE_LOG_RECOVERY_REQUIRED";
 }
 
+export class SpineHistoryCapacityError extends Error {
+  readonly code = "KEEP_SPINE_HISTORY_CAPACITY";
+}
+const DEFAULT_HISTORY_BYTES = 64 * 1024 * 1024;
+const CURSOR_BYTES = 32;
+/** Bound descriptor bytes before whole-history parsing, including observed growth.
+ * Read at most limit+1 bytes; the extra byte proves a capacity refusal.
+ */
+function readBounded(path: string, limit: number): Buffer {
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile()) throw new SpineLogRecoveryError("spine carrier is not a regular file");
+    if (stat.size > limit) throw new SpineHistoryCapacityError(`spine carrier exceeds ${limit}-byte capacity; preserve and reconcile ${path}`);
+    const chunks: Buffer[] = []; let total = 0;
+    for (;;) {
+      const buffer = Buffer.alloc(Math.min(64 * 1024, limit + 1 - total));
+      const count = readSync(fd, buffer, 0, buffer.length, null); if (!count) break;
+      total += count; if (total > limit) throw new SpineHistoryCapacityError(`spine carrier grew beyond ${limit}-byte capacity; preserve and reconcile ${path}`);
+      chunks.push(buffer.subarray(0, count));
+    }
+    return Buffer.concat(chunks);
+  } finally { closeSync(fd); }
+}
+
 /**
  * Filesystem store: newline-delimited JSON (JSONL) append-only files.
  * Logical appends are serialized, including short-write completion and abandoned
@@ -68,6 +93,7 @@ export class FileSpineStore implements SpineStore {
   private readonly fsyncOnAppend: boolean;
   private readonly io: DurableIO;
   private readonly appendWaitMs: number;
+  private readonly maxHistoryBytes: number;
   /** MEASURED durability: appends are fsync-durable iff constructed with `{fsync:true}`. */
   get durable(): boolean { return this.fsyncOnAppend; }
 
@@ -88,7 +114,9 @@ export class FileSpineStore implements SpineStore {
    * disabled; it does not promise crash durability. `opts.io` injects data writes/flushes, not every filesystem
    * operation. Lock publication uses its own filesystem primitives.
    */
-  constructor(dataDir: string, opts?: { fsync?: boolean; io?: DurableIO; appendWaitMs?: number }) {
+  constructor(dataDir: string, opts?: { fsync?: boolean; io?: DurableIO; appendWaitMs?: number; maxHistoryBytes?: number }) {
+    this.maxHistoryBytes = opts?.maxHistoryBytes ?? DEFAULT_HISTORY_BYTES;
+    if (!Number.isSafeInteger(this.maxHistoryBytes) || this.maxHistoryBytes <= 0) throw new Error("maxHistoryBytes must be a positive finite safe integer");
     this.stagingPath = join(dataDir, "staging.jsonl");
     this.stagingCursorPath = join(dataDir, "staging.cursor");
     this.chainPath = join(dataDir, "chain.jsonl");
@@ -114,6 +142,8 @@ export class FileSpineStore implements SpineStore {
 
   /** Append a line — fsync-durable (shared durable_fs) when opts.fsync, else a plain appendFileSync. */
   private append(path: string, line: string): void {
+    const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+    try { const stat = fstatSync(fd); if (!stat.isFile()) throw new SpineLogRecoveryError("spine append carrier is not a regular file"); this.checkCapacity(stat.size, Buffer.byteLength(line)); } finally { closeSync(fd); }
     if (this.fsyncOnAppend) durableAppend(this.io, path, line);
     else appendFileSync(path, line);
   }
@@ -121,18 +151,26 @@ export class FileSpineStore implements SpineStore {
   appendStaged(e: StagedEvent): void {
     if (!isWellFormedEvent(e)) throw new Error("staged event envelope is malformed");
     this.exclusive(this.stagingPath, () => {
-      const all = this.prepare(this.stagingPath) as StagedEvent[];
+      const line = JSON.stringify(e) + "\n";
+      const all = this.prepare(this.stagingPath, rows => {
+        const prior = rows.find(row => (row as StagedEvent).id === e.id);
+        if (prior !== undefined) { if (canonicalize(prior) !== canonicalize(e)) throw new SpineLogRecoveryError("staged identity already has different content"); return 0; }
+        return Buffer.byteLength(line);
+      }) as StagedEvent[];
       const prior = all.find(row => row.id === e.id);
       if (prior !== undefined) {
         if (canonicalize(prior) !== canonicalize(e)) throw new SpineLogRecoveryError("staged identity already has different content");
         this.syncFile(this.stagingPath); return;
       }
-      this.append(this.stagingPath, JSON.stringify(e) + "\n");
+      this.append(this.stagingPath, line);
     });
   }
 
   prepareForSeal(): void {
     // Do not nest file locks; the sealer separately owns cursor transaction order.
+    // Read-only capacity preflight both logs before publishing any recovery.
+    this.exclusive(this.stagingPath, () => { this.prepare(this.stagingPath, undefined, true); });
+    this.exclusive(this.chainPath, () => { this.prepare(this.chainPath, undefined, true); });
     this.exclusive(this.stagingPath, () => { this.prepare(this.stagingPath); });
     this.exclusive(this.chainPath, () => { this.prepare(this.chainPath); });
   }
@@ -163,8 +201,12 @@ export class FileSpineStore implements SpineStore {
   }
 
   /** Called only under this carrier's exclusive append lock. Readers never repair. */
-  private prepare(path: string): (StagedEvent | SealedBlock)[] {
-    const raw = readFileSync(path), end = raw.lastIndexOf(10) + 1;
+  private checkCapacity(current: number, growth: number): void {
+    if (!Number.isSafeInteger(current + growth) || current + growth > this.maxHistoryBytes) throw new SpineHistoryCapacityError(`spine prospective history exceeds ${this.maxHistoryBytes}-byte capacity; preserve and reconcile`);
+  }
+
+  private prepare(path: string, extra: (rows: (StagedEvent | SealedBlock)[]) => number = () => 0, dryRun = false): (StagedEvent | SealedBlock)[] {
+    const raw = readBounded(path, this.maxHistoryBytes), end = raw.lastIndexOf(10) + 1;
     const complete = raw.subarray(0, end), tail = raw.subarray(end);
     const all: (StagedEvent | SealedBlock)[] = [];
     const accept = (value: unknown): void => {
@@ -185,6 +227,7 @@ export class FileSpineStore implements SpineStore {
       accept(value);
     }
     if (tail.length === 0) {
+      this.checkCapacity(raw.length, extra(all));
       if (path === this.stagingPath) this.readStagingCursor(all.length);
       return all;
     }
@@ -195,15 +238,23 @@ export class FileSpineStore implements SpineStore {
       // 12 is not a record. A chain tail must link to the validated complete prefix.
       accept(value);
       if (path === this.stagingPath) this.readStagingCursor(all.length);
-      this.append(path, "\n");
+      this.checkCapacity(raw.length, 1 + extra(all));
+      if (!dryRun) this.append(path, "\n");
     } else {
       if (path === this.stagingPath) this.readStagingCursor(all.length);
+      this.checkCapacity(end, extra(all));
+      if (dryRun) { this.checkTailCarrier(path, end, tail); return all; }
       this.preserveTail(path, end, tail);
       const fd = openSync(path, constants.O_RDWR | constants.O_NOFOLLOW);
       try { ftruncateSync(fd, end); if (this.fsyncOnAppend) this.io.fsyncSync(fd); }
       finally { closeSync(fd); }
     }
     return all;
+  }
+
+  private checkTailCarrier(path: string, offset: number, bytes: Buffer): void {
+    const digest = createHash("sha256").update(bytes).digest("hex"), saved = `${path}.torn-${offset}-${digest}`;
+    if (existsSync(saved) && !readBounded(saved, Math.min(this.maxHistoryBytes, bytes.length)).equals(bytes)) throw new SpineLogRecoveryError("preserved tail content differs; explicit recovery required");
   }
 
   private preserveTail(path: string, offset: number, bytes: Buffer): void {
@@ -218,20 +269,20 @@ export class FileSpineStore implements SpineStore {
         try { linkSync(temp, saved); } catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; }
       } finally { try { unlinkSync(temp); } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; } }
     }
-    if (!readFileSync(saved).equals(bytes)) throw new SpineLogRecoveryError("preserved tail content differs; explicit recovery required");
+    if (!readBounded(saved, Math.min(this.maxHistoryBytes, bytes.length)).equals(bytes)) throw new SpineLogRecoveryError("preserved tail content differs; explicit recovery required");
     this.syncFile(saved);
     if (this.fsyncOnAppend) fsyncDir(this.io, dirname(path));
   }
 
   readStaged(): StagedEvent[] {
-    const all = readJsonl<StagedEvent>(this.stagingPath, this.fsyncOnAppend);
+    const all = readJsonl<StagedEvent>(this.stagingPath, this.fsyncOnAppend, this.maxHistoryBytes);
     const consumed = this.readStagingCursor(all.length);
     return all.slice(consumed);
   }
 
   removeStaged(count: number): void {
     if (!Number.isSafeInteger(count) || count < 0) throw new Error("staging removal count must be a non-negative safe integer");
-    const total = readJsonl<StagedEvent>(this.stagingPath, this.fsyncOnAppend).length;
+    const total = readJsonl<StagedEvent>(this.stagingPath, this.fsyncOnAppend, this.maxHistoryBytes).length;
     const consumed = this.readStagingCursor(total);
     if (count > total - consumed) throw new Error("staging removal exceeds the unconsumed durable prefix");
     this.publishStagingCursor(consumed + count);
@@ -244,7 +295,7 @@ export class FileSpineStore implements SpineStore {
    * by the chain identity) or the new prefix, never an invented intermediate count.
    */
   private readStagingCursor(total: number): number {
-    const raw = readFileSync(this.stagingCursorPath, "utf8");
+    const raw = readBounded(this.stagingCursorPath, CURSOR_BYTES).toString("utf8");
     if (!/^(?:0|[1-9][0-9]*)\n$/.test(raw)) throw new Error("staging cursor carrier is malformed");
     const value = Number(raw.slice(0, -1));
     if (!Number.isSafeInteger(value) || value < 0 || value > total) throw new Error("staging cursor is outside the durable staging log");
@@ -265,17 +316,25 @@ export class FileSpineStore implements SpineStore {
 
   appendBlock(b: SealedBlock): void {
     this.exclusive(this.chainPath, () => {
-      const all = this.prepare(this.chainPath) as SealedBlock[], prior = all.at(-1);
+      const line = JSON.stringify(b) + "\n";
+      const all = this.prepare(this.chainPath, rows => {
+        const prior = rows.at(-1) as SealedBlock | undefined;
+        if (prior !== undefined && canonicalize(prior) === canonicalize(b)) return 0;
+        const check = validateBlock(b, prior);
+        if (!check.ok) throw new Error(`FileSpineStore.appendBlock refused an unverifiable block (seq ${b?.seq}): ${check.reason}`);
+        if (blockByteLength(b) > MAX_BLOCK_BYTES) throw new Error(`new spine block exceeds ${MAX_BLOCK_BYTES}-byte size bound`);
+        return Buffer.byteLength(line);
+      }) as SealedBlock[], prior = all.at(-1);
       if (prior !== undefined && canonicalize(prior) === canonicalize(b)) { this.syncFile(this.chainPath); return; }
       const check = validateBlock(b, prior);
       if (!check.ok) throw new Error(`FileSpineStore.appendBlock refused an unverifiable block (seq ${b?.seq}): ${check.reason}`);
       if (blockByteLength(b) > MAX_BLOCK_BYTES) throw new Error(`new spine block exceeds ${MAX_BLOCK_BYTES}-byte size bound`);
-      this.append(this.chainPath, JSON.stringify(b) + "\n");
+      this.append(this.chainPath, line);
     });
   }
 
   readBlocks(): SealedBlock[] {
-    return readJsonl<SealedBlock>(this.chainPath, this.fsyncOnAppend);
+    return readJsonl<SealedBlock>(this.chainPath, this.fsyncOnAppend, this.maxHistoryBytes);
   }
 
   lastBlock(): SealedBlock | undefined {
@@ -284,9 +343,9 @@ export class FileSpineStore implements SpineStore {
   }
 }
 
-function readJsonl<T>(path: string, _durable: boolean): T[] {
+function readJsonl<T>(path: string, _durable: boolean, maxHistoryBytes: number): T[] {
   if (!existsSync(path)) return [];
-  const raw = readFileSync(path, "utf8");
+  const raw = readBounded(path, maxHistoryBytes).toString("utf8");
   const out: T[] = [];
   const lines = raw.split("\n");
   for (let index = 0; index < lines.length; index++) {

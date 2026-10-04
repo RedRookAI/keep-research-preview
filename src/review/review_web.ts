@@ -25,7 +25,7 @@ import { buildNonEngineerView, type NonEngineerView } from "./non_engineer_view.
 import { can, type Principal } from "../identity/rbac.js";
 import { computeMonitor, type MonitorSnapshot, type TicketState } from "../monitor/solve_monitor.js";
 import type { IdentityProviderPort, PrincipalRegistry } from "../identity/identity_provider.js";
-import type { SessionStore } from "../identity/session_store.js";
+import { SessionCapacityError, type SessionStore } from "../identity/session_store.js";
 
 export interface WebRequest {
   readonly method: string;
@@ -144,9 +144,14 @@ async function handleMultiUser(app: KeepApp, req: WebRequest, sec: WebSecurity, 
       app.spine.stage({ type: "identity.action", actor: "rbac", payload: { event: "authz.denied", who: identity.subject, action: "login", reason: "no role assigned to this identity", ts: now } });
       return htmlRes(403, renderLoginPage("Your account is not authorized for this Keep. Ask the owner to grant you a role."));
     }
-    const session = id.sessions.create(principal, now); // fresh id on login → anti-fixation
-    const cookie = `keep_session=${session.id}; Path=/; HttpOnly; SameSite=Strict${secureFlag}`;
-    return redirect("/", { "Set-Cookie": cookie });
+    try {
+      const session = id.sessions.create(principal, now); // fresh id on login → anti-fixation
+      const cookie = `keep_session=${session.id}; Path=/; HttpOnly; SameSite=Strict${secureFlag}`;
+      return redirect("/", { "Set-Cookie": cookie });
+    } catch (error) {
+      if (error instanceof SessionCapacityError) return htmlRes(503, renderLoginPage("Session capacity reached. Try again after an existing session ends."));
+      throw error;
+    }
   }
 
   const cookies = parseCookies(req.headers["cookie"]);

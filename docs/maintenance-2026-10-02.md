@@ -1,4 +1,9 @@
-# Maintenance preview: October 2, 2026
+# Historical maintenance preview: October 2, 2026
+
+This note records the historical 0.0.4-preview.1 binary. The current source is
+0.0.5-preview.1; see [October 4 changes](maintenance-2026-10-04.txt) and
+[the checkpoint record](../KEEP_RELEASE.md). The older binary retains its affected
+launcher pin.
 
 Keep 0.0.4-preview.1 (`keep-preview-2026-10-02.1`) is a maintenance research preview. It combines a prebuilt Linux x64 install path and newcomer quickstart with completed corrections not included in the September 10 public maintenance export. Earlier public releases and assets remain unchanged.
 
@@ -32,6 +37,9 @@ The [release record](../KEEP_RELEASE.md) identifies the exact artifacts, current
 
 Portable qualification excludes native-specific tests and the designated-host complete-artifact test. The clean-room experiment validates the binary installation and local synthetic recovery behavior. It does not qualify production identity, universal spending enforcement, arbitrary provider effects, outside replication or unattended consequential production operation. Required-jail launcher limitations remain in [Security](../SECURITY.md).
 
-## Future maintenance cadence
+## Maintenance cadence
 
-Prepare a biweekly export of completed, qualified canonical work, with honest release notes and exact artifact checks. Keep prior release identities and assets intact.
+The October 4 instruction supersedes the earlier biweekly plan: while development
+is active, publish a public checkpoint at least daily with actual results and
+artifact limitations. Preserve historical release identities. This documentation
+does not install a background publisher or host timer.

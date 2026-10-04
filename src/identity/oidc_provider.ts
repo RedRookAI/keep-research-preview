@@ -39,7 +39,7 @@ export interface OidcConfig {
   readonly audience: string;
   /** Allowed signing algorithms. Default ["RS256"]. NEVER derived from the token header. */
   readonly allowedAlgs?: readonly string[];
-  /** Clock-skew leeway in seconds for exp/nbf. Default 60. */
+  /** Finite nonnegative clock-skew leeway in seconds for exp/nbf. Default 60. */
   readonly leewaySec?: number;
   /** If set, the token's `nonce` claim must match this exactly. */
   readonly expectedNonce?: string;
@@ -53,10 +53,13 @@ export class OidcJwksProvider implements IdentityProviderPort {
   constructor(private readonly cfg: OidcConfig) {
     this.allowed = new Set(cfg.allowedAlgs ?? ["RS256"]);
     this.leewaySec = cfg.leewaySec ?? 60;
+    if (!Number.isFinite(this.leewaySec) || this.leewaySec < 0) {
+      throw new Error("OIDC leewaySec must be finite and nonnegative");
+    }
   }
 
   async verify(assertion: string, now: number): Promise<VerifiedIdentity | null> {
-    const nowSec = Math.floor(now / 1000);
+    const nowSec = now / 1000;
     const parts = assertion.split(".");
     if (parts.length !== 3) return null;
     const [h, p, s] = parts as [string, string, string];
@@ -88,8 +91,9 @@ export class OidcJwksProvider implements IdentityProviderPort {
     if (payload["iss"] !== this.cfg.issuer) return null;
     if (!audienceContains(payload["aud"], this.cfg.audience)) return null;
     const exp = numClaim(payload["exp"]);
-    if (exp === undefined || nowSec > exp + this.leewaySec) return null;
+    if (exp === undefined || nowSec >= exp + this.leewaySec) return null;
     const nbf = numClaim(payload["nbf"]);
+    if (Object.hasOwn(payload, "nbf") && nbf === undefined) return null;
     if (nbf !== undefined && nowSec < nbf - this.leewaySec) return null;
     if (this.cfg.expectedNonce !== undefined) {
       const nonce = typeof payload["nonce"] === "string" ? (payload["nonce"] as string) : "";

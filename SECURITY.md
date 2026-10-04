@@ -68,12 +68,23 @@ not impose an aggregate memory ceiling. Use separately qualified outer resource
 controls for hostile workloads. Legacy `true`/default best-effort and explicit
 `false` behavior remain available and carry their weaker observations.
 
-Builder tests cover the selected Linux layout and useful-work/refusal controls.
-The pinned Bubblewrap version is affected by [GHSA-pxhw-h44j-8pfx](https://github.com/containers/bubblewrap/security/advisories/GHSA-pxhw-h44j-8pfx).
-The tested fixed layout avoids its setup-time directory-creation precondition; this
-is not a patched dependency or general clearance of other layouts. Changing the
-launcher or layout requires fresh qualification. The separate native build-tool
-launcher has source inspection only for this advisory.
+The 0.0.5-preview.1 source pins the measured non-setuid Bubblewrap **0.13.0**
+launcher across the TypeScript required jail, native supervisor and P2 candidate
+probe. [Upstream GHSA-pxhw-h44j-8pfx](https://github.com/containers/bubblewrap/security/advisories/GHSA-pxhw-h44j-8pfx)
+affects versions below 0.12.0; the selected
+[0.13.0 release](https://github.com/containers/bubblewrap/releases/tag/v0.13.0)
+contains the fix. Keep verifies exact bytes; a matching version string alone does
+not admit a launcher. Setup remains refused when the required binary is absent
+or mismatched. [Launcher recipe and identity](tools/bubblewrap/README.txt) describe
+the measured build and required requalification; they do not authorize shared-host
+installation or security-policy changes.
+
+The downloadable **0.0.4-preview.1 archive remains affected**. A source commit or
+documentation update cannot patch already published bytes. Its earlier fixed-layout
+mitigation is not a patched dependency. Consult [the checkpoint record](KEEP_RELEASE.md)
+for the distinction between development qualification, public export checks and
+historical installed artifacts. Local checks do not establish arbitrary workload
+isolation, organization custody or independent replication.
 
 ## Optional native refusal transport: installation prerequisites
 

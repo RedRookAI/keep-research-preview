@@ -1,4 +1,8 @@
-Keep progress update — 2026-10-04
+Keep public source checkpoint — 2026-10-04
+
+Current public source version: 0.0.5-preview.1.
+Current downloadable binary: historical 0.0.4-preview.1.
+The new source and docs are published together; a new binary is not included.
 
 The audit produced 26 small remediation tickets. Each repeats research, the
 smallest scoped implementation or qualification, and actual outcome vetting.
@@ -8,10 +12,10 @@ and the final complete source checkpoint. Some tickets produce plans, inventorie
 or contracts; their completion does not qualify corresponding production guarantees.
 Failed retries are retained and charged to the same finite allowance.
 
-Security update in development
+Security update in the current source
 
-The published preview still contains the older Bubblewrap identity affected by
-GHSA-pxhw-h44j-8pfx. The development source coordinates all three consumers on the
+The historical published binary still contains the older Bubblewrap identity affected by
+GHSA-pxhw-h44j-8pfx. The current public source coordinates all three consumers on the
 measured 0.13.0 launcher. Required-mode admission still refuses absent or mismatched
 bytes. A layout mitigation is not a patched dependency.
 
@@ -34,12 +38,25 @@ The exact archive was separately checked through an installed backup journey on
 two local fixture tracks: uncertain-effect recovery, protected capture, restoration
 of all captured state, a fresh restart, and duplicate-work suppression. These
 fixtures do not establish real organization custody or offsite disaster recovery.
-The later cumulative full source run passed all 5,175 ordinary tests, 34
+The later cumulative full development source run at
+cc74ee2409c0bad33927dce5c28ea55fc2050002 passed all 5,175 ordinary tests, 34
 release/security tests, and 139 native tests, with zero failures or skips.
 A separate same-agent audit checked actual source files, native artifacts,
 compiler inputs, command logs, and rejection of changed inputs or incomplete phases.
-This exact-source qualification remains distinct from the earlier installed archive.
-This progress commit does not replace the published 0.0.4-preview.1 archive, install a host
+This exact-source qualification remains distinct from the earlier installed archive
+and the public export.
+
+The public 0.0.5-preview.1 export passed offline locked installation, TypeScript
+compilation and attribution checks, 84 declared partial-profile tests and 130
+changed-mechanism tests, with zero failures or skips. Its source build compiled
+three static Linux x64 PIE executables using the verified pinned compiler. The
+compiled source CLI reported the current version and completed 24 recovery checks
+with zero model calls. Actual source-file comparison and local artifact measurements
+are recorded in docs/checkpoint-2026-10-04.json and docs/evidence.md. These were
+same-agent, unprivileged, network-disabled checks within two CPUs, 4 GiB RAM and
+512 processes. They do not qualify the complete public profile or a fresh installed
+archive.
+This source checkpoint does not replace the published 0.0.4-preview.1 archive, install a host
 launcher, or deploy any instance. Do not infer patched public package bytes from
 this status note; consult the exact release record when a replacement is published.
 

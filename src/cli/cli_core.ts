@@ -37,6 +37,7 @@ import { listPendingReviews as listPending, needsDecision, getPacketInputs, isDe
 import { startReviewServer, type ReviewServerHandle } from "../review/review_server.js";
 import { handleGatewayRequest, startGatewayServer, type GatewayRequest, type GatewayResponse, type GatewayServerHandle } from "../gateway/http_gateway.js";
 import { randomBytes, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 /** Injectable I/O so the core is testable without a real terminal. */
 export interface CliIO {
@@ -96,7 +97,18 @@ export async function runGatewayCli(argv: readonly string[], io: CliIO, deps: Ga
   } catch (error) { io.write(`Gateway operation failed: ${(error as Error).message}. A failed observation is not permission to repeat a mutation under a new key.`); return { command, exitCode: 1 }; }
 }
 
-export const DEFAULT_VERSION = "0.0.4-preview.1";
+// The supported layouts are src/cli/*.ts and dist/src/cli/*.js. Read the
+// executing package's metadata directly: cwd and another installation cannot
+// select a default, and packing does not need a second generated version file.
+const packageMetadata = JSON.parse(readFileSync(new URL(
+  import.meta.url.endsWith(".ts") ? "../../package.json" : "../../../package.json",
+  import.meta.url,
+), "utf8")) as { name?: unknown; version?: unknown };
+if (packageMetadata.name !== "keep" || typeof packageMetadata.version !== "string" ||
+    packageMetadata.version.length === 0 || /\s/u.test(packageMetadata.version)) {
+  throw new Error("executing Keep package metadata has no valid version");
+}
+export const DEFAULT_VERSION = packageMetadata.version;
 
 export const USAGE = `keep — safe, auditable, self-hostable build automation
 

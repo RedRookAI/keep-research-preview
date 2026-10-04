@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -12,7 +12,7 @@ import { ModelGateway } from "../src/gateway/gateway.js";
 import { LocalProvider } from "../src/gateway/local_provider.js";
 import { MemoryStore } from "../src/memory/store.js";
 import { composeKeep, type KeepApp } from "../src/compose.js";
-import { runCli, runGatewayCli, type CliIO, type CliDeps } from "../src/cli/cli_core.js";
+import { DEFAULT_VERSION, runCli, runGatewayCli, runStaticCli, type CliIO, type CliDeps } from "../src/cli/cli_core.js";
 import type { GatewayServerHandle } from "../src/gateway/http_gateway.js";
 import { handleGatewayRequest } from "../src/gateway/http_gateway.js";
 import { GOAL_WORK_DOCUMENT, type GoalWorkDocument } from "../src/session/project_goal_work.js";
@@ -421,4 +421,17 @@ test("P9 SERVE: the bind defaults to 127.0.0.1 (safe-bind)", async () => {
   const gw = fakeGateway();
   await runCli(["serve", "--gateway"], fakeIO(), { app: appWithSolve(), serveGateway: gw.serve, tokenStore: memTokenStore() });
   assert.equal(gw.lastOpts.host, "127.0.0.1", "safe-bind by default");
+});
+
+ test("static CLI default matches executing package metadata and explicit versions remain deterministic", () => {
+  const metadata = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string };
+  assert.equal(DEFAULT_VERSION, metadata.version);
+  for (const arg of ["version", "--version", "-v"]) {
+    const output: string[] = [];
+    assert.equal(runStaticCli([arg], text => output.push(text))?.exitCode, 0);
+    assert.deepEqual(output, [`keep ${metadata.version}`]);
+    const injected: string[] = [];
+    runStaticCli([arg], text => injected.push(text), "9.9-test");
+    assert.deepEqual(injected, ["keep 9.9-test"]);
+  }
 });

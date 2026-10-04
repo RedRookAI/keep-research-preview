@@ -35,23 +35,16 @@ export class InProcessLock implements DistributedLock {
       release = resolve;
     });
     // The next waiter chains after this gate resolves.
-    this.tails.set(
-      key,
-      prev.then(() => gate),
-    );
+    const tail = prev.then(() => gate);
+    this.tails.set(key, tail);
     // Wait for all prior holders to finish.
     await prev;
     try {
       return await fn();
     } finally {
       release();
-      // Clean up the map entry if we were the last in line.
-      // (Best-effort; correctness does not depend on it.)
-      queueMicrotask(() => {
-        if (this.tails.get(key) === prev.then(() => gate)) {
-          // no-op: reference identity won't match after chaining; left intentionally simple
-        }
-      });
+      // Only our exact tail can be released; a later waiter still owns its entry.
+      if (this.tails.get(key) === tail) this.tails.delete(key);
     }
   }
 }

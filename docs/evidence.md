@@ -6,15 +6,53 @@ the [preview guide](research-preview.md) explains how to run the first experimen
 
 ## Current release record
 
-Use the companion `KEEP_RELEASE.md` supplied alongside the source and package
-archives for the current candidate's identities and actual check results. It is
-outside the archives so its checksum record does not refer to itself. Results
-below remain attached to their original source and package, even when the
-implementation is retained in a later release.
+Use [the checkpoint record](../KEEP_RELEASE.md) for the current public source
+checks and the historical downloadable binary identities. No new binary archive
+accompanies the October 4 source checkpoint. Results below remain attached to
+their original source and package, even when the implementation is retained in
+a later version.
 
 All results here were administered by the development session. A repository test
 or local effect sink is an outcome checker separate from the model; it is not
 outside administration. No genuinely outside replication is recorded.
+
+## October 4 public source checkpoint
+
+The public source version is **0.0.5-preview.1**. It contains the selected product
+remedies from the completed audit checkpoint. The new source uses the measured
+patched Bubblewrap 0.13.0 identity; the historical binary 0.0.4-preview.1 does not.
+
+The originating development source `cc74ee2409c0bad33927dce5c28ea55fc2050002`
+passed all 5,175 ordinary, 34 release/security and 139 native tests with zero skips
+or failures. Same-agent actual-file auditing bound the source, native artifacts,
+compiler inventory and command logs. This is the exact development result; public
+export adaptations and changed package metadata require their own checks.
+
+The public export passed offline locked dependency installation, TypeScript
+compilation and attribution checks through `node tools/run_ci_checks.mjs`, with
+**84/84 tests** in its declared partial profile. Fourteen changed-mechanism test
+files then passed **130/130 tests**. Both runs had zero failures or skips.
+`npm run build` verified the pinned compiler inventory and compiled three static
+Linux x64 PIE executables. The compiled source CLI reported `keep 0.0.5-preview.1`;
+`node dist/src/main.js demo recovery` completed **24 checks with zero model calls**.
+
+The [machine-readable checkpoint](checkpoint-2026-10-04.json) records the actual
+source comparison, product-file digest and local build measurements. These checks
+ran unprivileged with networking disabled, two CPUs, 4 GiB RAM, no swap and a
+512-process ceiling. The same agent checked actual source and compiler files
+against the tested inputs. This is partial public-export verification and a
+source-checkout demonstration; neither the complete public profile nor a fresh
+installed archive was qualified. No new binary was published and no instance was
+deployed. The earlier development full pass remains attached to its exact source.
+
+The separate earlier local version 0.0.2 archive passed scripts-enabled packaging,
+24 unprivileged installed recovery cases and two local backup/restore/restart fixture
+tracks. That archive is not a public 0.0.5-preview.1 binary. Fixture identities do
+not establish authenticated organization custody or offsite disaster survival.
+
+Historical failures below retain their original inputs and dispositions. Completing
+all 26 scoped tickets does not turn plan, inventory or contract outcomes into
+production qualification.
 
 ## Starting results
 
@@ -133,8 +171,8 @@ memory/authority-revocation property.
 
 The current record reports the introductory demonstration separately from the wider
 experimental suite. On historical source `63cbf80`, the broader portable run had
-**4,497 passes and 11 failures**; its release/security phase did not run. These counts
-have not been refreshed on the current candidate.
+**4,497 passes and 11 failures**; its release/security phase did not run. These counts belong to that historical source. The October 4 development result
+and public export checks are recorded separately above.
 
 | Historical finding | What is established and what remains unresolved |
 | --- | --- |

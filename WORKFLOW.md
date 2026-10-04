@@ -1,5 +1,8 @@
 # Contributing to Keep
 
+The current public source checkpoint is **0.0.5-preview.1**; its source and
+historical binary identities are in [the checkpoint record](KEEP_RELEASE.md).
+
 Start with the problem, the relevant implementation and an observable acceptance
 criterion. Explain significant tradeoffs, preserve unrelated work, and include
 tests for changed behavior. Personal and organization configurations need separate
@@ -13,6 +16,7 @@ Run these commands from a source checkout, not inside an installed package.
 | --- | --- | --- |
 | npm ci | Install locked dependencies; no native compile hook | Node/npm and registry access or a populated cache |
 | npm run test:fast | TypeScript typecheck only | Installed locked dependencies |
+| node tools/run_ci_checks.mjs | Offline locked install, typecheck, notices and eight focused test files; a partial profile | Populated npm cache, Node and the isolated test environment |
 | npm run test:notices | Check the retained attribution bundle | Complete vendor trees and installed locked dependencies |
 | npm run test:portable | Compile and run the selected portable test profile | Node, Git and the qualified Linux test environment described below |
 | npm run build | Compile TypeScript and verify/build native outputs | Pinned Linux x64 Rust toolchain and host C build tools |
@@ -31,7 +35,17 @@ After compilation, a focused test can be run directly:
 node --test --test-concurrency=1 dist/test/release_licensing.test.js
 ~~~
 
-The Linux portable profile includes required-project-jail regressions. These need the existing pinned non-setuid Bubblewrap executable (digest in `src/infra/required_project_jail.ts`), Python 3, the qualified merged-`/usr` layout and kernel permission to create the tested namespaces. Its KVM-presence probe expects a real `/dev/kvm` character device. A restricted container without these prerequisites cannot qualify the full profile. These are contributor test requirements; the binary recovery quickstart needs none of them. Launcher advisory limits remain in [Security](SECURITY.md).
+Required-project-jail checks need the exact measured non-setuid Bubblewrap 0.13.0
+launcher, Python 3, the supported merged `/usr` layout and permission to create
+the tested namespaces. Identity and recipe are in
+[the launcher guide](tools/bubblewrap/README.txt). Missing or mismatched prerequisites
+must refuse; do not change shared host settings to make checks pass.
+
+The current full runner does not implicitly boot a VM or run real KVM/Firecracker
+host probes. Optional host qualification remains separately selected below. A
+passing recovery demo or available kernel feature does not prove host isolation.
+The [checkpoint evidence](docs/evidence.md#october-4-public-source-checkpoint)
+distinguishes the complete development run from this public export's checks.
 
 The full runner defaults to one worker. Its --phase option is a partial check,
 not full qualification. The --portable profile excludes native tests and the

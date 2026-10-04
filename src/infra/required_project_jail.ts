@@ -1,4 +1,4 @@
-/** Explicit Linux project boundary, using the already qualified Bubblewrap binary.
+/** Explicit Linux project boundary, using an exact pinned Bubblewrap binary.
  * Host kernel/runtime and quiescent caller-owned trees remain trusted. This is not
  * a VM, a general syscall allowlist, or protection from same-uid host mutators.
  */
@@ -8,7 +8,8 @@ import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import type { NamespaceJailSpec, ProcessIsolationObservation } from "./isolation_backend.js";
 
-const BWRAP_SHA256 = "52231e1caf55bcbc667b269f49c63599a6f7db4767ae6a039580d0ff853db712";
+const BWRAP_PATH = "/opt/keep/bubblewrap/0.13.0/bwrap";
+const BWRAP_SHA256 = "e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f";
 const MAX_ENTRIES = 100_000, MAX_ARGS_BYTES = 64 * 1024;
 const WRAPPER = 'set -eu; cpu="$1"; size="$2"; procs="$3"; files="$4"; ' +
   'if [ "$cpu" != "-" ]; then ulimit -S -t "$cpu"; ulimit -H -t "$cpu"; fi; ' +
@@ -96,7 +97,7 @@ export function prepareRequiredJail(command: string, args: readonly string[], ja
       if (!s.isFile() || s.uid !== 0 || (s.mode & 0o6022) !== 0 || (s.mode & 0o111) === 0) throw new Error("untrusted required-jail launcher");
       return fd;
     };
-    const shell = trustedBinary("/usr/bin/bash"), launcher = trustedBinary("/usr/bin/bwrap");
+    const shell = trustedBinary("/usr/bin/bash"), launcher = trustedBinary(BWRAP_PATH);
     if (createHash("sha256").update(readFileSync(launcher)).digest("hex") !== BWRAP_SHA256) throw new Error("required-jail launcher identity mismatch");
     for (const [alias, target] of [["/bin", "usr/bin"], ["/lib", "usr/lib"], ["/lib64", "usr/lib64"]]) {
       if (readlinkSync(alias!) !== target) throw new Error("required jail needs the qualified merged-/usr layout");

@@ -38,6 +38,7 @@ export interface CapturedTestCommand {
   readonly cpuLimitSec: number;
   readonly maxOutputBytes: number;
   readonly envAllowlist: readonly string[];
+  readonly namespaceJail?: boolean | "required";
 }
 
 export interface CapturedInstalledProjectConfig {
@@ -382,7 +383,11 @@ function captureTestCommand(env: Readonly<Record<string, string | undefined>>): 
   const args = stringArray(env["KEEP_TEST_ARGS_JSON"] ?? "[]", "KEEP_TEST_ARGS_JSON");
   const envAllowlist = (env["KEEP_TEST_ENV_ALLOWLIST"] ?? "").split(",").filter(Boolean).map((name) => bounded(name, "KEEP_TEST_ENV_ALLOWLIST"));
   for (const name of envAllowlist) if (!SAFE_ENV_NAME.test(name) || CREDENTIAL_ENV.test(name)) throw new RuntimeConfigError("KEEP_TEST_ENV_ALLOWLIST", `refuses credential-like or invalid environment name: ${name}`);
-  return { command, args, timeoutMs: boundedInteger(env["KEEP_TEST_TIMEOUT_MS"], "KEEP_TEST_TIMEOUT_MS", DEFAULT_TEST_TIMEOUT_MS, 1_000, 60 * 60_000), cpuLimitSec: boundedInteger(env["KEEP_TEST_CPU_LIMIT_SEC"], "KEEP_TEST_CPU_LIMIT_SEC", DEFAULT_TEST_CPU_LIMIT_SEC, 1, 3_600), maxOutputBytes: boundedInteger(env["KEEP_TEST_MAX_OUTPUT_BYTES"], "KEEP_TEST_MAX_OUTPUT_BYTES", DEFAULT_TEST_MAX_OUTPUT_BYTES, 1_024, 64 * 1024 * 1024), envAllowlist: [...new Set(envAllowlist)].sort() };
+  const selection = env["KEEP_TEST_NAMESPACE_JAIL"];
+  if (selection !== undefined && selection !== "required" && selection !== "best-effort" && selection !== "off")
+    throw new RuntimeConfigError("KEEP_TEST_NAMESPACE_JAIL", "must be required, best-effort or off");
+  const namespaceJail = selection === "required" ? "required" : selection === "best-effort" ? true : selection === "off" ? false : undefined;
+  return { command, args, timeoutMs: boundedInteger(env["KEEP_TEST_TIMEOUT_MS"], "KEEP_TEST_TIMEOUT_MS", DEFAULT_TEST_TIMEOUT_MS, 1_000, 60 * 60_000), cpuLimitSec: boundedInteger(env["KEEP_TEST_CPU_LIMIT_SEC"], "KEEP_TEST_CPU_LIMIT_SEC", DEFAULT_TEST_CPU_LIMIT_SEC, 1, 3_600), maxOutputBytes: boundedInteger(env["KEEP_TEST_MAX_OUTPUT_BYTES"], "KEEP_TEST_MAX_OUTPUT_BYTES", DEFAULT_TEST_MAX_OUTPUT_BYTES, 1_024, 64 * 1024 * 1024), envAllowlist: [...new Set(envAllowlist)].sort(), ...(namespaceJail !== undefined ? { namespaceJail } : {}) };
 }
 
 function stringArray(raw: string, field: string): readonly string[] {

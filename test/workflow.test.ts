@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -112,4 +112,27 @@ test("documented expected-checksum gate stops before install on mismatch or miss
       }
     } finally { rmSync(fixture, { recursive: true, force: true }); }
   }
+});
+
+test("built static CLI uses its own current package version independently of cwd", () => {
+  const fixture = mkdtempSync(join(tmpdir(), "keep-version-authority-"));
+  try {
+    const installation = join(fixture, "installation"), foreign = join(fixture, "foreign");
+    mkdirSync(foreign);
+    writeFileSync(join(foreign, "package.json"), JSON.stringify({ name: "keep", version: "99.99.99" }));
+    cpSync(join(root, "dist/src"), join(installation, "dist/src"), { recursive: true });
+    const module = join(installation, "dist/src/cli/cli_core.js");
+    const originalDigest = createHash("sha256").update(readFileSync(module)).digest("hex");
+    const script = `import { runStaticCli } from ${JSON.stringify("file://" + module)}; runStaticCli(["--version"], text => process.stdout.write(text));`;
+    for (const version of ["0.0.1-fixture.1", "0.0.1-fixture.2"]) {
+      writeFileSync(join(installation, "package.json"), JSON.stringify({ name: "keep", version, type: "module" }));
+      const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], { cwd: foreign, encoding: "utf8", timeout: 15000 });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stdout, `keep ${version}`);
+      assert.equal(createHash("sha256").update(readFileSync(module)).digest("hex"), originalDigest);
+    }
+    writeFileSync(join(installation, "package.json"), JSON.stringify({ name: "keep", type: "module" }));
+    const malformed = spawnSync(process.execPath, ["--input-type=module", "-e", script], { cwd: foreign, encoding: "utf8", timeout: 15000 });
+    assert.notEqual(malformed.status, 0, "missing own version must not select foreign metadata or an old constant");
+  } finally { rmSync(fixture, { recursive: true, force: true }); }
 });

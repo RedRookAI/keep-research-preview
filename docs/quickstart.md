@@ -1,59 +1,39 @@
-# Five-minute quickstart
+# Run the current source checkpoint
 
-The first-run experiment needs Linux x64, Node.js 22 and npm. This release is qualified on Node 22.23.2. It needs no Rust compiler, C compiler, Git, model account, GPU or API key. The binary archive bundles TypeScript, its existing JavaScript dependency, so installation can also be performed offline after obtaining the archive.
+The public source version is **0.0.5-preview.1**. There is no downloadable binary
+for this version yet. The older 0.0.4-preview.1 archive remains historical and
+retains its affected launcher pin; see [Security](../SECURITY.md).
 
-## 1. Obtain and verify the package
+## Prerequisites and build
 
-Download `keep-0.0.4-preview.1.tgz` and the accompanying `KEEP_RELEASE.md` from the named [release](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-02.1).
-
-Copy the package SHA256 from the release record, then check it before installation:
-
-```sh
-printf '%s  %s\n' 'COPY_THE_PACKAGE_SHA256_FROM_KEEP_RELEASE.md' 'keep-0.0.4-preview.1.tgz' | sha256sum -c -
-```
-
-Continue only if it prints `keep-0.0.4-preview.1.tgz: OK`. Comparing a downloaded file with its own computed hash is not publisher authentication; use the digest in the trusted release record.
-
-## 2. Install
+Use an isolated Linux x64 checkout, Node.js 22.23.2, npm, Git, the pinned Rust
+1.97.1 toolchain with its musl target, and host C build tools. The build verifies
+the existing toolchain; it does not fetch a replacement. Configure `RUSTUP_HOME`
+or `KEEP_P1_TOOLCHAIN_ROOT` for your already acquired toolchain as described in
+[Contributing](../WORKFLOW.md).
 
 ```sh
-npm i -g ./keep-0.0.4-preview.1.tgz
+git clone https://github.com/RedRookAI/keep-research-preview.git
+cd keep-research-preview
+npm ci
+npm run build
+node dist/src/main.js version
+node dist/src/main.js demo recovery
 ```
 
-For a writable user-local installation instead:
-
-```sh
-npm i -g --prefix "$HOME/.local" ./keep-0.0.4-preview.1.tgz
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Keep the second line in your shell's usual PATH configuration if you want it to persist. No administrator access or source-build toolchain is required for this introductory installation. The package is specifically for Linux x64; other architectures need a separately qualified build.
-
-## 3. Run the recovery experiment
-
-```sh
-keep version
-keep demo recovery
-```
-
-Expected output:
+Expected version: `keep 0.0.5-preview.1`. A passing demo prints:
 
 ```text
-keep 0.0.4-preview.1
 Recovery experiment passed: 24 checks; 0 model calls.
 Detailed results: /tmp/keep-installed-fleet-uncertainty-<generated-id>/report.json
 ```
 
-The results directory is generated for each run. The report and child-process logs contain the detailed checks; inspect `report.json` at the printed path. Preserve that directory elsewhere if you need it after temporary-file cleanup.
+Inspect the generated report and local outbox records. No account or paid model
+is required. Use synthetic data and isolated resources. Required project jail
+operations additionally need the exact reviewed Bubblewrap launcher and a
+qualified namespace environment; an absent or mismatched launcher must refuse.
+Do not change a shared host's security policy to make a demonstration pass.
 
-Sixteen accounting cases and eight dispatch-permit cases compare Keep's state with a durable local outbox. They cover successful work, lost acknowledgments, refusal, retained uncertainty, fresh-process restart and permit reuse. Both personal and injected-tenant configurations run; injected identity is not a production identity provider. The experiment checks the actual local sink, not just a success label, and makes no external effect or paid call.
-
-## 4. Explore
-
-```sh
-keep help
-```
-
-The [preview guide](research-preview.md) explains configuration and limitations. The package includes the actual native client, supervisor and patch-capture binaries. The optional native refusal exchange requires administrator-owned custody described in [Security](../SECURITY.md#optional-native-refusal-transport-installation-prerequisites); ordinary npm installation does not silently relax that boundary.
-
-The recovery experiment does not qualify arbitrary coding tasks, production isolation, outside identity systems or remote-effect finality. Choose the next workflow from its own documented prerequisites rather than assuming that a successful introductory experiment establishes every guarantee.
+Before upgrading existing state, stop writers and retain a verified complete
+private backup. Read [backup guidance](backup.md) and the
+[checkpoint record](../KEEP_RELEASE.md). Do not mix old and new writers.

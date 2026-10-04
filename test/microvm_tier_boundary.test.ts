@@ -9,20 +9,17 @@
  * the network (NO virtio-net device), and is resource-bounded — PLUS the bound the weaker tiers could not
  * deliver: a HARD guest-RAM cap (`mem_size_mib`) that OOMs a memory bomb inside the guest, never on the host.
  *
- * DETECT-AND-SELECT, honest: `detectMicrovmRuntime()` MEASURES what is present. In THIS environment
- * `/dev/kvm` IS a real char device but the `firecracker`/`cloud-hypervisor` VMM is ABSENT and no guest
- * kernel/rootfs is built — so plan/contract logic is exercised by a strictly test-only fake while authority
- * is proven only by the separate real-Firecracker evidence path
- * (on REAL filesystem bytes) + the real KVM-present / firecracker-absent probe. The plan-level assertions
- * prove the guest hardware encodes the contract (ro rootfs, no NIC, mem cap). Where a real VMM + rootfs are
- * present (a KVM+Firecracker host), the `FIRECRACKER_OK` branch asserts REAL guest bytes instead.
+ * DETECT-AND-SELECT: `detectMicrovmRuntime()` records actual host inputs. These tests exercise
+ * plan/contract logic with a strictly test-only fake and check the probe's observations. They do
+ * not execute a real guest. Real guest authority requires the separate Firecracker host evidence
+ * tools on a prepared host; device/runtime metadata alone does not establish it.
  *
  * Proven by DISPROOF: each assertion has a paired neuter of `planMicrovmRun` / `microvmContainmentDecision`
  * / the honesty/wiring point — RED bytes under redrook-ops/.round-artifacts/BIND-MICROVM-TIER-BOUNDARY/.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, existsSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdtempSync, existsSync, writeFileSync, mkdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 
@@ -53,9 +50,6 @@ function spec(proj: string, over: Partial<MicrovmBoundarySpec> = {}): MicrovmBou
   return { projectDir: proj, kernelImage: "/x/vmlinux", rootfsImage: "/x/rootfs.ext4", command: "sh", args: [], memoryBytes: 256 * 1024 * 1024, ...over };
 }
 const MEM = 256 * 1024 * 1024;
-
-/** A real guest run needs KVM + a VMM binary + a built kernel/rootfs. Absent here → the VERIFIED-SEAM path. */
-const FIRECRACKER_OK = RT.available && RT.tier === "microvm";
 
 test("AUTHORITY: guest command, argv, and enforced limits move one canonical execution-request identity", () => {
   const base = spec("/project", { command: "/bin/sh", args: ["-c", "npm test"], timeoutMs: 90_000, maxProcesses: 128 });
@@ -212,11 +206,26 @@ test("CONTRACT: microvmContainmentDecision extends the shared contract with the 
 });
 
 // ── The measured microVM reality in THIS environment (honest labelling) ────────────────────────────────
-test("HONEST PROBE: /dev/kvm is measured present here, but the microVM tier is a VERIFIED-SEAM (no VMM/rootfs)", () => {
-  assert.equal(kvmDevicePresent(), true, "/dev/kvm is a real char device in this environment");
-  // firecracker/cloud-hypervisor absent → available:false, but kvmPresent honestly recorded true.
-  assert.equal(RT.kvmPresent, true, "the probe records KVM present (not conflated with VMM availability)");
-  assert.equal(RT.available, false, "no VMM binary here → the microVM tier is NOT claimed available (VERIFIED-SEAM)");
-  assert.equal(microvmImagesPresent({ kernelImage: "/nope/vmlinux", rootfsImage: "/nope/rootfs" }), false, "no built kernel/rootfs in this env");
-  assert.equal(FIRECRACKER_OK, false, "this env runs the VERIFIED-SEAM path (real-guest branch skipped honestly)");
+test("HONEST PROBE: device and runtime observations stay consistent with actual host inputs", (t) => {
+  let devicePresent = false;
+  try { devicePresent = statSync("/dev/kvm").isCharacterDevice(); } catch { /* device absent */ }
+  assert.equal(kvmDevicePresent(), devicePresent);
+  assert.equal(RT.kvmPresent, devicePresent, "device presence is separate from runtime availability");
+  const observed = detectMicrovmRuntime(true);
+  assert.equal(observed.kvmPresent, devicePresent);
+  assert.equal(RT.available, observed.available, "fresh runtime observation agrees");
+  if (observed.available) {
+    assert.equal(devicePresent, true);
+    assert.equal(observed.kind, "firecracker");
+    assert.equal(observed.tier, "microvm");
+    for (const path of [observed.vmmPath, observed.jailerPath]) {
+      assert.ok(path?.startsWith("/"), "available runtime has measured absolute executables");
+      assert.equal(statSync(path!).isFile(), true);
+    }
+  } else {
+    assert.equal(observed.kind, "none");
+    assert.equal(observed.tier, "none");
+  }
+  assert.equal(microvmImagesPresent({ kernelImage: "/nope/vmlinux", rootfsImage: "/nope/rootfs" }), false);
+  t.diagnostic(JSON.stringify({ kvmPresent: devicePresent, runtimeAvailable: observed.available, tier: observed.tier, realGuestExecuted: false }));
 });

@@ -1,6 +1,52 @@
-# Keep release record
+# Keep public checkpoint record
 
-## Maintenance research preview: October 2, 2026
+## October 4, 2026: source 0.0.5-preview.1
+
+The current public source contains the completed scoped audit remedies. The
+package metadata and CLI version are **0.0.5-preview.1**. This is a source
+checkpoint; no new binary archive, npm release or deployment accompanies it.
+
+| Input or result | Identity and scope |
+| --- | --- |
+| Originating completed development checkpoint | `b489bef590adc525e335739855945f46d41f8dfd` |
+| Exact development source qualified in the full run | `cc74ee2409c0bad33927dce5c28ea55fc2050002` |
+| Development full profile | 5,175 ordinary + 34 release/security + 139 native tests; zero failures, cancellations or skips |
+| Local security archive, distinct earlier input | Version 0.0.2; SHA256 `3870772c11abc350216c0a034e242344a87237d0d2c6ba7bcdc0ecfb67f1c6f6`; not this public source version or a public download |
+| Current downloadable binary | Historical 0.0.4-preview.1; original identities and checks below |
+| Public export checks | 84 partial-profile + 130 changed-mechanism tests; zero failures or skips; source build and 24-check source recovery demo passed |
+
+All 26 tickets met their defined outcomes after research, scoped action and actual
+vetting. Some outcomes are plans, inventories or contracts; they do not establish
+the corresponding production guarantee. Development results were administered by
+the same agent in an owned finite fixture. The actual-file audit checked source,
+compiler and native artifacts, logs, input substitution and incomplete-phase refusal.
+
+The public checkpoint imports selected product-file changes into existing public
+history and preserves its recovery CLI and configurable host-fixture paths. It does
+not import private Git history, raw operator evidence, backup payloads or credentials.
+Exported bytes and version metadata differ from the exact development revision;
+that development full pass is not relabeled as a full pass of this export.
+
+Actual export commands, environment and limits are in
+[Evidence](docs/evidence.md#october-4-public-source-checkpoint) and the
+[machine-readable checkpoint](docs/checkpoint-2026-10-04.json). The source build
+produced three static Linux x64 PIE executables; those are local measurements,
+not a newly published binary archive. The public complete profile and a fresh
+installed archive have not been qualified.
+
+The source now pins measured Bubblewrap 0.13.0 across all three launcher consumers.
+The downloadable older archive retains its affected pin. See [Security](SECURITY.md),
+[source quickstart](docs/quickstart.md), and [October 4 notes](docs/maintenance-2026-10-04.txt).
+
+Before changing existing operational state, stop writers and retain a verified
+complete private backup. A local fixture backup journey is not organization custody,
+offsite disaster recovery or universal remote-effect finality.
+
+---
+
+# Historical binary release record
+
+## Historical maintenance preview: October 2, 2026
 
 **Keep 0.0.4-preview.1**, release `keep-preview-2026-10-02.1`.
 

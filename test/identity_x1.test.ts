@@ -42,7 +42,7 @@ test("X1 sessions: create→get works; idle + absolute timeouts expire and destr
   const sess = s.create({ id: "u", kind: "human", role: "reviewer" }, 0);
   assert.equal(s.get(sess.id, 50)?.principal.id, "u");
   assert.equal(s.get(sess.id, 50 + 101), null, "idle timeout (no activity for >idleMs) expires");
-  assert.equal(s.activeCount(), 0, "expired session destroyed server-side");
+  assert.equal(s.activeCount(151), 0, "expired session destroyed server-side");
   const s2 = new SessionStore({ idleMs: 10_000, absoluteMs: 500 });
   const a = s2.create({ id: "u", kind: "human", role: "reviewer" }, 0);
   s2.get(a.id, 400); // active, but...
@@ -115,7 +115,7 @@ test("X1 web: an unknown identity is refused a session (403) and the denial is a
   const assertion = id.provider.sign({ sub: "stranger", email: "no@x.com", exp: 5000 });
   const r = await handleReviewRequest(app, rq({ method: "POST", path: "/login", headers: { host: "127.0.0.1:9", origin: "http://127.0.0.1:9" }, body: `assertion=${encodeURIComponent(assertion)}` }), sec(id));
   assert.equal(r.status, 403);
-  assert.equal(id.sessions.activeCount(), 0, "no session issued");
+  assert.equal(id.sessions.activeCount(1000), 0, "no session issued");
   assert.ok(app.spine.currentEvents().map((e) => e.payload as Record<string, unknown>).find((p) => p["event"] === "authz.denied" && p["action"] === "login"));
 });
 
@@ -124,7 +124,7 @@ test("X1 web: a tampered assertion is rejected (401, no session)", async () => {
   const assertion = id.provider.sign({ sub: "sub-rev", email: "rev@x.com", exp: 5000 }).slice(0, -2) + "zz";
   const r = await handleReviewRequest(appWithReview(), rq({ method: "POST", path: "/login", headers: { host: "127.0.0.1:9", origin: "http://127.0.0.1:9" }, body: `assertion=${encodeURIComponent(assertion)}` }), sec(id));
   assert.equal(r.status, 401);
-  assert.equal(id.sessions.activeCount(), 0);
+  assert.equal(id.sessions.activeCount(1000), 0);
 });
 
 test("X1 web: RBAC still enforced per session — a viewer session cannot decide (403)", async () => {

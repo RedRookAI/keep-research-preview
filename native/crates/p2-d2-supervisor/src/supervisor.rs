@@ -10,7 +10,8 @@ use std::fs::read_to_string;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 
-const BWRAP_DIGEST: &str = "52231e1caf55bcbc667b269f49c63599a6f7db4767ae6a039580d0ff853db712";
+const BWRAP_DIRECTORY: &str = "/opt/keep/bubblewrap/0.13.0";
+const BWRAP_DIGEST: &str = "e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f";
 const MEMORY_MAX: &str = "2147483648";
 const MEMORY_SWAP_MAX: &str = "0";
 const PIDS_MAX: &str = "256";
@@ -496,8 +497,8 @@ fn main() {
         build_cell_binding_index..build_cell_binding_index,
         ["--perms".to_owned(), "0500".to_owned()],
     );
-    let binaries = PinnedDirectory::open(Path::new("/usr/bin"))
-        .unwrap_or_else(|_| fail("/usr/bin pinning refused"));
+    let binaries = PinnedDirectory::open(Path::new(BWRAP_DIRECTORY))
+        .unwrap_or_else(|_| fail("dedicated Bubblewrap directory pinning refused"));
     let capture = binaries
         .capture_regular_file("bwrap", 4 * 1024 * 1024)
         .unwrap_or_else(|_| fail("bubblewrap capture refused"));

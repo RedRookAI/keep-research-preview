@@ -74,3 +74,74 @@ test("WRONG KEY: a token signed by a DIFFERENT private key is REJECTED", async (
   const other = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey;
   assert.equal(await provider().verify(signRs256(goodClaims(), "k1", other), NOW), null, "a signature from a non-JWKS key fails");
 });
+
+test("present malformed nbf is refused for owner and organization subjects", async () => {
+  for (const sub of ["owner:local", "organization:tenant-a:member"]) {
+    for (const nbf of [String(nowSec + 300), null, {}, [], true]) {
+      assert.equal(await provider().verify(signRs256({ ...goodClaims(), sub, nbf }), NOW), null, `malformed ${JSON.stringify(nbf)}`);
+    }
+    // A signed JSON number can overflow the parser even though Infinity is not a JSON literal.
+    const h = b64u({ alg: "RS256", kid: "k1" });
+    const p = Buffer.from(JSON.stringify({ ...goodClaims(), sub }).replace(/}$/, ',"nbf":1e999}')).toString("base64url");
+    const sig = createSign("RSA-SHA256").update(`${h}.${p}`).end().sign(privateKey).toString("base64url");
+    assert.equal(await provider().verify(`${h}.${p}.${sig}`, NOW), null, "non-finite parsed NumericDate");
+  }
+});
+
+test("optional and finite fractional nbf retain existing signature, issuer and time checks", async () => {
+  for (const sub of ["owner:local", "organization:tenant-a:member"]) {
+    assert.equal((await provider().verify(signRs256({ ...goodClaims(), sub }), NOW))?.subject, sub);
+    assert.ok(await provider().verify(signRs256({ ...goodClaims(), sub, nbf: nowSec - 0.5 }), NOW));
+    assert.ok(await provider().verify(signRs256({ ...goodClaims(), sub, nbf: nowSec + 60 }), NOW));
+    assert.equal(await provider().verify(signRs256({ ...goodClaims(), sub, nbf: nowSec + 60.5 }), NOW), null);
+    assert.equal(await provider().verify(signRs256({ ...goodClaims(), sub, nbf: nowSec - 0.5, iss: "https://wrong.example" }), NOW), null);
+    const token = signRs256({ ...goodClaims(), sub, nbf: nowSec - 0.5 });
+    const [h, , sig] = token.split(".");
+    assert.equal(await provider().verify(`${h}.${b64u({ ...goodClaims(), sub, nbf: nowSec - 1 })}.${sig}`, NOW), null);
+  }
+});
+
+test("invalid OIDC leeway fails construction before verification", () => {
+  for (const leewaySec of [NaN, Infinity, -Infinity, -1, -0.1]) {
+    assert.throws(() => new OidcJwksProvider({ jwks, issuer: ISS, audience: AUD, leewaySec }), /leeway/i);
+  }
+});
+
+test("default, zero and fractional leeway preserve finite expiration decisions", async () => {
+  for (const sub of ["owner:local", "organization:tenant-a:member"]) {
+    for (const leewaySec of [undefined, 0, 0.5]) {
+      const p = new OidcJwksProvider({ jwks, issuer: ISS, audience: AUD, ...(leewaySec === undefined ? {} : { leewaySec }) });
+      assert.equal((await p.verify(signRs256({ ...goodClaims(), sub }), NOW))?.subject, sub);
+      assert.equal(await p.verify(signRs256({ ...goodClaims(), sub, exp: nowSec - 3600 }), NOW), null);
+      const skew = leewaySec ?? 60;
+      assert.ok(await p.verify(signRs256({ ...goodClaims(), sub, exp: nowSec - skew + 0.25 }), NOW));
+      assert.equal(await p.verify(signRs256({ ...goodClaims(), sub, exp: nowSec - skew - 0.25 }), NOW), null);
+    }
+  }
+});
+
+test("expiration upper boundary is strict at millisecond precision including skew", async () => {
+  for (const sub of ["owner:local", "organization:tenant-a:member"]) {
+    for (const leewaySec of [0, 0.25, 60]) {
+      const p = new OidcJwksProvider({ jwks, issuer: ISS, audience: AUD, leewaySec });
+      for (const exp of [nowSec, nowSec + 0.5]) {
+        const token = signRs256({ ...goodClaims(), sub, exp });
+        const boundaryMs = (exp + leewaySec) * 1000;
+        assert.ok(await p.verify(token, boundaryMs - 1), "one millisecond before expiry");
+        assert.equal(await p.verify(token, boundaryMs), null, "exact expiry plus skew");
+        assert.equal(await p.verify(token, boundaryMs + 1), null, "one millisecond after expiry");
+      }
+    }
+  }
+});
+
+test("fractional nbf lower boundary remains inclusive with valid skew", async () => {
+  for (const leewaySec of [0, 0.25, 60]) {
+    const p = new OidcJwksProvider({ jwks, issuer: ISS, audience: AUD, leewaySec });
+    const nbf = nowSec + 0.5, boundaryMs = (nbf - leewaySec) * 1000;
+    const token = signRs256({ ...goodClaims(), nbf });
+    assert.equal(await p.verify(token, boundaryMs - 1), null);
+    assert.ok(await p.verify(token, boundaryMs));
+    assert.ok(await p.verify(token, boundaryMs + 1));
+  }
+});

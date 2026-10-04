@@ -343,3 +343,17 @@ async function runInstalled(argv: readonly string[], overlay: Readonly<Record<st
   });
   return { code, stdout, stderr };
 }
+
+test("installed test isolation selection is exact, optional and captured without widening authority", () => {
+  const base = { KEEP_PROVIDER: "local", KEEP_REPOSITORY: "/repo", KEEP_WORKSPACE_BASE: "/workspaces", KEEP_REVISION: REVISION, KEEP_REPO_REF: "sample", KEEP_TEST_COMMAND: "npm" };
+  for (const repoRef of ["owner-project", "organization-project"]) {
+    const capture = (selection?: string) => captureRuntimeContract({ ...base, KEEP_REPO_REF: repoRef, ...(selection !== undefined ? { KEEP_TEST_NAMESPACE_JAIL: selection } : {}) }, { ...context, resolveCommit: () => REVISION }, { projectRequired: true });
+    assert.equal(Object.hasOwn(capture().installedProject!.testCommand, "namespaceJail"), false);
+    assert.equal((capture("required").installedProject!.testCommand as { namespaceJail?: boolean | "required" }).namespaceJail, "required");
+    assert.equal((capture("best-effort").installedProject!.testCommand as { namespaceJail?: boolean | "required" }).namespaceJail, true);
+    assert.equal((capture("off").installedProject!.testCommand as { namespaceJail?: boolean | "required" }).namespaceJail, false);
+    for (const invalid of ["", "true", "false", "REQUIRED", " required", "required ", "unknown"])
+      assert.throws(() => capture(invalid), (error: unknown) => error instanceof RuntimeConfigError && error.field === "KEEP_TEST_NAMESPACE_JAIL");
+    assert.equal("identity" in capture("required"), false, "a project label cannot create organization identity");
+  }
+});

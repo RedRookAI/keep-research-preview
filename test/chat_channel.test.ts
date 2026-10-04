@@ -91,17 +91,18 @@ async function startInstalledChat(env: NodeJS.ProcessEnv): Promise<{ child: Chil
   return { child, origin };
 }
 async function stopChild(child: ChildProcessWithoutNullStreams): Promise<void> { if (child.exitCode !== null) return; child.kill("SIGTERM"); await new Promise<void>((resolve) => child.once("exit", () => resolve())); }
-function signedChatRequest(origin: string, secret: string, id: string, event: ChannelEvent): Promise<Response> { const raw = JSON.stringify(event); const timestamp = String(Math.floor(Date.now() / 1000)); const signature = createHmac("sha256", secret).update(`${timestamp}.${raw}`).digest("hex"); return fetch(`${origin}/event`, { method: "POST", headers: { "content-type": "application/json", "x-webhook-id": id, "x-webhook-timestamp": timestamp, "x-webhook-signature": `sha256=${signature}` }, body: raw }); }
+function signedChatRequest(origin: string, secret: string, id: string, event: ChannelEvent, timestamp = String(Math.floor(Date.now() / 1000))): Promise<Response> { const raw = JSON.stringify(event); const signature = createHmac("sha256", secret).update(`${timestamp}.${raw}`).digest("hex"); return fetch(`${origin}/event`, { method: "POST", headers: { "content-type": "application/json", "x-webhook-id": id, "x-webhook-timestamp": timestamp, "x-webhook-signature": `sha256=${signature}` }, body: raw }); }
 
 test("packaged signed chat entry shares gateway state and rejects replay across restart", async () => {
   const pkg = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as { bin: Record<string, string> }; assert.equal(pkg.bin["keep-chat"], "dist/src/channel/chat_server.js");
   const app = newApp("autonomous"); const gateway = await startGatewayServer(app, { token: TOKEN, host: "127.0.0.1", port: 0 }); const secret = "development-chat-secret"; const replayFile = join(mkdtempSync(join(tmpdir(), "keep-chat-replay-")), "window.jsonl"); const env = { KEEP_GATEWAY_ORIGIN: `http://127.0.0.1:${gateway.port}`, KEEP_GATEWAY_TOKEN: TOKEN, KEEP_CHAT_SECRET: secret, KEEP_CHAT_REPLAY_FILE: replayFile, KEEP_CHAT_PORT: "0" }; let installed = await startInstalledChat(env);
+  const timestamp = String(Math.floor(Date.now() / 1000));
   try {
     assert.equal((await fetch(`${installed.origin}/event`, { method: "POST", body: JSON.stringify({ kind: "project", goal: "must not exist" }) })).status, 401);
-    assert.equal((await signedChatRequest(installed.origin, secret, "delivery-1", { kind: "project", goal: "shared installed chat project" })).status, 200);
-    assert.equal((await signedChatRequest(installed.origin, secret, "delivery-1", { kind: "project", goal: "shared installed chat project" })).status, 409);
+    assert.equal((await signedChatRequest(installed.origin, secret, "delivery-1", { kind: "project", goal: "shared installed chat project" }, timestamp)).status, 200);
+    assert.equal((await signedChatRequest(installed.origin, secret, "delivery-1", { kind: "project", goal: "shared installed chat project" }, timestamp)).status, 409);
     await stopChild(installed.child); installed = await startInstalledChat(env);
-    assert.equal((await signedChatRequest(installed.origin, secret, "delivery-1", { kind: "project", goal: "shared installed chat project" })).status, 409);
+    assert.equal((await signedChatRequest(installed.origin, secret, "delivery-1", { kind: "project", goal: "shared installed chat project" }, timestamp)).status, 409);
     assert.equal(app.autonomyLoop!.manager.list().length, 1, "the signed delivery created exactly one durable project and replay created none");
   } finally { await stopChild(installed.child); await gateway.close(); }
 });

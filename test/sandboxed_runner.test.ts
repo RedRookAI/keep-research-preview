@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -140,4 +140,33 @@ for (const namespaceJail of [undefined, false, "required"] as const) test(`COMPO
   assert.ok(payloads.some((p) => p?.["event"] === "merge_authority"), "a governed decision was made after sandboxed tests");
   assert.ok(payloads.some(p => p["event"] === "isolated_execution" &&
     (p["processIsolation"] as { namespacePolicy?: string } | undefined)?.namespacePolicy === expectedPolicy));
+});
+
+test("captured installed required policy reaches the real runner without an optional fallback", async () => {
+  const { captureRuntimeContract } = await import("../src/cli/runtime_config.js");
+  const base = mkdtempSync(join(tmpdir(), "keep-captured-required-"));
+  try {
+    const project = join(base, "project"), workspaces = join(base, "workspaces");
+    mkdirSync(project); mkdirSync(workspaces); const marker = join(project, "task-entered");
+    const revision = "a".repeat(40);
+    const contract = captureRuntimeContract({ KEEP_PROVIDER: "local", KEEP_REPOSITORY: project, KEEP_WORKSPACE_BASE: workspaces, KEEP_REVISION: revision, KEEP_REPO_REF: "project", KEEP_TEST_COMMAND: process.execPath,
+      KEEP_TEST_ARGS_JSON: JSON.stringify(["-e", `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'useful task'); console.log('TAP version 13\\nok 1 - useful task\\n1..1');`]), KEEP_TEST_NAMESPACE_JAIL: "required", KEEP_TEST_TIMEOUT_MS: "5000", KEEP_TEST_CPU_LIMIT_SEC: "1" },
+      { cwd: project, realpath: path => path, isDirectory: () => true, repositoryRoot: () => project, resolveCommit: () => revision, validateBranch: (_, branch) => branch, resolveBranchCommit: () => revision }, { projectRequired: true });
+    assert.equal(contract.installedProject!.testCommand.namespaceJail, "required");
+    const runner = new SandboxedCommandRunner({ ...contract.installedProject!.testCommand, projectDir: project });
+    const result = await runner.run(".");
+    assert.equal(result.processIsolation?.namespacePolicy, "required");
+    if (result.runnerError) {
+      assert.equal(result.results.length, 0);
+      assert.equal(existsSync(marker), false, "unavailable required setup never enters the task");
+      assert.notEqual(result.processIsolation?.namespaceSetup, "launcher-confirmed");
+    } else {
+      assert.equal(readFileSync(marker, "utf8"), "useful task");
+      assert.equal(result.processIsolation?.basis, "launcher-status");
+      assert.equal(result.processIsolation?.namespaceSetup, "launcher-confirmed");
+      assert.equal(result.processIsolation?.rlimitSetup, "launcher-confirmed");
+      assert.equal(result.results.length, 1); assert.equal(result.results[0]!.passed, true);
+    }
+    console.log("captured-required actual outcome:", JSON.stringify({ entered: existsSync(marker), runnerError: result.runnerError ?? null, isolation: result.processIsolation }));
+  } finally { rmSync(base, { recursive: true, force: true }); }
 });
