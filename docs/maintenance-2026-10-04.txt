@@ -2,9 +2,10 @@ Keep progress update — 2026-10-04
 
 The audit produced 26 small remediation tickets. Each repeats research, the
 smallest scoped implementation or qualification, and actual outcome vetting.
-At this checkpoint, 23 tickets have passed their stated scoped outcomes. The
-remaining work is local security-release qualification, a later complete source
-checkpoint, and installed backup/restore/restart qualification.
+At this checkpoint, 25 tickets have passed their stated scoped outcomes. Local
+security-release qualification and the installed backup/restore/restart journey
+have passed. The final complete source checkpoint remains pending; failed retries
+are retained and charged to the same finite allowance.
 
 Security update in development
 
@@ -26,9 +27,13 @@ substitution refusal. Six focused gate tests and 23 selected native build-tool
 tests pass. These are same-agent local results, not independent replication or
 qualification of arbitrary native workloads.
 
-A distinct local candidate is undergoing its own exact-source, selected-profile,
-scripts-enabled packaging and unprivileged offline installed checks. The later
-complete source run and installed backup journey remain pending. This progress
+A distinct local 0.0.2 candidate passed its selected portable profile, release
+checks, scripts-enabled packaging, and 24 unprivileged offline installed cases.
+The exact archive was separately checked through an installed backup journey on
+two local fixture tracks: uncertain-effect recovery, protected capture, restoration
+of all captured state, a fresh restart, and duplicate-work suppression. These
+fixtures do not establish real organization custody or offsite disaster recovery.
+The later cumulative full source run remains pending. This progress
 commit does not replace the published 0.0.4-preview.1 archive, install a host
 launcher, or deploy any instance. Do not infer patched public package bytes from
 this status note; consult the exact release record when a replacement is published.
