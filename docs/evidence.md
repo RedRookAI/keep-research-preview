@@ -7,8 +7,8 @@ the [preview guide](research-preview.md) explains how to run the first experimen
 ## Current release record
 
 Use [the checkpoint record](../KEEP_RELEASE.md) for the current public source
-checks and the historical downloadable binary identities. No new binary archive
-accompanies the October 4 source checkpoint. Results below remain attached to
+checks and the historical downloadable binary identities. The source checkpoint and subsequent binary qualification have separate records.
+Results below remain attached to
 their original source and package, even when the implementation is retained in
 a later version.
 
@@ -42,8 +42,8 @@ ran unprivileged with networking disabled, two CPUs, 4 GiB RAM, no swap and a
 512-process ceiling. The same agent checked actual source and compiler files
 against the tested inputs. This is partial public-export verification and a
 source-checkout demonstration; neither the complete public profile nor a fresh
-installed archive was qualified. No new binary was published and no instance was
-deployed. The earlier development full pass remains attached to its exact source.
+installed archive was qualified. These source-export checks preceded binary qualification and did not deploy an
+instance. The earlier development full pass remains attached to its exact source.
 
 The separate earlier local version 0.0.2 archive passed scripts-enabled packaging,
 24 unprivileged installed recovery cases and two local backup/restore/restart fixture

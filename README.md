@@ -2,15 +2,19 @@
 
 Keep is a self-hosted platform for AI agents working on ongoing projects. It combines persistent knowledge, reusable skills and a native execution runtime with controls for permissions, acceptance and recovery. Security is at the heart of its approach to autonomy: useful work should preserve the operator's control over data, resources and effects.
 
-## Current public checkpoint
+## Current research preview
 
-**0.0.5-preview.1** is the October 4 source checkpoint. It carries the completed
-scoped audit remedies, including the measured Bubblewrap 0.13.0 identity across
-all three launcher consumers. See the [checkpoint record](KEEP_RELEASE.md).
+**0.0.5-preview.1** carries the completed scoped audit remedies, including the
+measured Bubblewrap 0.13.0 identity across all three source launcher consumers.
+The Linux x64 package includes compiled JavaScript and the three existing native
+transport executables. Read the [exact release record](KEEP_RELEASE.md) for
+artifact identities, actual qualification results and boundaries.
 
-The latest downloadable binary remains **0.0.4-preview.1**. Its launcher pin is
-affected by the upstream advisory; the new source checkpoint does not change
-that archive. A replacement binary has not been published.
+Release assets: [keep-preview-2026-10-04.1](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-04.1).
+Verify the matching package against the release record before installation;
+[installation and the first experiment](docs/quickstart.md) need Node 22 and npm,
+without a Rust or C compiler. The historical **0.0.4-preview.1** archive retains
+its affected launcher pin and original checksum.
 
 ## Build and try the current source
 
@@ -34,13 +38,13 @@ The optional native refusal transport has separate custody requirements. See
 
 ## What this preview offers
 
-Keep has CLI, gateway and client interfaces, project and memory storage, skill validation, governed coding workflows and resource-accounting mechanisms. The supported first-run result is the installed recovery experiment above. Provider-backed coding, enterprise identity and host isolation require their own configuration and qualification.
+Keep has CLI, gateway and client interfaces, project and memory storage, skill validation, governed coding workflows and resource-accounting mechanisms. The supported first-run result is the synthetic local recovery experiment. Provider-backed coding, enterprise identity and host isolation require their own configuration and qualification.
 
 This remains a research preview. Use synthetic data and isolated test resources while evaluating it. It is not qualified for unattended consequential production work, universal spending enforcement or exactly-once effects across arbitrary remote services. [Known limitations](docs/research-preview.md#interpreting-the-result) describe those boundaries.
 
 ## Read further
 
-- [Source checkpoint quickstart](docs/quickstart.md)
+- [Preview installation and source quickstart](docs/quickstart.md)
 - [October 4 changes and qualification](docs/maintenance-2026-10-04.txt)
 - [Latest audit and security-update progress](docs/maintenance-2026-10-04.txt)
 - [Installation details and limitations](docs/research-preview.md)

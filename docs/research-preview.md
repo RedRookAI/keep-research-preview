@@ -1,24 +1,23 @@
 # Research preview: install, run and inspect
 
-## This source checkpoint
+## This research preview
 
-Keep **0.0.5-preview.1** is the October 4 public source checkpoint. Use the
-[source quickstart](quickstart.md). It includes the audit remedies and the
-measured Bubblewrap 0.13.0 pin. Node.js 22.23.2 is the qualified development
-runtime; source compilation uses the pinned Rust 1.97.1 toolchain, musl target
-and host C build tools.
+Keep **0.0.5-preview.1** includes the October 4 audit remedies and measured
+Bubblewrap 0.13.0 pin. Use the [installation quickstart](quickstart.md) and the
+matching [release and downloads](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-04.1).
+The external [release record](../KEEP_RELEASE.md) identifies the exact source,
+package, environment, actual qualification results and limitations.
 
-There is no new downloadable binary. The existing 0.0.4-preview.1 package keeps
-its original checksum, results and affected launcher pin. The
-[checkpoint record](../KEEP_RELEASE.md) distinguishes that historical artifact,
-the development qualification, and checks performed on this public export.
+Node.js 22.23.2 is the qualified runtime. The Linux x64 package needs no Rust or C
+compiler to install; contributors building source use pinned Rust 1.97.1, its
+musl target and host C build tools. The historical 0.0.4-preview.1 archive keeps
+its original checksum and affected launcher pin.
 
 ## Verify a matching archive before installation
 
-If you have a separately reviewed matching 0.0.5-preview.1 archive, set
-`KEEP_RELEASE_SHA256` to its trusted artifact-record checksum. No such public
-binary release is claimed by this source checkpoint. Do not rename the older
-archive or use a file's own hash as publisher authentication. The following block
+For the matching 0.0.5-preview.1 archive, set `KEEP_RELEASE_SHA256` to its trusted
+release-record checksum. Do not rename the older archive or use a file's own hash
+as publisher authentication. The following block
 refuses before installation when the archive or required checksum is absent or
 mismatched, then runs the installed experiment:
 
