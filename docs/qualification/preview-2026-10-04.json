@@ -1,0 +1,65 @@
+{
+  "source_head": "fca232810f6c2309ed0a9e5c5090577fc7112fee",
+  "version": "0.0.5-preview.1",
+  "archive_sha256": "d6b9dc25abc878616c04030655550c8587fca58c47d7ed571c3439567ea79091",
+  "ordinary": 5168,
+  "release_security": 34,
+  "native": 139,
+  "failures": 0,
+  "skips": 0,
+  "installed_runtime_files": 1554,
+  "installed_recovery_cases": 24,
+  "protected_backup_synthetic_tracks": 2,
+  "qualified_scope": "Same-agent owned Linux x64 preview, exact source/archive/runtime and local synthetic recovery/boundary/backup fixtures. No whole-product or production/platform/real-organization custody qualification.",
+  "schema": "keep.preview-release-qualification/v1",
+  "status": "QUALIFIED_LOCAL_PREVIEW_CANDIDATE",
+  "source_archive": {
+    "source_file": "keep-source-preview-2026-10-04.1.tar.gz",
+    "source_bytes": 16481217,
+    "source_sha256": "612d07a4dd37197e50cd30098ee1f4993ec9d4171f96457a9ee16110f237878a",
+    "source_files": 4031
+  },
+  "binary_archive": {
+    "binary_file": "keep-0.0.5-preview.1.tgz",
+    "binary_bytes": 10776583,
+    "binary_sha256": "d6b9dc25abc878616c04030655550c8587fca58c47d7ed571c3439567ea79091"
+  },
+  "binary_files": 2256,
+  "scripts_enabled_pack_and_install": true,
+  "full_source_qualification_receipt_sha256": "50b0fea8688a2496451a6a155a0c4ccb058de41d538f9bf7c11735c0fa9b76dd",
+  "archive_inventory_sha256": "54bf58447061562d9bbd382ed4e9a32639f98245eaa8bf171377b8f6d902f3c5",
+  "installed_receipt_sha256": "9934df3817bfac364ce79820d83fd7fc949a13b0c841879398acc73bd65c9cc0",
+  "backup_receipt_sha256": "0c1026e62f637fc5d1b09c12d553ba03095b99b20d251ea8d105fe9ca7dee72f",
+  "installed_external_harness_sha256": "a627ddceafbdb1e6b7fceb2787f5b8164346037d9b98b5c2e6add8796b27e85d",
+  "backup_external_harness_sha256": "45595f5634fcb88a3249bf653bbcaeed961a33e7fc47a21da1722066a1f27e40",
+  "retained_failures": [
+    "Two pre-product namespace setup refusals, corrected only in owned fixture.",
+    "Initial full public candidate: 5168ordinary+34release/security pass; native136pass/3fail/0skip. Pinning and collector/export inventory corrected without weakened checks.",
+    "Closure observation refused historical export annotation/sort drift; all substantive fields and command sets reconciled.",
+    "Initial installed harness expected bare version; actual CLI correctly printed keep-prefixed version. Harness corrected, failure retained."
+  ],
+  "same_agent": true,
+  "production_authorizing": false,
+  "resource_limits": {
+    "cpu_percent": 200,
+    "memory_mib": 4096,
+    "swap_bytes": 0,
+    "pids": 512,
+    "cumulative_wall_seconds": 7200,
+    "actual_used_seconds_before_final_quickstart": 1761.345918640989,
+    "actual_used_seconds": 1780.995472028997
+  },
+  "source_tag_rule": "Archives bind exact qualified source fca232810f6c2309ed0a9e5c5090577fc7112fee. Later release tag/documentation commit adds external receipts and reconciled prose; full source qualification is not relabeled as that later commit. KEEP_RELEASE.md is an external noncircular companion.",
+  "exact_documented_quickstart": {
+    "status": "PASS",
+    "exit": 0,
+    "seconds": 14.649553388007917,
+    "exact_documented_shell_block": true,
+    "default_npm_install_layout": true,
+    "scripts_enabled": true,
+    "wrong_sha_before_install_refused": true,
+    "uid": 65534,
+    "archive_sha256": "d6b9dc25abc878616c04030655550c8587fca58c47d7ed571c3439567ea79091",
+    "source_and_compiler_inaccessible": true
+  }
+}

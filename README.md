@@ -49,6 +49,7 @@ This remains a research preview. Use synthetic data and isolated test resources 
 - [Latest audit and security-update progress](docs/maintenance-2026-10-04.txt)
 - [Installation details and limitations](docs/research-preview.md)
 - [Release record and qualification evidence](KEEP_RELEASE.md)
+- [Current completion map and remaining work](docs/completion-map.md)
 - [Proposed security research](docs/security-experiments.md)
 - [Semantic memory](docs/semantic-memory.md), [skills](docs/skill-registry.md) and [backups](docs/backup.md)
 - [Contributing and source builds](WORKFLOW.md)

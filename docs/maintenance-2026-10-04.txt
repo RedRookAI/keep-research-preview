@@ -1,73 +1,30 @@
-Keep public source checkpoint — 2026-10-04
+October 4, 2026 — Keep 0.0.5-preview.1 qualified security preview
 
-Current public source version: 0.0.5-preview.1.
-Current downloadable binary: historical 0.0.4-preview.1.
-The new source and docs are published together; a new binary is not included.
+This preview packages the selected completed audit remedies, measured patched
+Bubblewrap 0.13.0 identity and three genuine Linux x64 native executables. The older
+0.0.4 archive retains its affected pin and original bytes. Required jail use refuses
+absent/mismatched reviewed launcher bytes; installation changes no host policy.
 
-The audit produced 26 small remediation tickets. Each repeats research, the
-smallest scoped implementation or qualification, and actual outcome vetting.
-All 26 tickets have passed their stated scoped outcomes. These include local
-security-release qualification, the installed backup/restore/restart journey,
-and the final complete source checkpoint. Some tickets produce plans, inventories,
-or contracts; their completion does not qualify corresponding production guarantees.
-Failed retries are retained and charged to the same finite allowance.
+Qualified public source: fca232810f6c2309ed0a9e5c5090577fc7112fee.
+Package SHA256: d6b9dc25abc878616c04030655550c8587fca58c47d7ed571c3439567ea79091.
+Complete selected profile: 5,168 ordinary + 34 release/security + 139 native =
+5,341 passing tests, zero failures/skips.
 
-Security update in the current source
+Scripts-enabled offline unprivileged installation passed 1,554 runtime byte checks,
+version/exports, 24 local recovery cases and useful/refused required-jail controls.
+Protected backup/restore passed two synthetic tracks with complete product/state
+inventory and fresh-process sink readback; hostile targets refused. The exact
+documented default-layout quickstart and wrong-checksum refusal also passed.
 
-The historical published binary still contains the older Bubblewrap identity affected by
-GHSA-pxhw-h44j-8pfx. The current public source coordinates all three consumers on the
-measured 0.13.0 launcher. Required-mode admission still refuses absent or mismatched
-bytes. A layout mitigation is not a patched dependency.
+KEEP_RELEASE.md binds archives, checksums, environment and scope.
+docs/completion-map.md reconciles 41 objectives, 29 surface leaves, nine families
+and five tracks. Original scope is retained across 38 sources and 9,551 nonblank
+lines; missing referenced detail stays explicit. Personal and enterprise remain
+coequal. Only linguistic-uncertainty has the existing owner deferral.
 
-Primary advisory:
-https://github.com/containers/bubblewrap/security/advisories/GHSA-pxhw-h44j-8pfx
-Primary selected upstream release:
-https://github.com/containers/bubblewrap/releases/tag/v0.13.0
-
-The corrected required project jail and closed native build-tool operation have
-scoped local qualification. A separate stale debug-shim measurement was repaired
-after two independent clean builds reproduced the same current-source bytes.
-The required native gate passes, including byte, mode, symlink and hardlink
-substitution refusal. Six focused gate tests and 23 selected native build-tool
-tests pass. These are same-agent local results, not independent replication or
-qualification of arbitrary native workloads.
-
-A distinct local 0.0.2 candidate passed its selected portable profile, release
-checks, scripts-enabled packaging, and 24 unprivileged offline installed cases.
-The exact archive was separately checked through an installed backup journey on
-two local fixture tracks: uncertain-effect recovery, protected capture, restoration
-of all captured state, a fresh restart, and duplicate-work suppression. These
-fixtures do not establish real organization custody or offsite disaster recovery.
-The later cumulative full development source run at
-cc74ee2409c0bad33927dce5c28ea55fc2050002 passed all 5,175 ordinary tests, 34
-release/security tests, and 139 native tests, with zero failures or skips.
-A separate same-agent audit checked actual source files, native artifacts,
-compiler inputs, command logs, and rejection of changed inputs or incomplete phases.
-This exact-source qualification remains distinct from the earlier installed archive
-and the public export.
-
-The public 0.0.5-preview.1 export passed offline locked installation, TypeScript
-compilation and attribution checks, 84 declared partial-profile tests and 130
-changed-mechanism tests, with zero failures or skips. Its source build compiled
-three static Linux x64 PIE executables using the verified pinned compiler. The
-compiled source CLI reported the current version and completed 24 recovery checks
-with zero model calls. Actual source-file comparison and local artifact measurements
-are recorded in docs/checkpoint-2026-10-04.json and docs/evidence.md. These were
-same-agent, unprivileged, network-disabled checks within two CPUs, 4 GiB RAM and
-512 processes. They do not qualify the complete public profile or a fresh installed
-archive.
-This source checkpoint does not replace the published 0.0.4-preview.1 archive, install a host
-launcher, or deploy any instance. Do not infer patched public package bytes from
-this status note; consult the exact release record when a replacement is published.
-
-The supported preview demonstration remains the synthetic local recovery
-experiment described in README.md. Keep remains an incomplete research platform,
-with the limits in SECURITY.md. Local fixture labels do not establish enterprise
-custody, offsite disaster survival or universal exactly-once external effects.
-
-Maintenance cadence
-
-While development is active, publish a public progress checkpoint at least daily
-and preserve verified work on the development branch. Each update should identify
-actual outcomes, pending qualification and artifact/deployment status. No automatic
-background publisher or host timer is introduced by this note.
+The same-agent Linux fixture result is a research preview. Production authority,
+live organization identity/custody, offsite survival, universal billing, broad model
+quality and macOS/Windows native qualification remain open. No new VM, account,
+dependency, host policy, unrelated workspace change, npm registry publication or
+deployment occurred. Earlier failures and original artifact identities remain in
+the corresponding evidence records.

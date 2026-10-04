@@ -16,6 +16,12 @@ All results here were administered by the development session. A repository test
 or local effect sink is an outcome checker separate from the model; it is not
 outside administration. No genuinely outside replication is recorded.
 
+## October 4 qualified binary preview
+
+The exact public source `fca232810f6c2309ed0a9e5c5090577fc7112fee` passed 5,341 selected full-profile tests with zero failures/skips. The matching 0.0.5-preview.1 archive passed scripts-enabled offline installation, all 1,554 runtime byte checks, 24 synthetic accounting/restart cases, useful/refused required-boundary controls and two protected backup/restore tracks. See [exact artifacts and limits](../KEEP_RELEASE.md) and [the source/archive-bound receipt](qualification/preview-2026-10-04.json). The exact checksum-first quickstart shell block also passed with npm’s default layout and the installed CLI, and its wrong-checksum control refused before installation. Earlier failures were retained and corrected; no security/test check was weakened.
+
+The release tag adds companion receipts and current documentation after the exact source was frozen. The full pass remains bound to that source; it is not silently transferred to a later documentation commit. Evidence remains same-agent, one owned Linux fixture, synthetic local effects and injected tenant authority; no real IdP, outside custody, production launch or offsite survival is established.
+
 ## October 4 public source checkpoint
 
 The public source version is **0.0.5-preview.1**. It contains the selected product

@@ -1,46 +1,28 @@
-# Keep public checkpoint record
+# Keep 0.0.5-preview.1 — qualified security preview
 
-## October 4, 2026: source 0.0.5-preview.1
+Release: `keep-preview-2026-10-04.1` · Linux x64 · Node.js 22.23.2/npm.
 
-The current public source contains the completed scoped audit remedies. The
-package metadata and CLI version are **0.0.5-preview.1**. This is a source
-checkpoint; no new binary archive, npm release or deployment accompanies it.
+[Release and downloads](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-04.1) · [Quickstart](docs/quickstart.md) · [Completion map](docs/completion-map.md) · [Qualification receipt](docs/qualification/preview-2026-10-04.json)
 
-| Input or result | Identity and scope |
-| --- | --- |
-| Originating completed development checkpoint | `b489bef590adc525e335739855945f46d41f8dfd` |
-| Exact development source qualified in the full run | `cc74ee2409c0bad33927dce5c28ea55fc2050002` |
-| Development full profile | 5,175 ordinary + 34 release/security + 139 native tests; zero failures, cancellations or skips |
-| Local security archive, distinct earlier input | Version 0.0.2; SHA256 `3870772c11abc350216c0a034e242344a87237d0d2c6ba7bcdc0ecfb67f1c6f6`; not this public source version or a public download |
-| Current downloadable binary | Historical 0.0.4-preview.1; original identities and checks below |
-| Public export checks | 84 partial-profile + 130 changed-mechanism tests; zero failures or skips; source build and 24-check source recovery demo passed |
+This replacement preview carries the completed scoped audit fixes and measured Bubblewrap 0.13.0 identity. The older 0.0.4-preview.1 archive retains an affected launcher pin. Installing this package does not install a host launcher or change host security policy; required jail operations refuse absent/mismatched bytes.
 
-All 26 tickets met their defined outcomes after research, scoped action and actual
-vetting. Some outcomes are plans, inventories or contracts; they do not establish
-the corresponding production guarantee. Development results were administered by
-the same agent in an owned finite fixture. The actual-file audit checked source,
-compiler and native artifacts, logs, input substitution and incomplete-phase refusal.
+| Artifact | Exact identity |
+|---|---|
+| Qualified public source | `fca232810f6c2309ed0a9e5c5090577fc7112fee` |
+| Linux x64 package | `keep-0.0.5-preview.1.tgz`; 10,776,583 bytes; 2,256 files |
+| Package SHA256 | `d6b9dc25abc878616c04030655550c8587fca58c47d7ed571c3439567ea79091` |
+| Matching source archive | `keep-source-preview-2026-10-04.1.tar.gz`; 16,481,217 bytes; 4,031 files |
+| Source SHA256 | `612d07a4dd37197e50cd30098ee1f4993ec9d4171f96457a9ee16110f237878a` |
 
-The public checkpoint imports selected product-file changes into existing public
-history and preserves its recovery CLI and configurable host-fixture paths. It does
-not import private Git history, raw operator evidence, backup payloads or credentials.
-Exported bytes and version metadata differ from the exact development revision;
-that development full pass is not relabeled as a full pass of this export.
+Use the trusted package SHA256 above as `KEEP_RELEASE_SHA256`, then follow the checksum-first, unprivileged offline quickstart. The binary includes JavaScript, its existing bundled TypeScript dependency and three genuine static Linux x64 native executables; ordinary installation needs no Rust/C compiler.
 
-Actual export commands, environment and limits are in
-[Evidence](docs/evidence.md#october-4-public-source-checkpoint) and the
-[machine-readable checkpoint](docs/checkpoint-2026-10-04.json). The source build
-produced three static Linux x64 PIE executables; those are local measurements,
-not a newly published binary archive. The public complete profile and a fresh
-installed archive have not been qualified.
+The complete selected source profile passed **5,168 ordinary + 34 release/security + 139 native = 5,341 tests**, zero failures/skips. Scripts-enabled packaging reproduced the tested runtime; all 1,554 included runtime files matched. Compiled tests are intentionally excluded from distribution. A clean unprivileged consumer with no accessible contributor checkout/compiler passed version/exports, 24 synthetic accounting/restart cases and actual useful/refused required-project-boundary controls. Protected capture/restore passed two synthetic tracks with all restored product bytes, sidecars, uncertain claims and fresh-process sink readbacks; tampered, missing-key and occupied targets refused. The exact documented quickstart shell block also passed with npm’s default layout and the installed CLI. Wrong SHA refused before installation/state writes.
 
-The source now pins measured Bubblewrap 0.13.0 across all three launcher consumers.
-The downloadable older archive retains its affected pin. See [Security](SECURITY.md),
-[source quickstart](docs/quickstart.md), and [October 4 notes](docs/maintenance-2026-10-04.txt).
+Qualification ran in owned process namespaces with actual two-ID mapping, a private manager, network disabled, 2CPU/4GiB/0swap/512PID and a shared finite allowance. No new VM, account, host policy, global launcher installation or unrelated workload was changed. The evidence is same-agent/single-host. It does not qualify production PROBER/D3 authority, live organization identity/custody, offsite disaster survival, arbitrary exactly-once remote effects, universal spend control or macOS/Windows native distribution.
 
-Before changing existing operational state, stop writers and retain a verified
-complete private backup. A local fixture backup journey is not organization custody,
-offsite disaster recovery or universal remote-effect finality.
+The archives bind the exact tested source above. The release tag adds external evidence, the completion map and reconciled prose without changing qualified product code. This companion is excluded from both archives to avoid circular checksums. Do not attribute the full source pass to the later documentation commit. Original release/tag/asset bytes remain unchanged.
+
+The [completion map](docs/completion-map.md) retains all original objectives and open platform/product obligations; missing referenced original detail stays an explicit coverage gap. A qualified preview is not complete-product readiness. Actual failures and corrections are retained in the qualification record.
 
 ---
 

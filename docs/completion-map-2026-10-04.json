@@ -1,0 +1,1949 @@
+{
+  "schema": "keep.public-completion-map/v1",
+  "recorded_at": "2026-10-04T09:54:07.536513+00:00",
+  "status": "VETTED_CURRENT_SCOPE_MAP_WITH_EXPLICIT_MISSING_ORIGINAL_DETAIL",
+  "canonical_product_baseline": "b489bef590adc525e335739855945f46d41f8dfd",
+  "public_preview_source_head": "fca232810f6c2309ed0a9e5c5090577fc7112fee",
+  "preview_evidence": {
+    "source_head": "fca232810f6c2309ed0a9e5c5090577fc7112fee",
+    "version": "0.0.5-preview.1",
+    "archive_sha256": "d6b9dc25abc878616c04030655550c8587fca58c47d7ed571c3439567ea79091",
+    "ordinary": 5168,
+    "release_security": 34,
+    "native": 139,
+    "failures": 0,
+    "skips": 0,
+    "installed_runtime_files": 1554,
+    "installed_recovery_cases": 24,
+    "protected_backup_synthetic_tracks": 2,
+    "qualified_scope": "Same-agent owned Linux x64 preview, exact source/archive/runtime and local synthetic recovery/boundary/backup fixtures. No whole-product or production/platform/real-organization custody qualification."
+  },
+  "categories": [
+    "IMPLEMENTED_AND_QUALIFIED",
+    "IMPLEMENTED_BUT_UNQUALIFIED",
+    "MISSING"
+  ],
+  "category_rule": "Qualification must cover the named original obligation and consumer, not just component tests. Missing required authority/consumer is MISSING even when observational components exist. Partial code is explicit. No whole-product percentage derived from documents/tests/tickets.",
+  "coequal_tracks": [
+    "personal",
+    "enterprise"
+  ],
+  "scope_deferrals": [
+    {
+      "family": "linguistic-uncertainty",
+      "authority": "Existing explicit owner-authorized sole family deferral",
+      "other_historical_deferred_items": "Remain required/open"
+    }
+  ],
+  "mandatory_families": [
+    {
+      "id": "containment",
+      "objectives": [
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "20",
+        "21",
+        "22",
+        "23"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "complete": false,
+      "personal": "Separate local-owner usability and honest refused assurance evidence owed.",
+      "enterprise": "Separate authenticated organization lifecycle, custody and fleet evidence owed."
+    },
+    {
+      "id": "compliance",
+      "objectives": [
+        "25"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "complete": false,
+      "personal": "Separate local-owner usability and honest refused assurance evidence owed.",
+      "enterprise": "Separate authenticated organization lifecycle, custody and fleet evidence owed."
+    },
+    {
+      "id": "cost",
+      "objectives": [
+        "26"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "complete": false,
+      "personal": "Separate local-owner usability and honest refused assurance evidence owed.",
+      "enterprise": "Separate authenticated organization lifecycle, custody and fleet evidence owed."
+    },
+    {
+      "id": "nonhuman-identity",
+      "objectives": [
+        "10",
+        "27"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "complete": false,
+      "personal": "Separate local-owner usability and honest refused assurance evidence owed.",
+      "enterprise": "Separate authenticated organization lifecycle, custody and fleet evidence owed."
+    },
+    {
+      "id": "discovery",
+      "objectives": [
+        "28"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "complete": false,
+      "personal": "Separate local-owner usability and honest refused assurance evidence owed.",
+      "enterprise": "Separate authenticated organization lifecycle, custody and fleet evidence owed."
+    },
+    {
+      "id": "framework-control",
+      "objectives": [
+        "29"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "complete": false,
+      "personal": "Separate local-owner usability and honest refused assurance evidence owed.",
+      "enterprise": "Separate authenticated organization lifecycle, custody and fleet evidence owed."
+    },
+    {
+      "id": "threat-interception",
+      "objectives": [
+        "30"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "complete": false,
+      "personal": "Separate local-owner usability and honest refused assurance evidence owed.",
+      "enterprise": "Separate authenticated organization lifecycle, custody and fleet evidence owed."
+    },
+    {
+      "id": "drift-kill-switch",
+      "objectives": [
+        "31"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "complete": false,
+      "personal": "Separate local-owner usability and honest refused assurance evidence owed.",
+      "enterprise": "Separate authenticated organization lifecycle, custody and fleet evidence owed."
+    },
+    {
+      "id": "enterprise-operations",
+      "objectives": [
+        "32"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "complete": false,
+      "personal": "Separate local-owner usability and honest refused assurance evidence owed.",
+      "enterprise": "Separate authenticated organization lifecycle, custody and fleet evidence owed."
+    }
+  ],
+  "preserved_tracks": [
+    {
+      "id": "A",
+      "objectives": [
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12"
+      ],
+      "complete": false
+    },
+    {
+      "id": "B",
+      "objectives": [
+        "3",
+        "4",
+        "5",
+        "6",
+        "9",
+        "10",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17"
+      ],
+      "complete": false
+    },
+    {
+      "id": "C",
+      "objectives": [
+        "18",
+        "19",
+        "34",
+        "35"
+      ],
+      "complete": false
+    },
+    {
+      "id": "D",
+      "objectives": [
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "20",
+        "21",
+        "22",
+        "23",
+        "35"
+      ],
+      "complete": false
+    },
+    {
+      "id": "E",
+      "objectives": [
+        "12",
+        "24a",
+        "24",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "30",
+        "31",
+        "32",
+        "33",
+        "34",
+        "35",
+        "36",
+        "37",
+        "38",
+        "39",
+        "40"
+      ],
+      "complete": false
+    }
+  ],
+  "structural_debt": {
+    "built_ahead_modules": [
+      "native_boundary_port",
+      "native_authority_schema_v1",
+      "native_p2_d2_audit_plan",
+      "native_production_resolution_observation",
+      "profile_attestation",
+      "tree_fingerprint",
+      "ingress_registry",
+      "channel",
+      "boundary",
+      "admission"
+    ],
+    "meaningful_orphan_exports": [
+      "cassette::FileCassetteStore",
+      "resolve/selector::DEFAULT_SELECTOR",
+      "review/heterogeneous::heterogeneousReview",
+      "escalation_policy::certaintyFromSignals",
+      "review/review_core::getManifest",
+      "gateway/wire_dialect::WIRE_DIALECTS",
+      "eir/eir::obligationId",
+      "logic/plan_gate::stateSimulationGated",
+      "observability/fleet_telemetry::FleetTelemetryExporter"
+    ],
+    "not_complete_from_green_allowlist": true
+  },
+  "source_coverage": {
+    "retained_documents": 38,
+    "nonblank_lines": 9551,
+    "provenance_records": 3755,
+    "not_deduplicated_feature_or_effort_count": true,
+    "missing_original_detail_explicit": true,
+    "gap": "Missing referenced original backlog/detail and unresolved historical filename aliases prevent unconditional original-detail completeness. Referencing requirements remain retained/open; no replacement scope is invented."
+  },
+  "objectives": [
+    {
+      "id": "1",
+      "title": "Baseline and plan coverage",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Full original-detail coverage has dangling references; current installed release qualification pending.",
+      "next_smallest_leaf": "Resolve the named missing-source detail against maintained-line history without importing alternate workspaces.",
+      "dependencies": [],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/cli/doctor.ts",
+      "public_source_sha256": "842c5d13a126285e5060c74474aec84148b76c2ada69d5ae9b51043e8151fd64"
+    },
+    {
+      "id": "2",
+      "title": "P2-D2 overlay validator",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Installed production application/authority integration remains outside this pure validator scope.",
+      "next_smallest_leaf": "Qualify one installed canonical overlay acceptance/refusal consumer against preserved TS/Rust goldens.",
+      "dependencies": [],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/platform/native_p2_d2_overlay.ts",
+      "public_source_sha256": "84bca7bd8c3acf3f64caa4eaa34734cfba4c51a8b307cab4bc93c9ed2283e65a"
+    },
+    {
+      "id": "3",
+      "title": "P2-D2 immutable application evidence",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Off-host reviewer custody and audit-plan runtime consumption remain absent.",
+      "next_smallest_leaf": "Bind one immutable application result to the existing audit-plan contract with exact original carriers retained.",
+      "dependencies": [
+        "2"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/platform/native_p2_d2_application.ts",
+      "public_source_sha256": "1429216fb9a2d2d6442f889bf948e0a45976f40f88840895a6b6dfa2c1247a9a"
+    },
+    {
+      "id": "4",
+      "title": "P2 dependency admission",
+      "category": "MISSING",
+      "implementation": "MISSING_REQUIRED_LOAD_BEARING_CONSUMER",
+      "gap": "Current crypto candidate explicitly non-authorizing; semantic independent dependency admission absent.",
+      "next_smallest_leaf": "Obtain attributable review of one exact frozen crypto dependency closure and retain GO/NO-GO.",
+      "dependencies": [
+        "3"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "MISSING",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "MISSING",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "tools/native_p2_dependency_gate.mjs",
+      "public_source_sha256": "0cd33889e80583562540c8857bdf526883de3be7a2e643b7509c614023a51d20"
+    },
+    {
+      "id": "5",
+      "title": "P2-S2 crypto/B0 integration",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Production crypto/B0 root, custody and revocation are not joined to the native authority schema.",
+      "next_smallest_leaf": "Integrate admitted strict verification for one canonical signed root schema through native descriptors.",
+      "dependencies": [
+        "4",
+        "13"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/platform/native_authority_schema_v1.ts",
+      "public_source_sha256": "88e298e6ecedaf79f3db476a0ef249cdb758e7d2d29ac19aaffea02e7ef66523"
+    },
+    {
+      "id": "6",
+      "title": "Production release/deployment resolver",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Current resolver observation is non-authorizing; signed administrator deployment/root chain missing.",
+      "next_smallest_leaf": "Resolve one admitted root/release/deployment descriptor tuple without launch authority leaking to Node.",
+      "dependencies": [
+        "5",
+        "13"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "native/crates/production-resolver/src/lib.rs",
+      "public_source_sha256": "6cec7ef0d62f3fc104f1149e742674e80d55b8a56be8af3a6f2c7c6ed0e93dd6"
+    },
+    {
+      "id": "7",
+      "title": "First production PROBER launch",
+      "category": "MISSING",
+      "implementation": "MISSING_REQUIRED_LOAD_BEARING_CONSUMER",
+      "gap": "No production-authorized installed PROBER transaction joins the existing Firecracker assets.",
+      "next_smallest_leaf": "Join one credential-free PROBER launch to verified native resolver inputs and prove cleanup/effect absence.",
+      "dependencies": [
+        "6"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "MISSING",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "MISSING",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "native/crates/prober-launcher/src/lib.rs",
+      "public_source_sha256": "a0e44353a7f1fd7541d3548e8163ed604344c0d62cc959898eb57f22b986e916"
+    },
+    {
+      "id": "8",
+      "title": "Linux containment profile",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Required project jail covers a narrow development boundary; complete measured production Linux profile absent.",
+      "next_smallest_leaf": "Make one measured denial canary and mechanism-loss refusal load-bearing at native pre-dispatch.",
+      "dependencies": [
+        "7"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/infra/required_project_jail.ts",
+      "public_source_sha256": "e93aeb63388c52a37f61322c0859710ac5d3107106494d36fcc1b8d53bb0e518"
+    },
+    {
+      "id": "9",
+      "title": "A7 live attestation gate",
+      "category": "MISSING",
+      "implementation": "MISSING_REQUIRED_LOAD_BEARING_CONSUMER",
+      "gap": "Attestation remains a built-ahead island, not live D2-to-D3 pre-dispatch authority.",
+      "next_smallest_leaf": "Consume one fresh single-use profile challenge at pre-dispatch with revocation and replay refusal.",
+      "dependencies": [
+        "8",
+        "13"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "MISSING",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "MISSING",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/platform/profile_attestation.ts",
+      "public_source_sha256": "30de8357f557188a22c12a4f8a30a5fe978d379dec4404fcc7bb7a02e71ff424"
+    },
+    {
+      "id": "10",
+      "title": "A8 isolated network D3",
+      "category": "MISSING",
+      "implementation": "MISSING_REQUIRED_LOAD_BEARING_CONSUMER",
+      "gap": "Provider credentials and raw transport remain in Node; separate-principal D3 absent.",
+      "next_smallest_leaf": "Move one staged provider transaction and its credential to isolated D3; retain opaque reference in Node.",
+      "dependencies": [
+        "6",
+        "9",
+        "15"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "MISSING",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "MISSING",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/compose.ts",
+      "public_source_sha256": "b9e675de46fdfd1d5af99dc83da55f63ab301e0f342677a2c7b1b4642fe200d4"
+    },
+    {
+      "id": "11",
+      "title": "A9 Linux hostile operational proof",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Existing hostile tooling is not installed production-path adversarial qualification.",
+      "next_smallest_leaf": "Exercise one peer-substitution/inherited-fd bypass against the actual admitted installed native path.",
+      "dependencies": [
+        "7",
+        "8",
+        "9",
+        "10"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "tools/firecracker_host_hostile.mjs",
+      "public_source_sha256": "d8292249bc3942e43dbea8df2fa1015b03273edd5fb219761046595886daf648"
+    },
+    {
+      "id": "12",
+      "title": "A10 genuine installed solve",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Repository/project solver is now wired, but current installed real-model solve/PR and isolated credentials unqualified.",
+      "next_smallest_leaf": "Run one hostile fake-endpoint installed repository-to-reviewable-patch journey with no paid credentials.",
+      "dependencies": [
+        "10",
+        "11"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "One blank installed local/free-key repository-to-reviewable-patch journey with bounded fake endpoint first."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "One installed repository journey using attributable organization authority and isolated provider credentials."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/cli/keep.ts",
+      "public_source_sha256": "d0b077bbc963eece6a3ff5c5145c1cd601904b4b901b2231755d90e72dcd7f54"
+    },
+    {
+      "id": "13",
+      "title": "B0/B3 authenticated root and trusted time",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Owner-rooted B0/B3 genesis, trusted time/fencing and enterprise custody remain incomplete.",
+      "next_smallest_leaf": "Define and exercise one root genesis/loss-recovery ceremony separately for local owner and organization custodian.",
+      "dependencies": [
+        "4"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/platform/native_authority_schema_v1.ts",
+      "public_source_sha256": "88e298e6ecedaf79f3db476a0ef249cdb758e7d2d29ac19aaffea02e7ef66523"
+    },
+    {
+      "id": "14",
+      "title": "B1/B2 facts, policy, and verifier compartments",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Decision/policy components do not form the installed closed-world compartmented verifier chain.",
+      "next_smallest_leaf": "Join one prepared fact set to one closed operation registry at the native admitted boundary.",
+      "dependencies": [
+        "13"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/kernel/decision.ts",
+      "public_source_sha256": "3d0b2cde613eea6716ac18f56bda5c08e18a3ad5eee12f516a4e473d470622cd"
+    },
+    {
+      "id": "15",
+      "title": "B4 signing authority",
+      "category": "MISSING",
+      "implementation": "MISSING_REQUIRED_LOAD_BEARING_CONSUMER",
+      "gap": "Signing components are not isolated production effect authorization or enterprise key custody.",
+      "next_smallest_leaf": "Authorize one payload-bound effect with a separate-principal signer and live epoch revocation.",
+      "dependencies": [
+        "13",
+        "14"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "MISSING",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "MISSING",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/bom/bom_signing.ts",
+      "public_source_sha256": "5c793451c1f27df90562cbf1c02e3e1dcf99c839429704b62baf1bbd5d1564d6"
+    },
+    {
+      "id": "16",
+      "title": "B5/B6 durable effects",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Durable claims/uncertain holds exist; full authoritative D3 inbox/nonacceptance/reconciliation chain absent.",
+      "next_smallest_leaf": "Bind one D3 SEND_INITIATED record to an authenticated nonacceptance or unresolved hold across crash/restart.",
+      "dependencies": [
+        "10",
+        "15"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/fleet/fleet_lifecycle.ts",
+      "public_source_sha256": "2cc85a683f7a63c0ebf907c300ff35dcfc97d2c000b67c006ab8d1bf8d7258d4"
+    },
+    {
+      "id": "17",
+      "title": "B7/B8 constitutional and evidence closure",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Constitutional checks/evidence exist in parts; isolated predicate chain and independent anchoring incomplete.",
+      "next_smallest_leaf": "Make one retained constitutional predicate load-bearing on an admitted effect and test its removal.",
+      "dependencies": [
+        "14",
+        "15",
+        "16"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/governance/governance_suite.ts",
+      "public_source_sha256": "d2147285b045bc754737842da66ce6e806a96bbd0e2b6a278adb104fa799ba56"
+    },
+    {
+      "id": "18",
+      "title": "C canonical-path freeze and composition split",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Composition remains monolithic; all five canonical operation paths and duplicate authorities not frozen.",
+      "next_smallest_leaf": "Extract one typed subsystem composer with unchanged dependency/authority edges and targeted regression.",
+      "dependencies": [],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/compose.ts",
+      "public_source_sha256": "b9e675de46fdfd1d5af99dc83da55f63ab301e0f342677a2c7b1b4642fe200d4"
+    },
+    {
+      "id": "19",
+      "title": "C deployment/orchestration/effect closure",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Durable project orchestration exists; signed deployment plans and complete sink/adapter migration absent.",
+      "next_smallest_leaf": "Bind one durable project goal/verifier revision to one canonical effect path without alternate sink entry.",
+      "dependencies": [
+        "16",
+        "18"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/session/project_runtime.ts",
+      "public_source_sha256": "c1638a9ede86fdd1f9a3dcd60a928df6c3193ab76e4cc913dffc4a5a4e79c93a"
+    },
+    {
+      "id": "20",
+      "title": "D Linux assurance ladder",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Measured development tiers/host capability do not qualify every production assurance rung.",
+      "next_smallest_leaf": "Prove one exact installed namespace profile descriptor refuses downgrade instead of upgrading weaker evidence.",
+      "dependencies": [
+        "8",
+        "9",
+        "11"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "One constrained local profile with actual denial canary and honest unavailable-mechanism refusal."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "One exact measured microVM/witness/custody rung with downgrade refusal; existing host capability is not installed admission."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/isolation/isolation_tier.ts",
+      "public_source_sha256": "8c2a588122a4b592f51c621ebbbefe121322d92a7ae0bea323a567341766fa8f"
+    },
+    {
+      "id": "21",
+      "title": "macOS native isolation",
+      "category": "MISSING",
+      "implementation": "MISSING_REQUIRED_LOAD_BEARING_CONSUMER",
+      "gap": "Native installed macOS containment/authority closure and qualification absent.",
+      "next_smallest_leaf": "Research one supported macOS native authority/containment profile after Linux prerequisites; retain all semantics.",
+      "dependencies": [
+        "20"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "MISSING",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "MISSING",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": null
+    },
+    {
+      "id": "22",
+      "title": "Windows native isolation",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Windows API/backend code exists, but actual Windows-host native qualification absent.",
+      "next_smallest_leaf": "Run the bounded accepted/refused Job Object process cases on an existing authorized Windows fixture.",
+      "dependencies": [
+        "21"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/infra/windows_isolation.ts",
+      "public_source_sha256": "09e6e674daecf83293bb7e28983a53b2920df599c3ab4edcbfbc35caca37e0d4"
+    },
+    {
+      "id": "23",
+      "title": "Cross-platform conformance",
+      "category": "MISSING",
+      "implementation": "MISSING_REQUIRED_LOAD_BEARING_CONSUMER",
+      "gap": "No installed Linux/macOS/Windows coequal-profile conformance matrix.",
+      "next_smallest_leaf": "Replay one identical accepted/refused effect fixture across qualified platform profiles.",
+      "dependencies": [
+        "20",
+        "21",
+        "22"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "MISSING",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "MISSING",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": null
+    },
+    {
+      "id": "24a",
+      "title": "Evidence-grounded strategy selection",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Strategy primitives are not a qualified governed task topology/authority/evidence selector.",
+      "next_smallest_leaf": "Compare one bounded sequential-versus-parallel research decision against held-out authority/budget cases.",
+      "dependencies": [
+        "14",
+        "26"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/instance/bind_strategy.ts",
+      "public_source_sha256": "186a287fe55cab34cb42ed294e45bd239083c382272349afba8ac652105b1474"
+    },
+    {
+      "id": "24",
+      "title": "Resolution and evaluation leadership",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Official materialization exists; representative contamination-controlled benchmark/quality leadership absent.",
+      "next_smallest_leaf": "Run one official repository-materialized task through the existing local oracle and retain actual outcomes.",
+      "dependencies": [
+        "12"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "One contamination-controlled materialized task and free/local cost-quality result, without forced fleet setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "One representative frontier profile with attribution, variance and scale/cost evidence; no model prestige proxy."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/eval/official_swebench.ts",
+      "public_source_sha256": "fb1c7ec2c2b5f633b3c829e555eb1703152ca03759f12612e0c902c1c92e029d"
+    },
+    {
+      "id": "25",
+      "title": "Compliance-evidence automation",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Crosswalk/governance evidence is not current legal correctness or procurement-grade live coverage.",
+      "next_smallest_leaf": "Derive one freshness-bound evidence/gap export from an actual live control; separately research its standard mapping.",
+      "dependencies": [
+        "17"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/governance/governance_suite.ts",
+      "public_source_sha256": "d2147285b045bc754737842da66ce6e806a96bbd0e2b6a278adb104fa799ba56"
+    },
+    {
+      "id": "26",
+      "title": "Token and cost governance",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Autonomous generation is metered; provider-check/front-door/embedding routes are not a universal monetary ceiling.",
+      "next_smallest_leaf": "Meter only provider-check with a known-price durable reservation, 64-output-token bound and one attempt; unknown authority/price means zero wire.",
+      "dependencies": [],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "One bounded provider-check reservation tied to owner budget and known price; unknown price zero wire."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Same provider-check leaf tied to tenant/agent/task authority and durable aggregate ceiling; no local-owner substitute."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/scheduler/metered_provider.ts",
+      "public_source_sha256": "63d939645d79d4609fa4034c5b4583e872796968c60ef8caeadb702cf786c190"
+    },
+    {
+      "id": "27",
+      "title": "Non-human identity and scoped credentials",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Static JWKS/roster/session loader does not supply live login acquisition, rotation, revocation or native secret separation.",
+      "next_smallest_leaf": "Add one state/nonce/PKCE-bound organization login acquisition with replay refusal; do not borrow local OWNER authority.",
+      "dependencies": [
+        "10",
+        "13"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "One attributable local agent/service delegation and short-lived credential scope; local use need not enroll enterprise SSO."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "One state/nonce/PKCE-bound organization acquisition, followed by separate JWKS rotation and revocation leaves."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/cli/organization_runtime.ts",
+      "public_source_sha256": "30d1a43dc478cc2fb17b991d51e3702536ce04f43e4116bde84505dde54ea058"
+    },
+    {
+      "id": "28",
+      "title": "Cross-platform agent discovery",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Keep registries/metadata are not complete external cross-platform inventory or shadow-agent discovery.",
+      "next_smallest_leaf": "Inventory one supported external agent source with owner/purpose/lineage and unknown-agent disposition.",
+      "dependencies": [
+        "27"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/frontdoor/capability_registry.ts",
+      "public_source_sha256": "044b37cb5e1b4df76b71211eec6dc366ae5b3ce7b54feeacb7fb90b4d9089f03"
+    },
+    {
+      "id": "29",
+      "title": "Framework-neutral control",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Native MCP/capability controls exist; enforced LangGraph/CrewAI/ADK/custom adapters absent.",
+      "next_smallest_leaf": "Route one external framework capability through the same canonical authorization/effect port with bypass refusal.",
+      "dependencies": [
+        "19",
+        "27",
+        "28"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/ecosystem/hostile_mcp_gateway.ts",
+      "public_source_sha256": "0c631f3e0dd79b837e2c7c66e34fa2c3b9702db1a8ab4f5135219f7af4839c63"
+    },
+    {
+      "id": "30",
+      "title": "Runtime threat interception",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Interceptors exist; all installed model/tool/plugin/ingress/effect paths lack complete load-bearing bypass proof.",
+      "next_smallest_leaf": "Close one declared ingress-to-effect bypass through the existing canonical monitor and hostile control.",
+      "dependencies": [
+        "8",
+        "10",
+        "17",
+        "29"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/privacy/egress_interceptor.ts",
+      "public_source_sha256": "576cd3303f9ae4066d94c39ec396a5585c14c70bd78021f5305e85e74fbfc28f"
+    },
+    {
+      "id": "31",
+      "title": "Behavioral drift and kill switch",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Drift/kill/canary components are composed; deployed calibration, automatic attenuation/recovery and Goodhart qualification incomplete.",
+      "next_smallest_leaf": "Measure one bounded drift signal against benign/hostile controls and prove reversible attenuation at its real consumer.",
+      "dependencies": [
+        "17",
+        "30"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/loop/drift_monitor.ts",
+      "public_source_sha256": "13e59eaa722ed40a4c5826981cf47a738fe6a7d14f28e9a49e643670f62e38b8"
+    },
+    {
+      "id": "32",
+      "title": "Managed enterprise operations",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Enterprise gateway/tenancy exists in parts; live SSO lifecycle, networking, admin UI, retention/export and recovery not complete.",
+      "next_smallest_leaf": "Qualify one installed organization revocation/session operation with actual tenant isolation and independent sink readback.",
+      "dependencies": [
+        "27"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "One usable local administration/recovery journey without enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "One installed organization revocation/retention/export operation with tenant isolation and receiver readback."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/cli/organization_runtime.ts",
+      "public_source_sha256": "30d1a43dc478cc2fb17b991d51e3702536ce04f43e4116bde84505dde54ea058"
+    },
+    {
+      "id": "33",
+      "title": "Complete preserved surface/backlogs",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Broad product surface exists; original learning/privacy/clients/domain/integration seams remain required and incompletely qualified.",
+      "next_smallest_leaf": "Select one retained surface leaf below; prove its actual installed consumer and failure/recovery behavior.",
+      "dependencies": [],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "One retained local-first memory/skill/domain surface leaf with low-resource and privacy limits."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Same retained surface capability with actual organization/tenant/custody and fleet limits separately proved."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/compose.ts",
+      "public_source_sha256": "b9e675de46fdfd1d5af99dc83da55f63ab301e0f342677a2c7b1b4642fe200d4"
+    },
+    {
+      "id": "34",
+      "title": "Strict no-islands zero",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Ten built-ahead modules and nine meaningful orphan exports remain; explicit exceptions are not product closure.",
+      "next_smallest_leaf": "Wire one dependency-ready island into its genuine consumer and remove only its corresponding structural exception.",
+      "dependencies": [
+        "9",
+        "18",
+        "19"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "test/no_islands.test.ts",
+      "public_source_sha256": "3916d7218f2f93b82d870018805274f1dda42e7c07151e4ea50031bc2b4f642f"
+    },
+    {
+      "id": "35",
+      "title": "Whole-system adversarial validation",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Complete deterministic fixture tests are not whole-system production/platform/adversarial evidence.",
+      "next_smallest_leaf": "Add one bounded installed crash/restart hostile journey against a specific admitted path, then its cumulative checkpoint.",
+      "dependencies": [
+        "11",
+        "23",
+        "30"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "tools/run_full_tests.mjs",
+      "public_source_sha256": "89ed377c93d8b0e3c32b1d4566780e7c74caa0e635ba9ffdc9fb643b9cc9dbb9"
+    },
+    {
+      "id": "36",
+      "title": "Documentation and operator experience",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Preview docs are being reconciled; full platform/enterprise/upgrade/operator journeys incomplete.",
+      "next_smallest_leaf": "Qualify one exact installed preview quickstart from a blank unprivileged consumer.",
+      "dependencies": [],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "README.md",
+      "public_source_sha256": "58aae5d0fd47780810f9fcb54780cf2ff4f87e7f7e46e2d482fc09d2875dfc77"
+    },
+    {
+      "id": "37",
+      "title": "Open-source and security readiness",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Disclosure/licenses/notices exist; full governance, independent audit-readiness and residual-risk closure incomplete.",
+      "next_smallest_leaf": "Bind one public security claim to current installed evidence and its explicit residual before publication.",
+      "dependencies": [
+        "35"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "SECURITY.md",
+      "public_source_sha256": "a6f8eb9f0a0d639130f8d6d2e2cc65f42527bbf5f0b78a9e52a4f02780b57c82"
+    },
+    {
+      "id": "38",
+      "title": "Reproducible release and provenance",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Exact source/package receipts are in progress; independent reproducibility, signed distribution/rollback/transparency and all-platform closure absent.",
+      "next_smallest_leaf": "Compare one independently rebuilt exact-source archive and native output against the qualified candidate without relabeling same-agent receipts.",
+      "dependencies": [],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "One offline ordinary installation and exact byte-bound compatible recovery/update result."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Separate signed distribution/update revocation and outside-custodian evidence; no single-host key substitution."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "tools/build_native_transport.mjs",
+      "public_source_sha256": "0a8bcf99931928a0643cc7da00968cdc4ac880822b73cf43238944efb4149489"
+    },
+    {
+      "id": "39",
+      "title": "Performance and quality qualification",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Local evaluation instruments exist; reproducible representative quality/performance/variance/resource baselines incomplete.",
+      "next_smallest_leaf": "Measure one bounded spine query with a shadow derived index against canonical scan at 10000 events, restart and corrupt-prefix controls.",
+      "dependencies": [],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "src/research/local_retrieval_benchmark.ts",
+      "public_source_sha256": "713637fc39728027add0a397dd2a79d3ead827becc4d0acf7c17b25edd263cb3"
+    },
+    {
+      "id": "40",
+      "title": "Release candidate and owner effect gate",
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
+      "gap": "Preview qualification is not whole-product release candidate qualification; platform and production prerequisites remain open.",
+      "next_smallest_leaf": "Freeze one exact preview source/archive qualification and owner-authorized publication receipt with explicit excluded production claims.",
+      "dependencies": [
+        "35",
+        "36",
+        "37",
+        "38",
+        "39"
+      ],
+      "tracks": {
+        "personal": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Local owner; optional free/local model; no organization authority inferred.",
+          "next_leaf": "Apply this bounded leaf to the local-owner profile without adding enterprise-only setup."
+        },
+        "enterprise": {
+          "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+          "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
+          "next_leaf": "Apply this bounded leaf to authenticated organization authority, tenancy and custody separately."
+        }
+      },
+      "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
+      "public_code_path": "tools/qualify_exact_revision.mjs",
+      "public_source_sha256": "d51dc93b60da33e08386292346b5a97480c973053cb8bb9dc707db1d9e0948c2"
+    }
+  ],
+  "surface_leaves": [
+    {
+      "id": "privacy",
+      "title": "Privacy redaction, surrogate custody, encrypted opt-in vault, erasure and residency",
+      "objectives": [
+        "33",
+        "25",
+        "30"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Qualify one installed opt-in personal-data export/erase across conversation and task-memory consumers.",
+      "deferred": false,
+      "public_code_path": "src/privacy/persistent_personal_data_store.ts"
+    },
+    {
+      "id": "privacy-model",
+      "title": "Preserved vendored privacy-model requirement/design contradiction",
+      "objectives": [
+        "33",
+        "30"
+      ],
+      "category": "MISSING",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Retain the H-2 original requirement and record whether owner-authorized invariant-preserving substitution exists; no dependency addition assumed.",
+      "deferred": false,
+      "public_code_path": null
+    },
+    {
+      "id": "conformal",
+      "title": "Conformal risk control for privacy/deliberation thresholds",
+      "objectives": [
+        "33",
+        "30",
+        "39"
+      ],
+      "category": "MISSING",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Research and measure one declared threshold against calibration/held-out data before any guarantee.",
+      "deferred": false,
+      "public_code_path": null
+    },
+    {
+      "id": "memory",
+      "title": "Episodic memory, retrieval, tenant scoping, retention, decay and context continuity",
+      "objectives": [
+        "33",
+        "32"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Qualify one installed cross-session scoped recall with unauthorized cross-door/tenant access refused.",
+      "deferred": false,
+      "public_code_path": "src/memory/context_assembler.ts"
+    },
+    {
+      "id": "prompt",
+      "title": "Adaptive prompt strategy and self-updating per-model optimization",
+      "objectives": [
+        "33",
+        "24",
+        "26"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Measure one governed prompt candidate against fixed anchors and actual installed model-tier selection.",
+      "deferred": false,
+      "public_code_path": "src/prompt/prompt_strategy.ts"
+    },
+    {
+      "id": "reference",
+      "title": "Self-refreshing prices/model/endpoint/capability reference data",
+      "objectives": [
+        "26",
+        "33"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Bind one fresh known-price source to the metered provider-check leaf with stale/unknown refusal.",
+      "deferred": false,
+      "public_code_path": "src/reference/reference_refresher.ts"
+    },
+    {
+      "id": "learning",
+      "title": "Gradient-free learning, feedback, curriculum, consolidation and personalization",
+      "objectives": [
+        "33",
+        "31"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Exercise one current feedback-to-learner update through an installed consumer with regression rollback.",
+      "deferred": false,
+      "public_code_path": "src/loop/learners.ts"
+    },
+    {
+      "id": "skills",
+      "title": "Skill distillation, CEGIS validation, registry, retention/reuse and canary rollback",
+      "objectives": [
+        "33",
+        "24",
+        "31"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Qualify one installed skill candidate\u2192validated registry\u2192retrieval reuse path with hostile import refusal.",
+      "deferred": false,
+      "public_code_path": "src/registry/skill_registry.ts"
+    },
+    {
+      "id": "research",
+      "title": "Auto-research, corpus/RAG grounding and research need scheduling",
+      "objectives": [
+        "33",
+        "24"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Run one installed scheduled research need through bounded corpus admission with unsupported fetch refused.",
+      "deferred": false,
+      "public_code_path": "src/research/research_loop.ts"
+    },
+    {
+      "id": "training",
+      "title": "Opt-in LoRA/synthesis/training and separate canary deployment backend",
+      "objectives": [
+        "33",
+        "31"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Supply one explicitly authorized real backend to the existing typed port; no backend means honest refusal.",
+      "deferred": false,
+      "public_code_path": "src/autotrain/auto_training_suite.ts"
+    },
+    {
+      "id": "domains",
+      "title": "Executable cold-start creative/academic/software/domain workflows",
+      "objectives": [
+        "33",
+        "12"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Qualify one installed configured domain workflow through research\u2192plan\u2192produce\u2192review with actual artifact readback.",
+      "deferred": false,
+      "public_code_path": "src/autonomy/domain_workflows.ts"
+    },
+    {
+      "id": "feeds",
+      "title": "External-feed analytics and user-metric-directed generation",
+      "objectives": [
+        "33",
+        "24"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Qualify one governed content-feed ingestion/metric update through a real configured adapter without cross-tenant leakage.",
+      "deferred": false,
+      "public_code_path": "src/learning/audience_performance.ts"
+    },
+    {
+      "id": "sessions",
+      "title": "Durable multi-project sessions, aggregate resource governance and concurrency",
+      "objectives": [
+        "33",
+        "19",
+        "26"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Run two owned project sessions under one aggregate resource reservation and prove no state/authority interference.",
+      "deferred": false,
+      "public_code_path": "src/session/project_session_manager.ts"
+    },
+    {
+      "id": "healing",
+      "title": "Closed-loop fault detection, diagnosis, bounded repair and verification",
+      "objectives": [
+        "33",
+        "31",
+        "35"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Inject one reversible installed project fault and prove bounded detect\u2192repair\u2192verify without expanding effect authority.",
+      "deferred": false,
+      "public_code_path": "src/loop/artifact_self_heal.ts"
+    },
+    {
+      "id": "onboarding",
+      "title": "Non-engineer local/free-key onboarding, local-first and frontier provider paths",
+      "objectives": [
+        "12",
+        "33",
+        "36"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Qualify one blank installed local/free-provider setup with no unrestricted credentials or silent unsupported mode.",
+      "deferred": false,
+      "public_code_path": "src/frontdoor/onboarding_conversation.ts"
+    },
+    {
+      "id": "clients",
+      "title": "CLI, web, chat, client core and signed mobile/desktop distribution",
+      "objectives": [
+        "33",
+        "36"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Separate one working client-core session from signed app distribution; qualify its actual installed gateway consumer.",
+      "deferred": false,
+      "public_code_path": "src/client/client_core.ts"
+    },
+    {
+      "id": "notifications",
+      "title": "Notification delivery, review gates and interruption etiquette",
+      "objectives": [
+        "33",
+        "12"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Qualify one dry-run ready-for-review notification and CLI fallback through the actual configured port.",
+      "deferred": false,
+      "public_code_path": "src/notify/notification_router.ts"
+    },
+    {
+      "id": "triggers",
+      "title": "Signed webhook/polling ingress, dedup, retry and dead-letter behavior",
+      "objectives": [
+        "33",
+        "29",
+        "30"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Qualify one duplicate signed tracker event across restart through the governed installed solve/review route.",
+      "deferred": false,
+      "public_code_path": "src/ingress/trigger_ingress.ts"
+    },
+    {
+      "id": "interop",
+      "title": "MCP/A2A/framework/forge/tracker integration and human-gated hosted PR output",
+      "objectives": [
+        "29",
+        "28",
+        "12"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Qualify one read-only external adapter capability through canonical authorization before any hosted write.",
+      "deferred": false,
+      "public_code_path": "src/ecosystem/mcp.ts"
+    },
+    {
+      "id": "browser",
+      "title": "Governed browser/fetch capability",
+      "objectives": [
+        "29",
+        "30",
+        "33"
+      ],
+      "category": "MISSING",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Research one governed fetch adapter with DNS/TLS/redirect/redaction policy and no raw egress bypass.",
+      "deferred": false,
+      "public_code_path": null
+    },
+    {
+      "id": "evaluation",
+      "title": "NL decomposition fidelity, official benchmark, variance, best-of-N and competitive baselines",
+      "objectives": [
+        "24",
+        "39"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Materialize one official task and compare K=1 against a bounded candidate set with actual cost/outcomes.",
+      "deferred": false,
+      "public_code_path": "src/resolve/best_of_n.ts"
+    },
+    {
+      "id": "oversight",
+      "title": "Deterministic-primary independent review, intent fitness and permanent merge gate",
+      "objectives": [
+        "14",
+        "17",
+        "24"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Remove one deterministic review guard in an installed adversarial fixture and prove the unsafe effect is refused.",
+      "deferred": false,
+      "public_code_path": "src/oversight/merge_authority.ts"
+    },
+    {
+      "id": "sovereignty",
+      "title": "Air-gap/local floor, sovereignty, limited hardware and honest assurance differences",
+      "objectives": [
+        "20",
+        "33"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Qualify one offline installed local workflow and explicitly refuse mechanisms it cannot supply.",
+      "deferred": false,
+      "public_code_path": "src/frontdoor/local_first_defaults.ts"
+    },
+    {
+      "id": "custody",
+      "title": "Witness/transparency/TPM/TEE/HSM and distinct key authority",
+      "objectives": [
+        "13",
+        "15",
+        "17",
+        "20"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Bind one outside-principal witness readback to an installed record; same-host synthetic keys do not close custody.",
+      "deferred": false,
+      "public_code_path": "src/spine/witness_sink.ts"
+    },
+    {
+      "id": "backup",
+      "title": "Protected backup, component-complete restore, interrupted effects and offsite recovery",
+      "objectives": [
+        "16",
+        "33",
+        "35",
+        "38"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Qualify exact installed synthetic protected capture\u2192restore\u2192fresh-process duplicate refusal; offsite/custody separate.",
+      "deferred": false,
+      "public_code_path": "src/backup/installed_backup_restore.ts"
+    },
+    {
+      "id": "spine",
+      "title": "Canonical durable spine, bounded admission, schema/upcaster and query growth",
+      "objectives": [
+        "16",
+        "19",
+        "39"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Build only a shadow derived index and compare canonical locked scan across bounded restart/corruption cases.",
+      "deferred": false,
+      "public_code_path": "src/spine/spine.ts"
+    },
+    {
+      "id": "enterprise",
+      "title": "Managed enterprise identity/tenancy/operations and cross-provider federation",
+      "objectives": [
+        "27",
+        "32",
+        "25"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Implement one live organization acquisition/rotation/revocation leaf against current static-key loader; preserve n=1 separately.",
+      "deferred": false,
+      "public_code_path": "src/cli/organization_runtime.ts"
+    },
+    {
+      "id": "observability",
+      "title": "Fleet telemetry, actual OTLP/TLS/DNS/private endpoints and operational SLOs",
+      "objectives": [
+        "32",
+        "39"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
+      "next_smallest_leaf": "Qualify one configured private OTLP export with actual receiver readback and governed credential/tenant binding.",
+      "deferred": false,
+      "public_code_path": "src/observability/fleet_telemetry.ts"
+    },
+    {
+      "id": "linguistic",
+      "title": "Linguistic-uncertainty family: sole existing owner-authorized deferral",
+      "objectives": [
+        "33"
+      ],
+      "category": "IMPLEMENTED_BUT_UNQUALIFIED",
+      "qualification": "Some cue code exists; this sole owner-deferred family is retained and excluded from required activation. No other uncertainty family is deferred.",
+      "next_smallest_leaf": "No implementation activation under this goal; preserve explicit family deferral without extending it to other uncertainty/effect holds.",
+      "deferred": true,
+      "public_code_path": "src/anticipate/cue_ablation.ts"
+    }
+  ],
+  "scoped_audit_outcomes": [
+    {
+      "ticket": "T001",
+      "title": "Replace the affected Bubblewrap identity in all three Keep consumers",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Coordinated source identity update and TypeScript/static admission checks only; actual namespace execution T002, Rust/native actual admission T003, release T004 remain pending.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T002",
+      "title": "Qualify actual required-project-jail execution with the patched bytes",
+      "outcome_kind": "QUALIFICATION",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Scoped ticket result only; limits in original receipt.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T003",
+      "title": "Rebuild and qualify the patched native P2-D2 build-tool supervisor",
+      "outcome_kind": "QUALIFICATION",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "All3named actual-state cases and required focused commands pass for this closed native build-tool consumer. No arbitrary native workload, full-source release, guest boot, organizational custody or deployment admission.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T004",
+      "title": "Prepare and qualify one replacement Keep security-release artifact locally",
+      "outcome_kind": "RELEASE_CANDIDATE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "One local archive and synthetic installedrecovery qualification. No outside attestation, productionIdP, offsite recovery or arbitrarynative workload guarantee.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T005",
+      "title": "Bind keep-chat replay identity to authenticated envelope content",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "One adapter process, clean restarts and explicit local legacy cutoff; no multi-process, physical power-cut, external custody or universal exactly-once claim. T006 supplies delivery journal ownership/durability; T020 cumulative checkpoint remains pending.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T006",
+      "title": "Persist keep-chat dispatch state and preserve uncertain outcomes",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Qualifies exercised coherent-local-filesystem delivery accounting, SIGKILL and injected EIO model. Physical power-cut or dishonest/network filesystem guarantees are not established. HTTP200 plus consumed/formatted response confirms gateway acceptance only, not final task success. Evidence digest is supplied by the local operator; synthetic owner/org labels do not prove enterprise custody. Full exact-source T020 checkpoint still required.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T007",
+      "title": "Bound keep-chat forwarding lifetime without erasing dispatch uncertainty",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Bounds network waiting subject to event-loop scheduling, local journal contention and fsync latency; no hard real-time, response-byte or downstream task-duration guarantee. Timeout preserves possible remote effect. Same-agent owned loopback evidence, not outside replication or enterprise custody. T020 exact-source cumulative qualification remains pending.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T008",
+      "title": "Serialize each instance-registry read/modify/write transaction",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Registry serialization on common-host coherent local filesystem only; no distributed filesystem or PID identity redesign claim.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T009",
+      "title": "Release the last completed InProcessLock tail entry",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "In-process idle key retention fixed; no distributed-lock or crash-durability claim.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T010",
+      "title": "Reclaim expired untouched sessions and count only live sessions",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Expired retention/count corrected in both owner and tenant subjects. Linear sweep cost and live cardinality remain unbounded until separate T011 capacity work.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T011",
+      "title": "Refuse new session admission at a configured finite store capacity",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Finite configurable per-store entry cardinality including provisional slots, with coequal scoped owner/organization fixtures. No multi-node aggregate cap, arbitrary principal byte bound, workload performance standard, live identity/custody or general grant-issuance uncertainty guarantee.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T012",
+      "title": "Reject present malformed nbf claims while retaining valid NumericDate semantics",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Optional nbf decoding correction only; local synthetic subjects do not establish live IdP integration or organization custody.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T013",
+      "title": "Reject invalid OIDC leeway configuration before token verification",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Configuration precondition only; exact fractional/equality comparator remains the separate dependent T025.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T014",
+      "title": "Reject review-server startup cleanly on listener bind failure",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Review listener startup contract fixed only; no TLS or live identity/deployment qualification.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T015",
+      "title": "Enforce a finite per-log Spine history-read and append admission bound",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Per-log observed byte admission only; parsed-object heap, aggregate files/external readers and lifetime scan complexity are not bounded by this guarantee. Owned synthetic history measurement is workload-specific, not a production throughput/memory SLA. Existing local coherent-filesystem/process-domain and sealer cursor ownership remain required; no hostile-directory or distributed transaction claim. T020 exact-source cumulative qualification pending.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T016",
+      "title": "Select the smallest crash-safe Spine staging scaling design from measured alternatives",
+      "outcome_kind": "PLAN",
+      "category": "COMPLETED_DESIGN_INVENTORY_OR_GUIDANCE_ONLY",
+      "scope_qualification": "Closes only design/measurement. Alternative optimized filesystem stores, physical power-cut and production throughput unqualified. Same-agent evidence, no outside replication or enterprise custody. T020 cumulative runtime checkpoint pending.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T017",
+      "title": "Declare the maintained canonical branch and refresh its contributor entry guidance",
+      "outcome_kind": "DOCUMENTATION",
+      "category": "COMPLETED_DESIGN_INVENTORY_OR_GUIDANCE_ONLY",
+      "scope_qualification": "Prepared current contributor guidance only. No repository setting/default branch/public preview/remote workflow/timer changes, and no release qualification.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T018",
+      "title": "Report the actual installed package version from one version authority",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Default CLI version reflects its package metadata; explicit injection remains deterministic. Version consumer only, no release or confinement qualification.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T019",
+      "title": "Give current-source CI an honest unprivileged deterministic check profile",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "COMPLETED_DESIGN_INVENTORY_OR_GUIDANCE_ONLY",
+      "scope_qualification": "Prepared partial CI recipe passes local eligible checks. No remote run, full-source/native/archive/deployment qualification. T020 remains required.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T020",
+      "title": "Qualify one exact cumulative source revision with complete profile evidence",
+      "outcome_kind": "QUALIFICATION",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Scoped ticket result only; limits in original receipt.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T021",
+      "title": "Carry explicit required test isolation through installed CLI runtime capture",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Validated installed policy selection reaches actual useful required command execution. No general hostile-code deployment, organization identity or aggregate containment qualification.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T022",
+      "title": "Inventory installed model and embedding routes with precise metering coverage",
+      "outcome_kind": "INVENTORY",
+      "category": "COMPLETED_DESIGN_INVENTORY_OR_GUIDANCE_ONLY",
+      "scope_qualification": "Completed source-bound installed coverage INVENTORY_ONLY and one future unactivated leaf proposal. Adds no spend enforcement, universal bill bound or provider/organization qualification.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T023",
+      "title": "Specify the installed enterprise identity qualification contract and missing evidence",
+      "outcome_kind": "PLAN",
+      "category": "COMPLETED_DESIGN_INVENTORY_OR_GUIDANCE_ONLY",
+      "scope_qualification": "Completes source-bound contract/gap enumeration only; all live issuer, key update, acquisition, revocation/custody and deployment prerequisites remain NOT_QUALIFIED/not provided. No secrets, enrollment, issuer contact, external messages, owner substitution or implementation of missing enterprise components. Same-agent review, no outside replication.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T024",
+      "title": "Exercise installed backup restore and uncertain local effects in a fresh owned target",
+      "outcome_kind": "QUALIFICATION",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Quiescent synthetic fixture, actual protected capture/restore, fresh-process restart and local sink. No operational backup, real credentials, offsite survival, independently custodied keys, authenticated tenant organization or universal exactly-once external effects.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T025",
+      "title": "Reject expired JWTs at the exact expiry boundary including fractional time",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Strict expiry interval correction only; production clock trust, live IdP, deployment and custody remain unqualified.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    },
+    {
+      "ticket": "T026",
+      "title": "Remove hardcoded host assumptions from the microVM observation test",
+      "outcome_kind": "PRODUCT_CHANGE",
+      "category": "IMPLEMENTED_AND_QUALIFIED",
+      "scope_qualification": "Test portability correction only; real microVM execution and usable namespace qualification remain unqualified.",
+      "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    }
+  ]
+}
