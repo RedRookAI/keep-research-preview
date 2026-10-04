@@ -1,0 +1,46 @@
+Keep progress update — 2026-10-04
+
+The audit produced 26 small remediation tickets. Each repeats research, the
+smallest scoped implementation or qualification, and actual outcome vetting.
+At this checkpoint, 23 tickets have passed their stated scoped outcomes. The
+remaining work is local security-release qualification, a later complete source
+checkpoint, and installed backup/restore/restart qualification.
+
+Security update in development
+
+The published preview still contains the older Bubblewrap identity affected by
+GHSA-pxhw-h44j-8pfx. The development source coordinates all three consumers on the
+measured 0.13.0 launcher. Required-mode admission still refuses absent or mismatched
+bytes. A layout mitigation is not a patched dependency.
+
+Primary advisory:
+https://github.com/containers/bubblewrap/security/advisories/GHSA-pxhw-h44j-8pfx
+Primary selected upstream release:
+https://github.com/containers/bubblewrap/releases/tag/v0.13.0
+
+The corrected required project jail and closed native build-tool operation have
+scoped local qualification. A separate stale debug-shim measurement was repaired
+after two independent clean builds reproduced the same current-source bytes.
+The required native gate passes, including byte, mode, symlink and hardlink
+substitution refusal. Six focused gate tests and 23 selected native build-tool
+tests pass. These are same-agent local results, not independent replication or
+qualification of arbitrary native workloads.
+
+A distinct local candidate is undergoing its own exact-source, selected-profile,
+scripts-enabled packaging and unprivileged offline installed checks. The later
+complete source run and installed backup journey remain pending. This progress
+commit does not replace the published 0.0.4-preview.1 archive, install a host
+launcher, or deploy any instance. Do not infer patched public package bytes from
+this status note; consult the exact release record when a replacement is published.
+
+The supported preview demonstration remains the synthetic local recovery
+experiment described in README.md. Keep remains an incomplete research platform,
+with the limits in SECURITY.md. Local fixture labels do not establish enterprise
+custody, offsite disaster survival or universal exactly-once external effects.
+
+Maintenance cadence
+
+While development is active, publish a public progress checkpoint at least daily
+and preserve verified work on the development branch. Each update should identify
+actual outcomes, pending qualification and artifact/deployment status. No automatic
+background publisher or host timer is introduced by this note.

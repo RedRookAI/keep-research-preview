@@ -43,6 +43,7 @@ This remains a research preview. Use synthetic data and isolated test resources 
 
 - [Five-minute quickstart](docs/quickstart.md)
 - [Release changes and upgrade guidance](docs/maintenance-2026-10-02.md)
+- [Latest audit and security-update progress](docs/maintenance-2026-10-04.txt)
 - [Installation details and limitations](docs/research-preview.md)
 - [Release record and qualification evidence](KEEP_RELEASE.md)
 - [Proposed security research](docs/security-experiments.md)
