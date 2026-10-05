@@ -2,13 +2,17 @@
 
 The [October 5 provider-check source checkpoint](provider-check.md) closes only its
 bounded diagnostic admission leaf. The original preview qualification below remains
-bound to October 4 source and archive. Ordinary embeddings, fresh pricing
+bound to October 4 source and archive. Ordinary embeddings, broader fresh-price coverage
 and live organization acquisition/custody remain open.
 
 The later [FrontDoor checkpoint](frontdoor-metering.md) closes built-in model-call
 admission through the existing shared envelope and live request context. It qualifies
 one gateway summary flow and relevant regressions; custom brains, ordinary embeddings,
-fresh pricing and live organization custody remain open.
+fresh pricing for those calls and live organization custody remain open.
+
+The [fresh-price checkpoint](provider-check-pricing.md) closes one direct DeepSeek
+provider-check price-source/freshness leaf. Other diagnostic routes refuse; broader
+price coverage, ordinary embeddings and live organization custody remain open.
 
 Keep has a qualified Linux x64 research preview and broad implemented components. The complete product remains unfinished. The nine mandatory capability families remain open; neither local fixture success nor completed audit tickets establish production readiness.
 
@@ -58,7 +62,7 @@ Component references identify inspected source; imports, tests and tooling alone
 | 24a | Evidence-grounded strategy selection | Partial; required qualification owed | Compare one bounded sequential-versus-parallel research decision against held-out authority/budget cases. |
 | 24 | Resolution and evaluation leadership | Partial; required qualification owed | Run one official repository-materialized task through the existing local oracle and retain actual outcomes. |
 | 25 | Compliance-evidence automation | Partial; required qualification owed | Derive one freshness-bound evidence/gap export from an actual live control; separately research its standard mapping. |
-| 26 | Token and cost governance | Partial; required qualification owed | Research and bind one dated price source to provider-check admission; refuse stale/unknown rates under an explicit configured freshness policy. |
+| 26 | Token and cost governance | Partial; required qualification owed | Meter one ordinary embedding route with explicit encoder identity, projection/usage and applicable pricing; refuse unavailable admission. |
 | 27 | Non-human identity and scoped credentials | Partial; required qualification owed | Add one state/nonce/PKCE-bound organization login acquisition with replay refusal; do not borrow local OWNER authority. |
 | 28 | Cross-platform agent discovery | Partial; required qualification owed | Inventory one supported external agent source with owner/purpose/lineage and unknown-agent disposition. |
 | 29 | Framework-neutral control | Partial; required qualification owed | Route one external framework capability through the same canonical authorization/effect port with bypass refusal. |
@@ -85,7 +89,7 @@ These clarify the saved backlogs; they do not replace or narrow the original obj
 | Conformal risk control for privacy/deliberation thresholds | Required capability/consumer missing | Research and measure one declared threshold against calibration/held-out data before any guarantee. |
 | Episodic memory, retrieval, tenant scoping, retention, decay and context continuity | Partial; required qualification owed | Qualify one installed cross-session scoped recall with unauthorized cross-door/tenant access refused. |
 | Adaptive prompt strategy and self-updating per-model optimization | Partial; required qualification owed | Measure one governed prompt candidate against fixed anchors and actual installed model-tier selection. |
-| Self-refreshing prices/model/endpoint/capability reference data | Partial; required qualification owed | Bind one fresh known-price source to the metered provider-check leaf with stale/unknown refusal. |
+| Self-refreshing prices/model/endpoint/capability reference data | Partial; required qualification owed | Research fresh-price admission for one built-in FrontDoor route using the existing attributable source; other providers/categories remain separate. |
 | Gradient-free learning, feedback, curriculum, consolidation and personalization | Partial; required qualification owed | Exercise one current feedback-to-learner update through an installed consumer with regression rollback. |
 | Skill distillation, CEGIS validation, registry, retention/reuse and canary rollback | Partial; required qualification owed | Qualify one installed skill candidate→validated registry→retrieval reuse path with hostile import refusal. |
 | Auto-research, corpus/RAG grounding and research need scheduling | Partial; required qualification owed | Run one installed scheduled research need through bounded corpus admission with unsupported fetch refused. |
@@ -114,4 +118,4 @@ These clarify the saved backlogs; they do not replace or narrow the original obj
 
 The current explicit built-ahead list contains **10 modules** and the meaningful orphan-export list **9 symbols**. Their structural tests pass because exceptions are declared; final completion requires real consumers, invariant-preserving supersession or removal.
 
-The next implementation goal should select small dependency-ready leaves, researched and vetted before activation. The completed provider-check leaf is recorded separately. The built-in FrontDoor admission leaf is now also complete within its declared scope. Next bounded candidates are fresh-price acquisition, one ordinary embedding route and organization session acquisition/rotation/revocation. The shadow spine-index experiment remains a separate optional candidate. Production isolation and credential separation remain prerequisite work for stronger live-effect claims. Platform parity, retained learning/privacy/domain/client surfaces and independent operational evidence remain required. No new implementation goal is activated by this map.
+The next implementation goal should select small dependency-ready leaves, researched and vetted before activation. The completed provider-check leaf is recorded separately. The built-in FrontDoor admission leaf is now also complete within its declared scope. The direct DeepSeek diagnostic fresh-price leaf is complete. Next bounded candidates are one ordinary embedding route, one FrontDoor fresh-price consumer and organization session acquisition/rotation/revocation. The shadow spine-index experiment remains a separate optional candidate. Production isolation and credential separation remain prerequisite work for stronger live-effect claims. Platform parity, retained learning/privacy/domain/client surfaces and independent operational evidence remain required. No new implementation goal is activated by this map.

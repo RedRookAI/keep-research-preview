@@ -16,6 +16,32 @@ All results here were administered by the development session. A repository test
 or local effect sink is an outcome checker separate from the model; it is not
 outside administration. No genuinely outside replication is recorded.
 
+## October 5 provider-check fresh-price source checkpoint
+
+Development **0.0.8-preview.1**, exact tested source `601737cab3ffd5de633b361034ffb7e6fc50deee`,
+passed TypeScript emission and **421 relevant tests, zero failures/skips**:
+11 fresh-price outcomes, 12 existing diagnostic cases, 16 FrontDoor cases,
+17 reference tests, 49 CLI/runtime tests, 308 other regressions and 8 structural
+checks. The CLI reports `keep 0.0.8-preview.1`. The actual restored recovery-demo
+command separately passed 24 synthetic checks with zero model calls and refused
+extra arguments. [Source-bound receipt](qualification/provider-check-pricing-2026-10-05.json)
+and [research, policy and limits](provider-check-pricing.md) describe the scope.
+
+A fresh official-page observation parsed successfully. Synthetic source responses
+and actual owned loopback model HTTP proved reserve-before-wire, age/refusal,
+refresh failure, rate changes and captured concurrent settlement. Existing live
+subject and fresh-process ambiguous-hold controls passed. Initial failed checks
+are retained: pinned request typing, an outdated seed-priced CLI fixture and an
+older public export that lost the existing recovery-demo entry. The latter was
+restored and its real command vetted; no island exception was added.
+
+This is same-agent partial source evidence using the existing isolated test profile;
+no host policy changed and zero paid calls occurred. Fresh-price admission covers
+only the direct DeepSeek diagnostic, with an explicit operator age policy. It does
+not qualify a new binary, full native build, other price sources/routes, ordinary
+embeddings, live IdP/custody, independently administered replication or universal
+billing ceilings. Earlier source and binary receipts retain their original identities.
+
 ## October 5 FrontDoor source checkpoint
 
 Development **0.0.7-preview.1**, exact tested source `55695315ad05fc8acfeda9233c884bfe3ddfb1a2`,

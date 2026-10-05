@@ -950,19 +950,19 @@
       "title": "Token and cost governance",
       "category": "IMPLEMENTED_BUT_UNQUALIFIED",
       "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
-      "gap": "Autonomous generation, provider-check and built-in FrontDoor calls use projected monetary reservations. Custom brains, ordinary embeddings/other direct calls, fresh-price verification, live organization custody and universal billing coverage remain open.",
-      "next_smallest_leaf": "Research and bind one dated price source to provider-check admission; refuse stale/unknown rates under an explicit configured freshness policy.",
+      "gap": "Autonomous generation, provider-check and built-in FrontDoor use durable monetary reservations. One direct DeepSeek diagnostic now requires fresh attributable prices under explicit age policy. Other pricing coverage, custom brains, ordinary embeddings/direct calls, live organization custody and universal billing remain open.",
+      "next_smallest_leaf": "Meter one ordinary embedding route with explicit encoder identity, projection/usage and applicable pricing; refuse unavailable admission.",
       "dependencies": [],
       "tracks": {
         "personal": {
           "category": "IMPLEMENTED_BUT_UNQUALIFIED",
           "authority": "Local owner; optional free/local model; no organization authority inferred.",
-          "next_leaf": "One dated rate source/freshness policy consumed by provider-check admission, preserving local free operation."
+          "next_leaf": "One ordinary embedding monetary consumer, preserving credential-free local operation."
         },
         "enterprise": {
           "category": "IMPLEMENTED_BUT_UNQUALIFIED",
           "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
-          "next_leaf": "Same bounded rate/freshness consumer with live organization authority and no owner fallback; live acquisition/custody remain required."
+          "next_leaf": "Same bounded embedding monetary consumer with separately admitted encoder/session/tenant authority; live acquisition/custody remain required."
         }
       },
       "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
@@ -1419,7 +1419,7 @@
       ],
       "category": "IMPLEMENTED_BUT_UNQUALIFIED",
       "qualification": "Current component/test substrate only; original whole leaf operational qualification still owed.",
-      "next_smallest_leaf": "Bind one fresh known-price source to the metered provider-check leaf with stale/unknown refusal.",
+      "next_smallest_leaf": "Research fresh-price admission for one built-in FrontDoor route using the existing attributable source; other providers/categories remain separate.",
       "deferred": false,
       "public_code_path": "src/reference/reference_refresher.ts"
     },
@@ -1972,6 +1972,20 @@
       "failures": 0,
       "skips": 0,
       "qualification_scope": "Relevant same-agent source profile; synthetic organization fixtures, no new binary/whole-product qualification."
+    },
+    {
+      "as_of": "2026-10-05",
+      "ticket": "PR001",
+      "outcome": "One direct DeepSeek provider-check fresh-price admission with explicit policy; restored existing recovery-demo consumer after publication vet found older export regression.",
+      "version": "0.0.8-preview.1",
+      "source_head": "601737cab3ffd5de633b361034ffb7e6fc50deee",
+      "receipt": "qualification/provider-check-pricing-2026-10-05.json",
+      "tested_total": 421,
+      "recovery_cases": 24,
+      "failures": 0,
+      "skips": 0,
+      "qualification_scope": "Relevant same-agent source only; synthetic paid transports, actual public metadata observation; no new binary or broader product qualification.",
+      "historical_evidence_rule": "All prior baseline/source/archive hashes and receipts retain original identity."
     }
   ]
 }

@@ -1,0 +1,137 @@
+{
+  "schema": "keep.qualification.scoped-source/v1",
+  "as_of": "2026-10-05",
+  "ticket": "PR001",
+  "status": "PASS_SCOPED_SOURCE",
+  "source_head": "601737cab3ffd5de633b361034ffb7e6fc50deee",
+  "version": "0.0.8-preview.1",
+  "publication_kind": "SOURCE_ONLY_DEVELOPMENT_CHECKPOINT",
+  "source_sha256": {
+    "src/reference/provider_check_pricing.ts": "d626308fd3614e6acf1793a6c149b127f81244c5acbf6aa959d080d5aa9e9a7a",
+    "src/reference/reference_registry.ts": "c6b9ba33cb635d33ccc8abe7053c119cf187f5d05d97f065f820573dba82c2b8",
+    "src/compose.ts": "08d519321b6c982333327e54cd99902888912edb4829a034d1ac8f5863a3a122",
+    "src/cli/runtime_config.ts": "0ed2f6483f3866082c735c0b39bbaffe024dc1d09a81a796e8af463257078587",
+    "src/cli/keep.ts": "8a329c0694aa75a5f0bd91baea9185c4c9bd2f2fbb18447414bdfcf18e60147f",
+    "src/cli/recovery_demo.ts": "db5e089d5e467e2f85957868294fad95e5b2622aa9cd9b0345172c4e9321c004",
+    "test/provider_check.test.ts": "5f0805c8ec6a69b3dc522918219da01427e23980f144eb9941473b13d4b4a487",
+    "test/runtime_config.test.ts": "8885659157ca7df0260df3d7e8621f71ffc5b51c6eb5110c6bcb3155cb4acaef",
+    "test/provider_check_pricing.test.ts": "b32faab1e280d7dcd331be73985ddb0fffe18cad4e904d20d3c900b4c48c98fc",
+    "test/fixtures/provider_check_price_source.ts": "9aa878f4766c0da1e55b0aa7372611ac65cfb4feb078675c60bb65744f27730b",
+    "acceptance/installed_sg32_resources.mjs": "baf585589f3b3976b8fbbec4d902dd57b6f8246f20ab6194942fcba670ef68ea"
+  },
+  "package_metadata_sha256": {
+    "package.json": "a761d05c7a5a61b3619e73d8c627a44875359ffa49c5193491d4a6e26a9d53d1",
+    "package-lock.json": "bddb02e5df99105997ca54307bfc44bc5ef7c97969e897c41a628b17d1e2e317"
+  },
+  "node_version": "v22.23.2",
+  "typescript_version": "5.9.3",
+  "typecheck_and_emission": "PASS",
+  "actual_cli_version": "keep 0.0.8-preview.1",
+  "profile": {
+    "files": [
+      "test/provider_check_pricing.test.ts",
+      "test/provider_check.test.ts",
+      "test/frontdoor_metering.test.ts",
+      "test/reference.test.ts",
+      "test/reference_refresher.test.ts",
+      "test/runtime_config.test.ts",
+      "test/cli_core.test.ts",
+      "test/metered_autonomy_spend.test.ts",
+      "test/monetary_accounting_audit.test.ts",
+      "test/budget_ledger.test.ts",
+      "test/brokered_egress.test.ts",
+      "test/governed_remote_provider.test.ts",
+      "test/identity_x1.test.ts",
+      "test/instance_isolation.test.ts",
+      "test/capability_graph_v2.test.ts",
+      "test/http_gateway.test.ts",
+      "test/frontdoor_ingestion.test.ts",
+      "test/frontdoor_driver.test.ts",
+      "test/frontdoor_gate.test.ts",
+      "test/frontdoor_revision.test.ts",
+      "test/front_door_working.test.ts",
+      "test/front_door_setup.test.ts",
+      "test/frontdoor_f1.test.ts",
+      "test/frontdoor_routing.test.ts",
+      "test/frontdoor_capability.test.ts",
+      "test/frontdoor_directive.test.ts",
+      "test/frontdoor_resilient.test.ts",
+      "test/frontdoor_brain.test.ts",
+      "test/frontdoor_intent.test.ts",
+      "test/no_islands.test.ts",
+      "test/no_orphan_exports.test.ts",
+      "test/netguard_self.test.ts"
+    ],
+    "fresh_price_focused": 11,
+    "existing_provider_check": 12,
+    "frontdoor": 16,
+    "reference": 17,
+    "cli_and_runtime": 49,
+    "remaining_regression": 308,
+    "structural": 8,
+    "total": 421,
+    "failures": 0,
+    "skips": 0
+  },
+  "recovery_demo": {
+    "exit": 0,
+    "synthetic_checks": 24,
+    "model_calls": 0,
+    "extra_argument_refusal_exit": 2
+  },
+  "source_observation": {
+    "as_of": "2026-10-05",
+    "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+    "retrieval_kind": "anonymous public pricing page GET, no model call",
+    "html_sha256": "210f102275ccf1a6542f08a3bc9e4b4c7c83278cb74b35217bffa112df6363b2",
+    "actual_parser_result": {
+      "model": "deepseek-flash",
+      "inputPerM": 0.3,
+      "outputPerM": 1.2
+    },
+    "status": "PASS_LIVE_OBSERVATION_PARSE"
+  },
+  "actual_controls": {
+    "profile": "lxc-unshare (unconfined)",
+    "controls": {
+      "cpu.max": "200000 100000",
+      "memory.max": "4294967296",
+      "memory.swap.max": "0",
+      "pids.max": "512"
+    },
+    "private_network": true
+  },
+  "paid_provider_calls": 0,
+  "administered_by": "same development agent, owned Linux fixture",
+  "outcomes": [
+    "One direct DeepSeek model/route with explicit maximum price age; peak uncached rate from current schema",
+    "Durable reserve before actual loopback model HTTP; matching usage settlement",
+    "No model calls/reservations with stale, missing, invalid or unsupported prices",
+    "Public metadata has no model key/prompt; age uses Date/Age/transfer/resident time",
+    "Fresh reuse and re-price after expiry; failed refresh cannot authorize historical value",
+    "Expiry during reservation refuses wire and preserves hold",
+    "Concurrent calls settle using their own captured reservation rates",
+    "Existing lost acknowledgement/missing usage holds survive fresh processes",
+    "Captured owner policy grants fixed metadata host; organization/air-gap policy never widened",
+    "Restored existing recovery-demo CLI consumer, actual24synthetic cases and argument refusal"
+  ],
+  "retained_findings": [
+    "Pinned RequestInit did not expose cache; explicit Cache-Control headers used.",
+    "Old installed seed-priced diagnostic fixture updated to supported fresh route with unsupported-route zero-wire refusal.",
+    "Initial public420/421 exposed preexisting lost recovery-demo CLI entry; restored original consumer without allowlist exception.",
+    "Canonical archived harness required archive arguments; aligned existing optional source invocation while preserving supplied-archive hash checks."
+  ],
+  "limits": [
+    "Relevant same-agent source profile, not full/native or newly installable archive qualification",
+    "Synthetic price/model transports and organization authority; no paid call, live IdP or independent custody",
+    "One direct provider/model only; all other remote provider-check routes refuse",
+    "Only provider-check consumes fresh prices; FrontDoor/autonomy retain configured pricing, ordinary embeddings remain separate",
+    "Official observation plus operator age policy is not signed quote or guaranteed invoice; projection/framing/hidden/non-token costs remain",
+    "Shared process/state envelope, not fleet/per-tenant aggregation"
+  ],
+  "unchanged_downloadable_binary": {
+    "version": "0.0.5-preview.1",
+    "source_head": "fca232810f6c2309ed0a9e5c5090577fc7112fee",
+    "archive_sha256": "d6b9dc25abc878616c04030655550c8587fca58c47d7ed571c3439567ea79091"
+  }
+}
