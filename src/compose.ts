@@ -73,7 +73,7 @@ import { MultiRepositoryCoordinator, ProjectRepositoryTransactions } from "./git
 import { GovernedLocalMerge } from "./solve/governed_local_merge.js";
 import type { FileTree } from "./solve/patch.js";
 import type { TestRunner } from "./solve/validate.js";
-import { OWNER, RbacAuthorizer, type AuthorizationPort, type Principal } from "./identity/rbac.js";
+import { OWNER, RbacAuthorizer, type AuthorizationPort, type Principal, type Permission } from "./identity/rbac.js";
 import { DelegationRegistry, type DelegationParentResolver } from "./identity/delegation_registry.js";
 import { assembleSecondBrain, type SecondBrainSystem } from "./personalization/second_brain_system.js";
 import { CryptoShredKeyStore } from "./keystore/keystore.js";
@@ -147,7 +147,7 @@ import { AdapterProposalBridge, type AdapterBridgeDeps } from "./lora/adapter_pr
 import { GovernedAnchor, type VerifiedOutcome } from "./learning/governed_anchor.js";
 import { evaluateCueAblation, type CueAblationCase, type CueAblationResult } from "./anticipate/cue_ablation.js";
 import type { AskGateConfig } from "./anticipate/ask_gate.js";
-import { FrontDoor, type FrontDoorBrain, type PredictionSource } from "./frontdoor/front_door.js";
+import { FrontDoor, type FrontDoorBrain, type FrontDoorHandleResult, type PredictionSource } from "./frontdoor/front_door.js";
 import { buildWorkingPhase } from "./frontdoor/working_phase.js";
 import { buildSetupPhase } from "./frontdoor/setup_phase.js";
 import { Scheduler, DeadLetterQueue } from "./scheduler/scheduler.js";
@@ -691,6 +691,11 @@ export interface KeepApp {
   readonly frontDoor?: FrontDoor;
   /** One independently stateful Front Door per resolved enterprise tenant. */
   readonly frontDoorForSubject?: (subject: string) => FrontDoor;
+  /** Request-scoped built-in model authority; tenant labels alone do not authorize spending. */
+  readonly frontDoorMessage: (message: string, opts?: {
+    readonly subject?: string; readonly sessionId?: string;
+    readonly hasAttachments?: boolean; readonly attachmentCount?: number;
+  }) => Promise<FrontDoorHandleResult>;
   /** C2: dual-memory consensus — a lesson is trusted only on independent-origin consensus (anti-poison). */
   readonly memoryConsensus: MemoryConsensus;
   /** Scheduled autonomy: operator-toggled cadence bound to an authorization envelope (proposals accrue for review). */
@@ -1132,7 +1137,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
   // L7 (money-enforcement): the AUTOMATED solve paths (ingress + the autonomy loop) call the model through
   // a metered provider under a granted budget envelope — durable reservations include pending calls,
   // and settlement uses reported usage. Input projection/prices remain trusted estimates. The
-  // Other interactive paths remain unmetered; provider-check uses a bound diagnostic below.
+  // Provider-check and built-in FrontDoor calls use bound capabilities below. Other routes remain separate.
   // A generous default envelope never blocks the n=1 free path ($0 local cost); an operator tightens
   // `config.autonomyBudget` to bound autonomous spend. HONEST SEAM: ONE envelope bounds the whole
   // automated-solve subsystem; per-project-run envelope granularity is filed as L7b.
@@ -1354,16 +1359,32 @@ export function composeKeep(config: KeepConfig): KeepApp {
   // --- 19: the non-engineer FrontDoor. Deterministic jargon-free onboarding (always-works floor; no terminal/
   // config-file/JSON), optional LLM warming that never gates. Directives are captured to the canonical second-brain
   // memory by default and must earn trust. Local-first: doing nothing yields a working setup. ---
-  // The FrontDoor's brain seam wraps the gateway (degrades to the deterministic path on any error → null).
-  const frontDoorBrainCall: BrainCall = async (prompt, opts) => {
-    try { const r = await gateway.generate({ prompt, maxTokens: opts.maxOutputTokens }); return r.text; }
-    catch { return null; }
-  };
-  // Skill application: apply learned skills to front-door reasoning. The guarded top-k skills for the message's task
-  // shape are injected as a delimited advisory block, and the call is tagged with the applied lesson ids (per-call cost).
-  // Advisory-only — the pipeline gates still apply. Fires only when relevant skills exist; empty → the original prompt.
-  const guidedFrontDoorBrainCall: BrainCall = skillGuided(frontDoorBrainCall, skillRetrieval, (p) => intentShapeByRule(p));
+  // Copy request authority into its async chain, never onto a cached tenant FrontDoor.
+  const frontDoorCallContext = new AsyncLocalStorage<{
+    readonly subject: string | undefined; readonly sessionId: string | undefined; unavailable: boolean;
+  }>();
   const makeFrontDoor = (subject?: string): FrontDoor => {
+    const frontDoorBrainCall: BrainCall = async (prompt, opts) => {
+      const context = frontDoorCallContext.getStore();
+      if (context?.unavailable) return null;
+      try {
+        if (context?.subject !== subject || (diagnosticOrganization && subject === undefined)) {
+          throw new Error("FrontDoor requires matching live request authority");
+        }
+        const result = await generateMeteredModelCall(prompt, opts.maxOutputTokens, {
+          label: "FrontDoor", permission: "review.view",
+          ...(context?.sessionId === undefined ? {} : { sessionId: context.sessionId }),
+          ...(subject === undefined ? {} : { subject }),
+        });
+        return result.text;
+      } catch {
+        // No further built-in model calls in this message after refusal/uncertainty.
+        if (context !== undefined) context.unavailable = true;
+        return null;
+      }
+    };
+    // Advisory skills are injected before monetary projection; all downstream calls use the same boundary.
+    const guidedFrontDoorBrainCall: BrainCall = skillGuided(frontDoorBrainCall, skillRetrieval, (p) => intentShapeByRule(p));
     const memory: Pick<MemoryStore, "ingest"> = subject === undefined ? frontDoorMemory : {
       ingest: (content, opts) => frontDoorMemory.ingest(content, { ...opts, scope: "project", projectId: subject }),
     };
@@ -1422,6 +1443,11 @@ export function composeKeep(config: KeepConfig): KeepApp {
     if (tenantFrontDoors.size >= 10_000) throw new Error("front door tenant state ceiling reached");
     selected = makeFrontDoor(subject); tenantFrontDoors.set(subject, selected); return selected;
   };
+  const frontDoorMessage: KeepApp["frontDoorMessage"] = (message, opts = {}) => {
+    const selected = opts.subject === undefined ? frontDoor : frontDoorForSubject(opts.subject);
+    return frontDoorCallContext.run({ subject: opts.subject, sessionId: opts.sessionId, unavailable: false },
+      () => selected.handle(message, opts));
+  };
 
   // --- C1: the trace-level ReferenceMonitor — the single un-bypassable enforcement point. Scattered safety
   // invariants (frozen-floor immutability, self-improvement-requires-triad, gated-merge-requires-approval)
@@ -1446,33 +1472,38 @@ export function composeKeep(config: KeepConfig): KeepApp {
   const authorization = new DelegationRegistry(config.authorization ?? new RbacAuthorizer(), spine, delegationParentFor);
   const diagnosticIdentity = config.identity;
   const diagnosticOrganization = diagnosticIdentity !== undefined || releaseBoot !== undefined || tenantDeployment !== undefined;
-  const diagnosticPrincipal = (sessionId?: string): string => {
+  type ModelCallAuthority = {
+    readonly label: "provider-check" | "FrontDoor"; readonly permission: Permission;
+    readonly sessionId?: string; readonly subject?: string;
+  };
+  const modelCallPrincipal = (authority: ModelCallAuthority): string => {
     let principal: Principal = OWNER;
-    if (diagnosticOrganization) {
-      const session = diagnosticIdentity?.sessions.get(sessionId, Date.now());
+    if (diagnosticOrganization || authority.subject !== undefined) {
+      const session = diagnosticIdentity?.sessions.get(authority.sessionId, Date.now());
       const admitted = session?.principal;
       const current = admitted === undefined ? undefined : delegationParentFor(admitted.id, admitted.tenant);
       if (ownerDescriptor !== undefined || admitted === undefined || current === undefined ||
           admitted.kind !== "human" || current.kind !== "human" || !admitted.tenant ||
           current.id !== admitted.id || current.tenant !== admitted.tenant || current.role !== admitted.role ||
+          (authority.subject !== undefined && current.tenant !== authority.subject) ||
           (tenantDeployment !== undefined && admitted.tenant !== tenantDeployment.rootAdmission.tenantId)) {
-        throw new Error("provider-check requires a live admitted organization subject; no owner fallback");
+        throw new Error(`${authority.label} requires a live admitted organization subject; no owner fallback`);
       }
       principal = current;
     } else if (!tracedProvider.isLocal && ownerDescriptor === undefined) {
-      throw new Error("provider-check requires an admitted owner or organization provider route");
+      throw new Error(`${authority.label} requires an admitted owner or organization provider route`);
     }
-    if (!authorization.authorize(principal, "change.solve").allow) throw new Error("provider-check subject is not authorized");
+    if (!authorization.authorize(principal, authority.permission).allow) throw new Error(`${authority.label} subject is not authorized`);
     return canonicalize({ id: principal.id, kind: principal.kind, role: principal.role, tenant: principal.tenant ?? null });
   };
-  const providerCheck: KeepApp["providerCheck"] = async (prompt, sessionId) => {
-    const principal = diagnosticPrincipal(sessionId);
+  const generateMeteredModelCall = async (prompt: string, maxTokens: number, authority: ModelCallAuthority): Promise<GenerateResult> => {
+    const principal = modelCallPrincipal(authority);
     // Reserve through the existing private money ledger, then recheck live subject authority at entry.
     // A refusal after reservation conservatively retains the hold; it cannot create a free retry.
     const diagnosticProvider: ModelProvider = {
       name: tracedProvider.name, isLocal: tracedProvider.isLocal,
       generate: (request) => {
-        if (diagnosticPrincipal(sessionId) !== principal) throw new Error("provider-check subject changed before dispatch");
+        if (modelCallPrincipal(authority) !== principal) throw new Error(`${authority.label} subject changed before dispatch`);
         return tracedProvider.generate(request);
       },
       embed: (texts) => tracedProvider.embed(texts),
@@ -1480,8 +1511,11 @@ export function composeKeep(config: KeepConfig): KeepApp {
     const diagnosticGateway = new MeteredGateway(new ModelGateway(diagnosticProvider), meteringBudgetLedger, autonomyVelocityBreaker, spine);
     return new MeteredProvider(diagnosticProvider, diagnosticGateway, {
       runId: "autonomy-subsystem", cls: "auto-research", tier: tracedProvider.isLocal ? "local" : "frontier",
-    }).generate({ prompt, maxTokens: 64 });
+    }).generate({ prompt, maxTokens });
   };
+  const providerCheck: KeepApp["providerCheck"] = (prompt, sessionId) => generateMeteredModelCall(prompt, 64, {
+    label: "provider-check", permission: "change.solve", ...(sessionId === undefined ? {} : { sessionId }),
+  });
   const sodOperators = new Map<string, Identity>();
   for (const op of config.operators ?? [{ id: "owner", isOperator: true, displayName: "Owner" }]) sodOperators.set(op.id, op);
   const separationOfDuties = new SeparationOfDuties(sodOperators, { n: config.sodN ?? 1 });
@@ -2095,7 +2129,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
       developmentFixture,
     });
   })();
-  return { providerCheck, memoryCustody, ...(memoryRetentionPolicy === undefined ? {} : { memoryRetentionPolicy }), ...(taskMemoryForCommand ? { taskMemoryForCommand } : {}), spine, witnessSink, witnessExport, ...(clientSigning ? { clientSigning } : {}), ...(cueAblation ? { cueAblation } : {}), ...(projectMerge ? { projectMerge } : {}), ...(repositoryTransactions ? { repositoryTransactions } : {}), ...(releaseBoot === undefined ? {} : { releaseGraph: releaseBoot.graph, releaseLedgers: releaseBoot.ledgers }), ...(externalReviewVerifier === undefined ? {} : { externalReviewVerifier }), ...(nativeBoundaryTransport === undefined ? {} : { nativeBoundaryTransport }), capabilities, observedFailureDefenses, enforcementTier: capabilities.tier, seamAudit, enforcementProfile, spineDurable, egressWitnessed, egressProvider, witnessReconciliation, identityRegistry, gateway, ...(config.runtimePaths ? { runtimePaths: config.runtimePaths } : {}), ...(tenantDeployment ? { tenantDeployment } : {}), ...(fleetLifecycle ? { fleetLifecycle } : {}), ...(fleetTelemetry ? { fleetTelemetry } : {}), secondBrain, episodicTurns, contextAssembler, infra, effectMediation, lifecycle, heartbeat, referenceRefresher, promptLayer, boot, manifest, posture, selfImprovementBus, driftMonitor, referenceMonitor, solveOutcomeWire, calibrationWire, ...(revertSignal ? { revertSignal } : {}), triggerIngress, mcpGateway, notifications, authorization, separationOfDuties, registryStore, managedSkillRegistry, tenantRegistry, redactionGateway, harnessCompiler, egressInterceptor, ...(personalDataStore ? { personalDataStore } : {}), ...(bestOfNSolver ? { bestOfNSolver } : {}), ...(resolveWithTests ? { resolveWithTests } : {}), ...(resolveCascadeFn ? { resolveCascade: resolveCascadeFn } : {}), ...(config.identity ? { identity: config.identity } : {}), curriculumLearner, needScheduler, consolidation, skillDistiller, skillCanary, skillRetrieval, memoryConsensus, ...(artifactSelfHeal ? { artifactSelfHeal } : {}), ...(adapterBridge ? { adapterBridge } : {}), ...(governedAnchor ? { governedAnchor } : {}), frontDoor, frontDoorForSubject, ...(skillValidator ? { skillValidator } : {}), ...(skillEvaluator ? { skillEvaluator } : {}), ...(metaHarness ? { metaHarness } : {}), scheduler, budgetLedger, deadLetterQueue, sagaSequencer, nonPersistableRegistry, otelEmitter, vettingGates, governanceSuite, corpusSuite, observability, learningSignals, ...(autoTraining ? { autoTraining } : {}), ...(selfImprovement ? { selfImprovement } : {}), ...(outcomeAdaptation ? { outcomeAdaptation, resetOutcomeAdaptation: resetOutcomeAdaptation!, projectAuditDigest: (projectId: ProjectId, domain: string, value: string) => projectRegistry.namespace(projectId).pseudonym(domain, value) } : {}), ...(audiencePerformanceFor ? { audiencePerformanceFor } : {}), ...(autonomyLoop && projectManager ? { autonomyLoop, projectManager, vetoQueue } : {}), ...(projectRuntime ? { projectRuntime } : {}) };
+  return { providerCheck, frontDoorMessage, memoryCustody, ...(memoryRetentionPolicy === undefined ? {} : { memoryRetentionPolicy }), ...(taskMemoryForCommand ? { taskMemoryForCommand } : {}), spine, witnessSink, witnessExport, ...(clientSigning ? { clientSigning } : {}), ...(cueAblation ? { cueAblation } : {}), ...(projectMerge ? { projectMerge } : {}), ...(repositoryTransactions ? { repositoryTransactions } : {}), ...(releaseBoot === undefined ? {} : { releaseGraph: releaseBoot.graph, releaseLedgers: releaseBoot.ledgers }), ...(externalReviewVerifier === undefined ? {} : { externalReviewVerifier }), ...(nativeBoundaryTransport === undefined ? {} : { nativeBoundaryTransport }), capabilities, observedFailureDefenses, enforcementTier: capabilities.tier, seamAudit, enforcementProfile, spineDurable, egressWitnessed, egressProvider, witnessReconciliation, identityRegistry, gateway, ...(config.runtimePaths ? { runtimePaths: config.runtimePaths } : {}), ...(tenantDeployment ? { tenantDeployment } : {}), ...(fleetLifecycle ? { fleetLifecycle } : {}), ...(fleetTelemetry ? { fleetTelemetry } : {}), secondBrain, episodicTurns, contextAssembler, infra, effectMediation, lifecycle, heartbeat, referenceRefresher, promptLayer, boot, manifest, posture, selfImprovementBus, driftMonitor, referenceMonitor, solveOutcomeWire, calibrationWire, ...(revertSignal ? { revertSignal } : {}), triggerIngress, mcpGateway, notifications, authorization, separationOfDuties, registryStore, managedSkillRegistry, tenantRegistry, redactionGateway, harnessCompiler, egressInterceptor, ...(personalDataStore ? { personalDataStore } : {}), ...(bestOfNSolver ? { bestOfNSolver } : {}), ...(resolveWithTests ? { resolveWithTests } : {}), ...(resolveCascadeFn ? { resolveCascade: resolveCascadeFn } : {}), ...(config.identity ? { identity: config.identity } : {}), curriculumLearner, needScheduler, consolidation, skillDistiller, skillCanary, skillRetrieval, memoryConsensus, ...(artifactSelfHeal ? { artifactSelfHeal } : {}), ...(adapterBridge ? { adapterBridge } : {}), ...(governedAnchor ? { governedAnchor } : {}), frontDoor, frontDoorForSubject, ...(skillValidator ? { skillValidator } : {}), ...(skillEvaluator ? { skillEvaluator } : {}), ...(metaHarness ? { metaHarness } : {}), scheduler, budgetLedger, deadLetterQueue, sagaSequencer, nonPersistableRegistry, otelEmitter, vettingGates, governanceSuite, corpusSuite, observability, learningSignals, ...(autoTraining ? { autoTraining } : {}), ...(selfImprovement ? { selfImprovement } : {}), ...(outcomeAdaptation ? { outcomeAdaptation, resetOutcomeAdaptation: resetOutcomeAdaptation!, projectAuditDigest: (projectId: ProjectId, domain: string, value: string) => projectRegistry.namespace(projectId).pseudonym(domain, value) } : {}), ...(audiencePerformanceFor ? { audiencePerformanceFor } : {}), ...(autonomyLoop && projectManager ? { autonomyLoop, projectManager, vetoQueue } : {}), ...(projectRuntime ? { projectRuntime } : {}) };
 }
 
 /** Deterministic short content hash for auditable version bumps (zero-dep, non-crypto FNV-1a). */

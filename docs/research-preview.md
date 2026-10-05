@@ -1,6 +1,6 @@
 # Research preview: install, run and inspect
 
-Current development source is **0.0.6-preview.1** and adds [budget-bound provider-check](provider-check.md). The downloadable preview and installation examples below remain **0.0.5-preview.1**.
+Current development source is **0.0.7-preview.1** and adds [budget-bound FrontDoor calls](frontdoor-metering.md), retaining [provider-check admission](provider-check.md). The downloadable preview and installation examples below remain **0.0.5-preview.1**.
 
 ## This research preview
 

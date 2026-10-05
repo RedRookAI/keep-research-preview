@@ -5,9 +5,8 @@
  *  - the TokenVelocityBreaker trips on rate-of-spend or a repetitive-identical-call burst;
  *  - valid reported usage settles that reservation; entered failures keep an unresolved hold.
  *
- * The attended/interactive path keeps using the plain gateway (`generate`, unmetered — the operator is
- * present), exactly as the MeteredGateway design intends. This provider is injected ONLY into the
- * composed automated solve paths; direct interactive gateway calls remain unmetered.
+ * Composed provider-check and built-in FrontDoor calls also use this wrapper through bound authority
+ * capabilities. Other direct interactive gateway calls and ordinary embeddings remain unmetered.
  *
  * HONEST SEAM (scope): this arms ONE granted envelope for the whole unattended autonomy SUBSYSTEM
  * (daily cap + per-run cap + per-call token ceiling + velocity). PER-PROJECT-RUN envelope granularity

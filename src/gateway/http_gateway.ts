@@ -347,7 +347,17 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     if (frontDoor === undefined) return json(501, { error: "front door not composed" });
     const b = parseBody(req.body);
     if (b === null) return json(400, { error: "invalid json" });
-    const result = await frontDoor.handle(String(b["message"] ?? ""), { subject: tenant ?? "keep.n1.default" });
+    const hasAttachments = b["hasAttachments"], attachmentCount = b["attachmentCount"];
+    if ((hasAttachments !== undefined && typeof hasAttachments !== "boolean") ||
+        (attachmentCount !== undefined && (typeof attachmentCount !== "number" || !Number.isSafeInteger(attachmentCount) || attachmentCount < 0))) {
+      return json(400, { error: "invalid attachment metadata" });
+    }
+    const sessionId = sec.identity === undefined ? undefined : req.headers["x-keep-session"];
+    const result = await app.frontDoorMessage(String(b["message"] ?? ""), {
+      ...(personalMode ? {} : { subject: tenant! }), ...(sessionId === undefined ? {} : { sessionId }),
+      ...(hasAttachments === undefined ? {} : { hasAttachments }),
+      ...(attachmentCount === undefined ? {} : { attachmentCount }),
+    });
     return json(200, { result });
   }
 

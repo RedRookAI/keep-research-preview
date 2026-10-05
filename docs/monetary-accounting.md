@@ -31,8 +31,9 @@ The built-in offline fixture and explicitly sacrificial local development config
 have zero token fees in composition; this does not measure hosting costs or attest
 that arbitrary injected development code is network-free.
 
-The October 5 development source meters `provider-check` through this ledger.
-Other direct interactive calls and ordinary embeddings remain outside it. Bounded embedding work has a separate request/byte/window budget. The velocity
+The October 5 development source meters `provider-check` and built-in FrontDoor
+model calls through this ledger. Other direct interactive calls and ordinary
+embeddings remain outside it. Bounded embedding work has a separate request/byte/window budget. The velocity
 breaker measures rate after calls; its post-call error does not establish non-execution.
 These distinctions are why Keep does not advertise a universal spending ceiling.
 
@@ -86,3 +87,20 @@ The standalone organization CLI has no session acquisition and therefore refuses
 Personal local mode remains credential-free; remote owner mode requires its captured
 owner route. Rates use dated seed/last-good inputs; fresh-price acquisition remains
 open. See [research, acceptance and limits](provider-check.md).
+
+## FrontDoor request scope
+
+The [FrontDoor source checkpoint](frontdoor-metering.md) scopes the gateway message's
+resolved tenant and header session with per-app async context. Every built-in call
+reserves through the same internal monetary ledger; file/paste summarization retains
+its 256-output-token bound and one transport attempt. Session/current roster/role,
+bound tenant, provider route and `review.view` permission are checked before
+reservation and again before provider entry. Cached tenant instances retain no session.
+
+Each valid chunk gets a separate reservation. Refusal or uncertain consumption stops
+further built-in model calls in that message and preserves deterministic fallback;
+outstanding exposure survives restart without automatic expiry/refund/replay.
+`frontDoorMessage` supplies this message-level behavior. Ordinary embeddings, optional
+injected custom brains, other direct library routes, fresh-rate verification and
+fleet/per-tenant budget aggregation remain separate obligations. The allowance is the
+existing shared process/state envelope, with its previously documented defaults.

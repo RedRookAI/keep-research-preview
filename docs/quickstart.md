@@ -1,6 +1,6 @@
 # Install the current research preview
 
-Current development source is **0.0.6-preview.1** and adds [budget-bound provider-check](provider-check.md). The downloadable preview and installation examples below remain **0.0.5-preview.1**.
+Current development source is **0.0.7-preview.1** and adds [budget-bound FrontDoor calls](frontdoor-metering.md), retaining [provider-check admission](provider-check.md). The downloadable preview and installation examples below remain **0.0.5-preview.1**.
 
 Keep **0.0.5-preview.1** is a Linux x64 research preview. Use Node.js 22.23.2 and
 npm. The package includes compiled JavaScript, its bundled TypeScript dependency

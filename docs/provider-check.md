@@ -1,9 +1,13 @@
 # Budget-bound provider-check — October 5, 2026
 
-Development source **0.0.6-preview.1** meters this one diagnostic through Keep's
+The **0.0.6-preview.1** source checkpoint meters this one diagnostic through Keep's
 existing durable monetary ledger. It does not add this behavior to the previously
 published 0.0.5-preview.1 binary. Other interactive and ordinary embedding routes
 remain separate obligations.
+
+The later **0.0.7-preview.1** [FrontDoor checkpoint](frontdoor-metering.md) extends
+the same ledger to built-in FrontDoor calls. Its source has separate qualification;
+this diagnostic's original 170-test receipt retains its original source identity.
 
 ## Research before implementation
 

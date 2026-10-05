@@ -950,19 +950,19 @@
       "title": "Token and cost governance",
       "category": "IMPLEMENTED_BUT_UNQUALIFIED",
       "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
-      "gap": "Autonomous generation and provider-check use projected monetary reservations; FrontDoor/ordinary embeddings, fresh-price verification, live organization custody and universal billing coverage remain open.",
-      "next_smallest_leaf": "Research and meter one FrontDoor brain call through the existing durable ledger with actual useful/refused/restart outcomes; preserve separate personal and organization authority.",
+      "gap": "Autonomous generation, provider-check and built-in FrontDoor calls use projected monetary reservations. Custom brains, ordinary embeddings/other direct calls, fresh-price verification, live organization custody and universal billing coverage remain open.",
+      "next_smallest_leaf": "Research and bind one dated price source to provider-check admission; refuse stale/unknown rates under an explicit configured freshness policy.",
       "dependencies": [],
       "tracks": {
         "personal": {
           "category": "IMPLEMENTED_BUT_UNQUALIFIED",
           "authority": "Local owner; optional free/local model; no organization authority inferred.",
-          "next_leaf": "One FrontDoor brain call using existing owner budget and known configured price; preserve credential-free local operation."
+          "next_leaf": "One dated rate source/freshness policy consumed by provider-check admission, preserving local free operation."
         },
         "enterprise": {
           "category": "IMPLEMENTED_BUT_UNQUALIFIED",
           "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
-          "next_leaf": "The same bounded FrontDoor call requires live organization session/current role/admitted route; no owner fallback. Live acquisition/custody remain required."
+          "next_leaf": "Same bounded rate/freshness consumer with live organization authority and no owner fallback; live acquisition/custody remain required."
         }
       },
       "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
@@ -1959,6 +1959,14 @@
       "failures": 0,
       "skips": 0,
       "qualification_scope": "Relevant same-agent source profile only; no new binary or whole-product qualification."
+    },
+    {
+      "as_of": "2026-10-05",
+      "ticket": "FD001",
+      "outcome": "Built-in FrontDoor monetary admission and scoped live message context implemented; source-only qualification recorded separately.",
+      "version": "0.0.7-preview.1",
+      "receipt": "qualification/frontdoor-2026-10-05.json",
+      "historical_evidence_rule": "Prior source/binary/checkpoint receipts retain original identities; no broad qualification transferred."
     }
   ]
 }
