@@ -1,0 +1,137 @@
+{
+  "schema": "keep.installed-solve-qualification/v1",
+  "status": "VETTED_SOURCE_CHECKPOINT",
+  "as_of": "2026-10-05",
+  "source_version": "0.0.11-preview.1",
+  "ticket": "IS001",
+  "procedure": [
+    "research",
+    "smallest implementation",
+    "vet"
+  ],
+  "same_agent": true,
+  "source_checks": {
+    "private": {
+      "source_head": "954d4eb56b44b341cd927c11f47c9a4e385e2059",
+      "tests": 157,
+      "files": [
+        "cli_core",
+        "installed_project_entrypoint",
+        "runtime_config",
+        "project_loop",
+        "project_runtime",
+        "project_finalization",
+        "project_session_persistence",
+        "gateway_client"
+      ],
+      "failures": 0,
+      "skips": 0,
+      "emitting_typecheck": "PASS",
+      "recovery_demo": {
+        "exit": 0,
+        "synthetic_checks": 24,
+        "model_calls": 0,
+        "extra_argument_refusal_exit": 2
+      },
+      "log_sha256": "ddaa1a0275f48d588230a4ab3afcff87a88aa44e5f6bf6ef9ddf124080fa62f6"
+    },
+    "public": {
+      "source_head": "376aba8f248d2517c68f3866ce8d54c692aa3999",
+      "tests": 157,
+      "files": [
+        "cli_core",
+        "installed_project_entrypoint",
+        "runtime_config",
+        "project_loop",
+        "project_runtime",
+        "project_finalization",
+        "project_session_persistence",
+        "gateway_client"
+      ],
+      "failures": 0,
+      "skips": 0,
+      "emitting_typecheck": "PASS",
+      "recovery_demo": {
+        "exit": 0,
+        "synthetic_checks": 24,
+        "model_calls": 0,
+        "extra_argument_refusal_exit": 2
+      },
+      "log_sha256": "82f4193ff54560e862d80f695cc51b18e885bf7d41a91ed309640db72a1a2909"
+    }
+  },
+  "installed": {
+    "status": "PASS",
+    "version": "0.0.11-preview.1",
+    "configuredPosture": "autonomous",
+    "solvePosture": "approval-required",
+    "localInstalledStart": true,
+    "explicitApprovalBeforeDispatch": true,
+    "reviewableProposal": true,
+    "passedTests": [
+      "limit",
+      "goal: requested outcome"
+    ],
+    "artifactVettingPassed": true,
+    "processIsolationEvidence": {
+      "attempted": true,
+      "executed": true,
+      "processIsolation": {
+        "basis": "adapter-spawn-plan",
+        "degraded": [],
+        "namespacePolicy": "best-effort",
+        "namespaceSetup": "unverified",
+        "requestedNamespaces": [
+          "mount-ns",
+          "pid-ns",
+          "net-ns"
+        ],
+        "requestedRlimits": [
+          "cpuLimit",
+          "file-size",
+          "process-count",
+          "open-files"
+        ],
+        "rlimitSetup": "unverified",
+        "version": 1
+      },
+      "requiredTier": "process",
+      "requirementMet": true,
+      "selectedTier": "process"
+    },
+    "solved": true,
+    "controlledModelCalls": 2,
+    "sourceUnchanged": true,
+    "restartNoReplay": true,
+    "wrongTokenRefused": true,
+    "explicitVetoOutput": "Merge refused: operator vetoed the exact reviewed proposal\n",
+    "paidCalls": 0,
+    "limits": "Controlled model responses; same-agent Linux fixture with best-effort process isolation, not real-model quality or production qualification; no new downloadable release.",
+    "source_head": "376aba8f248d2517c68f3866ce8d54c692aa3999",
+    "archive_sha256": "87bab1f95206b78f9b3bb117ea6b43c12097f723db129242bbea22422a928d1e",
+    "package_receipt_sha256": "451ca1bd574c6cf18bf3db49ded244354de188d98901ba225c8e8ef08898a145",
+    "external_harness_sha256": "9c72326453ddf8f5399ef088b3eb46849c964a8235ccdd25bc67193cf8e892ab",
+    "command_receipt_sha256": "5f938b9b3a99ec4db443ade4dba71e6d72d696ef17d1fd5b94810de6381e0310",
+    "dist_files_byte_matched": 1557,
+    "scripts_enabled_offline_install": true,
+    "prepack_rerun": false,
+    "artifact_purpose": "Local test candidate only, not a published/download-qualified archive",
+    "native_provenance": "reused prior qualified build; complete native Git tree and native build script identical to prior built source",
+    "prior_native_source": "fca232810f6c2309ed0a9e5c5090577fc7112fee",
+    "materialized_file_observed": "export const retryLimit = 7;",
+    "original_file_observed": "export const retryLimit = 0;"
+  },
+  "retained_attempts": [
+    "Initial focused test expected different existing refusal wording; corrected assertion, no runtime check weakened.",
+    "Two owned-fixture setup attempts refused missing chown; Python ownership function used only on owned fixture files.",
+    "Unknown-price chat-fixture model withheld before HTTP; controlled positive endpoint uses a pricing identity already known to the existing solver ledger. No price gate bypass or real provider call."
+  ],
+  "boundaries": [
+    "Relevant source subset, not complete test suite",
+    "Owner configured Linux journey; organization identity/custody onboarding remains separately unqualified",
+    "Best-effort process isolation observation does not establish required-jail/native/VM production isolation",
+    "Controlled model responses do not establish learned-model quality or real provider success rates",
+    "Existing download remains 0.0.5-preview.1; no new release/tag/npm publication"
+  ],
+  "publication_rule": "Exact checks bind recorded source heads. Later publication commit adds evidence and reconciled prose; it does not relabel qualification or publish the local candidate."
+}
