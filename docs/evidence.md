@@ -16,6 +16,26 @@ All results here were administered by the development session. A repository test
 or local effect sink is an outcome checker separate from the model; it is not
 outside administration. No genuinely outside replication is recorded.
 
+## October 5 provider-check source checkpoint
+
+Development source **0.0.6-preview.1**, exact commit `2839bee290c2ff6847393c75ad0cabf6c5ea430a`,
+passed TypeScript emission and **170 relevant tests: 12 focused + 158 regressions,
+zero failures/skips**. The compiled CLI reports `keep 0.0.6-preview.1`.
+[Source-bound receipt](qualification/provider-check-2026-10-05.json) and
+[research, behavior and limits](provider-check.md) describe the one-ticket scope.
+
+Actual loopback requests follow durable reservations; valid usage settles them.
+Uncertain usage or lost acknowledgements remain held across a fresh process.
+Unknown prices, unacceptable allowances and denied subjects refuse entry. A signed,
+immutable installed organization boot without a live subject makes zero HTTP calls.
+The fixture reused an existing isolated task profile, two CPUs, 4 GiB RAM, no swap
+and a 512-process ceiling; it changed no host policy and made zero paid provider calls.
+
+This is same-agent partial source qualification. No native rebuild, new archive,
+complete source profile, live organization custody, independent audit or universal
+billing ceiling is established. The downloadable binary below remains unchanged.
+FrontDoor/ordinary embedding monetary coverage and fresh pricing remain open.
+
 ## October 4 qualified binary preview
 
 The exact public source `fca232810f6c2309ed0a9e5c5090577fc7112fee` passed 5,341 selected full-profile tests with zero failures/skips. The matching 0.0.5-preview.1 archive passed scripts-enabled offline installation, all 1,554 runtime byte checks, 24 synthetic accounting/restart cases, useful/refused required-boundary controls and two protected backup/restore tracks. See [exact artifacts and limits](../KEEP_RELEASE.md) and [the source/archive-bound receipt](qualification/preview-2026-10-04.json). The exact checksum-first quickstart shell block also passed with npm’s default layout and the installed CLI, and its wrong-checksum control refused before installation. Earlier failures were retained and corrected; no security/test check was weakened.

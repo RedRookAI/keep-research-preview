@@ -1952,7 +1952,13 @@
       "ticket": "PC001",
       "outcome": "provider-check durable admission implemented; source-only qualification recorded separately",
       "receipt": "qualification/provider-check-2026-10-05.json",
-      "historical_evidence_rule": "Original baseline hashes and preview evidence retain October 4 identity; no broad qualification transferred."
+      "historical_evidence_rule": "Original baseline hashes and preview evidence retain October 4 identity; no broad qualification transferred.",
+      "source_head": "2839bee290c2ff6847393c75ad0cabf6c5ea430a",
+      "version": "0.0.6-preview.1",
+      "tested_total": 170,
+      "failures": 0,
+      "skips": 0,
+      "qualification_scope": "Relevant same-agent source profile only; no new binary or whole-product qualification."
     }
   ]
 }

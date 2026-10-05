@@ -1,0 +1,83 @@
+{
+  "schema": "keep.qualification.scoped-source/v1",
+  "as_of": "2026-10-05",
+  "ticket": "PC001",
+  "status": "PASS_SCOPED_SOURCE",
+  "source_head": "2839bee290c2ff6847393c75ad0cabf6c5ea430a",
+  "version": "0.0.6-preview.1",
+  "publication_kind": "SOURCE_ONLY_DEVELOPMENT_CHECKPOINT",
+  "source_sha256": {
+    "src/compose.ts": "db39d4bb8eaa77b9d64948425aff09c65ffa113ae3d6acd51e1ae4ac1b49e896",
+    "src/cli/cli_core.ts": "c1ab27bf57990f0840329823880b542e1c1c8db2274f94950e33db3014470369",
+    "src/scheduler/metered_gateway.ts": "a0be378cced3cdf08adca5f7da854db3e90416c844bf15f24f4ada5c8bcd9921",
+    "test/provider_check.test.ts": "c695c4a2f75ae9a7dde2cbc38cb692070f730f6cc889ed23c538e8877b035030",
+    "test/runtime_config.test.ts": "9c8f580cff5e954ef8a8fb7799dc20858102f40de0e57ac2429ba741e180a8bd",
+    "test/capability_graph_v2.test.ts": "47207b844d6e209b836fb45a6bcc24b299bfb49a8f7c8caa9c71b95f48c6a452"
+  },
+  "package_metadata_sha256": {
+    "package.json": "f78acd878b9977a4ce22e14cfca260cce7c828d590822cb37d50dc7fb74e1d56",
+    "package-lock.json": "b314eea731af43c1d72d7f4ccbacd8da6ec8d35e62cdafd9bf794521af841235"
+  },
+  "node_version": "v22.23.2",
+  "typescript_version": "5.9.3",
+  "typecheck_and_emission": "PASS",
+  "actual_cli_version": "keep 0.0.6-preview.1",
+  "profile": {
+    "files": [
+      "test/provider_check.test.ts",
+      "test/cli_core.test.ts",
+      "test/runtime_config.test.ts",
+      "test/metered_autonomy_spend.test.ts",
+      "test/monetary_accounting_audit.test.ts",
+      "test/budget_ledger.test.ts",
+      "test/brokered_egress.test.ts",
+      "test/governed_remote_provider.test.ts",
+      "test/identity_x1.test.ts",
+      "test/instance_isolation.test.ts",
+      "test/capability_graph_v2.test.ts"
+    ],
+    "focused": 12,
+    "regression": 158,
+    "total": 170,
+    "pass": 170,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "observed_controls": {
+    "cpu.max": "200000 100000",
+    "memory.max": "4294967296",
+    "memory.swap.max": "0",
+    "pids.max": "512",
+    "task_profile": "lxc-unshare (unconfined)"
+  },
+  "network": "Owned private loopback network; synthetic endpoints only",
+  "paid_provider_calls": 0,
+  "same_agent": true,
+  "actual_outcomes": [
+    "Credential-free local diagnostic uses monetary admission",
+    "Actual HTTP request follows durable fsynced reservation; valid usage settles matching reservation",
+    "Unknown configured price and denied allowance or subject refuse before wire",
+    "Missing/malformed usage, lost acknowledgement and provider exception retain exposure across actual fresh process",
+    "One HTTP attempt; no automatic ambiguous retry",
+    "Current organization session/roster/role rechecked before provider entry",
+    "Signed immutable installed organization boot without live subject refuses with zero HTTP requests"
+  ],
+  "command_log_sha256": "c199bace262e27219c010159da9937b20a380ad5959a314e1c6f421c3dcf5460",
+  "compiler_and_test_elapsed_seconds": 41.990268362977076,
+  "retained_binary": {
+    "version": "0.0.5-preview.1",
+    "source_head": "fca232810f6c2309ed0a9e5c5090577fc7112fee",
+    "archive_sha256": "d6b9dc25abc878616c04030655550c8587fca58c47d7ed571c3439567ea79091",
+    "release_tag": "keep-preview-2026-10-04.1"
+  },
+  "limits": [
+    "Partial relevant source profile, not full/native/platform/new archive qualification",
+    "Known configured seed/last-good rates are dated trusted inputs, not fresh verified bills",
+    "Approximate input projection and non-token charges prevent universal billing claim",
+    "Synthetic identities/sinks; no live IdP, independent custody or outside audit",
+    "Standalone organization CLI refuses until live session acquisition exists",
+    "FrontDoor and ordinary embedding monetary coverage remain open"
+  ]
+}
