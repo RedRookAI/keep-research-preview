@@ -1,6 +1,6 @@
 # Manual memory-correction monetary admission
 
-MC001 extends MW001's document admission to one manual `POST /memory/correct`. Development source **0.0.10-preview.1** combines these two tickets. The create/correct source checkpoint is being prepared; publication and its exact-source receipt are recorded separately. Downloadable 0.0.5-preview.1 retains its original identity.
+MC001 extends MW001's document admission to one manual `POST /memory/correct`. Development source **0.0.10-preview.1** combines these two tickets. The create/correct source checkpoint passed the exact private/public source profiles; its [receipt](qualification/manual-memory-create-correct-2026-10-05.json) records the source identities and boundaries. Downloadable 0.0.5-preview.1 retains its original identity.
 
 ## Configure and use
 
@@ -28,4 +28,4 @@ Other direct corrections, durable custody commands, bulk/system ingestion, conso
 
 Primary sources checked October 5, 2026: [embedding input/model/usage](https://developers.openai.com/api/reference/resources/embeddings/methods/create), [observed model pricing](https://developers.openai.com/api/docs/models/text-embedding-3-small), [provider data controls](https://developers.openai.com/api/docs/guides/your-data), [conditional concurrent-update prior art](https://www.postgresql.org/docs/current/transaction-iso.html). The update principle supports preserving Keep's existing comparison; PostgreSQL behavior does not qualify Keep's ephemeral backend as a database transaction. Same-day MW001/ME001 findings are reused where unchanged.
 
-The focused correction/create/query/memory/transport/gateway profile passed 153 tests, zero failures/skips, including 31 correction cases. Actual owned loopback sinks and fresh child processes use synthetic replies/keys; no paid vendor operation. Final versioned private/public source qualification is recorded at the combined checkpoint. Full native, live organization custody and downloadable artifact qualification remain separate.
+The focused correction/create/query/memory/transport/gateway profile passed 153 tests, zero failures/skips, including 31 correction cases. Actual owned loopback sinks and fresh child processes use synthetic replies/keys; no paid vendor operation. Final private/public 0.0.10-preview.1 profiles each passed 721 tests in 44 files, zero failures/skips, plus 24 actual synthetic recovery checks. [Combined source receipt](qualification/manual-memory-create-correct-2026-10-05.json). Full native, live organization custody and downloadable artifact qualification remain separate.

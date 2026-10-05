@@ -1,6 +1,6 @@
 # Keep completion map — October 4 baseline, October 5 updates
 
-The 0.0.10-preview.1 [manual write](manual-memory-write.md)/[correction](manual-memory-correction.md) checkpoint closes two specific document consumers using the existing ledger, explicit document consent/pricing and live write authority. Other embedding consumers, persistence/replay guarantees, wider price/encoder support and live organization custody remain open. This advances scoped outcomes without marking a whole product family complete.
+The 0.0.10-preview.1 [manual write](manual-memory-write.md)/[correction](manual-memory-correction.md) checkpoint closes two specific document consumers using the existing ledger, explicit document consent/pricing and live write authority. Other embedding consumers, persistence/replay guarantees, wider price/encoder support and live organization custody remain open. This advances scoped outcomes without marking a whole product family complete. [Combined receipt](qualification/manual-memory-create-correct-2026-10-05.json): 721 tests in 44 files plus 24 recovery checks in each private/public profile, zero failures/skips.
 
 The [October 5 provider-check source checkpoint](provider-check.md) closes only its
 bounded diagnostic admission leaf. The original preview qualification below remains

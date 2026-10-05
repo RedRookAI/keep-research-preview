@@ -1,6 +1,6 @@
 # Evidence and limitations
 
-Combined 0.0.10-preview.1 source checkpoint: manual write/correction admission is preparing a separate exact private/public qualification. Earlier source and installed-artifact receipts below retain their original identities.
+Combined **0.0.10-preview.1** manual create/correct source: exact tested public revision `a957571b107f8567038cabe3f017ecd2a6596bb8` and private revision `2b311f144034d3441c88c2891384c51dc2cdedbc` each passed **721 tests in 44 files**, zero failures/skips, emitting typecheck and **24** synthetic recovery checks. CLI reports `keep 0.0.10-preview.1`; zero paid vendor requests. [Combined receipt](qualification/manual-memory-create-correct-2026-10-05.json), [write](manual-memory-write.md) and [correction](manual-memory-correction.md) guides state scope and limits. Earlier source/installed-artifact receipts below retain original identities.
 
 ## October 5 memory-recall query source checkpoint
 

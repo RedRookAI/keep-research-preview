@@ -2000,6 +2000,24 @@
       "skips": 0,
       "qualification_scope": "Same-agent source/loopback/fresh-process fixtures; local synthetic organization authority; no live organization encoder/custody or new binary qualification.",
       "historical_evidence_rule": "Prior source/archive/baseline receipts retain original identities; no broad qualification transferred."
+    },
+    {
+      "as_of": "2026-10-05",
+      "tickets": [
+        "MW001",
+        "MC001"
+      ],
+      "outcome": "Single manual create/correct document embedding consumers admitted through shared durable money ledger with explicit document consent/pricing and live write authority; safe original-note comparison retained.",
+      "version": "0.0.10-preview.1",
+      "source_head": "a957571b107f8567038cabe3f017ecd2a6596bb8",
+      "receipt": "qualification/manual-memory-create-correct-2026-10-05.json",
+      "tested_total": 721,
+      "files": 44,
+      "recovery_cases": 24,
+      "failures": 0,
+      "skips": 0,
+      "qualification_scope": "Relevant same-agent private/public source profiles and synthetic loopback/fresh-process fixtures; not full native/live organization custody/new binary.",
+      "historical_evidence_rule": "Prior baseline/source/archive receipts retain original identities; no whole-product completion inferred."
     }
   ]
 }

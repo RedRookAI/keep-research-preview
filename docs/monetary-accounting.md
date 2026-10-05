@@ -1,6 +1,6 @@
 # Monetary accounting on metered model calls
 
-The 0.0.10-preview.1 development checkpoint adds [manual document writes](manual-memory-write.md) and [manual corrections](manual-memory-correction.md) to the shared monetary ledger. Combined exact-source qualification and publication are recorded separately. Earlier receipts retain their original source coverage; other document/task/fitness consumers remain outside this change.
+The 0.0.10-preview.1 development checkpoint adds [manual document writes](manual-memory-write.md) and [manual corrections](manual-memory-correction.md) to the shared monetary ledger. [Combined exact-source qualification](qualification/manual-memory-create-correct-2026-10-05.json) passed 721 relevant tests and 24 recovery checks in each private/public profile. Earlier receipts retain their original source coverage; other document/task/fitness consumers remain outside this change.
 
 This describes the corrected development implementation. It does not change the
 results or contents of the historical research-preview release.

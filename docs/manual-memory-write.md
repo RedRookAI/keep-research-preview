@@ -1,6 +1,6 @@
 # Manual memory-write monetary admission
 
-Development source **0.0.10-preview.1** combines MW001 manual writes and [MC001 manual corrections](manual-memory-correction.md) for the next public checkpoint. MW001 was previously vetted and privately saved at metadata 0.0.9-preview.1; its private receipt keeps that exact identity. The earlier public ME001 receipt qualifies query code at its own revision. The new combined export receives a separate qualification; downloadable 0.0.5-preview.1 retains its original identity.
+Development source **0.0.10-preview.1** combines MW001 manual writes and [MC001 manual corrections](manual-memory-correction.md) in the combined public source checkpoint. MW001 was previously vetted and privately saved at metadata 0.0.9-preview.1; its private receipt keeps that exact identity. The earlier public ME001 receipt qualifies query code at its own revision. The [combined source receipt](qualification/manual-memory-create-correct-2026-10-05.json) qualifies the new export separately; downloadable 0.0.5-preview.1 retains its original identity.
 
 ## Scope and host configuration
 
@@ -32,4 +32,4 @@ This endpoint still uses the existing ephemeral ordinary MemoryStore. Its succes
 
 ## Evidence boundary
 
-Vetting uses synthetic keys/replies, actual owned loopback HTTP sinks and fresh child processes; paid vendor operation, live organization encoder/custody, full native and new downloadable artifact qualification remain separate. [Private source receipt](qualification/manual-memory-write-2026-10-05.json): emitting typecheck, 690 tests in 43 files (zero failures/skips), plus 24 synthetic recovery checks passed at the exact recorded private revision. Public export and qualification must occur on the combined batch and version selected for the next public checkpoint.
+Vetting uses synthetic keys/replies, actual owned loopback HTTP sinks and fresh child processes; paid vendor operation, live organization encoder/custody, full native and new downloadable artifact qualification remain separate. [Private source receipt](qualification/manual-memory-write-2026-10-05.json): emitting typecheck, 690 tests in 43 files (zero failures/skips), plus 24 synthetic recovery checks passed at the exact recorded private revision. Public export and qualification must occur on the combined batch and version selected in the combined public source checkpoint.
