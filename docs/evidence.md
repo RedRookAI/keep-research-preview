@@ -16,6 +16,31 @@ All results here were administered by the development session. A repository test
 or local effect sink is an outcome checker separate from the model; it is not
 outside administration. No genuinely outside replication is recorded.
 
+## October 5 FrontDoor source checkpoint
+
+Development **0.0.7-preview.1**, exact tested source `55695315ad05fc8acfeda9233c884bfe3ddfb1a2`,
+passed TypeScript emission and **385 relevant tests: 16 FrontDoor outcomes,
+12 provider-check compatibility cases and 357 regressions; zero failures/skips**.
+The compiled CLI reports `keep 0.0.7-preview.1`.
+[Source-bound receipt](qualification/frontdoor-2026-10-05.json) and
+[research, behavior and limits](frontdoor-metering.md) describe the one-ticket scope.
+
+The gateway summary consumer, actual loopback provider HTTP, per-chunk durable
+reservation/settlement and fresh-process ambiguous holds passed. Synthetic live
+session/roster tests passed concurrent same-tenant and different-tenant cases,
+including revocation after reservation and permission loss before entry.
+Refusal/uncertainty stops further built-in model calls in that message and preserves
+sanitized deterministic fallback. Earlier private fixture failures were retained
+and corrected; no product authorization or spending check was weakened.
+
+This is same-agent partial source evidence. The run reused an existing owned
+isolated task profile with two CPUs, 4 GiB RAM, no swap and 512 processes; no host
+policy changed and zero paid model calls occurred. No full/native rebuild, new
+archive qualification, live IdP, independent custody or newly qualified remote
+enterprise flow is inferred. Dated configured prices, approximate projection,
+custom brains, ordinary embeddings and fleet billing remain explicit limits.
+Original binary and earlier source receipts below retain their exact identities.
+
 ## October 5 provider-check source checkpoint
 
 Development source **0.0.6-preview.1**, exact commit `2839bee290c2ff6847393c75ad0cabf6c5ea430a`,

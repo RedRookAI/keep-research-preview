@@ -1,0 +1,102 @@
+{
+  "schema": "keep.qualification.scoped-source/v1",
+  "as_of": "2026-10-05",
+  "ticket": "FD001",
+  "status": "PASS_SCOPED_SOURCE",
+  "source_head": "55695315ad05fc8acfeda9233c884bfe3ddfb1a2",
+  "version": "0.0.7-preview.1",
+  "publication_kind": "SOURCE_ONLY_DEVELOPMENT_CHECKPOINT",
+  "source_sha256": {
+    "src/compose.ts": "68d0151e4a95ef34beefced4324fe990e6e026c5091e2c4c9490e468a3ce8233",
+    "src/gateway/http_gateway.ts": "016c3f3d540b2d230586100f2e45ab7805c566ce024ba593ca5c33981f6450a0",
+    "src/scheduler/metered_provider.ts": "2b4e0e35a5fff1319978ec2b51741d3f1a05ef0e0c87fbe165c92d161f4323b5",
+    "test/frontdoor_metering.test.ts": "70e2bf9fb2381b62c3e293afe4a481c27473341c589a91e7307cf244b454cab6"
+  },
+  "package_metadata_sha256": {
+    "package.json": "8610e5c9a357fde34b41f783bb8c88087c9a17ba731cacfae9197c869f0a9c51",
+    "package-lock.json": "d79ba315b1c80e544c3dc00a6b36afd6ee0b09dbb4c381f703500e778605a5ca"
+  },
+  "node_version": "v22.23.2",
+  "typescript_version": "5.9.3",
+  "typecheck_and_emission": "PASS",
+  "actual_cli_version": "keep 0.0.7-preview.1",
+  "profile": {
+    "files": [
+      "test/frontdoor_metering.test.ts",
+      "test/provider_check.test.ts",
+      "test/cli_core.test.ts",
+      "test/runtime_config.test.ts",
+      "test/metered_autonomy_spend.test.ts",
+      "test/monetary_accounting_audit.test.ts",
+      "test/budget_ledger.test.ts",
+      "test/brokered_egress.test.ts",
+      "test/governed_remote_provider.test.ts",
+      "test/identity_x1.test.ts",
+      "test/instance_isolation.test.ts",
+      "test/capability_graph_v2.test.ts",
+      "test/http_gateway.test.ts",
+      "test/frontdoor_ingestion.test.ts",
+      "test/frontdoor_driver.test.ts",
+      "test/frontdoor_gate.test.ts",
+      "test/frontdoor_revision.test.ts",
+      "test/front_door_working.test.ts",
+      "test/front_door_setup.test.ts",
+      "test/frontdoor_f1.test.ts",
+      "test/frontdoor_routing.test.ts",
+      "test/frontdoor_capability.test.ts",
+      "test/frontdoor_directive.test.ts",
+      "test/frontdoor_resilient.test.ts",
+      "test/frontdoor_brain.test.ts",
+      "test/frontdoor_intent.test.ts"
+    ],
+    "frontdoor_focused": 16,
+    "provider_check_compatibility": 12,
+    "regression": 357,
+    "total": 385,
+    "pass": 385,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "observed_controls": {
+    "cpu.max": "200000 100000",
+    "memory.max": "4294967296",
+    "memory.swap.max": "0",
+    "pids.max": "512",
+    "task_profile": "lxc-unshare (unconfined)"
+  },
+  "network": "Owned private loopback network; synthetic endpoints only",
+  "paid_provider_calls": 0,
+  "same_agent": true,
+  "actual_outcomes": [
+    "Gateway /message reaches sanitized paste summary with validated attachment metadata",
+    "Actual owner loopback HTTP follows durable fsynced reservation per chunk; valid usage settles matching reservation",
+    "Unknown prices/expired or revoked grants/disallowed class/token ceiling refuse wire with useful deterministic fallback",
+    "Missing/malformed usage, lost response and provider error retain a hold across actual fresh process; no further model call in that message",
+    "Pending actual HTTP exposure blocks concurrent admission against configured estimate",
+    "Synthetic authenticated human viewer uses review.view; provider-check retains change.solve",
+    "Concurrent same-tenant sessions and different tenants retain separate authority across awaited reservations; revocation rechecked before entry",
+    "Roster/role/session/permission loss, missing request context and borrowed owner route cannot authorize organization model calls"
+  ],
+  "command_log_sha256": "11d9354a020799a434ca685f75335f1b7283c4de6149ee86df13e6ad4d1a44e7",
+  "compiler_and_test_elapsed_seconds": 45.08723610598827,
+  "retained_binary": {
+    "version": "0.0.5-preview.1",
+    "source_head": "fca232810f6c2309ed0a9e5c5090577fc7112fee",
+    "archive_sha256": "d6b9dc25abc878616c04030655550c8587fca58c47d7ed571c3439567ea79091",
+    "release_tag": "keep-preview-2026-10-04.1"
+  },
+  "limits": [
+    "Partial source profile, no new native/archive/installable qualification",
+    "Organization session/roster/permission fixtures use injected local provider; no live IdP/custody or newly admitted remote enterprise proof",
+    "Shared process/state envelope, approximate input projection and dated configured rates; no universal/fleet-wide billing bound",
+    "Optional custom brains, ordinary embeddings and other direct library calls remain outside built-in coverage"
+  ],
+  "earlier_failures": {
+    "private_compile_fixture_errors": "Corrected immutable config/API result/revoke signature assumptions before passing compilation",
+    "private_outcome_fixture_errors": "Corrected exact floating-point invoice comparison and ensured the envelope actually existed before revocation; product checks retained",
+    "failed_logs_retained_privately": true
+  },
+  "independent_outside_replication": false
+}

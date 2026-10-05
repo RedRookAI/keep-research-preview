@@ -1966,7 +1966,12 @@
       "outcome": "Built-in FrontDoor monetary admission and scoped live message context implemented; source-only qualification recorded separately.",
       "version": "0.0.7-preview.1",
       "receipt": "qualification/frontdoor-2026-10-05.json",
-      "historical_evidence_rule": "Prior source/binary/checkpoint receipts retain original identities; no broad qualification transferred."
+      "historical_evidence_rule": "Prior source/binary/checkpoint receipts retain original identities; no broad qualification transferred.",
+      "source_head": "55695315ad05fc8acfeda9233c884bfe3ddfb1a2",
+      "tested_total": 385,
+      "failures": 0,
+      "skips": 0,
+      "qualification_scope": "Relevant same-agent source profile; synthetic organization fixtures, no new binary/whole-product qualification."
     }
   ]
 }
