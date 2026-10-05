@@ -51,6 +51,8 @@ export interface CliIO {
 
 export interface CliDeps {
   readonly app: KeepApp;
+  /** Existing organization session in this app process; never an owner or gateway token. */
+  readonly providerCheckSession?: string;
   /** Absent → `solve` explains that a provider/repo must be configured (honest, no fake success). */
   readonly solve?: SolveFn;
   readonly clock?: () => number;
@@ -122,7 +124,7 @@ Commands:
   encoder show         Show KEEP_ENCODER_PROFILE; configuring an encoder does not grant document consent.
   memory-retention configure  Save an explicit private-source retention policy (docs/semantic-memory.md).
   message <text>       Send Keep a message and get its reply (the conversational surface).
-  provider-check [text] Verify the configured model path through release admission and the egress broker.
+  provider-check [text] Verify the configured model path with durable budget admission and governed egress.
   project <goal>       Start a project; optional --posture=autonomous|policy-calibrated|approval-required.
                        Opt in to retained context with --memory=user|project|agent|global
                        --memory-processing=configured-provider; --project=<id> selects an existing project.
@@ -161,7 +163,6 @@ Commands:
   monitor              Show every ticket in flight — what's solving, stuck, or needs your decision.
   calibration [...]    See/authorize reduced-escalation proposals (authorize needs --step-up); record outcomes.
   audit <id>           Show the plain-language history of a change.
-  demo recovery        Run the no-key local recovery experiment.
   version              Print the Keep version.
   help                 Show this help.
 
@@ -231,7 +232,7 @@ export async function runCli(argv: readonly string[], io: CliIO, deps: CliDeps):
 
 async function cmdProviderCheck(rest: readonly string[], io: CliIO, deps: CliDeps): Promise<CliResult> {
   const prompt = rest.join(" ").trim() || "Return a short Keep provider health acknowledgement.";
-  const result = await deps.app.gateway.generate({ prompt, maxTokens: 64 });
+  const result = await deps.app.providerCheck(prompt, deps.providerCheckSession);
   io.write(`${result.model}: ${result.text}`);
   return { command: "provider-check", exitCode: 0 };
 }

@@ -29,7 +29,7 @@ import type { DistributedLock } from "./lock/lock.js";
 import type { SpineStore } from "./spine/store.js";
 
 import { ModelGateway } from "./gateway/gateway.js";
-import type { ModelProvider, EmbeddingBackendInfo } from "./gateway/gateway.js";
+import type { ModelProvider, EmbeddingBackendInfo, GenerateResult } from "./gateway/gateway.js";
 import { LocalProvider } from "./gateway/local_provider.js";
 import { buildDefaultBrokeredEgress, EgressDeniedError } from "./gateway/brokered_egress.js";
 import { GovernedRemoteProvider, type RemoteProcessingDeclaration, type EmbeddingProcessingDeclaration } from "./gateway/governed_remote_provider.js";
@@ -514,6 +514,8 @@ export interface KeepConfig {
 }
 
 export interface KeepApp {
+  /** Budget-bound diagnostic. Organization callers must supply a live same-process session. */
+  readonly providerCheck: (prompt: string, sessionId?: string) => Promise<GenerateResult>;
   /** Explicit opt-in durable manual memory. Construction does not create or initialize custody. */
   readonly memoryCustody: FileMemoryCustody;
   readonly memoryRetentionPolicy?: CapturedMemoryRetentionPolicy;
@@ -1130,7 +1132,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
   // L7 (money-enforcement): the AUTOMATED solve paths (ingress + the autonomy loop) call the model through
   // a metered provider under a granted budget envelope — durable reservations include pending calls,
   // and settlement uses reported usage. Input projection/prices remain trusted estimates. The
-  // INTERACTIVE CLI path keeps using `gateway.generate` directly (unmetered — the operator is present).
+  // Other interactive paths remain unmetered; provider-check uses a bound diagnostic below.
   // A generous default envelope never blocks the n=1 free path ($0 local cost); an operator tightens
   // `config.autonomyBudget` to bound autonomous spend. HONEST SEAM: ONE envelope bounds the whole
   // automated-solve subsystem; per-project-run envelope granularity is filed as L7b.
@@ -1442,6 +1444,44 @@ export function composeKeep(config: KeepConfig): KeepApp {
   const delegationParentFor: DelegationParentResolver = config.delegationParentFor
     ?? ((id, tenant) => id === OWNER.id && tenant === undefined ? OWNER : undefined);
   const authorization = new DelegationRegistry(config.authorization ?? new RbacAuthorizer(), spine, delegationParentFor);
+  const diagnosticIdentity = config.identity;
+  const diagnosticOrganization = diagnosticIdentity !== undefined || releaseBoot !== undefined || tenantDeployment !== undefined;
+  const diagnosticPrincipal = (sessionId?: string): string => {
+    let principal: Principal = OWNER;
+    if (diagnosticOrganization) {
+      const session = diagnosticIdentity?.sessions.get(sessionId, Date.now());
+      const admitted = session?.principal;
+      const current = admitted === undefined ? undefined : delegationParentFor(admitted.id, admitted.tenant);
+      if (ownerDescriptor !== undefined || admitted === undefined || current === undefined ||
+          admitted.kind !== "human" || current.kind !== "human" || !admitted.tenant ||
+          current.id !== admitted.id || current.tenant !== admitted.tenant || current.role !== admitted.role ||
+          (tenantDeployment !== undefined && admitted.tenant !== tenantDeployment.rootAdmission.tenantId)) {
+        throw new Error("provider-check requires a live admitted organization subject; no owner fallback");
+      }
+      principal = current;
+    } else if (!tracedProvider.isLocal && ownerDescriptor === undefined) {
+      throw new Error("provider-check requires an admitted owner or organization provider route");
+    }
+    if (!authorization.authorize(principal, "change.solve").allow) throw new Error("provider-check subject is not authorized");
+    return canonicalize({ id: principal.id, kind: principal.kind, role: principal.role, tenant: principal.tenant ?? null });
+  };
+  const providerCheck: KeepApp["providerCheck"] = async (prompt, sessionId) => {
+    const principal = diagnosticPrincipal(sessionId);
+    // Reserve through the existing private money ledger, then recheck live subject authority at entry.
+    // A refusal after reservation conservatively retains the hold; it cannot create a free retry.
+    const diagnosticProvider: ModelProvider = {
+      name: tracedProvider.name, isLocal: tracedProvider.isLocal,
+      generate: (request) => {
+        if (diagnosticPrincipal(sessionId) !== principal) throw new Error("provider-check subject changed before dispatch");
+        return tracedProvider.generate(request);
+      },
+      embed: (texts) => tracedProvider.embed(texts),
+    };
+    const diagnosticGateway = new MeteredGateway(new ModelGateway(diagnosticProvider), meteringBudgetLedger, autonomyVelocityBreaker, spine);
+    return new MeteredProvider(diagnosticProvider, diagnosticGateway, {
+      runId: "autonomy-subsystem", cls: "auto-research", tier: tracedProvider.isLocal ? "local" : "frontier",
+    }).generate({ prompt, maxTokens: 64 });
+  };
   const sodOperators = new Map<string, Identity>();
   for (const op of config.operators ?? [{ id: "owner", isOperator: true, displayName: "Owner" }]) sodOperators.set(op.id, op);
   const separationOfDuties = new SeparationOfDuties(sodOperators, { n: config.sodN ?? 1 });
@@ -2055,7 +2095,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
       developmentFixture,
     });
   })();
-  return { memoryCustody, ...(memoryRetentionPolicy === undefined ? {} : { memoryRetentionPolicy }), ...(taskMemoryForCommand ? { taskMemoryForCommand } : {}), spine, witnessSink, witnessExport, ...(clientSigning ? { clientSigning } : {}), ...(cueAblation ? { cueAblation } : {}), ...(projectMerge ? { projectMerge } : {}), ...(repositoryTransactions ? { repositoryTransactions } : {}), ...(releaseBoot === undefined ? {} : { releaseGraph: releaseBoot.graph, releaseLedgers: releaseBoot.ledgers }), ...(externalReviewVerifier === undefined ? {} : { externalReviewVerifier }), ...(nativeBoundaryTransport === undefined ? {} : { nativeBoundaryTransport }), capabilities, observedFailureDefenses, enforcementTier: capabilities.tier, seamAudit, enforcementProfile, spineDurable, egressWitnessed, egressProvider, witnessReconciliation, identityRegistry, gateway, ...(config.runtimePaths ? { runtimePaths: config.runtimePaths } : {}), ...(tenantDeployment ? { tenantDeployment } : {}), ...(fleetLifecycle ? { fleetLifecycle } : {}), ...(fleetTelemetry ? { fleetTelemetry } : {}), secondBrain, episodicTurns, contextAssembler, infra, effectMediation, lifecycle, heartbeat, referenceRefresher, promptLayer, boot, manifest, posture, selfImprovementBus, driftMonitor, referenceMonitor, solveOutcomeWire, calibrationWire, ...(revertSignal ? { revertSignal } : {}), triggerIngress, mcpGateway, notifications, authorization, separationOfDuties, registryStore, managedSkillRegistry, tenantRegistry, redactionGateway, harnessCompiler, egressInterceptor, ...(personalDataStore ? { personalDataStore } : {}), ...(bestOfNSolver ? { bestOfNSolver } : {}), ...(resolveWithTests ? { resolveWithTests } : {}), ...(resolveCascadeFn ? { resolveCascade: resolveCascadeFn } : {}), ...(config.identity ? { identity: config.identity } : {}), curriculumLearner, needScheduler, consolidation, skillDistiller, skillCanary, skillRetrieval, memoryConsensus, ...(artifactSelfHeal ? { artifactSelfHeal } : {}), ...(adapterBridge ? { adapterBridge } : {}), ...(governedAnchor ? { governedAnchor } : {}), frontDoor, frontDoorForSubject, ...(skillValidator ? { skillValidator } : {}), ...(skillEvaluator ? { skillEvaluator } : {}), ...(metaHarness ? { metaHarness } : {}), scheduler, budgetLedger, deadLetterQueue, sagaSequencer, nonPersistableRegistry, otelEmitter, vettingGates, governanceSuite, corpusSuite, observability, learningSignals, ...(autoTraining ? { autoTraining } : {}), ...(selfImprovement ? { selfImprovement } : {}), ...(outcomeAdaptation ? { outcomeAdaptation, resetOutcomeAdaptation: resetOutcomeAdaptation!, projectAuditDigest: (projectId: ProjectId, domain: string, value: string) => projectRegistry.namespace(projectId).pseudonym(domain, value) } : {}), ...(audiencePerformanceFor ? { audiencePerformanceFor } : {}), ...(autonomyLoop && projectManager ? { autonomyLoop, projectManager, vetoQueue } : {}), ...(projectRuntime ? { projectRuntime } : {}) };
+  return { providerCheck, memoryCustody, ...(memoryRetentionPolicy === undefined ? {} : { memoryRetentionPolicy }), ...(taskMemoryForCommand ? { taskMemoryForCommand } : {}), spine, witnessSink, witnessExport, ...(clientSigning ? { clientSigning } : {}), ...(cueAblation ? { cueAblation } : {}), ...(projectMerge ? { projectMerge } : {}), ...(repositoryTransactions ? { repositoryTransactions } : {}), ...(releaseBoot === undefined ? {} : { releaseGraph: releaseBoot.graph, releaseLedgers: releaseBoot.ledgers }), ...(externalReviewVerifier === undefined ? {} : { externalReviewVerifier }), ...(nativeBoundaryTransport === undefined ? {} : { nativeBoundaryTransport }), capabilities, observedFailureDefenses, enforcementTier: capabilities.tier, seamAudit, enforcementProfile, spineDurable, egressWitnessed, egressProvider, witnessReconciliation, identityRegistry, gateway, ...(config.runtimePaths ? { runtimePaths: config.runtimePaths } : {}), ...(tenantDeployment ? { tenantDeployment } : {}), ...(fleetLifecycle ? { fleetLifecycle } : {}), ...(fleetTelemetry ? { fleetTelemetry } : {}), secondBrain, episodicTurns, contextAssembler, infra, effectMediation, lifecycle, heartbeat, referenceRefresher, promptLayer, boot, manifest, posture, selfImprovementBus, driftMonitor, referenceMonitor, solveOutcomeWire, calibrationWire, ...(revertSignal ? { revertSignal } : {}), triggerIngress, mcpGateway, notifications, authorization, separationOfDuties, registryStore, managedSkillRegistry, tenantRegistry, redactionGateway, harnessCompiler, egressInterceptor, ...(personalDataStore ? { personalDataStore } : {}), ...(bestOfNSolver ? { bestOfNSolver } : {}), ...(resolveWithTests ? { resolveWithTests } : {}), ...(resolveCascadeFn ? { resolveCascade: resolveCascadeFn } : {}), ...(config.identity ? { identity: config.identity } : {}), curriculumLearner, needScheduler, consolidation, skillDistiller, skillCanary, skillRetrieval, memoryConsensus, ...(artifactSelfHeal ? { artifactSelfHeal } : {}), ...(adapterBridge ? { adapterBridge } : {}), ...(governedAnchor ? { governedAnchor } : {}), frontDoor, frontDoorForSubject, ...(skillValidator ? { skillValidator } : {}), ...(skillEvaluator ? { skillEvaluator } : {}), ...(metaHarness ? { metaHarness } : {}), scheduler, budgetLedger, deadLetterQueue, sagaSequencer, nonPersistableRegistry, otelEmitter, vettingGates, governanceSuite, corpusSuite, observability, learningSignals, ...(autoTraining ? { autoTraining } : {}), ...(selfImprovement ? { selfImprovement } : {}), ...(outcomeAdaptation ? { outcomeAdaptation, resetOutcomeAdaptation: resetOutcomeAdaptation!, projectAuditDigest: (projectId: ProjectId, domain: string, value: string) => projectRegistry.namespace(projectId).pseudonym(domain, value) } : {}), ...(audiencePerformanceFor ? { audiencePerformanceFor } : {}), ...(autonomyLoop && projectManager ? { autonomyLoop, projectManager, vetoQueue } : {}), ...(projectRuntime ? { projectRuntime } : {}) };
 }
 
 /** Deterministic short content hash for auditable version bumps (zero-dep, non-crypto FNV-1a). */

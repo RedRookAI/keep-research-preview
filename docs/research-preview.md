@@ -1,5 +1,7 @@
 # Research preview: install, run and inspect
 
+Current development source is **0.0.6-preview.1** and adds [budget-bound provider-check](provider-check.md). The downloadable preview and installation examples below remain **0.0.5-preview.1**.
+
 ## This research preview
 
 Keep **0.0.5-preview.1** includes the October 4 audit remedies and measured

@@ -16,6 +16,13 @@ Verify the matching package against the release record before installation;
 without a Rust or C compiler. The historical **0.0.4-preview.1** archive retains
 its affected launcher pin and original checksum.
 
+## Current development source
+
+**0.0.6-preview.1** adds budget-bound `provider-check`: durable reservation before
+dispatch, 64 output tokens, one attempt and live subject checks. Read the
+[research, behavior and limits](docs/provider-check.md). This is a source checkpoint;
+the downloadable 0.0.5-preview.1 binary retains its original contents and evidence.
+
 ## Build and try the current source
 
 Use Linux x64 and Node.js 22.23.2. Source builds additionally require the pinned
@@ -28,7 +35,7 @@ node dist/src/main.js version
 node dist/src/main.js demo recovery
 ```
 
-Expected version: `keep 0.0.5-preview.1`. The recovery experiment uses synthetic
+Expected source version: `keep 0.0.6-preview.1`. The recovery experiment uses synthetic
 local outbox effects and no model calls. Its 24 cases exercise accounting,
 uncertain acknowledgements and fresh-process restart. A passing demonstration
 has narrower scope than complete source or installed-artifact qualification.
@@ -44,6 +51,7 @@ This remains a research preview. Use synthetic data and isolated test resources 
 
 ## Read further
 
+- [October 5 provider-check source checkpoint](docs/provider-check.md)
 - [Preview installation and source quickstart](docs/quickstart.md)
 - [October 4 changes and qualification](docs/maintenance-2026-10-04.txt)
 - [Latest audit and security-update progress](docs/maintenance-2026-10-04.txt)

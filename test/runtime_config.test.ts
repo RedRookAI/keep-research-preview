@@ -271,7 +271,7 @@ test("OWNER INSTALLED PATH: explicit owner provider reaches the governed built-i
   try {
     const result = await runInstalled(["provider-check", "owner-path"], {
       KEEP_PROVIDER: "openai-compatible", KEEP_PROVIDER_LOCATION: "local", KEEP_PROVIDER_AUTHORITY: "owner",
-      KEEP_PROVIDER_BASE_URL: `http://127.0.0.1:${address.port}`, KEEP_PROVIDER_MODEL: "real-wire-fixture", KEEP_PROVIDER_API_KEY: "owner-secret",
+      KEEP_PROVIDER_BASE_URL: `http://127.0.0.1:${address.port}`, KEEP_PROVIDER_MODEL: "gpt-5.4-mini", KEEP_PROVIDER_API_KEY: "owner-secret",
       ...REMOTE_PROCESSING, KEEP_REPOSITORY: repository, KEEP_DATA_DIR: dataDir,
     });
     assert.equal(result.code, 0, result.stderr);

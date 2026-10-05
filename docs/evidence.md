@@ -6,8 +6,8 @@ the [preview guide](research-preview.md) explains how to run the first experimen
 
 ## Current release record
 
-Use [the checkpoint record](../KEEP_RELEASE.md) for the current public source
-checks and the historical downloadable binary identities. The source checkpoint and subsequent binary qualification have separate records.
+Use [the release record](../KEEP_RELEASE.md) for the qualified downloadable binary.
+The October 5 development source checkpoint below has separate, narrower evidence.
 Results below remain attached to
 their original source and package, even when the implementation is retained in
 a later version.
@@ -24,7 +24,7 @@ The release tag adds companion receipts and current documentation after the exac
 
 ## October 4 public source checkpoint
 
-The public source version is **0.0.5-preview.1**. It contains the selected product
+The October 4 public source version was **0.0.5-preview.1**. It contains the selected product
 remedies from the completed audit checkpoint. The new source uses the measured
 patched Bubblewrap 0.13.0 identity; the historical binary 0.0.4-preview.1 does not.
 

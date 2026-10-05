@@ -1,4 +1,9 @@
-# Keep completion map — October 4, 2026
+# Keep completion map — October 4 baseline, October 5 update
+
+The [October 5 provider-check source checkpoint](provider-check.md) closes only its
+bounded diagnostic admission leaf. The original preview qualification below remains
+bound to October 4 source and archive. FrontDoor/ordinary embeddings, fresh pricing
+and live organization acquisition/custody remain open.
 
 Keep has a qualified Linux x64 research preview and broad implemented components. The complete product remains unfinished. The nine mandatory capability families remain open; neither local fixture success nor completed audit tickets establish production readiness.
 
@@ -48,7 +53,7 @@ Component references identify inspected source; imports, tests and tooling alone
 | 24a | Evidence-grounded strategy selection | Partial; required qualification owed | Compare one bounded sequential-versus-parallel research decision against held-out authority/budget cases. |
 | 24 | Resolution and evaluation leadership | Partial; required qualification owed | Run one official repository-materialized task through the existing local oracle and retain actual outcomes. |
 | 25 | Compliance-evidence automation | Partial; required qualification owed | Derive one freshness-bound evidence/gap export from an actual live control; separately research its standard mapping. |
-| 26 | Token and cost governance | Partial; required qualification owed | Meter only provider-check with a known-price durable reservation, 64-output-token bound and one attempt; unknown authority/price means zero wire. |
+| 26 | Token and cost governance | Partial; required qualification owed | Research and meter one FrontDoor brain call through the existing durable ledger with actual useful/refused/restart outcomes; preserve separate personal and organization authority. |
 | 27 | Non-human identity and scoped credentials | Partial; required qualification owed | Add one state/nonce/PKCE-bound organization login acquisition with replay refusal; do not borrow local OWNER authority. |
 | 28 | Cross-platform agent discovery | Partial; required qualification owed | Inventory one supported external agent source with owner/purpose/lineage and unknown-agent disposition. |
 | 29 | Framework-neutral control | Partial; required qualification owed | Route one external framework capability through the same canonical authorization/effect port with bypass refusal. |
@@ -104,4 +109,4 @@ These clarify the saved backlogs; they do not replace or narrow the original obj
 
 The current explicit built-ahead list contains **10 modules** and the meaningful orphan-export list **9 symbols**. Their structural tests pass because exceptions are declared; final completion requires real consumers, invariant-preserving supersession or removal.
 
-The next implementation goal should select small dependency-ready leaves, researched and vetted before activation. Immediate bounded candidates are provider-check monetary admission, the shadow spine-index experiment and organization acquisition/rotation/revocation work. Production isolation and credential separation remain prerequisite work for stronger live-effect claims. Platform parity, retained learning/privacy/domain/client surfaces and independent operational evidence remain required. No new implementation goal is activated by this map.
+The next implementation goal should select small dependency-ready leaves, researched and vetted before activation. The completed provider-check leaf is recorded separately. Next bounded candidates are FrontDoor monetary admission, fresh-price acquisition and organization session acquisition/rotation/revocation. The shadow spine-index experiment remains a separate optional candidate. Production isolation and credential separation remain prerequisite work for stronger live-effect claims. Platform parity, retained learning/privacy/domain/client surfaces and independent operational evidence remain required. No new implementation goal is activated by this map.

@@ -31,8 +31,8 @@ The built-in offline fixture and explicitly sacrificial local development config
 have zero token fees in composition; this does not measure hosting costs or attest
 that arbitrary injected development code is network-free.
 
-Direct interactive calls and ordinary embeddings are not governed by this monetary
-ledger. Bounded embedding work has a separate request/byte/window budget. The velocity
+The October 5 development source meters `provider-check` through this ledger.
+Other direct interactive calls and ordinary embeddings remain outside it. Bounded embedding work has a separate request/byte/window budget. The velocity
 breaker measures rate after calls; its post-call error does not establish non-execution.
 These distinctions are why Keep does not advertise a universal spending ceiling.
 
@@ -70,3 +70,19 @@ does not clear the envelope's unknown history. Existing history is retained.
 Only known non-entry permits voiding a reservation. Do not use `voidBeforeDispatch`
 to clear an ambiguous provider exception. The current API does not provide general
 provider-bill reconciliation or automatic expiry/refund of unresolved reservations.
+
+## October 5 provider-check scope
+
+The diagnostic requests 64 output tokens with one attempt. It shares the existing
+`autonomy-subsystem` run and `auto-research` class, including consumption, revocation
+and unresolved holds. Configure `KeepConfig.autonomyBudget` to authorize a different
+allowance; existing durable grants do not reset on startup. The default envelope
+is USD 100 daily, USD 50 per run and 32,000 projected tokens per call. The diagnostic
+still limits output to 64. These are configured admission caps, not verified bills.
+
+Organization operation needs a live same-process session, current roster/role and
+the admitted provider route. Authority is rechecked after reservation before entry.
+The standalone organization CLI has no session acquisition and therefore refuses.
+Personal local mode remains credential-free; remote owner mode requires its captured
+owner route. Rates use dated seed/last-good inputs; fresh-price acquisition remains
+open. See [research, acceptance and limits](provider-check.md).

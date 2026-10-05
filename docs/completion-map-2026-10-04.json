@@ -950,19 +950,19 @@
       "title": "Token and cost governance",
       "category": "IMPLEMENTED_BUT_UNQUALIFIED",
       "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
-      "gap": "Autonomous generation is metered; provider-check/front-door/embedding routes are not a universal monetary ceiling.",
-      "next_smallest_leaf": "Meter only provider-check with a known-price durable reservation, 64-output-token bound and one attempt; unknown authority/price means zero wire.",
+      "gap": "Autonomous generation and provider-check use projected monetary reservations; FrontDoor/ordinary embeddings, fresh-price verification, live organization custody and universal billing coverage remain open.",
+      "next_smallest_leaf": "Research and meter one FrontDoor brain call through the existing durable ledger with actual useful/refused/restart outcomes; preserve separate personal and organization authority.",
       "dependencies": [],
       "tracks": {
         "personal": {
           "category": "IMPLEMENTED_BUT_UNQUALIFIED",
           "authority": "Local owner; optional free/local model; no organization authority inferred.",
-          "next_leaf": "One bounded provider-check reservation tied to owner budget and known price; unknown price zero wire."
+          "next_leaf": "One FrontDoor brain call using existing owner budget and known configured price; preserve credential-free local operation."
         },
         "enterprise": {
           "category": "IMPLEMENTED_BUT_UNQUALIFIED",
           "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
-          "next_leaf": "Same provider-check leaf tied to tenant/agent/task authority and durable aggregate ceiling; no local-owner substitute."
+          "next_leaf": "The same bounded FrontDoor call requires live organization session/current role/admitted route; no owner fallback. Live acquisition/custody remain required."
         }
       },
       "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",
@@ -1944,6 +1944,15 @@
       "category": "IMPLEMENTED_AND_QUALIFIED",
       "scope_qualification": "Test portability correction only; real microVM execution and usable namespace qualification remain unqualified.",
       "limits": "Scoped original audit outcome, not whole product or current public archive; documentation/design/inventory outcomes add no runtime capability."
+    }
+  ],
+  "development_updates": [
+    {
+      "as_of": "2026-10-05",
+      "ticket": "PC001",
+      "outcome": "provider-check durable admission implemented; source-only qualification recorded separately",
+      "receipt": "qualification/provider-check-2026-10-05.json",
+      "historical_evidence_rule": "Original baseline hashes and preview evidence retain October 4 identity; no broad qualification transferred."
     }
   ]
 }

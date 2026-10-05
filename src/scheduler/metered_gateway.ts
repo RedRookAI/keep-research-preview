@@ -108,7 +108,8 @@ export class TokenVelocityBreaker {
  * The enforcement gateway. Wraps a ModelGateway; every metered generate() consults the ledger
  * BEFORE the call and hard-stops (throws BudgetExceeded) if a cap would breach — no override. On
  * success, records real spend to the ledger + the velocity breaker. Unmetered generate() (the
- * interactive, human-attended path) passes straight through — enforcement is for UNATTENDED loops.
+ * interactive path) passes straight through. Callers choose metered admission explicitly;
+ * composed provider-check diagnostics also use generateMetered.
  */
 export class MeteredGateway {
   constructor(
