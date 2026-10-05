@@ -214,7 +214,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     prompt: (question) => new Promise<string>((resolve) => rl.question(question, (a) => resolve(a.trim()))),
   };
 
-  // `solve` is intentionally absent until a real provider+repo are configured; cli_core reports this honestly.
+  // Installed solve uses the canonical project runtime; no second SolveFn pipeline is injected here.
   const deps: CliDeps = { app, readFile: (p) => readFileSync(p, "utf8"), tokenStore: new FileGatewayTokenStore(join(dataDir, "gateway-token")), ...(presentedOwnerToken === undefined ? {} : { gatewayToken: presentedOwnerToken }), ...(expectedOwnerToken === undefined ? {} : { gatewayExpectedToken: expectedOwnerToken }),
     ...(workerId === undefined ? {} : { serveGateway: async (workerApp, options) => {
       if (workerApp.projectRuntime === undefined) throw new Error("native project worker requires a durable runtime");

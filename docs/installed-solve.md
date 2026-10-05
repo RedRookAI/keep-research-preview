@@ -4,6 +4,8 @@ Development source 0.0.11-preview.1 connects `keep solve` to the existing projec
 
 Configure the provider using the existing provider profile/environment contract. Repository work also requires KEEP_REPOSITORY, KEEP_WORKSPACE_BASE (separate from the source), KEEP_REVISION (exact commit), KEEP_REPO_REF, KEEP_BASE_BRANCH (defaults to main, must point at that commit), and KEEP_TEST_COMMAND with optional KEEP_TEST_ARGS_JSON. Run `keep doctor` first; its readiness result is configuration evidence, not a model-quality or production-host qualification. `keep onboard` captures directives; it does not configure these execution settings.
 
+The automated solver requires a model price known to its existing accounting path. An unknown remote-compatible model price refuses before wire, including for a loopback endpoint; locality does not imply a zero fee. A readiness result does not establish current prices or funded execution. This ticket preserves that gate and its existing diagnostic limits.
+
 ```sh
 keep solve "Correct the retry limit; preserve unrelated behavior and tests"
 ```

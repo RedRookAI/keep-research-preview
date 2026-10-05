@@ -20,8 +20,8 @@ const model = createServer(async (req, res) => {
   try {
     assert.equal(req.url, "/chat/v1/chat/completions"); assert.equal(req.headers.authorization, "Bearer controlled-fixture-only");
     const chunks = []; for await (const chunk of req) chunks.push(chunk);
-    const body = JSON.parse(Buffer.concat(chunks).toString("utf8")); assert.equal(body.model, "chat-fixture");
-    const prompt = body.messages[0].content; calls.push(prompt);
+    const body = JSON.parse(Buffer.concat(chunks).toString("utf8")); assert.equal(body.model, "gpt-5.4-mini");
+    const prompt = body.messages[0].content; calls.push(prompt); writeFileSync(join(root, "model-calls.json"), JSON.stringify(calls));
     const value = calls.length === 2
       ? { body: "assert.equal((await import('./src/retry.mjs')).retryLimit,7);" }
       : { action: "plan", rationale: "Correct the retry limit", edits: [{ file: "src/retry.mjs", search: "retryLimit = 0", replace: "retryLimit = 7", intent: "Correct limit" }] };
@@ -30,7 +30,9 @@ const model = createServer(async (req, res) => {
   } catch (e) { errors.push(String(e)); res.destroy(); }
 });
 await new Promise(resolve => model.listen(0, "127.0.0.1", resolve));
-const env = { ...base, KEEP_PROVIDER: "openai-compatible", KEEP_PROVIDER_AUTHORITY: "owner", KEEP_PROVIDER_LOCATION: "local", KEEP_PROVIDER_BASE_URL: `http://127.0.0.1:${model.address().port}/chat`, KEEP_PROVIDER_MODEL: "chat-fixture", KEEP_PROVIDER_API_KEY: "controlled-fixture-only", KEEP_REMOTE_PROCESSING_PURPOSE: "software-development", KEEP_REMOTE_PROCESSING_REGION: "local", KEEP_REPOSITORY: source, KEEP_WORKSPACE_BASE: workspaces, KEEP_REVISION: revision, KEEP_REPO_REF: "project", KEEP_TEST_COMMAND: process.execPath, KEEP_TEST_ARGS_JSON: JSON.stringify(["--test", "--test-reporter=tap", "retry.test.mjs"]), KEEP_TEST_TIMEOUT_MS: "5000", KEEP_TEST_CPU_LIMIT_SEC: "2", KEEP_TEST_MAX_OUTPUT_BYTES: "16384", KEEP_DATA_DIR: data, KEEP_PROJECT_POSTURE: "autonomous" };
+// A synthetic endpoint uses a pricing identity already known to the automated-solve ledger.
+// No OpenAI request or price-quality claim: an unknown remote price correctly refuses before wire.
+const env = { ...base, KEEP_PROVIDER: "openai-compatible", KEEP_PROVIDER_AUTHORITY: "owner", KEEP_PROVIDER_LOCATION: "local", KEEP_PROVIDER_BASE_URL: `http://127.0.0.1:${model.address().port}/chat`, KEEP_PROVIDER_MODEL: "gpt-5.4-mini", KEEP_PROVIDER_API_KEY: "controlled-fixture-only", KEEP_REMOTE_PROCESSING_PURPOSE: "software-development", KEEP_REMOTE_PROCESSING_REGION: "local", KEEP_REPOSITORY: source, KEEP_WORKSPACE_BASE: workspaces, KEEP_REVISION: revision, KEEP_REPO_REF: "project", KEEP_TEST_COMMAND: process.execPath, KEEP_TEST_ARGS_JSON: JSON.stringify(["--test", "--test-reporter=tap", "retry.test.mjs"]), KEEP_TEST_TIMEOUT_MS: "5000", KEEP_TEST_CPU_LIMIT_SEC: "2", KEEP_TEST_MAX_OUTPUT_BYTES: "16384", KEEP_DATA_DIR: data, KEEP_PROJECT_POSTURE: "autonomous" };
 async function command(args, environment = env, expected = 0) {
   const child = spawn(process.execPath, [entry, ...args], { cwd: root, env: environment, stdio: ["ignore", "pipe", "pipe"] });
   let stdout = "", stderr = ""; child.stdout.on("data", b => { stdout += b; }); child.stderr.on("data", b => { stderr += b; });
@@ -57,16 +59,19 @@ try {
   const initial = await observe(); writeFileSync(join(root, "initial.json"), JSON.stringify(initial, null, 2));
   assert.equal(initial.project.status, "waiting-approval"); assert.equal(calls.length, 0);
   await command(["project", "resume", runId, "--approve=" + initial.project.wait.decisionId], remote());
-  const result = await observe(); writeFileSync(join(root, "outcome.json"), JSON.stringify(result, null, 2));
+  const result = await observe(); writeFileSync(join(root, "outcome.json"), JSON.stringify({ ...result, controlledCalls: calls.length, controlledErrors: errors }, null, 2));
   assert.deepEqual(errors, []); assert.equal(result.project.artifacts.implement.solve.solved, true, JSON.stringify(result));
   assert.ok(result.proposal, "reviewable proposal required"); assert.equal(readFileSync(join(source, "src/retry.mjs"), "utf8"), "export const retryLimit = 0;\n");
   assert.match(JSON.stringify(result.proposal), /retryLimit/u);
+  assert.equal(result.proposal.checks.testsPassed, true); assert.equal(result.proposal.checks.vettingCleared, true);
+  assert.deepEqual(result.proposal.checks.passedTests, ["limit", "goal: requested outcome"]);
+  assert.equal(result.project.artifacts.vet_artifact.passed, true);
   const beforeRestart = calls.length; await stop(); origin = await start();
   const restored = await observe(); assert.equal(calls.length, beforeRestart); assert.deepEqual(restored.proposal, result.proposal);
   const denied = await command(["solve", "do not dispatch"], { ...remote(), KEEP_GATEWAY_TOKEN: "d".repeat(64) }, 1); assert.match(denied, /401|403/u); assert.equal(calls.length, beforeRestart);
   const digest = result.proposal.rollback.patchSha256;
   const decision = await command(["merge", runId, "veto", "--proposal=" + digest], remote());
   assert.equal(readFileSync(join(source, "src/retry.mjs"), "utf8"), "export const retryLimit = 0;\n");
-  const receipt = { status: "PASS", version: JSON.parse(readFileSync(join(installed, "package.json"))).version, installed, configuredPosture: "autonomous", solvePosture: "approval-required", localInstalledStart: true, explicitApprovalBeforeDispatch: true, reviewableProposal: true, solved: true, controlledModelCalls: calls.length, sourceUnchanged: true, restartNoReplay: true, wrongTokenRefused: true, explicitVetoOutput: decision, paidCalls: 0, limits: "Controlled model responses; same-agent Linux fixture, not real-model quality or production qualification; no new downloadable release." };
+  const receipt = { status: "PASS", version: JSON.parse(readFileSync(join(installed, "package.json"))).version, installed, configuredPosture: "autonomous", solvePosture: "approval-required", localInstalledStart: true, explicitApprovalBeforeDispatch: true, reviewableProposal: true, passedTests: result.proposal.checks.passedTests, artifactVettingPassed: true, processIsolationEvidence: result.project.artifacts.vet_artifact.isolation, solved: true, controlledModelCalls: calls.length, sourceUnchanged: true, restartNoReplay: true, wrongTokenRefused: true, explicitVetoOutput: decision, paidCalls: 0, limits: "Controlled model responses; same-agent Linux fixture with best-effort process isolation, not real-model quality or production qualification; no new downloadable release." };
   writeFileSync(join(root, "result.json"), JSON.stringify(receipt, null, 2)); console.log(JSON.stringify(receipt));
 } finally { await stop(); model.closeAllConnections(); await new Promise(resolve => model.close(resolve)); }
