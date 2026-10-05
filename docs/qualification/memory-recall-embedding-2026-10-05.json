@@ -1,0 +1,138 @@
+{
+  "ticket": "ME001",
+  "research_as_of": "2026-10-05",
+  "status": "PASS_RELEVANT_SOURCE_PROFILE",
+  "version": "0.0.9-preview.1",
+  "tested_source_head": "24a4a68d5b711870f1e8cea1aed71c5d9fc4645a",
+  "scope": "Built-in ordinary memory-recall query embedding, one direct OpenAI text-embedding-3-small route, explicit dated operator-declared USD input price",
+  "primary_sources": [
+    {
+      "url": "https://developers.openai.com/api/reference/resources/embeddings/methods/create",
+      "evidence": "Model and input-token usage contract; fetched October 5, 2026"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/text-embedding-3-small",
+      "evidence": "Standard input price observed USD 0.02 per million tokens, October 5, 2026; not signed or automatically refreshed"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/embeddings",
+      "evidence": "Input-token billing, cl100k_base and matching representations"
+    },
+    {
+      "url": "https://docs.litellm.ai/docs/proxy/users#budget-reservation",
+      "evidence": "Reserve before processing and authoritative fail-closed accounting; reuse existing ledger"
+    }
+  ],
+  "private": {
+    "runtime_source_head": "b1785a5c63c445b507e8c3d1acd4d2489a62eb79",
+    "tests": 662,
+    "files": 42,
+    "failures": 0,
+    "skips": 0,
+    "recovery_checks": 24,
+    "model_calls_in_demo": 0,
+    "doc_delta": "Only monetary-accounting prose reconciliation was pending during checks; runtime/package matched public candidate"
+  },
+  "public": {
+    "source_head": "24a4a68d5b711870f1e8cea1aed71c5d9fc4645a",
+    "tests": 662,
+    "files": 42,
+    "failures": 0,
+    "skips": 0,
+    "typecheck_and_emission": "PASS",
+    "cli_version": "keep 0.0.9-preview.1",
+    "recovery_checks": 24,
+    "model_calls_in_demo": 0,
+    "invalid_demo_arguments_exit": 2
+  },
+  "selected_tests": [
+    "provider_check_pricing",
+    "provider_check",
+    "frontdoor_metering",
+    "reference",
+    "reference_refresher",
+    "runtime_config",
+    "cli_core",
+    "metered_autonomy_spend",
+    "monetary_accounting_audit",
+    "budget_ledger",
+    "brokered_egress",
+    "governed_remote_provider",
+    "identity_x1",
+    "instance_isolation",
+    "capability_graph_v2",
+    "http_gateway",
+    "frontdoor_ingestion",
+    "frontdoor_driver",
+    "frontdoor_gate",
+    "frontdoor_revision",
+    "front_door_working",
+    "front_door_setup",
+    "frontdoor_f1",
+    "frontdoor_routing",
+    "frontdoor_capability",
+    "frontdoor_directive",
+    "frontdoor_resilient",
+    "frontdoor_brain",
+    "frontdoor_intent",
+    "no_islands",
+    "no_orphan_exports",
+    "netguard_self",
+    "memory_recall_metering",
+    "embedding_budget",
+    "http_provider",
+    "gateway_tracing",
+    "memory",
+    "memory_persistence",
+    "memory_task_context",
+    "governed_memory_custody",
+    "redaction_gateway",
+    "swapmatrix"
+  ],
+  "commands": [
+    "Pinned Node 22.23.2 and locked TypeScript emitting typecheck",
+    "node --test --test-concurrency=1 on the 42 selected emitted files",
+    "node dist/src/main.js version",
+    "node dist/src/main.js demo recovery",
+    "node dist/src/main.js demo recovery extra (expected refusal exit2)"
+  ],
+  "controls": {
+    "existing_task_profile": "lxc-unshare",
+    "cpu_max": "200000 100000",
+    "memory_max": 4294967296,
+    "memory_swap_max": 0,
+    "pids_max": 512,
+    "task_private_network": true,
+    "existing_netguard_preload": true,
+    "no_new_host_enforcement": true,
+    "private_public_checkouts_isolated": true,
+    "shared_services_restarted": false,
+    "paid_requests": 0,
+    "concurrency": "One implementation agent; serial source checks"
+  },
+  "outcomes": [
+    "Actual loopback HTTP verifies complete-body reserve before wire and valid input settlement; existing useful hit shape retained",
+    "Unknown/expired/future/missing price, unsupported route, byte bound, missing purpose, blocked host, privacy transformation and denied grants refuse without HTTP",
+    "One-attempt 503/lost acknowledgement and incomplete/invalid/wrong-model usage retain hold across fresh child process",
+    "Pending exposure excludes concurrent call; permission/price loss after reservation retains hold without wire",
+    "Known usage overrun settles actual spend and blocks subsequent paid admission",
+    "Live synthetic organization sessions retain tenant candidate isolation; missing/revoked/wrong tenant and borrowed owner route refuse",
+    "Output ceiling semantics and local credential-free behavior preserved"
+  ],
+  "retained_failures": [
+    "Initial fixture Origin human rejected by TypeScript; corrected to existing external value",
+    "First end-to-end profile 68/79 passed: broker omitted newly lowered attempt limit; money refused larger transport reserve; captured bound now preserved",
+    "Next profile 70/79 passed: test assumed output ceiling applied to input and expected breach kind omitted from message; preserved ledger semantics and included breach kind",
+    "Focused correction profile78/78 passed; final added grant/HTTP/overrun cases and versioned metadata qualified in final662-test profiles"
+  ],
+  "limits": [
+    "Same-agent source profile, not full native or installed-archive qualification",
+    "Keys, provider responses and organization identity are synthetic; no live paid vendor or organization custody qualification",
+    "Price is trusted captured operator input, not automatically fetched/revalidated/signed billing evidence",
+    "Serialized-byte token projection is conservative inference for this encoder, not universal account/hidden-fee ceiling",
+    "Descriptor names existing primary model; no automatic chat/encoder separation or stored-vector migration",
+    "Document ingestion, fitness, task encoders and opaque injected stores outside monetary coverage; wider routes/refreshed pricing remain open",
+    "Downloadable0.0.5-preview.1 and all previous receipts retain original identities; no new binary"
+  ],
+  "publication": "Prepared reviewed source/docs checkpoint; remote publication must be separately verified"
+}

@@ -1986,6 +1986,20 @@
       "skips": 0,
       "qualification_scope": "Relevant same-agent source only; synthetic paid transports, actual public metadata observation; no new binary or broader product qualification.",
       "historical_evidence_rule": "All prior baseline/source/archive hashes and receipts retain original identity."
+    },
+    {
+      "as_of": "2026-10-05",
+      "ticket": "ME001",
+      "outcome": "One direct ordinary memory query encoder admitted through durable monetary reservation and bounded single-attempt transport; trusted dated operator price declaration.",
+      "version": "0.0.9-preview.1",
+      "source_head": "24a4a68d5b711870f1e8cea1aed71c5d9fc4645a",
+      "receipt": "qualification/memory-recall-embedding-2026-10-05.json",
+      "tested_total": 662,
+      "recovery_cases": 24,
+      "failures": 0,
+      "skips": 0,
+      "qualification_scope": "Same-agent source/loopback/fresh-process fixtures; local synthetic organization authority; no live organization encoder/custody or new binary qualification.",
+      "historical_evidence_rule": "Prior source/archive/baseline receipts retain original identities; no broad qualification transferred."
     }
   ]
 }

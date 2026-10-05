@@ -1,5 +1,12 @@
 # Evidence and limitations
 
+## October 5 memory-recall query source checkpoint
+
+Development **0.0.9-preview.1**, exact tested public source `24a4a68d5b711870f1e8cea1aed71c5d9fc4645a`, passed **662** relevant tests in **42** files, zero failures/skips, plus **24** actual synthetic recovery-demo cases. Private runtime and public changed runtime/package inputs match; both profiles passed. The CLI reports `keep 0.0.9-preview.1`. Actual HTTP sinks and fresh-process fixtures check reserve-before-wire, zero-call refusals, retained uncertainty and known usage overruns; **zero paid requests**. [Configuration, research and limits](memory-recall-embedding.md), [source-bound receipt](qualification/memory-recall-embedding-2026-10-05.json).
+
+This is one direct configured query encoder with explicit dated operator price input. Other embedding consumers, automatic price refresh, live organization custody, full native and new installed artifacts remain unqualified. The downloadable 0.0.5-preview.1 and earlier source receipts below retain their original identities.
+
+
 This page records what was exercised, on which artifacts, and within which
 boundaries. The [research overview](research.md) explains the proposed advances;
 the [preview guide](research-preview.md) explains how to run the first experiment.
