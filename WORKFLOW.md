@@ -1,7 +1,8 @@
 # Contributing to Keep
 
-The current public source checkpoint is **0.0.5-preview.1**; its source and
-historical binary identities are in [the checkpoint record](KEEP_RELEASE.md).
+The current public source checkpoint is **0.0.8-preview.1**; its narrower source
+evidence is in [the evidence record](docs/evidence.md). The downloadable binary
+remains **0.0.5-preview.1**, with its identities in [the release record](KEEP_RELEASE.md).
 
 Start with the problem, the relevant implementation and an observable acceptance
 criterion. Explain significant tradeoffs, preserve unrelated work, and include
@@ -102,3 +103,16 @@ A contribution report should identify the source revision, changed behavior, com
 results, remaining failures and environment. A local repeat is not independent
 replication. See [Security](SECURITY.md) before reporting vulnerabilities and
 [Licensing](docs/licensing.md) before distributing artifacts.
+
+## Commit, checkpoint and release protocol
+
+Adopted October 5, 2026. Apply this cadence to future Keep work within the user's agreed scope.
+
+- Research current primary sources and actual consumers for each ticket, implement the smallest change, then vet useful/refused/recovery outcomes and reconcile affected docs. Commit each vetted ticket and push it to private Git. During longer work, save clearly labeled incomplete checkpoints privately rather than leave the only copy on this box.
+- Combine related vetted tickets into a coherent public source checkpoint. Publish at least once per active development day when there is meaningful new work. If code is not ready, a reviewed public progress/documentation update can meet that cadence without exporting unvetted code. Do not create empty commits on unchanged days. An explicit goal's publication requirement still applies at its stopping point.
+- Advance the source version once per published code checkpoint, not per ticket or private commit. Align private/public package metadata, lockfiles, CLI version and current documentation before qualifying that checkpoint. Documentation-only corrections or protocol updates can retain the version; their Git commit identifies the change.
+- Reuse each ticket's relevant vetting evidence. At the public batch boundary, run the necessary combined/export checks on the exact source and package metadata being published. Repeat passed checks only after relevant changes, failures or new material evidence. Preserve original source-bound receipts; never transfer them to an untested revision or binary.
+- Prepare downloadable releases separately after the combined changes pass the normal exact-archive and installed-consumer qualification. A public source push is not a newly qualified binary release. Preserve earlier archive/version/checksum records and state the distinction in the docs.
+- Verify successful Git publication and keep current state clear about privately completed work, pending public changes and the last published checkpoint. Publishing a batch does not activate another ticket or expand a goal.
+
+This is a written working protocol. It installs no hook, timer, service or resource enforcement and changes no other instance's instructions or workspace.
