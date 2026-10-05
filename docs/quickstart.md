@@ -2,7 +2,7 @@
 
 Current development source is **0.0.8-preview.1**, adding [one provider-check fresh-price policy](provider-check-pricing.md). Downloadable archive identities and installation blocks below remain bound to 0.0.5-preview.1.
 
-Current development source is **0.0.7-preview.1** and adds [budget-bound FrontDoor calls](frontdoor-metering.md), retaining [provider-check admission](provider-check.md). The downloadable preview and installation examples below remain **0.0.5-preview.1**.
+It retains [budget-bound FrontDoor calls](frontdoor-metering.md) and [provider-check admission](provider-check.md).
 
 Keep **0.0.5-preview.1** is a Linux x64 research preview. Use Node.js 22.23.2 and
 npm. The package includes compiled JavaScript, its bundled TypeScript dependency
