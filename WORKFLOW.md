@@ -1,8 +1,8 @@
 # Contributing to Keep
 
-The current public source checkpoint is **0.0.12-preview.1**; its narrower source
-evidence is in [the evidence record](docs/evidence.md). The downloadable binary
-remains **0.0.5-preview.1**, with its identities in [the release record](KEEP_RELEASE.md).
+The current public source and downloadable Linux x64 preview are **0.0.12-preview.1**.
+Use [the evidence record](docs/evidence.md) and [exact release identities](KEEP_RELEASE.md).
+The release tag adds documentation to the exact qualified source; historical receipts keep their original identities.
 
 Start with the problem, the relevant implementation and an observable acceptance
 criterion. Explain significant tradeoffs, preserve unrelated work, and include

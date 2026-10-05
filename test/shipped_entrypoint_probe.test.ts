@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -18,21 +18,25 @@ function runCli(args: readonly string[], overlay: Readonly<Record<string, string
   const dataDir = mkdtempSync(join(tmpdir(), "keep-probe-"));
   const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("KEEP_")));
   try {
-    return spawnSync(process.execPath, [join(process.cwd(), "dist/src/cli/keep.js"), ...args], {
+    const result = spawnSync(process.execPath, [join(process.cwd(), "dist/src/cli/keep.js"), ...args], {
       cwd: process.cwd(),
       input: "",
       encoding: "utf8",
       timeout: 20000,
       env: { ...inherited, ...overlay, KEEP_DATA_DIR: dataDir },
     });
+    if (args[0] === "solve") assert.deepEqual(readdirSync(dataDir), [], "unconfigured solve must not compose mutable product state");
+    return result;
   } finally {
     rmSync(dataDir, { recursive: true, force: true });
   }
 }
 
-test("SHIPPED-ENTRYPOINT PROBE: explicit local mode reaches the honest inert `solve` seam", () => {
+test("SHIPPED-ENTRYPOINT PROBE: explicit local solve refuses missing repository setup", () => {
   const r = runCli(["solve", "make the totals not double-count tax"]);
-  assert.match(r.stdout, /No model\/repository is configured yet/);
+  assert.equal(r.stdout, "");
+  assert.match(r.stderr, /Solve setup incomplete: KEEP_REPOSITORY: is required/u);
+  assert.match(r.stderr, /Run keep doctor/u);
   assert.equal(r.status, 2);
 });
 
@@ -40,7 +44,8 @@ test("SHIPPED-ENTRYPOINT PROBE: missing provider mode refuses before command com
   const r = runCli(["solve", "make the totals not double-count tax"], {});
   assert.equal(r.stdout, "");
   assert.match(r.stderr, /KEEP_PROVIDER: is required; choose explicit local or remote mode/);
-  assert.equal(r.status, 1);
+  assert.match(r.stderr, /Run keep doctor/u);
+  assert.equal(r.status, 2);
 });
 
 test("SHIPPED-ENTRYPOINT PROBE (isolation): the solve seam message is not printed with no command", () => {

@@ -19,10 +19,13 @@ Set `KEEP_RELEASE_SHA256` to the binary package checksum in that trusted release
     ./keep-0.0.12-preview.1.tgz
   "$keep_preview_consumer/node_modules/.bin/keep" version
   "$keep_preview_consumer/node_modules/.bin/keep" demo project
+  printf 'Installed command: %s\n' "$keep_preview_consumer/node_modules/.bin/keep"
 )
 ```
 
 Expected version: `keep 0.0.12-preview.1`. The walkthrough states that its two responses are scripted locally and its sample approval/veto decisions are simulated. It then shows an actual changed working copy, passing repository/goal tests and a diff. It checks restart without replay, token refusal and source preservation after veto. No account or paid request is needed, and it uses its own temporary repository rather than your files.
+
+This installs into a temporary user-owned prefix. Use the printed `Installed command` path wherever this guide says `keep`, or add that prefix's `node_modules/.bin` to your shell's PATH. Retain the prefix to keep using the preview.
 
 Open the printed evidence directory to inspect `result.json`, `outcome.json`, `source/`, `workspaces/project/` and command records. The [walkthrough guide](portfolio-walkthrough.md) explains what to inspect and what the result does not establish. The demo needs permission to bind an ephemeral loopback port; if a constrained environment refuses it, retain the report and use the recovery experiment below.
 
