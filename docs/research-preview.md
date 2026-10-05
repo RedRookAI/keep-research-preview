@@ -1,82 +1,35 @@
-# Research preview: install, run and inspect
+# Keep research preview
 
-Current development source is **0.0.11-preview.1**, connecting [installed solve](installed-solve.md) to the approval-required repository runtime. The downloadable archive remains 0.0.5-preview.1; no replacement archive is qualified here.
+**0.0.12-preview.1**, Linux x64, Node.js 22.23.2/npm. [Download the matching preview](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1), verify its checksum in [the external release record](../KEEP_RELEASE.md), and follow the [installation guide](quickstart.md). No Rust/C compiler is needed for installation; the repository walkthrough also requires Git.
 
-It retains [budget-bound FrontDoor calls](frontdoor-metering.md) and [provider-check admission](provider-check.md).
+## First useful result
 
-## This research preview
+```sh
+keep demo project
+```
 
-Keep **0.0.5-preview.1** includes the October 4 audit remedies and measured
-Bubblewrap 0.13.0 pin. Use the [installation quickstart](quickstart.md) and the
-matching [release and downloads](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-04.1).
-The external [release record](../KEEP_RELEASE.md) identifies the exact source,
-package, environment, actual qualification results and limitations.
+The walkthrough uses the installed repository workflow and two scripted local responses. It simulates sample approval/veto actions, prints an actual proposed diff and two passing tests, checks restart without replay and token refusal, and leaves the original sample source unchanged. Open the printed directory to inspect the workspace, proposal and command records. No account or paid provider request is needed. [Walkthrough details](portfolio-walkthrough.md).
 
-Node.js 22.23.2 is the qualified runtime. The Linux x64 package needs no Rust or C
-compiler to install; contributors building source use pinned Rust 1.97.1, its
-musl target and host C build tools. The historical 0.0.4-preview.1 archive keeps
-its original checksum and affected launcher pin.
-
-## Verify a matching archive before installation
-
-For the matching 0.0.5-preview.1 archive, set `KEEP_RELEASE_SHA256` to its trusted
-release-record checksum. Do not rename the older archive or use a file's own hash
-as publisher authentication. The following block
-refuses before installation when the archive or required checksum is absent or
-mismatched, then runs the installed experiment:
-
-~~~sh
-(
-  set -eu
-  : "${KEEP_RELEASE_SHA256:?Set KEEP_RELEASE_SHA256 to the published package checksum}"
-  keep_demo_archive="$(realpath keep-0.0.5-preview.1.tgz)"
-  printf '%s  %s\n' "$KEEP_RELEASE_SHA256" "$keep_demo_archive" |
-    sha256sum --check --status
-  keep_demo_consumer="$(mktemp -d)"
-  npm install --prefix "$keep_demo_consumer" --no-audit --no-fund "$keep_demo_archive"
-  node "$keep_demo_consumer/node_modules/keep/acceptance/installed_sg32_resources.mjs" \
-    "$keep_demo_consumer/node_modules/keep" "$keep_demo_archive" "$KEEP_RELEASE_SHA256"
-)
-~~~
-
-## First supported experiment
+For the companion recovery experiment:
 
 ```sh
 keep demo recovery
 ```
 
-The [installed experiment](../acceptance/installed_sg32_resources.mjs) writes an append-only, fsynced local outbox, injects lost acknowledgments and starts fresh processes. It compares actual sink effects with committed and reserved capacity. No real payment, mail, model request or private data is involved. Its provider throws if called.
+It compares actual append-only local outbox effects against committed/reserved capacity, including lost acknowledgments and fresh-process restarts. The 24 named synthetic checks require no Git or model account; the provider throws if called.
 
-The 24 checks cover acknowledged work, uncertainty after adapter entry, unsuccessful results, pre-entry refusal, useful work when capacity remains, restarted/concurrent permit reuse and a durable claim with no adapter entry. The same cases run under personal and injected-tenant configurations.
+## Continue on your own repository
 
-For artifact-specific verification, the harness also retains its original interface:
+[Configure a provider and repository](installed-solve.md), run `keep doctor`, then submit one bounded goal with `keep solve`. Review the printed project approval and exact-proposal merge/veto controls. The selected model's accounting, processing and authority requirements apply. The walkthrough's scripted result is not a model-quality prediction.
 
-```sh
-node acceptance/installed_sg32_resources.mjs /absolute/installed/keep /absolute/keep-0.0.5-preview.1.tgz PACKAGE_SHA256
-```
-
-The CLI demonstration invokes the installed-only form and reports the local checks. The release qualification separately verifies the exact archive and installed bytes.
+Keep retains [FrontDoor monetary admission](frontdoor-metering.md), [provider-check pricing](provider-check-pricing.md), [memory query admission](memory-recall-embedding.md), and [manual write](manual-memory-write.md)/[correction](manual-memory-correction.md) controls from recent checkpoints.
 
 ## Interpreting the result
 
-A passing experiment demonstrates the named synthetic accounting and restart behaviors. It is builder-administered evidence, not independent replication, production identity verification, authoritative confirmation of remote effects or proof of general coding quality. A possibly executed obligation remains reserved until supported reconciliation; unknown obligations do not automatically expire.
+The [release record](../KEEP_RELEASE.md) and [evidence](evidence.md) bind actual checks to exact source and package identities. Component passes, a scripted workflow and complete source/installed qualification are distinct. Historical receipts keep their original identities and counts.
 
-The native client/supervisor exchange is currently refusal-only development functionality. Shipping its genuine binaries does not imply that they launch arbitrary workloads or provide production isolation. Its custody checks remain unchanged; see [Security](../SECURITY.md).
+The demonstration reports best-effort process isolation. Required-jail operations separately require measured Bubblewrap 0.13.0 and a qualified namespace environment; absent/mismatched launcher bytes must refuse. Installing Keep does not install a host launcher or change shared-host policy. Native binaries have [additional custody prerequisites](../SECURITY.md#optional-native-refusal-transport-installation-prerequisites); their presence does not qualify arbitrary workloads or production PROBER/D3 authority.
 
-The completed development checkpoint ran all ordinary, release/security and native phases.
-That result belongs to its exact development inputs; it does not automatically
-qualify this exported source or a new archive. Public export checks and historical
-artifact results appear separately in [the checkpoint record](../KEEP_RELEASE.md)
-and [the evidence record](evidence.md#known-test-status).
+Evidence remains same-agent on a synthetic Linux fixture. It does not establish real-model success rates, live organization identity/custody, offsite disaster survival, universal spend enforcement or exactly-once effects across arbitrary services. Personal and organization requirements remain coequal in the [completion map](completion-map.md); this preview is not complete-product readiness.
 
-Use synthetic data and isolated resources. Production credentials, unrestricted paid services, outside identity providers, Firecracker hosts and required project jails require their own supported setup and qualification. No automatic native fallback or universal provider compatibility is promised.
-
-## Upgrading existing data
-
-Stop writers and retain a verified private backup of the complete data directory before opening it with this version. Do not change schema labels or mix operational files from different releases. Review [skill-registry upgrades](skill-registry.md#upgrading-data-from-the-september-9-research-preview), [backup guidance](backup.md) and [the current checkpoint notes](maintenance-2026-10-04.txt).
-
-## Build from source
-
-Contributors use the complete source export, not the binary package, for compilation and tests. Install locked npm dependencies, configure the pinned Rust 1.97.1 toolchain with the `x86_64-unknown-linux-musl` target, and provide host C build tools. `RUSTUP_HOME` or `KEEP_P1_TOOLCHAIN_ROOT` selects the already acquired toolchain; the build verifies its identities and does not fetch replacements. See [Contributing](../WORKFLOW.md).
-
-Optional Firecracker fixture qualification takes explicit `KEEP_FIRECRACKER_RUNTIME_DIR`, `KEEP_FIRECRACKER_IMAGES_DIR`, `KEEP_FIRECRACKER_ASSETS_DIR` and `KEEP_NATIVE_FIXTURE_BUILD_DIR` paths. The non-authorizing historical P2 dependency inventory normalizes maintainer paths; regenerate it with the current collector before claiming a newly qualified optional P2 closure. This does not affect the introductory binary transport build or recovery experiment.
+Before upgrading existing state, stop its writers and retain a verified complete private backup. See [backup guidance](backup.md) and the matching release notes; do not mix old/new writers or interfere with other instances. Older 0.0.5 and affected 0.0.4 releases retain their original archives, tags and qualification records.

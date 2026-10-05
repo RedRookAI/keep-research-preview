@@ -1,6 +1,6 @@
 # A configured repository goal with solve
 
-Development source 0.0.11-preview.1 connects `keep solve` to the existing project runtime. The downloadable 0.0.5-preview.1 archive predates this change. Use a build/install of the new source checkpoint; no replacement downloadable artifact is qualified here.
+Keep **0.0.12-preview.1** includes installed solve through the project runtime. First try `keep demo project` for the scripted walkthrough, then configure an actual provider and your own repository as below.
 
 Configure the provider using the existing provider profile/environment contract. Repository work also requires KEEP_REPOSITORY, KEEP_WORKSPACE_BASE (separate from the source), KEEP_REVISION (exact commit), KEEP_REPO_REF, KEEP_BASE_BRANCH (defaults to main, must point at that commit), and KEEP_TEST_COMMAND with optional KEEP_TEST_ARGS_JSON. Run `keep doctor` first; its readiness result is configuration evidence, not a model-quality or production-host qualification. `keep onboard` captures directives; it does not configure these execution settings.
 

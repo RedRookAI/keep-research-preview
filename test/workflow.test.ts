@@ -12,7 +12,7 @@ const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
   repository?: unknown; bugs?: unknown; homepage?: unknown;
 };
 const publicDocs = ["README.md", "WORKFLOW.md", "CLAUDE.md", "SECURITY.md",
-  "docs/research-preview.md", "docs/research.md", "docs/evidence.md", "docs/licensing.md", "docs/semantic-memory.md", "docs/skill-registry.md"];
+  "docs/research-preview.md", "docs/quickstart.md", "docs/portfolio-walkthrough.md", "docs/research.md", "docs/evidence.md", "docs/licensing.md", "docs/semantic-memory.md", "docs/skill-registry.md"];
 
 test("public instructions have existing local links and no private planning or card prerequisites", () => {
   for (const name of publicDocs) {
@@ -88,8 +88,8 @@ test("full runner retains product tests and distinguishes partial/portable profi
 });
 
 test("documented expected-checksum gate stops before install on mismatch or missing inputs", () => {
-  const guide = readFileSync(join(root, "docs/research-preview.md"), "utf8");
-  const block = guide.match(/~~~sh\n(\(\n[\s\S]*?\n\))\n~~~/u)?.[1];
+  const guide = readFileSync(join(root, "docs/quickstart.md"), "utf8");
+  const block = guide.match(/```sh\n(\(\n[\s\S]*?\n\))\n```/u)?.[1];
   assert.ok(block, "documented install block missing");
   for (const variant of ["matching", "mismatch", "malformed", "unset", "missing-archive"] as const) {
     const fixture = mkdtempSync(join(tmpdir(), "keep-checksum-guide-"));
@@ -98,14 +98,20 @@ test("documented expected-checksum gate stops before install on mismatch or miss
       if (variant !== "missing-archive") writeFileSync(join(fixture, `keep-${pkg.version}.tgz`), bytes);
       const bin = join(fixture, "bin"), sentinel = join(fixture, "calls");
       mkdirSync(bin);
-      for (const name of ["npm", "node"])
-        writeFileSync(join(bin, name), `#!/bin/sh\nprintf '%s\\n' '${name}' >> "$KEEP_CHECK_SENTINEL"\n`, { mode: 0o755 });
+      writeFileSync(join(bin, "npm"), `#!/bin/sh
+set -eu
+printf '%s\\n' npm >> "$KEEP_CHECK_SENTINEL"
+test "$1" = install && test "$2" = --prefix
+mkdir -p "$3/node_modules/.bin"
+printf '%s\\n' '#!/bin/sh' 'printf "%s\\n" keep >> "$KEEP_CHECK_SENTINEL"' > "$3/node_modules/.bin/keep"
+chmod +x "$3/node_modules/.bin/keep"
+`, { mode: 0o755 });
       const env: NodeJS.ProcessEnv = { PATH: `${bin}:/usr/bin:/bin`, LANG: "C", TMPDIR: fixture, KEEP_CHECK_SENTINEL: sentinel };
       if (variant !== "unset") env.KEEP_RELEASE_SHA256 = variant === "mismatch" ? "0".repeat(64) : variant === "malformed" ? "not-a-checksum" : createHash("sha256").update(bytes).digest("hex");
       const result: ReturnType<typeof spawnSync> = spawnSync("/bin/sh", ["-c", block], { cwd: fixture, env, encoding: "utf8", timeout: 5000 });
       if (variant === "matching") {
         assert.equal(result.status, 0, String(result.stderr));
-        assert.equal(readFileSync(sentinel, "utf8"), "npm\nnode\n");
+        assert.equal(readFileSync(sentinel, "utf8"), "npm\nkeep\nkeep\n");
       } else {
         assert.notEqual(result.status, 0, variant);
         assert.equal(existsSync(sentinel), false, `${variant} reached installation`);

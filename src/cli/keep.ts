@@ -38,6 +38,7 @@ import { configuredSemanticEncoder, encoderProfileDescriptor, encoderProfileFrom
 import { loadMemoryRetentionProfile, memoryRetentionProfileFromArgs, writeMemoryRetentionProfile } from "./memory_retention_profile.js";
 
 import { runRecoveryDemo } from "./recovery_demo.js";
+import { runProjectDemo } from "./project_demo.js";
 
 const SYSTEM_RELEASE_TRUST_ROOT = "/etc/keep/release-root.cbor";
 
@@ -52,6 +53,13 @@ export function executingPackageRoot(): string {
 }
 
 export async function main(argv: readonly string[]): Promise<number> {
+  if (argv[0] === "demo" && !["project", "recovery"].includes(argv[1] ?? "")) {
+    process.stderr.write("Usage: keep demo project | keep demo recovery\n"); return 2;
+  }
+  if (argv[0] === "demo" && argv[1] === "project") {
+    if (argv.length !== 2) { process.stderr.write("Usage: keep demo project\n"); return 2; }
+    return runProjectDemo(executingPackageRoot());
+  }
   const solveRequested = argv[0] === "solve";
   if (solveRequested && (!argv.slice(1).join(" ").trim() || argv.slice(1).some(arg => arg.startsWith("--")))) {
     process.stderr.write('Usage: keep solve "<repository goal>" (no options). Run keep doctor to inspect provider and repository setup.\n');

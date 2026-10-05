@@ -1,6 +1,6 @@
 {
   "name": "keep",
-  "version": "0.0.11-preview.1",
+  "version": "0.0.12-preview.1",
   "description": "Self-hostable, provider-agnostic build orchestrator with consequence-gated autonomy",
   "main": "dist/src/index.js",
   "scripts": {
@@ -92,7 +92,9 @@
     "docs/memory-recall-embedding.md",
     "docs/manual-memory-write.md",
     "docs/manual-memory-correction.md",
-    "docs/installed-solve.md"
+    "docs/installed-solve.md",
+    "acceptance/installed_solve.mjs",
+    "docs/portfolio-walkthrough.md"
   ],
   "exports": {
     ".": "./dist/src/index.js",

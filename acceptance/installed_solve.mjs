@@ -66,12 +66,14 @@ try {
   assert.equal(result.proposal.checks.testsPassed, true); assert.equal(result.proposal.checks.vettingCleared, true);
   assert.deepEqual(result.proposal.checks.passedTests, ["limit", "goal: requested outcome"]);
   assert.equal(result.project.artifacts.vet_artifact.passed, true);
+  assert.equal(readFileSync(join(workspaces, "project/src/retry.mjs"), "utf8"), "export const retryLimit = 7;\n");
+  assert.match(result.proposal.diff, /\+export const retryLimit = 7;/u);
   const beforeRestart = calls.length; await stop(); origin = await start();
   const restored = await observe(); assert.equal(calls.length, beforeRestart); assert.deepEqual(restored.proposal, result.proposal);
   const denied = await command(["solve", "do not dispatch"], { ...remote(), KEEP_GATEWAY_TOKEN: "d".repeat(64) }, 1); assert.match(denied, /401|403/u); assert.equal(calls.length, beforeRestart);
   const digest = result.proposal.rollback.patchSha256;
   const decision = await command(["merge", runId, "veto", "--proposal=" + digest], remote());
   assert.equal(readFileSync(join(source, "src/retry.mjs"), "utf8"), "export const retryLimit = 0;\n");
-  const receipt = { status: "PASS", version: JSON.parse(readFileSync(join(installed, "package.json"))).version, installed, configuredPosture: "autonomous", solvePosture: "approval-required", localInstalledStart: true, explicitApprovalBeforeDispatch: true, reviewableProposal: true, passedTests: result.proposal.checks.passedTests, artifactVettingPassed: true, processIsolationEvidence: result.project.artifacts.vet_artifact.isolation, solved: true, controlledModelCalls: calls.length, sourceUnchanged: true, restartNoReplay: true, wrongTokenRefused: true, explicitVetoOutput: decision, paidCalls: 0, limits: "Controlled model responses; same-agent Linux fixture with best-effort process isolation, not real-model quality or production qualification; no new downloadable release." };
+  const receipt = { status: "PASS", root, runId, diff: result.proposal.diff, version: JSON.parse(readFileSync(join(installed, "package.json"))).version, installed, configuredPosture: "autonomous", solvePosture: "approval-required", localInstalledStart: true, explicitApprovalBeforeDispatch: true, reviewableProposal: true, passedTests: result.proposal.checks.passedTests, artifactVettingPassed: true, processIsolationEvidence: result.project.artifacts.vet_artifact.isolation, solved: true, controlledModelCalls: calls.length, sourceUnchanged: true, restartNoReplay: true, wrongTokenRefused: true, explicitVetoOutput: decision, paidCalls: 0, modelResponses: "scripted-loopback", operatorDecisions: "simulated approval then exact-proposal veto", limits: "Controlled model responses; same-agent Linux fixture with best-effort process isolation, not real-model quality or production qualification." };
   writeFileSync(join(root, "result.json"), JSON.stringify(receipt, null, 2)); console.log(JSON.stringify(receipt));
 } finally { await stop(); model.closeAllConnections(); await new Promise(resolve => model.close(resolve)); }

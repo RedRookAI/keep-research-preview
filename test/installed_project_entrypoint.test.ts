@@ -7,6 +7,19 @@ import { join } from "node:path";
 import { gitChildHardening } from "../src/cli/runtime_config.js";
 import { materializeRepository, type MaterializationJournal, type MaterializationRecord } from "../src/git/repository_materializer.js";
 
+test("project walkthrough invalid arguments and missing Git refuse without ordinary product state", () => {
+  const root = mkdtempSync(join(tmpdir(), "keep-project-demo-prerequisites-")), data = join(root, "ordinary-data");
+  const inherited = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith("KEEP_")));
+  try {
+    for (const args of [["demo"], ["demo", "unknown"], ["demo", "project", "extra"]]) {
+      const result = spawnSync(process.execPath, [join(process.cwd(), "dist/src/main.js"), ...args], { cwd: root, env: { ...inherited, KEEP_DATA_DIR: data }, encoding: "utf8" });
+      assert.equal(result.status, 2); assert.match(result.stderr, /Usage: keep demo/u); assert.equal(existsSync(data), false);
+    }
+    const result = spawnSync(process.execPath, [join(process.cwd(), "dist/src/main.js"), "demo", "project"], { cwd: root, env: { ...inherited, PATH: root, KEEP_DATA_DIR: data }, encoding: "utf8" });
+    assert.equal(result.status, 2); assert.match(result.stderr, /needs Git on PATH/u); assert.equal(existsSync(data), false);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
 test("packaged solve rejects invalid input or incomplete setup before product state", () => {
   const root = mkdtempSync(join(tmpdir(), "keep-solve-setup-")), dataDir = join(root, "data");
   const inherited = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith("KEEP_")));

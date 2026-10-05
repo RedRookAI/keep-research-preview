@@ -118,6 +118,8 @@ export const USAGE = `keep — safe, auditable, self-hostable build automation
 Usage: keep <command> [args]
 
 Commands:
+  demo project         Walk through a tested repository proposal with scripted local responses.
+  demo recovery        Inspect 24 synthetic recovery checks; no model calls.
   doctor               Validate installed project readiness without calls or mutation.
   provider configure   Save a non-secret local/external, owner/organization provider profile.
   provider show        Show the active non-secret provider profile.

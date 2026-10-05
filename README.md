@@ -1,76 +1,56 @@
 # Keep
 
-Keep is a self-hosted platform for AI agents working on ongoing projects. It combines persistent knowledge, reusable skills and a native execution runtime with controls for permissions, acceptance and recovery. Security is at the heart of its approach to autonomy: useful work should preserve the operator's control over data, resources and effects.
+Turn a repository goal into a tested, reviewable proposal, with an audit trail and explicit decisions.
 
-## Current research preview
+Keep is a self-hosted agent platform for ongoing projects. Its repository workflow combines a separate working copy, test execution, review controls and recoverable project state. This Linux x64 research preview lets you try that workflow before configuring a model account.
 
-**0.0.5-preview.1** carries the completed scoped audit remedies, including the
-measured Bubblewrap 0.13.0 identity across all three source launcher consumers.
-The Linux x64 package includes compiled JavaScript and the three existing native
-transport executables. Read the [exact release record](KEEP_RELEASE.md) for
-artifact identities, actual qualification results and boundaries.
+## Try a change you can inspect
 
-Release assets: [keep-preview-2026-10-04.1](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-04.1).
-Verify the matching package against the release record before installation;
-[installation and the first experiment](docs/quickstart.md) need Node 22 and npm,
-without a Rust or C compiler. The historical **0.0.4-preview.1** archive retains
-its affected launcher pin and original checksum.
-
-## Current development source
-
-**0.0.11-preview.1** connects [installed solve](docs/installed-solve.md) to the existing configured repository workflow with approval required. Manual memory monetary admission from 0.0.10-preview.1 remains available. See current state and source-bound evidence for qualification limits.
-
-This is a source checkpoint; the downloadable 0.0.5-preview.1 binary retains its
-original contents and qualification.
-
-## Build and try the current source
-
-Use Linux x64 and Node.js 22.23.2. Source builds additionally require the pinned
-Rust 1.97.1 toolchain, its musl target and host C build tools. Follow the
-[source quickstart](docs/quickstart.md) and [build prerequisites](WORKFLOW.md).
-After building:
+Follow the [checksum-first installation guide](docs/quickstart.md), then run:
 
 ```sh
-node dist/src/main.js version
-node dist/src/main.js demo recovery
+keep demo project
 ```
 
-Expected source version: `keep 0.0.11-preview.1`. The recovery experiment uses synthetic
-local outbox effects and no model calls. Its 24 cases exercise accounting,
-uncertain acknowledgements and fresh-process restart. A passing demonstration
-has narrower scope than complete source or installed-artifact qualification.
+You need Node.js 22.23.2, npm and Git. No API key, Rust or C compiler is needed for the installed walkthrough. It creates its own temporary repository and uses two scripted local responses; sample approval and veto actions are simulated.
 
-The optional native refusal transport has separate custody requirements. See
-[Security](SECURITY.md#optional-native-refusal-transport-installation-prerequisites).
+```text
+PASS  Approval gate held: 0 model calls before sample approval
+PASS  Materialized change: retry limit 0 → 7
+PASS  Tests: limit; goal: requested outcome
+PASS  Restart retained the proposal without replay
+PASS  Wrong token refused; exact proposal vetoed; original source unchanged
+```
 
-## What this preview offers
+The command prints the real proposed diff and the directory containing the sample repository, edited workspace, test results and command records. You can inspect the result rather than taking a model's word for it. [What the walkthrough demonstrates](docs/portfolio-walkthrough.md) explains the scripted responses and evidence limits.
 
-Keep has CLI, gateway and client interfaces, project and memory storage, skill validation, governed coding workflows and resource-accounting mechanisms. The supported first-run result is the synthetic local recovery experiment. Provider-backed coding, enterprise identity and host isolation require their own configuration and qualification.
+```mermaid
+flowchart LR
+    Goal[Repository goal] --> Approval[Approval gate]
+    Approval --> Workspace[Separate workspace]
+    Workspace --> Tests[Repository and goal tests]
+    Tests --> Proposal[Reviewable diff]
+    Proposal --> Decision[Exact proposal decision]
+```
 
-This remains a research preview. Use synthetic data and isolated test resources while evaluating it. It is not qualified for unattended consequential production work, universal spending enforcement or exactly-once effects across arbitrary remote services. [Known limitations](docs/research-preview.md#interpreting-the-result) describe those boundaries.
+For the companion recovery experiment, run `keep demo recovery`: 24 synthetic checks, no model calls. For your own repository, [configure a provider and repository](docs/installed-solve.md), run `keep doctor`, then `keep solve "your goal"`.
 
-## Read further
+## Current preview
 
-- [October 5 manual write and correction checkpoint](docs/manual-memory-correction.md)
+**0.0.12-preview.1**, Linux x64. [Release and downloads](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1) · [Installation](docs/quickstart.md) · [Exact release record](KEEP_RELEASE.md).
 
-- [October 5 memory-recall query checkpoint](docs/memory-recall-embedding.md)
+This preview includes the repository walkthrough, installed solve wiring, budget-bound FrontDoor/provider diagnostics and manual memory/query monetary admission from the recent source checkpoints. The package carries compiled JavaScript, its existing bundled TypeScript dependency and three genuine native executables. Ordinary installation needs no native toolchain.
 
-- [October 5 provider-check fresh-price checkpoint](docs/provider-check-pricing.md)
-- [October 5 FrontDoor source checkpoint](docs/frontdoor-metering.md)
-- [October 5 provider-check source checkpoint](docs/provider-check.md)
-- [Preview installation and source quickstart](docs/quickstart.md)
-- [October 4 changes and qualification](docs/maintenance-2026-10-04.txt)
-- [Latest audit and security-update progress](docs/maintenance-2026-10-04.txt)
-- [Installation details and limitations](docs/research-preview.md)
-- [Release record and qualification evidence](KEEP_RELEASE.md)
-- [Current completion map and remaining work](docs/completion-map.md)
-- [Proposed security research](docs/security-experiments.md)
-- [Semantic memory](docs/semantic-memory.md), [skills](docs/skill-registry.md) and [backups](docs/backup.md)
-- [Contributing and source builds](WORKFLOW.md)
+The measured Bubblewrap 0.13.0 pin remains required for required-jail operations. Installing the package does not install a host launcher or change security policy. Optional native transport has separate [custody prerequisites](SECURITY.md#optional-native-refusal-transport-installation-prerequisites).
+
+A successful scripted walkthrough demonstrates this workflow, not general model quality, live organization onboarding or production isolation. Keep remains a research preview, with [explicit open requirements](docs/completion-map.md) and [evidence boundaries](docs/evidence.md). The older releases retain their original artifacts and qualification identities.
+
+## Explore the project
+
+- [Repository walkthrough and retained artifacts](docs/portfolio-walkthrough.md)
+- [Use a configured model on your repository](docs/installed-solve.md)
+- [Memory](docs/semantic-memory.md), [skills](docs/skill-registry.md), [backups](docs/backup.md) and [monetary accounting](docs/monetary-accounting.md)
+- [Qualification evidence](docs/evidence.md) and [remaining work](docs/completion-map.md)
+- [Contributing and pinned source builds](WORKFLOW.md)
 - [Security and private reporting](SECURITY.md)
 - [Licensing and attribution](docs/licensing.md)
-
-## Source contributors
-
-Binary-package users can skip source builds. Contributors need Node/npm, Git, the pinned Rust toolchain and host C build tools for native compilation. The source includes the locked dependencies and build instructions; see [Contributing](WORKFLOW.md).
-
