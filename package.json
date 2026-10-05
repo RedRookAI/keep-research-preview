@@ -1,6 +1,6 @@
 {
   "name": "keep",
-  "version": "0.0.10-preview.1",
+  "version": "0.0.11-preview.1",
   "description": "Self-hostable, provider-agnostic build orchestrator with consequence-gated autonomy",
   "main": "dist/src/index.js",
   "scripts": {
@@ -91,7 +91,8 @@
     "docs/provider-check-pricing.md",
     "docs/memory-recall-embedding.md",
     "docs/manual-memory-write.md",
-    "docs/manual-memory-correction.md"
+    "docs/manual-memory-correction.md",
+    "docs/installed-solve.md"
   ],
   "exports": {
     ".": "./dist/src/index.js",

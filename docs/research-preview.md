@@ -1,6 +1,6 @@
 # Research preview: install, run and inspect
 
-Current development source is **0.0.10-preview.1**, adding [manual write](manual-memory-write.md) and [correction](manual-memory-correction.md) admission, retaining [query admission](memory-recall-embedding.md) and [one provider-check fresh-price policy](provider-check-pricing.md). Downloadable archive identities and installation blocks below remain bound to 0.0.5-preview.1.
+Current development source is **0.0.11-preview.1**, connecting [installed solve](installed-solve.md) to the approval-required repository runtime. The downloadable archive remains 0.0.5-preview.1; no replacement archive is qualified here.
 
 It retains [budget-bound FrontDoor calls](frontdoor-metering.md) and [provider-check admission](provider-check.md).
 

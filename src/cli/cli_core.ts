@@ -86,6 +86,7 @@ export async function runGatewayCli(argv: readonly string[], io: CliIO, deps: Ga
     switch (command) {
       case "memory": return await cmdMemory(rest, io, deps);
       case "project": return await cmdProject(rest, io, deps);
+      case "solve": return await cmdRepositorySolve(rest, io, deps);
       case "projects": return await cmdProjects(io, deps);
       case "merge": return await cmdProjectMerge(rest, io, deps);
       case "revert": return await cmdProjectRevert(rest, io, deps);
@@ -94,7 +95,7 @@ export async function runGatewayCli(argv: readonly string[], io: CliIO, deps: Ga
         const response = await gatewayCall(deps, rest[0] === "status" ? "GET" : "POST", "/worker/" + rest[0], rest[0] === "status" ? undefined : { workerId: rest[1] });
         io.write(response.body); return { command, exitCode: response.status === 200 || response.status === 202 ? 0 : 1 };
       }
-      default: throw new Error("remote gateway mode supports project, projects, merge, revert, worker and memory commands");
+      default: throw new Error("remote gateway mode supports solve, project, projects, merge, revert, worker and memory commands");
     }
   } catch (error) { io.write(`Gateway operation failed: ${(error as Error).message}. A failed observation is not permission to repeat a mutation under a new key.`); return { command, exitCode: 1 }; }
 }
@@ -153,7 +154,8 @@ Commands:
                        Store/correct: --private-purpose=<id> retains exact private source only under host policy.
                        erase <id>: revoke its local key; outside copies remain pending.
                        hold <id> --hold-id=<ref> [--release]: register/release a named retention hold.
-  solve <description>  Describe a goal; Keep proposes a reviewed change (never merges).
+  solve <description>  Start the configured repository workflow with approval required.
+                       Follow project resume/merge controls printed for the run.
   status               List changes waiting for your review.
   review [<id>]        Review a proposed change and approve or decline it (add --plain for a
                        plain-language view for non-engineers).
@@ -291,6 +293,10 @@ async function cmdProject(rest: readonly string[], io: CliIO, deps: GatewayCliDe
   if (rest[0] === "jobs") return cmdProjectJobs(rest.slice(1), io, deps);
   if (rest[0] === "quarantine") return cmdProjectQuarantine(rest.slice(1), io, deps);
   if (rest[0] === "archive" || rest[0] === "delete") return cmdProjectLifecycle(rest[0], rest.slice(1), io, deps);
+  return cmdProjectStart(rest, io, deps);
+}
+
+async function cmdProjectStart(rest: readonly string[], io: CliIO, deps: GatewayCliDeps): Promise<CliResult> {
   const postureArg = rest.find((arg) => arg.startsWith("--posture="));
   const postureValue = postureArg?.slice("--posture=".length);
   if (postureValue !== undefined && postureValue !== "autonomous" && postureValue !== "policy-calibrated" && postureValue !== "approval-required") {
@@ -486,13 +492,10 @@ async function cmdOnboard(io: CliIO, deps: CliDeps): Promise<CliResult> {
 // ─── solve: run the pipeline to a human-gated PR, record it for review ───
 
 async function cmdSolve(rest: readonly string[], io: CliIO, deps: CliDeps): Promise<CliResult> {
+  if (!deps.solve) return cmdRepositorySolve(rest, io, deps);
   const description = rest.join(" ").trim();
   if (!description) {
     io.write("Tell me what to work on, e.g.  keep solve \"fix the bug where totals add tax twice\"");
-    return { command: "solve", exitCode: 2 };
-  }
-  if (!deps.solve) {
-    io.write("No model/repository is configured yet, so I can't solve here.\nRun `keep onboard` first, or configure a provider and repository.");
     return { command: "solve", exitCode: 2 };
   }
   const id = `KEEP-${(deps.clock ?? Date.now)().toString(36).toUpperCase()}`;
@@ -508,6 +511,17 @@ async function cmdSolve(rest: readonly string[], io: CliIO, deps: CliDeps): Prom
   io.write(renderSolveSummary(result.manifest));
   io.write(`\nReview it with:  keep review ${result.manifest.id}`);
   return { command: "solve", exitCode: 0 };
+}
+
+async function cmdRepositorySolve(rest: readonly string[], io: CliIO, deps: GatewayCliDeps): Promise<CliResult> {
+  const description = rest.join(" ").trim();
+  if (!description || rest.some(arg => arg.startsWith("--"))) {
+    io.write('Usage: keep solve "<repository goal>" (no options). Configure the provider and repository first; run keep doctor to inspect setup.');
+    return { command: "solve", exitCode: 2 };
+  }
+  // Start directly: a goal named "resume" or "delete" is never a control operation.
+  const result = await cmdProjectStart([description, "--posture=approval-required"], io, deps);
+  return { ...result, command: "solve" };
 }
 
 function renderSolveSummary(m: PrManifest): string {

@@ -1,6 +1,6 @@
 # Contributing to Keep
 
-The current public source checkpoint is **0.0.10-preview.1**; its narrower source
+The current public source checkpoint is **0.0.11-preview.1**; its narrower source
 evidence is in [the evidence record](docs/evidence.md). The downloadable binary
 remains **0.0.5-preview.1**, with its identities in [the release record](KEEP_RELEASE.md).
 

@@ -153,9 +153,32 @@ test("solve with no description exits 2 with guidance", async () => {
   assert.equal(r.exitCode, 2); assert.match(io.joined(), /Tell me what to work on/);
 });
 
-test("solve with no solve dep reports honestly (no fake success)", async () => {
-  const io = fakeIO(); const r = await runCli(["solve", "do a thing"], io, { app: newApp() });
-  assert.equal(r.exitCode, 2); assert.match(io.joined(), /No model\/repository is configured/);
+test("solve without legacy injection propagates canonical runtime refusal", async () => {
+  const io = fakeIO(); const r = await runCli(["solve", "do a thing"], io, { app: newApp(), gateway: async () => ({ status: 501, headers: {}, body: '{"error":"runtime unavailable"}' }) });
+  assert.equal(r.exitCode, 2); assert.match(io.joined(), /isn't available.*runtime unavailable/u);
+});
+
+test("installed and remote solve start only, require approval and preserve literal control-word goals", async () => {
+  for (const remote of [false, true]) for (const goal of ["resume", "delete", "fix retry limit"]) {
+    const io = fakeIO(); let calls = 0;
+    const deps = { app: newApp(), gatewayToken: "a".repeat(64), gatewayExpectedToken: "a".repeat(64), gateway: async (request: { method: string; path: string; headers: Record<string, string>; body: string }) => {
+      calls++; assert.equal(request.method, "POST"); assert.equal(request.path, "/project");
+      assert.equal(request.headers["authorization"], "Bearer " + "a".repeat(64));
+      assert.deepEqual(JSON.parse(request.body), { goal, posture: "approval-required" });
+      return { status: 200, headers: {}, body: JSON.stringify({ runId: "fixture", revision: 1, status: "waiting-approval", note: null, wait: { decisionId: "decision" } }) };
+    } };
+    const result = await (remote ? runGatewayCli : runCli)(["solve", goal], io, deps);
+    assert.equal(result.command, "solve"); assert.equal(result.exitCode, 0); assert.equal(calls, 1);
+    assert.match(io.joined(), /keep project resume fixture --approve=decision/u);
+  }
+});
+
+test("canonical solve invalid inputs have zero gateway calls", async () => {
+  for (const args of [[], [" "], ["fix", "--posture=autonomous"], ["--domain=writing"]]) {
+    const io = fakeIO(); let calls = 0;
+    const result = await runGatewayCli(["solve", ...args], io, { gateway: async () => { calls++; throw new Error("must not dispatch"); } });
+    assert.equal(result.exitCode, 2); assert.equal(calls, 0); assert.match(io.joined(), /Usage: keep solve/u);
+  }
 });
 
 test("a successful solve records a review.pending and prints the review hint (never merges)", async () => {

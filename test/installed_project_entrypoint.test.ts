@@ -7,6 +7,18 @@ import { join } from "node:path";
 import { gitChildHardening } from "../src/cli/runtime_config.js";
 import { materializeRepository, type MaterializationJournal, type MaterializationRecord } from "../src/git/repository_materializer.js";
 
+test("packaged solve rejects invalid input or incomplete setup before product state", () => {
+  const root = mkdtempSync(join(tmpdir(), "keep-solve-setup-")), dataDir = join(root, "data");
+  const inherited = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith("KEEP_")));
+  try {
+    for (const args of [["solve"], ["solve", "fix", "--posture=autonomous"], ["solve", "fix"]]) {
+      const result = spawnSync(process.execPath, [join(process.cwd(), "dist/src/main.js"), ...args], { cwd: root, encoding: "utf8", env: { ...inherited, KEEP_DATA_DIR: dataDir } });
+      assert.equal(result.status, 2, result.stderr); assert.match(result.stderr, /keep doctor/u);
+      assert.equal(existsSync(dataDir), false); assert.doesNotMatch(result.stderr, /\n\s+at /u);
+    }
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
 test("installed help and version require no provider and create no product state", () => {
   const root = mkdtempSync(join(tmpdir(), "keep-installed-static-"));
   const dataDir = join(root, "data");

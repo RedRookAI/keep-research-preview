@@ -18,12 +18,8 @@ its affected launcher pin and original checksum.
 
 ## Current development source
 
-**0.0.10-preview.1** adds [manual memory writes](docs/manual-memory-write.md) and [manual corrections](docs/manual-memory-correction.md) to monetary admission for one direct encoder, retaining [memory-recall query admission](docs/memory-recall-embedding.md). It retains the fresh official price observation under an explicit
-maximum-age policy for the direct DeepSeek `deepseek-flash` provider-check route.
-Stale, missing, unreadable or unsupported prices refuse before model dispatch.
-Read [research, configuration and limits](docs/provider-check-pricing.md).
-It retains [budget-bound diagnostics](docs/provider-check.md) and
-[built-in FrontDoor admission with live request authority](docs/frontdoor-metering.md).
+**0.0.11-preview.1** connects [installed solve](docs/installed-solve.md) to the existing configured repository workflow with approval required. Manual memory monetary admission from 0.0.10-preview.1 remains available. See current state and source-bound evidence for qualification limits.
+
 This is a source checkpoint; the downloadable 0.0.5-preview.1 binary retains its
 original contents and qualification.
 
@@ -39,7 +35,7 @@ node dist/src/main.js version
 node dist/src/main.js demo recovery
 ```
 
-Expected source version: `keep 0.0.10-preview.1`. The recovery experiment uses synthetic
+Expected source version: `keep 0.0.11-preview.1`. The recovery experiment uses synthetic
 local outbox effects and no model calls. Its 24 cases exercise accounting,
 uncertain acknowledgements and fresh-process restart. A passing demonstration
 has narrower scope than complete source or installed-artifact qualification.

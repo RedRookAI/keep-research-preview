@@ -4,8 +4,8 @@
  * Zero runtime deps (node:readline, node:fs, node:os, node:path are built-ins).
  *
  * Honesty: onboard/status/review/audit are fully live here (they need only the app + spine). A3 resolves and wires
- * provider/repository/workspace into the installed composition root, but `solve` remains absent until A10 supplies
- * repository materialization and the complete pipeline deps. Until then the CLI says so rather than faking a solve.
+ * provider/repository/workspace into the installed composition root. Installed `solve` starts the same project
+ * runtime with approval required; injected legacy solvers remain a library/test compatibility path.
  */
 
 import { createInterface } from "node:readline";
@@ -52,6 +52,11 @@ export function executingPackageRoot(): string {
 }
 
 export async function main(argv: readonly string[]): Promise<number> {
+  const solveRequested = argv[0] === "solve";
+  if (solveRequested && (!argv.slice(1).join(" ").trim() || argv.slice(1).some(arg => arg.startsWith("--")))) {
+    process.stderr.write('Usage: keep solve "<repository goal>" (no options). Run keep doctor to inspect provider and repository setup.\n');
+    return 2;
+  }
   if (argv[0] === "demo" && argv[1] === "recovery") {
     if (argv.length !== 2) { process.stderr.write("Usage: keep demo recovery\n"); return 2; }
     return runRecoveryDemo(executingPackageRoot());
@@ -123,10 +128,17 @@ export async function main(argv: readonly string[]): Promise<number> {
   }
   const dataDir = resolve(runtimeEnv["KEEP_DATA_DIR"] ?? join(homedir(), ".keep"));
   const directDomainRequested = argv.some((arg) => arg.startsWith("--domain="));
-  const projectCommand = workerRequested || (!directDomainRequested && ["project", "projects", "merge", "revert"].includes((argv[0] ?? "").toLowerCase()));
+  const projectCommand = workerRequested || solveRequested || (!directDomainRequested && ["project", "projects", "merge", "revert"].includes((argv[0] ?? "").toLowerCase()));
   const domainSurfaceRequested = directDomainRequested || (argv[0] === "serve" && argv.includes("--gateway"));
   const organizationCommand = runtimeEnv["KEEP_PROVIDER_AUTHORITY"]?.toLowerCase() === "organization";
-  const captured = projectCommand || organizationCommand || runtimeEnv["KEEP_ENCODER_PROFILE"] !== undefined || runtimeEnv["KEEP_ENCODER_API_KEY"] !== undefined ? captureRuntimeContract(runtimeEnv, { cwd: process.cwd() }, { projectRequired: projectCommand }) : undefined;
+  let captured: CapturedRuntimeContract | undefined;
+  try {
+    captured = projectCommand || organizationCommand || runtimeEnv["KEEP_ENCODER_PROFILE"] !== undefined || runtimeEnv["KEEP_ENCODER_API_KEY"] !== undefined ? captureRuntimeContract(runtimeEnv, { cwd: process.cwd() }, { projectRequired: projectCommand }) : undefined;
+  } catch (error) {
+    if (!solveRequested) throw error;
+    process.stderr.write(`Solve setup incomplete: ${(error as Error).message}\nRun keep doctor. Configure a provider and KEEP_REPOSITORY, KEEP_WORKSPACE_BASE, KEEP_REVISION, KEEP_REPO_REF and KEEP_TEST_COMMAND before starting a repository goal.\n`);
+    return 2;
+  }
   const capturedCredential = captured ? await loadCapturedCredential(captured.credentialReference, runtimeEnv) : undefined;
   const encoderCredential = captured ? await loadCapturedCredential(captured.encoderCredentialReference, runtimeEnv) : undefined;
   const repositoryFreeProviderCheck = (argv[0] ?? "").toLowerCase() === "provider-check";
