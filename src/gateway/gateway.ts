@@ -71,7 +71,7 @@ export interface EmbeddingBackendInfo {
  * Domain code (retrieval, fitness, dreaming) depends on THIS, never a provider.
  */
 export class ModelGateway {
-  constructor(private readonly provider: ModelProvider) {}
+  constructor(private readonly provider: ModelProvider, private readonly queryEmbedding?: (query: string) => Promise<Embedding | undefined>) {}
 
   get providerName(): string {
     return this.provider.name;
@@ -88,6 +88,11 @@ export class ModelGateway {
   /** Embeddings for retrieval/learning — the path that was hardcoded (fix #2). */
   embed(texts: readonly string[]): Promise<Embedding[]> {
     return this.provider.embed(texts);
+  }
+
+  /** Query-only host capability; document/fitness embedding keeps its separate path. */
+  async embedQuery(query: string): Promise<Embedding | undefined> {
+    return this.queryEmbedding ? this.queryEmbedding(query) : (await this.provider.embed([query]))[0];
   }
 
   embedBounded(texts: readonly string[], options: BoundedEmbeddingOptions): Promise<BoundedEmbeddingResult> {

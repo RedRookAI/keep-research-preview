@@ -439,7 +439,7 @@ export class MemoryStore {
    */
   async retrieve(query: string, k: number, minTier: TrustTier = "candidate", agentId?: string, projectId?: string, includeShared = true): Promise<RetrievalHit[]> {
     if (this.partitionScope && ((agentId !== undefined && agentId !== this.partitionScope.agentId) || (projectId !== undefined && projectId !== this.partitionScope.projectId))) return [];
-    const [qvec] = await this.gateway.embed([query]);
+    const qvec = await this.gateway.embedQuery(query);
     if (!qvec) return [];
     const minWeight = TIER_WEIGHT[minTier];
     // M2 STRUCTURAL ISOLATION: the candidate id-set is the shared space + ONLY the querying agent's own bucket.

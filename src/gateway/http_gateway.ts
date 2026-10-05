@@ -1357,8 +1357,15 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     const denied = gate("memory.read"); if (denied) return denied;
     const q = String(req.query["q"] ?? "");
     const agentId = req.query["agentId"] !== undefined ? String(req.query["agentId"]) : undefined;
-    const hits = await memoryRecall(app.secondBrain.memory, { query: q, ...(agentId !== undefined ? { agentId } : {}), ...(tenant === undefined ? {} : { projectId: tenant }) });
-    return json(200, { hits });
+    try {
+      const hits = await app.memoryRecall(q, { ...(agentId === undefined ? {} : { agentId }),
+        ...(tenant === undefined ? {} : { subject: tenant }),
+        ...(sec.identity === undefined || req.headers["x-keep-session"] === undefined ? {} : { sessionId: req.headers["x-keep-session"] }),
+      });
+      return json(200, { hits });
+    } catch {
+      return json(409, { error: "memory recall unavailable; preserve pending accounting and resolve admission before retrying" });
+    }
   }
   if (req.method === "POST" && req.path === "/memory/update") {
     const denied = gate("memory.write"); if (denied) return denied;

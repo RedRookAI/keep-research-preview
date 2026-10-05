@@ -25,12 +25,18 @@ export interface BoundedEmbeddingOptions {
   readonly assertAuthority?: () => void;
   /** Trusted host supplies its existing durable recovery reservation. Not egress admission. */
   readonly reserve: (work: EmbeddingWork) => Promise<EmbeddingWorkControl>;
+  /** May lower the configured attempt ceiling, never raise it. */
+  readonly maxAttempts?: number;
   readonly maxBatchWindows?: number;
   readonly maxBatchBytes?: number;
   readonly maxResponseBytes?: number;
   readonly signal?: AbortSignal;
 }
 export interface BoundedEmbeddingResult {
+  /** Aggregate observed input usage. Missing/inconsistent counters never imply zero. */
+  readonly usage?: TokenUsage;
+  readonly usageComplete?: boolean;
+  readonly model?: string;
   readonly vectors: readonly Embedding[];
   /** Worst-case reserved exposure, including retries; unused slots are not refunded. */
   readonly reserved: EmbeddingWork;
@@ -184,11 +190,13 @@ export class HttpProvider implements ModelProvider {
    * memory remains lexical until model/role/transform and document-egress admission
    * are wired by the host. This primitive never grants that authority itself. */
   async embedBounded(texts: readonly string[], options: BoundedEmbeddingOptions): Promise<BoundedEmbeddingResult> {
+    const maxAttempts = options.maxAttempts ?? this.maxAttempts;
     const batchWindows = options.maxBatchWindows ?? 64, batchBytes = options.maxBatchBytes ?? 65_536;
     const responseBytes = options.maxResponseBytes ?? 4_194_304;
     if (!Number.isSafeInteger(batchWindows) || batchWindows < 1 || batchWindows > 256 ||
         !Number.isSafeInteger(batchBytes) || batchBytes < 1 || batchBytes > 1_048_576 ||
         !Number.isSafeInteger(responseBytes) || responseBytes < 1 || responseBytes > 8_388_608 ||
+        !Number.isSafeInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > this.maxAttempts ||
         !Number.isSafeInteger(this.maxAttempts) || this.maxAttempts < 1 || this.maxAttempts > 16 ||
         !Number.isSafeInteger(this.timeoutMs) || this.timeoutMs < 1 || this.timeoutMs > 86_400_000 ||
         !Number.isSafeInteger(this.baseBackoffMs) || this.baseBackoffMs < 0 ||
@@ -213,16 +221,18 @@ export class HttpProvider implements ModelProvider {
       } else batches.push({ path: wire.path, body, bytes, windows: items.length });
     };
     for (let start = 0; start < texts.length; start += batchWindows) addBatch(texts.slice(start, start + batchWindows));
-    const reserved = Object.freeze({ requests: batches.length * this.maxAttempts,
-      inputBytes: batches.reduce((n, b) => n + b.bytes, 0) * this.maxAttempts, windows: texts.length * this.maxAttempts });
+    const reserved = Object.freeze({ requests: batches.length * maxAttempts,
+      inputBytes: batches.reduce((n, b) => n + b.bytes, 0) * maxAttempts, windows: texts.length * maxAttempts });
     const dispatched = { requests: 0, inputBytes: 0, windows: 0 };
     if (!batches.length) return { vectors: [], reserved, dispatched };
     const control = await options.reserve(reserved), vectors: Embedding[] = [];
     let dimension: number | undefined, observedHttpFailure = false;
+    let usageComplete = true, model: string | undefined;
+    const usage = { freshInputTokens: 0, cachedInputTokens: 0, outputTokens: 0 };
     try {
       for (const batch of batches) {
         let delay = 0;
-        for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
           const result = await control.runRequest(batch.bytes, batch.windows, async budgetSignal => {
             const signal = options.signal === undefined ? budgetSignal : AbortSignal.any([budgetSignal, options.signal]);
             signal.throwIfAborted();
@@ -248,11 +258,17 @@ export class HttpProvider implements ModelProvider {
               if (!dimension || vector.length !== dimension || !vector.every(value => typeof value === "number" && Number.isFinite(value)) ||
                   !Number.isFinite(norm) || norm <= 0) throw new Error("invalid embedding vector dimension or values");
             }
+            if (parsed.usageComplete !== true || (model !== undefined && model !== parsed.model)) usageComplete = false;
+            model ??= parsed.model;
+            usage.freshInputTokens += parsed.usage.freshInputTokens;
+            usage.cachedInputTokens += parsed.usage.cachedInputTokens;
+            usage.outputTokens += parsed.usage.outputTokens;
+            if (!Object.values(usage).every(n => Number.isSafeInteger(n) && n >= 0)) usageComplete = false;
             return { status: res.status, retryAfter: undefined, vectors: parsed.vectors };
           });
           if (result.vectors) { vectors.push(...result.vectors); break; }
           const permanent = result.status !== 429 && result.status < 500;
-          if (permanent || attempt === this.maxAttempts) {
+          if (permanent || attempt === maxAttempts) {
             observedHttpFailure = true;
             throw new ProviderError(`embedding HTTP ${result.status}`, result.status, permanent);
           }
@@ -260,7 +276,7 @@ export class HttpProvider implements ModelProvider {
         }
       }
       await control.complete();
-      return { vectors, reserved, dispatched: Object.freeze({ ...dispatched }) };
+      return { vectors, reserved, dispatched: Object.freeze({ ...dispatched }), usage: Object.freeze(usage), usageComplete, ...(model === undefined ? {} : { model }) };
     } catch (error) {
       // Known HTTP refusal can close observed work. Unknown/late/invalid responses
       // are held by runRequest; complete must not clear that durable hold.

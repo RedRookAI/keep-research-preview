@@ -32,8 +32,7 @@ have zero token fees in composition; this does not measure hosting costs or atte
 that arbitrary injected development code is network-free.
 
 The October 5 development source meters `provider-check` and built-in FrontDoor
-model calls through this ledger. Other direct interactive calls and ordinary
-embeddings remain outside it. Bounded embedding work has a separate request/byte/window budget. The velocity
+model calls through this ledger. [One ordinary memory-recall query route](memory-recall-embedding.md) now also uses it under an explicit dated price declaration. Other direct interactive calls and document/task/fitness embeddings remain outside this monetary coverage. Bounded embedding work has a separate request/byte/window budget. The velocity
 breaker measures rate after calls; its post-call error does not establish non-execution.
 These distinctions are why Keep does not advertise a universal spending ceiling.
 

@@ -950,19 +950,19 @@
       "title": "Token and cost governance",
       "category": "IMPLEMENTED_BUT_UNQUALIFIED",
       "implementation": "PARTIAL_CURRENT_IMPLEMENTATION",
-      "gap": "Autonomous generation, provider-check and built-in FrontDoor use durable monetary reservations. One direct DeepSeek diagnostic now requires fresh attributable prices under explicit age policy. Other pricing coverage, custom brains, ordinary embeddings/direct calls, live organization custody and universal billing remain open.",
-      "next_smallest_leaf": "Meter one ordinary embedding route with explicit encoder identity, projection/usage and applicable pricing; refuse unavailable admission.",
+      "gap": "Autonomous generation, provider-check, built-in FrontDoor and one direct ordinary recall-query encoder use durable monetary reservations. Query pricing is an explicit dated operator declaration; one direct DeepSeek diagnostic uses fresh attributable prices. Document/task/fitness embeddings, custom brains, wider pricing, direct calls, live organization custody and universal billing remain open.",
+      "next_smallest_leaf": "Research monetary admission for document ingestion on one encoder; reuse query accounting and preserve privacy/authority boundaries.",
       "dependencies": [],
       "tracks": {
         "personal": {
           "category": "IMPLEMENTED_BUT_UNQUALIFIED",
           "authority": "Local owner; optional free/local model; no organization authority inferred.",
-          "next_leaf": "One ordinary embedding monetary consumer, preserving credential-free local operation."
+          "next_leaf": "One document embedding consumer while preserving credential-free local work; query route has narrow source fixture evidence."
         },
         "enterprise": {
           "category": "IMPLEMENTED_BUT_UNQUALIFIED",
           "authority": "Authenticated organization issuer/roster/custodian required; static/injected tenant is fixture only.",
-          "next_leaf": "Same bounded embedding monetary consumer with separately admitted encoder/session/tenant authority; live acquisition/custody remain required."
+          "next_leaf": "Same document consumer with separate encoder/session/tenant admission; live issuer and organization encoder custody remain unqualified."
         }
       },
       "qualification": "Original scope remains unqualified; prior scoped audit and source test receipts are separate evidence, not product completion.",

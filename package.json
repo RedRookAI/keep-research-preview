@@ -1,6 +1,6 @@
 {
   "name": "keep",
-  "version": "0.0.8-preview.1",
+  "version": "0.0.9-preview.1",
   "description": "Self-hostable, provider-agnostic build orchestrator with consequence-gated autonomy",
   "main": "dist/src/index.js",
   "scripts": {

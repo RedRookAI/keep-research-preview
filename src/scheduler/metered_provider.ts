@@ -6,7 +6,7 @@
  *  - valid reported usage settles that reservation; entered failures keep an unresolved hold.
  *
  * Composed provider-check and built-in FrontDoor calls also use this wrapper through bound authority
- * capabilities. Other direct interactive gateway calls and ordinary embeddings remain unmetered.
+ * capabilities. Ordinary memory-query admission has a separate composed capability; other embedding/direct routes remain unmetered.
  *
  * HONEST SEAM (scope): this arms ONE granted envelope for the whole unattended autonomy SUBSYSTEM
  * (daily cap + per-run cap + per-call token ceiling + velocity). PER-PROJECT-RUN envelope granularity

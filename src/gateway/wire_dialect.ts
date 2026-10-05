@@ -46,6 +46,7 @@ export interface ExternalRoutingPolicy {
 }
 
 export interface EmbedWireParsed {
+  readonly usageComplete?: boolean;
   readonly vectors: readonly (readonly number[])[];
   readonly model: string;
   readonly usage: TokenUsage;
@@ -143,6 +144,8 @@ export const openAiDialect: WireDialect = {
       vectors,
       model: typeof o["model"] === "string" ? (o["model"] as string) : "unknown",
       usage: { freshInputTokens: num(usage["prompt_tokens"]), cachedInputTokens: 0, outputTokens: 0 },
+      usageComplete: Number.isSafeInteger(usage["prompt_tokens"]) && (usage["prompt_tokens"] as number) >= 0 &&
+        Number.isSafeInteger(usage["total_tokens"]) && usage["total_tokens"] === usage["prompt_tokens"],
     };
   },
   streamDoneSentinel: "[DONE]",

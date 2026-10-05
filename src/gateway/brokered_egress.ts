@@ -328,7 +328,8 @@ class BrokeredEgressProvider implements ModelProvider {
       if (typeof text !== "string" || !text || (bytes += Buffer.byteLength(text)) > 4_194_304) throw new EgressDeniedError("invalid bounded embedding windows");
       return text;
     });
-    const bounds = { maxBatchWindows: options.maxBatchWindows ?? 64, maxBatchBytes: options.maxBatchBytes ?? 65_536, maxResponseBytes: options.maxResponseBytes ?? 4_194_304 };
+    const bounds = { maxBatchWindows: options.maxBatchWindows ?? 64, maxBatchBytes: options.maxBatchBytes ?? 65_536, maxResponseBytes: options.maxResponseBytes ?? 4_194_304,
+      ...(options.maxAttempts === undefined ? {} : { maxAttempts: options.maxAttempts }) };
     if (!Object.values(bounds).every(n => Number.isSafeInteger(n) && n > 0) || (options.role !== undefined && options.role !== "query" && options.role !== "document")) throw new EgressDeniedError("invalid bounded embedding declaration");
     const invocationId = this.#deps.requestId();
     const args: CanonicalValue = { kind: "embed-bounded", invocationId, texts: captured, boundsJson: JSON.stringify(bounds),
