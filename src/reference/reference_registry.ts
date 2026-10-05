@@ -11,6 +11,7 @@
  */
 
 import { ReferenceSet, type FreshnessPolicy } from "./reference_set.js";
+import type { ProviderCheckPrice } from "./provider_check_pricing.js";
 
 /** Seed date — the honest "as of" for every category below. */
 export const SEED_AS_OF = "2026-08-04";
@@ -111,6 +112,10 @@ const POLICIES = {
  * honest dated seed. Consumers read via the typed getters, which surface freshness state.
  */
 export class ReferenceRegistry {
+  /** Separate attributable diagnostic snapshot; ordinary historical references never authorize it. */
+  readonly providerCheckPricing = new ReferenceSet<ProviderCheckPrice[]>({
+    seed: [], asOfMs: 0, policy: { freshMs: 0, graceMs: 0, jitter: 0 },
+  });
   readonly modelFamilies: ReferenceSet<ModelFamily[]>;
   readonly endpoints: ReferenceSet<ProviderEndpoint[]>;
   readonly pricing: ReferenceSet<ReferencePricing[]>;

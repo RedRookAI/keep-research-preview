@@ -18,11 +18,12 @@ its affected launcher pin and original checksum.
 
 ## Current development source
 
-**0.0.7-preview.1** adds durable monetary admission to built-in FrontDoor model
-calls, carrying live request/session authority without caching it on a tenant.
-The `/message` API now forwards validated attachment metadata to existing paste
-summarization. Read [research, behavior and limits](docs/frontdoor-metering.md).
-It retains [budget-bound provider-check](docs/provider-check.md).
+**0.0.8-preview.1** requires a fresh official price observation under an explicit
+maximum-age policy for the direct DeepSeek `deepseek-flash` provider-check route.
+Stale, missing, unreadable or unsupported prices refuse before model dispatch.
+Read [research, configuration and limits](docs/provider-check-pricing.md).
+It retains [budget-bound diagnostics](docs/provider-check.md) and
+[built-in FrontDoor admission with live request authority](docs/frontdoor-metering.md).
 This is a source checkpoint; the downloadable 0.0.5-preview.1 binary retains its
 original contents and qualification.
 
@@ -38,7 +39,7 @@ node dist/src/main.js version
 node dist/src/main.js demo recovery
 ```
 
-Expected source version: `keep 0.0.7-preview.1`. The recovery experiment uses synthetic
+Expected source version: `keep 0.0.8-preview.1`. The recovery experiment uses synthetic
 local outbox effects and no model calls. Its 24 cases exercise accounting,
 uncertain acknowledgements and fresh-process restart. A passing demonstration
 has narrower scope than complete source or installed-artifact qualification.
@@ -54,6 +55,7 @@ This remains a research preview. Use synthetic data and isolated test resources 
 
 ## Read further
 
+- [October 5 provider-check fresh-price checkpoint](docs/provider-check-pricing.md)
 - [October 5 FrontDoor source checkpoint](docs/frontdoor-metering.md)
 - [October 5 provider-check source checkpoint](docs/provider-check.md)
 - [Preview installation and source quickstart](docs/quickstart.md)

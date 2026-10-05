@@ -16,9 +16,11 @@ import { SessionStore } from "../src/identity/session_store.js";
 import type { Principal } from "../src/identity/rbac.js";
 import { FileSystemLock } from "../src/lock/lock.js";
 
-const model = "gpt-5.4-mini"; // Existing configured seed, not a live pricing claim.
+import { priceHtml, priceTransport } from "./fixtures/provider_check_price_source.js";
+
+const model = "deepseek-flash"; // Synthetic current source/transport, no paid request.
 const prompt = "probe";
-const projectedUsd = (2 * 0.75 + 64 * 4.5) / 1_000_000;
+const projectedUsd = (2 * 0.3 + 64 * 1.2) / 1_000_000;
 function root(t: TestContext): string {
   const dir = mkdtempSync(join(tmpdir(), "keep-provider-check-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
@@ -47,13 +49,14 @@ async function endpoint(t: TestContext, handle: (request: IncomingMessage, respo
   await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
   t.after(() => new Promise<void>(resolve => server.close(() => resolve())));
   const address = server.address(); assert.ok(address && typeof address !== "string");
-  return `http://127.0.0.1:${address.port}`;
+  priceTransport(t, `http://127.0.0.1:${address.port}`);
+  return "https://api.deepseek.com";
 }
 function owner(dataDir: string, baseUrl: string, modelName = model, cap = 1): KeepConfig {
   return { dataDir, ownerProvider: { mode: "openai-compatible", baseUrl, model: modelName, apiKey: "SYNTHETIC_ONLY" },
     remoteProcessing: { purpose: "diagnostic", region: "test" },
-    residency: { allowedPurposes: ["diagnostic"], allowedRegions: ["test"], egressAllowlist: ["127.0.0.1"], airGapped: false },
-    autonomyBudget: budget(cap) };
+    residency: { allowedPurposes: ["diagnostic"], allowedRegions: ["test"], egressAllowlist: ["api.deepseek.com", "api-docs.deepseek.com"], airGapped: false },
+    providerCheckPricing: { maxAgeMs: 60000 }, autonomyBudget: budget(cap) };
 }
 
 test("provider-check local CLI uses monetary admission and remains credential-free", async t => {
@@ -85,7 +88,7 @@ test("provider-check known configured price reserves durably before actual HTTP 
   assert.equal(hits, 1); assert.match(output.output.join("\n"), /diagnostic-ok/u);
   const events = money(dir), held = events.find(event => event["op"] === "reserve")!["reservation"] as { id: string };
   const settled = events.find(event => event["op"] === "settle")!;
-  assert.equal(settled["reservationId"], held.id); assert.equal(settled["amount"], (2 * 0.75 + 4.5) / 1_000_000);
+  assert.equal(settled["reservationId"], held.id); assert.equal(settled["amount"], (2 * 0.3 + 1.2) / 1_000_000);
 });
 
 test("provider-check unknown pricing refuses without HTTP or a reservation", async t => {
@@ -115,7 +118,13 @@ for (const invalid of ["missing", "malformed", "lost-ack", "server-error"] as co
     assert.equal(hits, 1); assert.equal(money(dir).filter(event => event["op"] === "settle").length, 0);
     const held = money(dir).filter(event => event["op"] === "reserve"); assert.equal(held.length, 1);
     // Real separate Node process: configured startup must neither reset exposure nor replay the ambiguous request.
-    const script = `import { composeKeep } from './dist/src/compose.js'; import { runCli } from './dist/src/cli/cli_core.js';
+    const script = `const saved=globalThis.fetch; globalThis.fetch=async(input,init)=> {
+      const url=String(input);
+      if(url==='https://api-docs.deepseek.com/quick_start/pricing/') {
+        const r=new Response(${JSON.stringify(priceHtml())},{headers:{'content-type':'text/html',date:new Date().toUTCString()}});
+        Object.defineProperty(r,'url',{value:url});return r;
+      } return saved(input,init);
+    }; import { composeKeep } from './dist/src/compose.js'; import { runCli } from './dist/src/cli/cli_core.js';
       const app = composeKeep(JSON.parse(process.argv[1])); const result = await runCli(['provider-check','probe'],
         {write: text => process.stdout.write(text+'\\n'), prompt: async () => ''}, {app}); process.exitCode=result.exitCode;`;
     const child = spawn(process.execPath, ["--input-type=module", "--eval", script, JSON.stringify(config)],

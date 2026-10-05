@@ -9,6 +9,11 @@ The later **0.0.7-preview.1** [FrontDoor checkpoint](frontdoor-metering.md) exte
 the same ledger to built-in FrontDoor calls. Its source has separate qualification;
 this diagnostic's original 170-test receipt retains its original source identity.
 
+The **0.0.8-preview.1** [fresh-price checkpoint](provider-check-pricing.md) now
+requires an explicit maximum-age policy and a fresh official observation for the
+one supported direct DeepSeek route. Other remote diagnostic routes refuse.
+The older qualification below remains source-bound; local operation is preserved.
+
 ## Research before implementation
 
 Primary sources inspected October 5, 2026:
@@ -24,8 +29,8 @@ ambiguous exposure rather than automatically expiring or retrying it.
 ## Behavior and authority
 
 `keep provider-check [prompt]` requests at most 64 output tokens and one HTTP attempt.
-Known configured prices and an acceptable durable allowance are required before
-remote dispatch. Awaited reservation precedes the actual provider request; valid
+Fresh applicable prices under the explicit supported-source policy and an
+acceptable durable allowance are required before remote dispatch. Awaited reservation precedes the actual provider request; valid
 reported usage settles that reservation. Missing/malformed usage, a lost response
 or an entered provider exception leaves a durable hold across process restart.
 The command can return useful text while usage remains uncertain; successful text
@@ -52,7 +57,9 @@ Use an explicit authorized envelope for a different allowance.
 
 ## Limits and acceptance
 
-Rates are dated configured seed/last-good inputs, not newly verified provider bills.
+Current remote diagnostic admission uses the fresh official observation described
+in [price policy](provider-check-pricing.md); other routes retain their configured
+seed/last-good inputs. Neither establishes verified provider bills.
 Input projection is approximately one token per four prompt characters. Framing,
 cache price breakdowns, hidden input and non-token fees remain limitations.
 Local zero token fees do not measure hosting costs. Custom injected providers are

@@ -3,13 +3,15 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { execFileSync, spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { captureRuntimeContract, createConfiguredProvider, describeRuntimeConfig, gitChildHardening, resolveRuntimeConfig, resolveRuntimeIntent, RuntimeConfigError } from "../src/cli/runtime_config.js";
 import { HttpProvider } from "../src/gateway/http_provider.js";
 import { LocalProvider } from "../src/gateway/local_provider.js";
+
+import { priceHtml } from "./fixtures/provider_check_price_source.js";
 
 const REVISION = "a".repeat(40);
 
@@ -253,7 +255,7 @@ test("A4 INSTALLED PATH: unsigned remote intent is refused before contacting its
   }
 });
 
-test("OWNER INSTALLED PATH: explicit owner provider reaches the governed built-in transport without organization release signing", async () => {
+test("OWNER INSTALLED PATH: fresh-priced direct owner route reaches built-in transport; unverified loopback refuses", async () => {
   let hits = 0;
   const server = createServer((req, res) => {
     let body = ""; req.on("data", (chunk) => { body += String(chunk); }); req.on("end", () => {
@@ -269,14 +271,32 @@ test("OWNER INSTALLED PATH: explicit owner provider reaches the governed built-i
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address() as AddressInfo;
   try {
+    const preload = join(dataDir, "synthetic-pricing.mjs");
+    writeFileSync(preload, `const saved=globalThis.fetch; globalThis.fetch=async(input,init)=> {
+      const url=String(input);
+      if(url==='https://api-docs.deepseek.com/quick_start/pricing/') {
+        if(init.body!==undefined || new Headers(init.headers).has('authorization')) throw new Error('metadata leaked authority');
+        const response=new Response(${JSON.stringify(priceHtml())},{headers:{'content-type':'text/html',date:new Date().toUTCString()}});
+        Object.defineProperty(response,'url',{value:url});return response;
+      }
+      if(url.startsWith('https://api.deepseek.com/')) return saved(url.replace('https://api.deepseek.com',${JSON.stringify(`http://127.0.0.1:${address.port}`)}),init);
+      return saved(input,init);
+    };`);
     const result = await runInstalled(["provider-check", "owner-path"], {
-      KEEP_PROVIDER: "openai-compatible", KEEP_PROVIDER_LOCATION: "local", KEEP_PROVIDER_AUTHORITY: "owner",
-      KEEP_PROVIDER_BASE_URL: `http://127.0.0.1:${address.port}`, KEEP_PROVIDER_MODEL: "gpt-5.4-mini", KEEP_PROVIDER_API_KEY: "owner-secret",
+      KEEP_PROVIDER: "openai-compatible", KEEP_PROVIDER_LOCATION: "external", KEEP_PROVIDER_AUTHORITY: "owner",
+      KEEP_PROVIDER_BASE_URL: "https://api.deepseek.com", KEEP_PROVIDER_MODEL: "deepseek-flash", KEEP_PROVIDER_API_KEY: "owner-secret",
+      KEEP_PROVIDER_CHECK_PRICE_MAX_AGE_MS: "60000", NODE_OPTIONS: `${process.env["NODE_OPTIONS"] ?? ""} --import ${preload}`,
       ...REMOTE_PROCESSING, KEEP_REPOSITORY: repository, KEEP_DATA_DIR: dataDir,
     });
     assert.equal(result.code, 0, result.stderr);
     assert.match(result.stdout, /owner-path-ok/u);
     assert.equal(hits, 1);
+    const refused = await runInstalled(["provider-check", "owner-path"], {
+      KEEP_PROVIDER: "openai-compatible", KEEP_PROVIDER_LOCATION: "local", KEEP_PROVIDER_AUTHORITY: "owner",
+      KEEP_PROVIDER_BASE_URL: `http://127.0.0.1:${address.port}`, KEEP_PROVIDER_MODEL: "gpt-5.4-mini", KEEP_PROVIDER_API_KEY: "owner-secret",
+      ...REMOTE_PROCESSING, KEEP_REPOSITORY: repository, KEEP_DATA_DIR: dataDir,
+    });
+    assert.equal(refused.code, 1); assert.match(refused.stdout + refused.stderr, /price-unknown/u); assert.equal(hits, 1);
   } finally { await new Promise<void>((resolve) => server.close(() => resolve())); rmSync(dataDir, { recursive: true, force: true }); rmSync(repository, { recursive: true, force: true }); }
 });
 

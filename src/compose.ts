@@ -196,6 +196,7 @@ import { AdaptivePromptLayer } from "./prompt/adaptive_prompt_layer.js";
 import { PromptStore } from "./prompt/prompt_store.js";
 import { ComplexityClassifier } from "./prompt/complexity_router.js";
 import { ReferenceRefresher } from "./reference/reference_refresher.js";
+import { fetchProviderCheckPrice, priceIsFresh, supportedPriceRoute, validPriceMaxAge, PROVIDER_CHECK_PRICE_HOST } from "./reference/provider_check_pricing.js";
 import type { RefreshFn } from "./reference/reference_set.js";
 import type { ModelFamily, ProviderEndpoint, ReferencePricing, CapabilityDefaults } from "./reference/reference_registry.js";
 import { ResidencyEnforcer, type ResidencyPolicy } from "./governance/residency.js";
@@ -496,6 +497,8 @@ export interface KeepConfig {
    * never blocked; runaway loops still hard-stop). Tighten this to bound autonomous spend.
    */
   readonly autonomyBudget?: AuthorizationEnvelope;
+  /** Explicit maximum price age for the one qualified direct DeepSeek provider-check route. */
+  readonly providerCheckPricing?: { readonly maxAgeMs: number };
   /** The learning-loop tick (provider-agnostic). Omit -> a no-op tick. */
   readonly learningTick?: HeartbeatTick;
   readonly heartbeatIntervalMs?: number;
@@ -968,6 +971,10 @@ export function composeKeep(config: KeepConfig): KeepApp {
   // cost-tagged span in the current run's trace. The provider is wrapped behind its port — no parallel gateway.
   const traceRecorder = new TraceRecorder(spine);
   const pricingRegistry = new ReferenceRegistry();
+  const providerCheckPriceMaxAge = config.providerCheckPricing?.maxAgeMs;
+  const providerCheckHasExternalRouting = config.externalRouting !== undefined;
+  if (providerCheckPriceMaxAge !== undefined && !validPriceMaxAge(providerCheckPriceMaxAge)) throw new Error("provider-check price maximum age must be a positive safe integer");
+  const priceEgress = new ResidencyEnforcer(config.residency ?? { allowedRegions: [], egressAllowlist: [], airGapped: true });
   // Background reference revalidation: keep the pricing/model/endpoint/capability reference data fresh. Fetchers are
   // CONNECTED-ENV SEAMS (a real pricing/model endpoint) — absent by default, so offline the honest seed/last-good stands
   // and each tick skips cleanly. The tick is driven by the always-on heartbeat below (not operator-invoked). The
@@ -1145,7 +1152,15 @@ export function composeKeep(config: KeepConfig): KeepApp {
   // Bind the configured route to its pricing identity, not a decorated wrapper name.
   // Only the explicitly local/development configuration has a declared zero token fee.
   // Missing remote registry pricing remains unknown and cannot admit paid work.
-  const meteringCost = new LenientCostModel((name) => name === tracedProvider.name
+  const diagnosticPriceContext = new AsyncLocalStorage<CostModel>();
+  const meteringCost = new class extends LenientCostModel {
+    override cost(...args: Parameters<CostModel["cost"]>): ReturnType<CostModel["cost"]> {
+      return diagnosticPriceContext.getStore()?.cost(...args) ?? super.cost(...args);
+    }
+    override hasPricing(model: string): boolean {
+      return diagnosticPriceContext.getStore()?.hasPricing(model) ?? super.hasPricing(model);
+    }
+  }((name) => name === tracedProvider.name
     ? selectedDescriptor ? priceFor(selectedDescriptor.model) : { inputPerM: 0, outputPerM: 0 }
     : undefined);
   const meteringBudgetLedger = new BudgetLedger(spine, meteringCost, Date.now, {
@@ -1496,7 +1511,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
     if (!authorization.authorize(principal, authority.permission).allow) throw new Error(`${authority.label} subject is not authorized`);
     return canonicalize({ id: principal.id, kind: principal.kind, role: principal.role, tenant: principal.tenant ?? null });
   };
-  const generateMeteredModelCall = async (prompt: string, maxTokens: number, authority: ModelCallAuthority): Promise<GenerateResult> => {
+  const generateMeteredModelCall = async (prompt: string, maxTokens: number, authority: ModelCallAuthority, checkPrice?: () => void): Promise<GenerateResult> => {
     const principal = modelCallPrincipal(authority);
     // Reserve through the existing private money ledger, then recheck live subject authority at entry.
     // A refusal after reservation conservatively retains the hold; it cannot create a free retry.
@@ -1504,6 +1519,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
       name: tracedProvider.name, isLocal: tracedProvider.isLocal,
       generate: (request) => {
         if (modelCallPrincipal(authority) !== principal) throw new Error(`${authority.label} subject changed before dispatch`);
+        checkPrice?.();
         return tracedProvider.generate(request);
       },
       embed: (texts) => tracedProvider.embed(texts),
@@ -1513,9 +1529,36 @@ export function composeKeep(config: KeepConfig): KeepApp {
       runId: "autonomy-subsystem", cls: "auto-research", tier: tracedProvider.isLocal ? "local" : "frontier",
     }).generate({ prompt, maxTokens });
   };
-  const providerCheck: KeepApp["providerCheck"] = (prompt, sessionId) => generateMeteredModelCall(prompt, 64, {
-    label: "provider-check", permission: "change.solve", ...(sessionId === undefined ? {} : { sessionId }),
-  });
+  const providerCheck: KeepApp["providerCheck"] = async (prompt, sessionId) => {
+    const authority: ModelCallAuthority = { label: "provider-check", permission: "change.solve", ...(sessionId === undefined ? {} : { sessionId }) };
+    modelCallPrincipal(authority); // Refuse absent live authority before even public metadata acquisition.
+    if (tracedProvider.isLocal) return generateMeteredModelCall(prompt, 64, authority);
+    if (providerCheckPriceMaxAge === undefined || selectedDescriptor === undefined ||
+        !supportedPriceRoute(selectedDescriptor) || providerCheckHasExternalRouting) {
+      throw new Error("price-unknown: provider-check requires an explicit freshness policy and supported direct price source");
+    }
+    if (!priceEgress.checkEgress(PROVIDER_CHECK_PRICE_HOST).allowed) throw new Error("price-unverifiable: public price source egress denied");
+    const prices = pricingRegistry.providerCheckPricing;
+    if (!priceIsFresh(prices.current()[0], providerCheckPriceMaxAge)) {
+      await prices.refresh(fetchProviderCheckPrice);
+    }
+    const quote = prices.current()[0];
+    if (!priceIsFresh(quote, providerCheckPriceMaxAge)) throw new Error("price-unverifiable: fresh applicable prices unavailable");
+    const cost = new CostModel();
+    cost.registerPricing({ model: tracedProvider.name, inputPerMillion: quote.inputPerM, outputPerMillion: quote.outputPerM,
+      cachedInputPerMillion: quote.inputPerM });
+    spine.stage({ type: "identity.action", actor: "provider-check", payload: {
+      event: "price_selected", source: quote.source, sourceDigest: quote.sourceDigest,
+      verifiedAtMs: quote.verifiedAtMs, receivedAtMs: quote.receivedAtMs, maxAgeMs: providerCheckPriceMaxAge,
+      model: quote.model, inputPerM: quote.inputPerM, outputPerM: quote.outputPerM,
+    } });
+    const checkPrice = (): void => {
+      if (!priceIsFresh(quote, providerCheckPriceMaxAge) || prices.current()[0]?.sourceDigest !== quote.sourceDigest) {
+        throw new Error("price-unverifiable: prices expired or changed before dispatch; reservation remains held");
+      }
+    };
+    return diagnosticPriceContext.run(cost, () => generateMeteredModelCall(prompt, 64, authority, checkPrice));
+  };
   const sodOperators = new Map<string, Identity>();
   for (const op of config.operators ?? [{ id: "owner", isOperator: true, displayName: "Owner" }]) sodOperators.set(op.id, op);
   const separationOfDuties = new SeparationOfDuties(sodOperators, { n: config.sodN ?? 1 });

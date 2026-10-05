@@ -1,6 +1,6 @@
 {
   "name": "keep",
-  "version": "0.0.7-preview.1",
+  "version": "0.0.8-preview.1",
   "description": "Self-hostable, provider-agnostic build orchestrator with consequence-gated autonomy",
   "main": "dist/src/index.js",
   "scripts": {
@@ -87,7 +87,8 @@
     "tools/bubblewrap/README.txt",
     "tools/bubblewrap/identity.json",
     "docs/provider-check.md",
-    "docs/frontdoor-metering.md"
+    "docs/frontdoor-metering.md",
+    "docs/provider-check-pricing.md"
   ],
   "exports": {
     ".": "./dist/src/index.js",

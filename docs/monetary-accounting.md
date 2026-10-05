@@ -85,8 +85,11 @@ Organization operation needs a live same-process session, current roster/role an
 the admitted provider route. Authority is rechecked after reservation before entry.
 The standalone organization CLI has no session acquisition and therefore refuses.
 Personal local mode remains credential-free; remote owner mode requires its captured
-owner route. Rates use dated seed/last-good inputs; fresh-price acquisition remains
-open. See [research, acceptance and limits](provider-check.md).
+owner route. The later [fresh-price checkpoint](provider-check-pricing.md) requires
+fresh attributable rates and an explicit maximum age for the supported direct
+DeepSeek diagnostic; other remote diagnostic routes refuse. It preserves rates
+on each durable reservation and does not widen FrontDoor pricing qualification.
+See [research, acceptance and limits](provider-check.md).
 
 ## FrontDoor request scope
 

@@ -17,6 +17,8 @@ import type { ResidencyPolicy } from "../governance/residency.js";
 import { anthropicDialect, openAiDialect, openAiDialectWithRouting, type ExternalRoutingPolicy, type WireDialect } from "../gateway/wire_dialect.js";
 import { encoderCredentialReference, loadEncoderProfile, type EncoderProfile } from "./encoder_profile.js";
 
+import { PROVIDER_CHECK_PRICE_HOST, validPriceMaxAge } from "../reference/provider_check_pricing.js";
+
 export type ProviderMode = "local" | "openai-compatible" | "anthropic-compatible";
 export type ProviderLocation = "offline" | "local" | "external";
 export type ProviderAuthority = "owner" | "organization";
@@ -52,6 +54,7 @@ export interface CapturedInstalledProjectConfig {
 }
 
 export interface CapturedRuntimeContract {
+  readonly providerCheckPricing?: { readonly maxAgeMs: number };
   readonly encoder?: EncoderProfile;
   readonly encoderCredentialReference?: CredentialReference;
   readonly provider: Omit<Extract<ResolvedProvider, { readonly mode: "openai-compatible" | "anthropic-compatible" }>, "apiKey"> | { readonly mode: "local"; readonly location: "offline"; readonly authority: "owner" };
@@ -89,6 +92,7 @@ export type ResolvedProvider =
     };
 
 export interface ResolvedRuntimeConfig {
+  readonly providerCheckPricing?: { readonly maxAgeMs: number };
   readonly provider: ResolvedProvider;
   readonly remoteProcessing?: RemoteProcessingDeclaration;
   readonly residency?: ResidencyPolicy;
@@ -99,6 +103,7 @@ export interface ResolvedRuntimeConfig {
 }
 
 export interface RuntimeIntent {
+  readonly providerCheckPricing?: { readonly maxAgeMs: number };
   readonly provider: ResolvedProvider;
   readonly remoteProcessing?: RemoteProcessingDeclaration;
   readonly residency?: ResidencyPolicy;
@@ -135,7 +140,7 @@ export interface RuntimeConfigContext {
   readonly processEnv?: NodeJS.ProcessEnv;
 }
 
-const REMOTE_ONLY_FIELDS = ["KEEP_PROVIDER_LOCATION", "KEEP_PROVIDER_AUTHORITY", "KEEP_PROVIDER_BASE_URL", "KEEP_PROVIDER_MODEL", "KEEP_PROVIDER_API_KEY", "KEEP_PROVIDER_API_KEY_FILE", "KEEP_PROVIDER_API_KEY_STDIN", "KEEP_REMOTE_PROCESSING_PURPOSE", "KEEP_REMOTE_PROCESSING_REGION", "KEEP_PROVIDER_ROUTE_ALLOWLIST", "KEEP_RELEASE_BUNDLE", "KEEP_RELEASE_TRUST_ROOT"] as const;
+const REMOTE_ONLY_FIELDS = ["KEEP_PROVIDER_CHECK_PRICE_MAX_AGE_MS", "KEEP_PROVIDER_LOCATION", "KEEP_PROVIDER_AUTHORITY", "KEEP_PROVIDER_BASE_URL", "KEEP_PROVIDER_MODEL", "KEEP_PROVIDER_API_KEY", "KEEP_PROVIDER_API_KEY_FILE", "KEEP_PROVIDER_API_KEY_STDIN", "KEEP_REMOTE_PROCESSING_PURPOSE", "KEEP_REMOTE_PROCESSING_REGION", "KEEP_PROVIDER_ROUTE_ALLOWLIST", "KEEP_RELEASE_BUNDLE", "KEEP_RELEASE_TRUST_ROOT"] as const;
 const MAX_FIELD = 8_192;
 const SAFE_REF = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 const EXACT_REVISION = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u;
@@ -186,6 +191,8 @@ export function captureRuntimeContract(
     }
     else if (env["KEEP_RELEASE_BUNDLE"] !== undefined || env["KEEP_RELEASE_TRUST_ROOT"] !== undefined) throw new RuntimeConfigError("KEEP_RELEASE_BUNDLE", "is organization-only; owner authority is explicit configuration admission, not release signing");
   }
+  const providerCheckPricing = capturePricePolicy(env);
+  if (providerCheckPricing && provider.authority === "owner" && residency) residency = { ...residency, egressAllowlist: [...new Set([...residency.egressAllowlist, PROVIDER_CHECK_PRICE_HOST])] };
   const encoderPath = env["KEEP_ENCODER_PROFILE"];
   if (encoderPath === undefined && env["KEEP_ENCODER_API_KEY"] !== undefined) throw new RuntimeConfigError("KEEP_ENCODER_PROFILE", "is required when an encoder credential is present");
   const encoder = encoderPath === undefined ? undefined : loadEncoderProfile(absolutePath(encoderPath, "KEEP_ENCODER_PROFILE", context.cwd));
@@ -202,7 +209,7 @@ export function captureRuntimeContract(
     };
   }
   const installedProject = captureInstalledProject(env, context, options.projectRequired === true);
-  return Object.freeze({ provider, ...(credentialReference ? { credentialReference } : {}), ...(remoteProcessing ? { remoteProcessing } : {}), ...(residency ? { residency } : {}), ...(externalRouting ? { externalRouting } : {}), memoryProvider: localMemoryProvider(), ...(installedProject ? { installedProject } : {}), ...(releaseAdmission ? { releaseAdmission } : {}), ...(organization ? { organization } : {}), ...(encoder ? { encoder } : {}), ...(encoderCredential ? { encoderCredentialReference: encoderCredential } : {}) });
+  return Object.freeze({ provider, ...(providerCheckPricing ? { providerCheckPricing } : {}), ...(credentialReference ? { credentialReference } : {}), ...(remoteProcessing ? { remoteProcessing } : {}), ...(residency ? { residency } : {}), ...(externalRouting ? { externalRouting } : {}), memoryProvider: localMemoryProvider(), ...(installedProject ? { installedProject } : {}), ...(releaseAdmission ? { releaseAdmission } : {}), ...(organization ? { organization } : {}), ...(encoder ? { encoder } : {}), ...(encoderCredential ? { encoderCredentialReference: encoderCredential } : {}) });
 }
 
 export function resolveRuntimeConfig(
@@ -249,8 +256,9 @@ export function resolveRuntimeIntent(env: Readonly<Record<string, string | undef
   const purpose = bounded(required(env, "KEEP_REMOTE_PROCESSING_PURPOSE"), "KEEP_REMOTE_PROCESSING_PURPOSE");
   const region = bounded(required(env, "KEEP_REMOTE_PROCESSING_REGION"), "KEEP_REMOTE_PROCESSING_REGION");
   const host = new URL(baseUrl).hostname;
+  const providerCheckPricing = capturePricePolicy(env);
   const externalRouting = externalRoutingFromEnv(env, rawMode, location);
-  return { provider: { mode: rawMode, baseUrl, model, apiKey, location, authority, ...(externalRouting ? { externalRouting } : {}) }, remoteProcessing: { purpose, region }, residency: { allowedPurposes: [purpose], allowedRegions: [region], egressAllowlist: [host] }, memoryProvider: localMemoryProvider() };
+  return { provider: { mode: rawMode, baseUrl, model, apiKey, location, authority, ...(externalRouting ? { externalRouting } : {}) }, ...(providerCheckPricing ? { providerCheckPricing } : {}), remoteProcessing: { purpose, region }, residency: { allowedPurposes: [purpose], allowedRegions: [region], egressAllowlist: providerCheckPricing && authority === "owner" ? [host, PROVIDER_CHECK_PRICE_HOST] : [host] }, memoryProvider: localMemoryProvider() };
 }
 
 export function createConfiguredProvider(config: ResolvedProvider): ModelProvider {
@@ -523,4 +531,13 @@ export function gitChildHardening(
 
 function localMemoryProvider(): { readonly mode: "local"; readonly purpose: "credential-free-memory-embedding" } {
   return { mode: "local", purpose: "credential-free-memory-embedding" };
+}
+
+/** Explicit metadata freshness opt-in; it is not a model credential or broader egress grant. */
+function capturePricePolicy(env: Readonly<Record<string, string | undefined>>): { readonly maxAgeMs: number } | undefined {
+  const raw = env["KEEP_PROVIDER_CHECK_PRICE_MAX_AGE_MS"];
+  if (raw === undefined) return undefined;
+  const value = Number(raw);
+  if (!/^[1-9]\d*$/u.test(raw) || !validPriceMaxAge(value)) throw new RuntimeConfigError("KEEP_PROVIDER_CHECK_PRICE_MAX_AGE_MS", "must be a positive safe integer in milliseconds");
+  return Object.freeze({ maxAgeMs: value });
 }
