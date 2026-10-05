@@ -1,3 +1,33 @@
+# Keep 0.0.12-preview.1 — inspect a tested repository proposal
+
+Release: `keep-preview-2026-10-05.1` · Linux x64 · Node.js 22.23.2/npm/Git.
+
+[Download](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1) · [Checksum-first quickstart](docs/quickstart.md) · [Walkthrough](docs/portfolio-walkthrough.md) · [Qualification](docs/qualification/preview-2026-10-05.json).
+
+Run `keep demo project` to see an actual separate-workspace edit, passing repository and goal tests, and a reviewable diff. Two authored local responses and sample approval/veto decisions are clearly disclosed before work. The approval gate holds before dispatch; restart retains the proposal without replay; a wrong token refuses and veto leaves original source unchanged. No account or paid call is needed. Inspect the printed report and artifacts, then follow the configured-solve guide for your own repository.
+
+| Artifact | Exact identity |
+|---|---|
+| Qualified public source | `3e4e3e3990fcc6262d6a20491d067f2563b95bb1` |
+| Linux x64 package | `keep-0.0.12-preview.1.tgz`; 10,820,623 bytes; 2,273 files |
+| Package SHA256 | `df188e14685a3a21e422d113bbfcd8241ee293d5e3a38cebbd186e5c9c4d92d7` |
+| Matching source archive | `keep-source-preview-2026-10-05.1.tar.gz`; 16,743,058 bytes; 4,070 files |
+| Source SHA256 | `04596cb015086a8c11ef9eadd6441514115f580b24946f92d6965385c9d538df` |
+
+Set `KEEP_RELEASE_SHA256` to the trusted package SHA256 above before using the quickstart. Ordinary offline installation needs no Rust/C compiler; the existing TypeScript dependency is bundled. The package contains three genuine native executables. Required-jail operations still require the measured Bubblewrap 0.13.0 launcher; installation does not install a host launcher or change security policy.
+
+All selected source phases passed across the recorded unchanged-source runs: **5,295 ordinary + 34 release/security + 139 native = 5,468 tests**, zero failures/skips. Scripts-enabled prepack reproduced the tested runtime. A fresh unprivileged offline installation byte-matched all **1,560** production runtime files, resolved package exports and passed both actual demos, useful/refused required-jail controls and two protected backup/restore tracks. The complete native phase was rerun after an owned filesystem correction; earlier failed full reports remain failed, with their passing ordinary/security phases explicitly reused for this same source. The exact written default-layout quickstart passed; wrong checksum refused before installation/state writes. Failures and corrections remain recorded.
+
+The research preview includes the recent source work on installed solve, model-call/provider diagnostics and manual memory/query monetary admission. Older checkpoint receipts retain their original identities. The new package is separately qualified; results are not silently inherited from those narrower checkpoints.
+
+This is same-agent evidence on one owned Linux host, with network disabled, existing 2CPU/4GiB/0swap/512PID controls and the inherited finite test allowance. The walkthrough reports best-effort isolation; required-jail evidence is separate. No real-model success rate, live organization custody, independently rebuilt artifact, offsite disaster survival, universal spending ceiling, production PROBER/D3 authority or macOS/Windows qualification is established. The [completion map](docs/completion-map.md) keeps broader obligations open.
+
+Archives bind the qualified source above. The release tag adds external receipts and reconciled documentation; full source results do not become results for that later documentation commit. This companion is outside both archives to avoid circular checksums. Archived documentation records the source snapshot before publication; use this companion and the release-tag documentation for current download identities. Original releases/tags/assets are unchanged.
+
+---
+
+# Previous release records
+
 # Keep 0.0.5-preview.1 — qualified security preview
 
 Release: `keep-preview-2026-10-04.1` · Linux x64 · Node.js 22.23.2/npm.

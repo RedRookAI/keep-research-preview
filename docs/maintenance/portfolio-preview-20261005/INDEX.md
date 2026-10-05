@@ -8,10 +8,11 @@ Project acceptance: a visitor verifies the new download, installs without a cont
 
 | Ticket | Result | Dependency supplying required input | Planning status |
 |---|---|---|---|
-| [PF001](PF001.md) | An inspectable installed repository walkthrough | Reuse completed IS001 CLI/journey; no unfinished ticket prerequisite | Actionable, candidate audited |
-| [PF002A](PF002A.md) | Current solve setup refusal is correctly checked by the full profile | PF001 supplies the supported installed solve contract | Actionable; two stale probes found during PF002 |
-| [PF002](PF002.md) | Exact current source and clean installed package qualify | PF001 supplies packaged command, guide and versioned source; PF002A supplies reconciled probes | Actionable after PF001 |
-| [PF003](PF003.md) | Visitor can acquire and run the matching public preview | PF002 supplies qualified immutable archives, checksums and receipts | Actionable after PF002 |
+| [PF001](PF001.md) | An inspectable installed repository walkthrough | Reuse completed IS001 CLI/journey; no unfinished ticket prerequisite | Confirmed; installed acceptance passed |
+| [PF002A](PF002A.md) | Current solve setup refusal is correctly checked by the full profile | PF001 supplies the supported installed solve contract | Confirmed; preserved refusals and cumulative qualification passed |
+| [PF002B](PF002B.md) | Native I/O observation and unchanged-source qualification | PF002A supplies exact candidate; PF002 failure identifies fixture question | Confirmed; unchanged-source native phase and fixture passed |
+| [PF002](PF002.md) | Exact current source and clean installed package qualify | PF001 supplies packaged command, guide and versioned source; PF002A supplies reconciled probes; PF002B supplies compatible native evidence | Confirmed; exact source/package/install passed |
+| [PF003](PF003.md) | Visitor can acquire and run the matching public preview | PF002 supplies qualified immutable archives, checksums and receipts | Qualified inputs ready; publication readback pending |
 
 Use one implementation agent, serial product work. Implementation is authorized by the user's activated goal. These tickets do not authorize paid calls, additional dependencies, VMs, accounts, host policy/enforcement, shared-service restart or unrelated workspaces. Inherit the existing 2CPU/4GiB/0swap/512PID test profile and original 7200-second allowance, with 4820.387784691072 seconds already accounted; do not reset it. Record new measured attempts. If remaining allowance cannot cover a necessary check, report the gap and request an explicitly revised allowance.
 

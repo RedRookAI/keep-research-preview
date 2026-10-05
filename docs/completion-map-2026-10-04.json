@@ -2018,6 +2018,14 @@
       "skips": 0,
       "qualification_scope": "Relevant same-agent private/public source profiles and synthetic loopback/fresh-process fixtures; not full native/live organization custody/new binary.",
       "historical_evidence_rule": "Prior baseline/source/archive receipts retain original identities; no whole-product completion inferred."
+    },
+    {
+      "version": "0.0.12-preview.1",
+      "checkpoint": "downloadable portfolio preview",
+      "source_head": "3e4e3e3990fcc6262d6a20491d067f2563b95bb1",
+      "receipt": "docs/qualification/preview-2026-10-05.json",
+      "qualified_scope": "Same-agent, one owned Linux x64 fixture. Scripted responses, simulated approval/veto, local boundary/recovery and synthetic backup tracks. No real-model quality, live organization custody, independent rebuild, offsite survival or production native authority qualification.",
+      "mandatory_families_closed": 0
     }
   ]
 }

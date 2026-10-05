@@ -1,4 +1,10 @@
-Installed solve source **0.0.11-preview.1**: exact public `376aba8f248d2517c68f3866ce8d54c692aa3999` and private `954d4eb56b44b341cd927c11f47c9a4e385e2059` each passed **157 relevant tests in 8 files**, zero failures/skips, emitting typecheck and **24 recovery checks**. An installed test-only package byte-matched **1557 production dist files** and produced a proposal with two passing tests after explicit approval, preserved source, refused a wrong token and retained the proposal over restart without model replay. Two controlled HTTP calls; zero paid vendor requests. [Receipt](qualification/installed-solve-2026-10-05.json) and [guide](installed-solve.md) separate owner/process fixture evidence, reused native binaries, source qualification and the unchanged downloadable archive. Earlier receipts below retain their original identities.
+# October 5 downloadable portfolio preview
+
+**0.0.12-preview.1**, exact source `3e4e3e3990fcc6262d6a20491d067f2563b95bb1`: **5,468** complete selected source tests (5,295 ordinary, 34 release/security, 139 native), zero failures/skips. Scripts-enabled packaging and a fresh unprivileged offline installation matched **1,560** runtime files. The installed repository walkthrough produced an actual patch with two passing tests after simulated approval, retained its proposal over restart, refused a wrong token and preserved original source after veto; two scripted local responses, zero paid requests. Installed recovery passed 24 cases. Required-jail allow/refuse, two protected backup/restore tracks, the exact quickstart and wrong-checksum refusal passed. [Receipt](qualification/preview-2026-10-05.json), [release identities](../KEEP_RELEASE.md) and [walkthrough boundaries](portfolio-walkthrough.md).
+
+This closes this downloadable checkpoint and its first-use scenario. It does not establish real-model quality, live organization custody, independently administered replication or production isolation. Earlier records below remain historical and retain their original source/archive identities and narrower scopes.
+
+Installed solve source **0.0.11-preview.1**: exact public `376aba8f248d2517c68f3866ce8d54c692aa3999` and private `954d4eb56b44b341cd927c11f47c9a4e385e2059` each passed **157 relevant tests in 8 files**, zero failures/skips, emitting typecheck and **24 recovery checks**. An installed test-only package byte-matched **1557 production dist files** and produced a proposal with two passing tests after explicit approval, preserved source, refused a wrong token and retained the proposal over restart without model replay. Two controlled HTTP calls; zero paid vendor requests. [Receipt](qualification/installed-solve-2026-10-05.json) and [guide](installed-solve.md) separate owner/process fixture evidence, reused native binaries, source qualification and the downloadable archive at that checkpoint. Earlier receipts below retain their original identities.
 
 # Evidence and limitations
 
@@ -18,7 +24,7 @@ the [preview guide](research-preview.md) explains how to run the first experimen
 ## Current release record
 
 Use [the release record](../KEEP_RELEASE.md) for the qualified downloadable binary.
-The October 5 development source checkpoint below has separate, narrower evidence.
+Earlier October 5 development checkpoints below have separate, narrower evidence.
 Results below remain attached to
 their original source and package, even when the implementation is retained in
 a later version.
@@ -95,7 +101,7 @@ and a 512-process ceiling; it changed no host policy and made zero paid provider
 
 This is same-agent partial source qualification. No native rebuild, new archive,
 complete source profile, live organization custody, independent audit or universal
-billing ceiling is established. The downloadable binary below remains unchanged.
+billing ceiling is established. The historical downloadable binary below retained its original identity.
 FrontDoor/ordinary embedding monetary coverage and fresh pricing remain open.
 
 ## October 4 qualified binary preview

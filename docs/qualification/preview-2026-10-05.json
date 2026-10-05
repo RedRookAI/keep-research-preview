@@ -1,0 +1,122 @@
+{
+  "schema": "keep.preview-release-qualification/v1",
+  "status": "QUALIFIED_LOCAL_PREVIEW_CANDIDATE",
+  "version": "0.0.12-preview.1",
+  "source_head": "3e4e3e3990fcc6262d6a20491d067f2563b95bb1",
+  "archive_sha256": "df188e14685a3a21e422d113bbfcd8241ee293d5e3a38cebbd186e5c9c4d92d7",
+  "source_archive": {
+    "source_head": "3e4e3e3990fcc6262d6a20491d067f2563b95bb1",
+    "source_file": "keep-source-preview-2026-10-05.1.tar.gz",
+    "source_sha256": "04596cb015086a8c11ef9eadd6441514115f580b24946f92d6965385c9d538df",
+    "source_bytes": 16743058,
+    "source_files": 4070,
+    "files_equal_frozen_public_revision": true,
+    "external_release_companion_excluded": true,
+    "private_history_absent": true
+  },
+  "binary_archive": {
+    "binary_file": "keep-0.0.12-preview.1.tgz",
+    "binary_sha256": "df188e14685a3a21e422d113bbfcd8241ee293d5e3a38cebbd186e5c9c4d92d7",
+    "binary_bytes": 10820623
+  },
+  "qualification_mode": "Unchanged exact source; passing ordinary/release-security phases from retained failed complete run, passing complete native phase after fixture-only correction. Not one successful all-phase command.",
+  "ordinary": 5295,
+  "release_security": 34,
+  "native": 139,
+  "failures": 0,
+  "skips": 0,
+  "binary_files": 2273,
+  "installed_runtime_files": 1560,
+  "installed_recovery_cases": 24,
+  "protected_backup_synthetic_tracks": 2,
+  "scripts_enabled_pack_and_install": true,
+  "exact_documented_quickstart": {
+    "status": "PASS",
+    "exit": 0,
+    "seconds": 4.48937752697384,
+    "exact_documented_shell_block": true,
+    "default_npm_install_layout": true,
+    "scripts_enabled": true,
+    "wrong_sha_before_install_refused": true,
+    "uid": 65534,
+    "archive_sha256": "df188e14685a3a21e422d113bbfcd8241ee293d5e3a38cebbd186e5c9c4d92d7",
+    "source_and_compiler_inaccessible": true
+  },
+  "installed_repository_walkthrough": {
+    "status": "PASS",
+    "version": "0.0.12-preview.1",
+    "explicitApprovalBeforeDispatch": true,
+    "sourceUnchanged": true,
+    "restartNoReplay": true,
+    "wrongTokenRefused": true,
+    "passedTests": [
+      "limit",
+      "goal: requested outcome"
+    ],
+    "controlledModelCalls": 2,
+    "paidCalls": 0,
+    "modelResponses": "scripted-loopback",
+    "operatorDecisions": "simulated approval then exact-proposal veto",
+    "diff": "diff --git a/src/retry.mjs b/src/retry.mjs\nindex c7f39ed..43ef747 100644\n--- a/src/retry.mjs\n+++ b/src/retry.mjs\n@@ -1 +1 @@\n-export const retryLimit = 0;\n+export const retryLimit = 7;\n",
+    "processIsolationEvidence": {
+      "attempted": true,
+      "executed": true,
+      "processIsolation": {
+        "basis": "adapter-spawn-plan",
+        "degraded": [],
+        "namespacePolicy": "best-effort",
+        "namespaceSetup": "unverified",
+        "requestedNamespaces": [
+          "mount-ns",
+          "pid-ns",
+          "net-ns"
+        ],
+        "requestedRlimits": [
+          "cpuLimit",
+          "file-size",
+          "process-count",
+          "open-files"
+        ],
+        "rlimitSetup": "unverified",
+        "version": 1
+      },
+      "requiredTier": "process",
+      "requirementMet": true,
+      "selectedTier": "process"
+    }
+  },
+  "required_boundary": {
+    "useful": true,
+    "outside_and_read_only_writes_refused": true,
+    "shared_inode_before_entry_refused": true,
+    "network_connection_refused": true,
+    "patched_bwrap_sha256": "e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f"
+  },
+  "same_agent": true,
+  "production_authorizing": false,
+  "full_source_qualification_receipt_sha256": "808d34c8b72ee61c090569b06a431a781a9f1c542d6306f936fbe72ed3036a78",
+  "archive_inventory_sha256": "9145ff821f9d547f67b3655ef23dc6000d840d3904fe6dbd77382ed2dad4d3cc",
+  "installed_receipt_sha256": "592e237511aaddddcc0a983c12ffb2605d9d5a0b8d3df104f1ada1fc82161c82",
+  "backup_receipt_sha256": "0c4d93b964985c87a81c1710b129eecfb6baef2b0fd5a6125524309d34dc9d4a",
+  "installed_external_harness_sha256": "6205c8eacc666014bc488a801158a1caeba7b89734724657f4c0c642d370def8",
+  "backup_external_harness_sha256": "45595f5634fcb88a3249bf653bbcaeed961a33e7fc47a21da1722066a1f27e40",
+  "resource_limits": {
+    "cpu_percent": 200,
+    "memory_mib": 4096,
+    "swap_bytes": 0,
+    "pids": 512,
+    "cumulative_wall_seconds": 7200,
+    "actual_cumulative_accounted_seconds": 6955.81978849306,
+    "accounting": "Measured attempts; includes explicitly recorded conservative5-second outer-manager charges where successful transient timestamps were collected."
+  },
+  "retained_failures": [
+    "Copied fixture parent initially allowed the unprivileged consumer to see contributor source; check refused before install, own /root mode restored to700. Backup harness then refused a missing package_version receipt field; measured archive version was added without weakening the assertion. Successful transient unit accounting uses measured inner elapsed plus a conservative5-second manager allowance when systemd timestamps are collected.",
+    "Second full run:5295 ordinary +34 release/security pass; native138pass/1 frozen-I/O mismatch. Overlay storage differs from the required backing device. Binding plain-storage /tmp passed I/O but correctly failed no-mount-crossing parent pinning. Plain owned root corrected the fixture; unchanged-source native phase and genuine probe rerun. Original full report remains failed.",
+    "Initial full source 5865f5e:5293 ordinary pass/2 stale shipped-solve probe failures/0 skips; remaining phases not reached. PF002A reconciles expectations with current setup refusal and adds empty-state assertions; no runtime gate relaxed. Full qualification rerun against a new clean source.",
+    "Initial focused documentation audit: 43 pass/2 fail. Preserved the existing security heading anchor and moved the checksum test to the canonical quickstart without weakening refusal controls; corrected focused run:45 pass/0 fail/0 skip.",
+    "Read-only lower Git inventory ownership refused before product execution; used command-local safe.directory for that read-only inventory. Failed owned unit name was replaced by a new unique name; no host reset.",
+    "Source archive audit initially rejected Git archive root directory named keep; allowed that directory while retaining strict file paths and exact-byte checks."
+  ],
+  "source_tag_rule": "Archives bind exact qualified source 3e4e3e3990fcc6262d6a20491d067f2563b95bb1. The later tag adds external receipts and reconciled documentation only; full source results are not transferred to the documentation commit. Companion is excluded from archives to avoid circular checksums.",
+  "qualified_scope": "Same-agent, one owned Linux x64 fixture. Scripted responses, simulated approval/veto, local boundary/recovery and synthetic backup tracks. No real-model quality, live organization custody, independent rebuild, offsite survival or production native authority qualification."
+}
