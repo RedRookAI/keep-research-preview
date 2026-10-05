@@ -31,7 +31,7 @@ import { GOAL_PHASES, GOAL_WORK_DOCUMENT, type GoalWorkPhase } from "../session/
 import { ALL_PERMISSIONS, can, OWNER, type Principal, type Permission } from "../identity/rbac.js";
 import { auditTrail } from "../review/review_core.js";
 import { exportTenantAudit } from "../audit/tenant_audit_export.js";
-import { memoryStore, memoryRecall, memoryUpdate, memoryForget, memoryCorrect, memoryList, memoryReview, memoryPurge, executeDurableMemoryMutation, deliverMemoryAdmissions, type DurableMemoryMutation, type MemoryFilter } from "../memory/memory_tools.js";
+import { memoryUpdate, memoryForget, memoryList, memoryReview, memoryPurge, executeDurableMemoryMutation, deliverMemoryAdmissions, type DurableMemoryMutation, type MemoryFilter } from "../memory/memory_tools.js";
 import { MemoryStore } from "../memory/store.js";
 import type { MemoryPartitionScope } from "../memory/persistence.js";
 import { adoptOpenClawSkill } from "../compat/openclaw_adapter.js";
@@ -1343,15 +1343,24 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     if (tenant !== undefined && ((b?.["scope"] !== undefined && b["scope"] !== "project") || b?.["agentId"] !== undefined)) {
       return json(400, { error: "tenant memory writes are confined to the resolved tenant project scope" });
     }
-    const res = await memoryStore(app.secondBrain.memory, {
-      content,
-      ...(typeof b?.["kind"] === "string" ? { kind: b["kind"] as MemoryKind } : {}),
-      ...(tenant !== undefined ? { scope: "project" as const, projectId: tenant } : {
-        ...(typeof b?.["scope"] === "string" ? { scope: b["scope"] as MemoryScope } : {}),
-        ...(typeof b?.["agentId"] === "string" ? { agentId: b["agentId"] as string } : {}),
-      }),
-    });
-    return res ? json(200, { ok: true, id: res.id }) : json(422, { ok: false, reason: "rejected-at-ingestion" });
+    if (b?.["processing"] !== undefined && b["processing"] !== "configured-provider") return json(400, { error: "invalid document processing choice" });
+    try {
+      const res = await app.memoryStore({
+        content,
+        ...(typeof b?.["kind"] === "string" ? { kind: b["kind"] as MemoryKind } : {}),
+        ...(tenant !== undefined ? { scope: "project" as const, projectId: tenant } : {
+          ...(typeof b?.["scope"] === "string" ? { scope: b["scope"] as MemoryScope } : {}),
+          ...(typeof b?.["agentId"] === "string" ? { agentId: b["agentId"] as string } : {}),
+        }),
+      }, {
+        ...(b?.["processing"] === "configured-provider" ? { processing: "configured-provider" } : {}),
+        ...(tenant === undefined ? {} : { subject: tenant }),
+        ...(sec.identity === undefined || req.headers["x-keep-session"] === undefined ? {} : { sessionId: req.headers["x-keep-session"] }),
+      });
+      return res ? json(200, { ok: true, id: res.id }) : json(422, { ok: false, reason: "rejected-at-ingestion" });
+    } catch {
+      return json(409, { error: "memory write unavailable; preserve pending accounting and reconcile possible publication before retrying" });
+    }
   }
   if (req.method === "GET" && req.path === "/memory") {
     const denied = gate("memory.read"); if (denied) return denied;
@@ -1382,8 +1391,17 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
   if (req.method === "POST" && req.path === "/memory/correct") {
     const denied = gate("memory.write"); if (denied) return denied;
     const b = parseBody(req.body);
-    const res = await memoryCorrect(app.secondBrain.memory, String(b?.["id"] ?? ""), String(b?.["content"] ?? ""), tenant);
-    return res ? json(200, { ok: true, ...res }) : json(404, { ok: false });
+    if (b?.["processing"] !== undefined && b["processing"] !== "configured-provider") return json(400, { error: "invalid document processing choice" });
+    try {
+      const res = await app.memoryCorrect({ id: String(b?.["id"] ?? ""), content: String(b?.["content"] ?? "") }, {
+        ...(b?.["processing"] === "configured-provider" ? { processing: "configured-provider" } : {}),
+        ...(tenant === undefined ? {} : { subject: tenant }),
+        ...(sec.identity === undefined || req.headers["x-keep-session"] === undefined ? {} : { sessionId: req.headers["x-keep-session"] }),
+      });
+      return res ? json(200, { ok: true, ...res }) : json(404, { ok: false });
+    } catch {
+      return json(409, { error: "memory correction unavailable; preserve pending accounting and reconcile possible replacement before retrying" });
+    }
   }
 
   // ─── M4: memory curation (list / review / purge) ───

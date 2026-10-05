@@ -27,6 +27,12 @@ import { MemoryConsensus, type ConsensusLesson } from "./consensus.js";
 import { evaluatePromotion, type FunctionalGateConfig, DEFAULT_FUNCTIONAL_CONFIG } from "./gates.js";
 import type { MemoryPartitionScope, MemoryPartitionView, PersistedMemoryEntry } from "./persistence.js";
 
+/** Trusted per-operation controls; never decoded from a memory command/body. */
+export interface MemoryIngestControls {
+  readonly embedDocument?: (sanitized: string) => Promise<Embedding | undefined>;
+  readonly assertPublishAuthority?: () => void;
+}
+
 export interface IngestOptions {
   readonly origin: Origin;
   readonly scope?: MemoryScope;
@@ -147,13 +153,17 @@ export class MemoryStore {
    * lowest trust tier. Seeded lessons enter on probation with a citation.
    * Returns the stored lesson, or undefined if rejected at ingestion.
    */
-  async ingest(content: string, opts: IngestOptions): Promise<Lesson | undefined> {
-    const prepared = await this.prepare(content, opts);
-    return prepared === undefined ? undefined : this.publish(prepared);
+  async ingest(content: string, opts: IngestOptions, controls?: MemoryIngestControls): Promise<Lesson | undefined> {
+    const embedDocument = controls?.embedDocument, assertPublishAuthority = controls?.assertPublishAuthority;
+    const prepared = await this.prepare(content, opts, embedDocument);
+    if (prepared === undefined) return undefined;
+    assertPublishAuthority?.();
+    return this.publish(prepared);
   }
 
   /** Prepare a replacement without retiring the old item or admitting a partial successor. */
-  async correct(id: string, content: string, projectId?: string): Promise<{ oldId: string; newId: string } | null> {
+  async correct(id: string, content: string, projectId?: string, controls?: MemoryIngestControls): Promise<{ oldId: string; newId: string } | null> {
+    const embedDocument = controls?.embedDocument, assertPublishAuthority = controls?.assertPublishAuthority;
     const old = projectId === undefined ? this.get(id) : this.getForProject(projectId, id);
     if (!old || old.tier === "retired" || this.useExpired(old) || !this.privateUseAllowed(old)) return null;
     const expected = structuredClone(old);
@@ -163,8 +173,9 @@ export class MemoryStore {
       origin: "self", kind: old.kind, scope: old.scope, citation: `supersedes:${id}`,
       ...(tenant === undefined ? {} : { projectId: tenant }),
       ...(agent === undefined ? {} : { agentId: agent }),
-    });
+    }, embedDocument);
     if (!prepared) return null;
+    assertPublishAuthority?.();
     // Another operation can change the old item while the provider is preparing its replacement.
     // Compare the complete semantic state, including evidence and validity, before publishing.
     const current = projectId === undefined ? this.get(id) : this.getForProject(projectId, id);
@@ -173,7 +184,7 @@ export class MemoryStore {
     return { oldId: id, newId: fresh.id };
   }
 
-  private async prepare(content: string, input: IngestOptions): Promise<PreparedLesson | undefined> {
+  private async prepare(content: string, input: IngestOptions, embedDocument?: MemoryIngestControls["embedDocument"]): Promise<PreparedLesson | undefined> {
     // Capture scope before awaiting a provider; later caller mutation cannot redirect publication.
     const opts = { ...input };
     if (this.partitionScope) {
@@ -203,7 +214,9 @@ export class MemoryStore {
       });
       return undefined;
     }
-    const vec = this.sourceCustody === undefined ? (await this.gateway.embed([scan.sanitized]))[0] : undefined;
+    const vec = this.sourceCustody === undefined
+      ? embedDocument === undefined ? (await this.gateway.embed([scan.sanitized]))[0] : await embedDocument(scan.sanitized)
+      : undefined;
     if (this.sourceCustody === undefined && (!vec || vec.length === 0 || !vec.every(Number.isFinite))) throw new Error("embedding backend returned an invalid memory vector");
     // Seeded (borrowed) lessons start on probation; everything else starts candidate.
     const tier: TrustTier = opts.origin === "seeded" ? "probation" : "candidate";

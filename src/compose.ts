@@ -82,7 +82,7 @@ import { FileMemoryCustody } from "./memory/persistence.js";
 import { captureMemoryRetentionPolicy, type MemoryRetentionPolicy, type CapturedMemoryRetentionPolicy } from "./memory/retention.js";
 import { resolveMemoryScope } from "./memory/scope.js";
 import { createTaskMemoryContext, parseTaskMemorySelection, TaskMemoryUnavailableError, type TaskMemoryContext, type TaskMemoryEncoder } from "./memory/task_context.js";
-import { memoryRecall as recallMemory } from "./memory/memory_tools.js";
+import { memoryRecall as recallMemory, memoryStore as storeMemory, memoryCorrect as correctMemory } from "./memory/memory_tools.js";
 import type { EmbeddingWork } from "./solve/recovery_budget.js";
 import { NativeProjectCommandUnavailableError, type NativeProjectCommand } from "./session/project_command.js";
 import { ProjectRegistry } from "./session/project_registry.js";
@@ -304,6 +304,8 @@ export interface KeepConfig {
   /** Explicit trusted operator price observation for one direct OpenAI recall encoder.
    * USD per million input tokens; no automatic refresh or signed billing claim. */
   readonly memoryRecallPricing?: { readonly inputPerMillion: number; readonly observedAtMs: number; readonly maxAgeMs: number };
+  /** Separate document price observation; recall pricing does not admit manual writes. */
+  readonly memoryStorePricing?: KeepConfig["memoryRecallPricing"];
   /** Optional independently admitted semantic encoder. Never inferred from the chat
    * model. Each native command must separately consent to document embedding. */
   readonly semanticEncoder?: {
@@ -525,6 +527,9 @@ export interface KeepApp {
   readonly providerCheck: (prompt: string, sessionId?: string) => Promise<GenerateResult>;
   /** Session-bound ordinary query recall; organization callers supply the resolved tenant. */
   readonly memoryRecall: (query: string, options?: { readonly sessionId?: string; readonly subject?: string; readonly agentId?: string }) => ReturnType<typeof recallMemory>;
+  /** One manual write with separately admitted document processing and live publication authority. */
+  readonly memoryStore: (args: Parameters<typeof storeMemory>[1], options?: { readonly sessionId?: string; readonly subject?: string; readonly processing?: "configured-provider" }) => ReturnType<typeof storeMemory>;
+  readonly memoryCorrect: (args: { readonly id: string; readonly content: string }, options?: Parameters<KeepApp["memoryStore"]>[1]) => ReturnType<typeof correctMemory>;
   /** Explicit opt-in durable manual memory. Construction does not create or initialize custody. */
   readonly memoryCustody: FileMemoryCustody;
   readonly memoryRetentionPolicy?: CapturedMemoryRetentionPolicy;
@@ -790,11 +795,14 @@ function jsonSafe(v: unknown): unknown {
 
 export function composeKeep(config: KeepConfig): KeepApp {
   const opaqueRecallStore = config.frontDoorMemory !== undefined;
-  const recallPrice = config.memoryRecallPricing === undefined ? undefined : Object.freeze({
-    inputPerMillion: config.memoryRecallPricing.inputPerMillion, observedAtMs: config.memoryRecallPricing.observedAtMs, maxAgeMs: config.memoryRecallPricing.maxAgeMs,
-  });
-  if (recallPrice && (!Number.isFinite(recallPrice.inputPerMillion) || recallPrice.inputPerMillion <= 0 ||
-      !Number.isSafeInteger(recallPrice.observedAtMs) || recallPrice.observedAtMs < 0 || !validPriceMaxAge(recallPrice.maxAgeMs))) throw new Error("invalid memory-recall price declaration");
+  const captureMemoryPrice = (input: KeepConfig["memoryRecallPricing"], label: string) => {
+    const price = input === undefined ? undefined : Object.freeze({ inputPerMillion: input.inputPerMillion, observedAtMs: input.observedAtMs, maxAgeMs: input.maxAgeMs });
+    if (price && (!Number.isFinite(price.inputPerMillion) || price.inputPerMillion <= 0 ||
+        !Number.isSafeInteger(price.observedAtMs) || price.observedAtMs < 0 || !validPriceMaxAge(price.maxAgeMs))) throw new Error(`invalid ${label} price declaration`);
+    return price;
+  };
+  const recallPrice = captureMemoryPrice(config.memoryRecallPricing, "memory-recall");
+  const storePrice = captureMemoryPrice(config.memoryStorePricing, "memory-store");
   const memoryRetentionPolicy = config.memoryRetentionPolicy === undefined ? undefined : captureMemoryRetentionPolicy(config.memoryRetentionPolicy);
   // A4 production preflight is deliberately the first composition action: no store, witness, provider, probe or other
   // mutable application state exists until the installed artifact and signed authority closure admit this boot.
@@ -1500,7 +1508,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
   const diagnosticIdentity = config.identity;
   const diagnosticOrganization = diagnosticIdentity !== undefined || releaseBoot !== undefined || tenantDeployment !== undefined;
   type ModelCallAuthority = {
-    readonly label: "provider-check" | "FrontDoor" | "memory-recall"; readonly permission: Permission;
+    readonly label: "provider-check" | "FrontDoor" | "memory-recall" | "memory-store" | "memory-correct"; readonly permission: Permission;
     readonly sessionId?: string; readonly subject?: string;
   };
   const modelCallPrincipal = (authority: ModelCallAuthority): string => {
@@ -1524,43 +1532,44 @@ export function composeKeep(config: KeepConfig): KeepApp {
     return canonicalize({ id: principal.id, kind: principal.kind, role: principal.role, tenant: principal.tenant ?? null });
   };
   const recallAuthority = new AsyncLocalStorage<ModelCallAuthority>();
-  const embedMemoryQuery = async (query: string) => {
-    const authority = recallAuthority.getStore() ?? { label: "memory-recall" as const, permission: "memory.read" as const };
+  const embedMemoryText = async (text: string, role: "query" | "document", authority: ModelCallAuthority, price: KeepConfig["memoryRecallPricing"]) => {
+    const maxInputBytes = role === "document" ? 8_000 : 65_000;
+    const maxBatchBytes = role === "document" ? 8_192 : 65_536;
     if (tracedProvider.isLocal) {
       if (diagnosticOrganization) modelCallPrincipal(authority);
-      return (await tracedProvider.embed([query]))[0];
+      return (await tracedProvider.embed([text]))[0];
     }
     const principal = modelCallPrincipal(authority);
-    if (!query || Buffer.byteLength(query) > 65_000) throw new Error("memory-recall query exceeds bounded input");
+    if (!text || Buffer.byteLength(text) > maxInputBytes) throw new Error(`${authority.label} text exceeds bounded input`);
     if (selectedDescriptor?.mode !== "openai-compatible" || selectedDescriptor.model !== "text-embedding-3-small" ||
-        selectedDescriptor.baseUrl !== "https://api.openai.com" || providerCheckHasExternalRouting || !recallPrice) {
-      throw new Error("price-unknown: memory-recall requires the direct supported encoder and explicit dated price declaration");
+        selectedDescriptor.baseUrl !== "https://api.openai.com" || providerCheckHasExternalRouting || !price) {
+      throw new Error(`price-unknown: ${authority.label} requires the direct supported encoder and explicit dated price declaration`);
     }
     const assertCurrent = () => {
-      if (modelCallPrincipal(authority) !== principal) throw new Error("memory-recall subject changed before dispatch");
+      if (modelCallPrincipal(authority) !== principal) throw new Error(`${authority.label} subject changed before dispatch`);
       const now = Date.now();
-      if (now < recallPrice.observedAtMs || now - recallPrice.observedAtMs > recallPrice.maxAgeMs) throw new Error("price-unverifiable: memory-recall price expired or future-dated");
+      if (now < price.observedAtMs || now - price.observedAtMs > price.maxAgeMs) throw new Error(`price-unverifiable: ${authority.label} price expired or future-dated`);
     };
     assertCurrent();
     const cost = new CostModel();
-    cost.registerPricing({ model: tracedProvider.name, inputPerMillion: recallPrice.inputPerMillion, cachedInputPerMillion: recallPrice.inputPerMillion, outputPerMillion: 0 });
+    cost.registerPricing({ model: tracedProvider.name, inputPerMillion: price.inputPerMillion, cachedInputPerMillion: price.inputPerMillion, outputPerMillion: 0 });
     return diagnosticPriceContext.run(cost, async () => {
       let reservationId: string | undefined, projectedInput = 0;
-      const result = await tracedProvider.embedBounded!([query], {
-        role: "query", maxAttempts: 1, maxBatchWindows: 1, maxBatchBytes: 65_536, assertAuthority: assertCurrent,
+      const result = await tracedProvider.embedBounded!([text], {
+        role, maxAttempts: 1, maxBatchWindows: 1, maxBatchBytes, assertAuthority: assertCurrent,
         reserve: async work => {
-          if (work.requests !== 1 || work.windows !== 1 || work.inputBytes > 65_536) throw new Error("memory-recall transport exceeds admitted work");
+          if (work.requests !== 1 || work.windows !== 1 || work.inputBytes > maxBatchBytes) throw new Error(`${authority.label} transport exceeds admitted work`);
           assertCurrent();
           projectedInput = work.inputBytes;
           const admitted = await meteringBudgetLedger.reserve("autonomy-subsystem", "auto-research", "frontier", tracedProvider.name,
             { freshInputTokens: projectedInput, cachedInputTokens: 0, outputTokens: 0 });
-          if (admitted.breach.wouldBreach || !admitted.reservation) throw new Error(`memory-recall budget refused (${admitted.breach.kind ?? "admission"}): ${admitted.breach.reason ?? "missing reservation"}`);
+          if (admitted.breach.wouldBreach || !admitted.reservation) throw new Error(`${authority.label} budget refused (${admitted.breach.kind ?? "admission"}): ${admitted.breach.reason ?? "missing reservation"}`);
           reservationId = admitted.reservation.id;
-          spine.stage({ type: "identity.action", actor: "memory-recall", payload: { event: "price_selected", source: "https://developers.openai.com/api/docs/models/text-embedding-3-small",
-            evidence: "operator-declared", observedAtMs: recallPrice.observedAtMs, maxAgeMs: recallPrice.maxAgeMs, inputPerMillion: recallPrice.inputPerMillion } });
+          spine.stage({ type: "identity.action", actor: authority.label, payload: { event: "price_selected", role, source: "https://developers.openai.com/api/docs/models/text-embedding-3-small",
+            evidence: "operator-declared", observedAtMs: price.observedAtMs, maxAgeMs: price.maxAgeMs, inputPerMillion: price.inputPerMillion } });
           let entered = false;
           return { runRequest: async (bytes, windows, send) => {
-            if (entered || bytes !== projectedInput || windows !== 1) throw new Error("memory-recall transport attempted unadmitted work");
+            if (entered || bytes !== projectedInput || windows !== 1) throw new Error(`${authority.label} transport attempted unadmitted work`);
             assertCurrent(); entered = true;
             return send(new AbortController().signal);
           }, complete: async () => {} };
@@ -1568,13 +1577,15 @@ export function composeKeep(config: KeepConfig): KeepApp {
       });
       if (!reservationId || result.model !== selectedDescriptor.model || result.usageComplete !== true || !result.usage ||
           result.usage.cachedInputTokens !== 0 || result.usage.outputTokens !== 0) {
-        throw new Error("memory-recall usage unavailable or mismatched; reservation remains unresolved");
+        throw new Error(`${authority.label} usage unavailable or mismatched; reservation remains unresolved`);
       }
       await meteringBudgetLedger.settle(reservationId, result.usage);
-      if (result.usage.freshInputTokens > projectedInput) throw new Error("memory-recall usage exceeded its projection; further admission requires reconciliation");
+      if (result.usage.freshInputTokens > projectedInput) throw new Error(`${authority.label} usage exceeded its projection; further admission requires reconciliation`);
       return result.vectors[0];
     });
   };
+  const embedMemoryQuery = (query: string) => embedMemoryText(query, "query",
+    recallAuthority.getStore() ?? { label: "memory-recall", permission: "memory.read" }, recallPrice);
   const memoryRecall: KeepApp["memoryRecall"] = async (query, options = {}) => {
     const authority: ModelCallAuthority = { label: "memory-recall", permission: "memory.read",
       ...(options.sessionId === undefined ? {} : { sessionId: options.sessionId }), ...(options.subject === undefined ? {} : { subject: options.subject }) };
@@ -1584,6 +1595,38 @@ export function composeKeep(config: KeepConfig): KeepApp {
     return recallAuthority.run(authority, () => recallMemory(secondBrain.memory, { query,
       ...(options.agentId === undefined ? {} : { agentId: options.agentId }), ...(options.subject === undefined ? {} : { projectId: options.subject }),
     }));
+  };
+  const manualMemoryControls = (label: "memory-store" | "memory-correct", options: NonNullable<Parameters<KeepApp["memoryStore"]>[1]>) => {
+    const processing = options.processing;
+    const authority: ModelCallAuthority = { label, permission: "memory.write",
+      ...(options.sessionId === undefined ? {} : { sessionId: options.sessionId }), ...(options.subject === undefined ? {} : { subject: options.subject }) };
+    // Personal local tenant selection stays the gateway's existing scoped view; it is not a session identity.
+    const principalAuthority: ModelCallAuthority = !diagnosticOrganization && tracedProvider.isLocal
+      ? { label, permission: "memory.write" } : authority;
+    const principal = modelCallPrincipal(principalAuthority);
+    if (diagnosticOrganization && authority.subject === undefined) throw new Error(`${label} requires resolved organization tenant`);
+    if (!tracedProvider.isLocal && (opaqueRecallStore || processing !== "configured-provider")) throw new Error(`${label} requires explicit document processing and a built-in store`);
+    const assertCurrent = () => {
+      if (modelCallPrincipal(principalAuthority) !== principal) throw new Error(`${label} subject changed before publication`);
+    };
+    return { subject: authority.subject, controls: {
+      ...(!tracedProvider.isLocal || !opaqueRecallStore ? { embedDocument: (text: string) => embedMemoryText(text, "document", authority, storePrice) } : {}),
+      assertPublishAuthority: assertCurrent,
+    } };
+  };
+  const memoryStore: KeepApp["memoryStore"] = async (args, options = {}) => {
+    // Capture operation scope/consent before awaiting any preparation or provider work.
+    const input = { ...args }, { subject, controls } = manualMemoryControls("memory-store", options);
+    if (subject !== undefined) {
+      if ((input.scope !== undefined && input.scope !== "project") || input.agentId !== undefined ||
+          (input.projectId !== undefined && input.projectId !== subject)) throw new Error("memory-store write is outside the resolved tenant");
+      input.scope = "project"; input.projectId = subject;
+    }
+    return storeMemory(secondBrain.memory, input, controls);
+  };
+  const memoryCorrect: KeepApp["memoryCorrect"] = async (args, options = {}) => {
+    const { id, content } = args, { subject, controls } = manualMemoryControls("memory-correct", options);
+    return correctMemory(secondBrain.memory, id, content, subject, controls);
   };
   const generateMeteredModelCall = async (prompt: string, maxTokens: number, authority: ModelCallAuthority, checkPrice?: () => void): Promise<GenerateResult> => {
     const principal = modelCallPrincipal(authority);
@@ -2246,7 +2289,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
       developmentFixture,
     });
   })();
-  return { providerCheck, memoryRecall, frontDoorMessage, memoryCustody, ...(memoryRetentionPolicy === undefined ? {} : { memoryRetentionPolicy }), ...(taskMemoryForCommand ? { taskMemoryForCommand } : {}), spine, witnessSink, witnessExport, ...(clientSigning ? { clientSigning } : {}), ...(cueAblation ? { cueAblation } : {}), ...(projectMerge ? { projectMerge } : {}), ...(repositoryTransactions ? { repositoryTransactions } : {}), ...(releaseBoot === undefined ? {} : { releaseGraph: releaseBoot.graph, releaseLedgers: releaseBoot.ledgers }), ...(externalReviewVerifier === undefined ? {} : { externalReviewVerifier }), ...(nativeBoundaryTransport === undefined ? {} : { nativeBoundaryTransport }), capabilities, observedFailureDefenses, enforcementTier: capabilities.tier, seamAudit, enforcementProfile, spineDurable, egressWitnessed, egressProvider, witnessReconciliation, identityRegistry, gateway, ...(config.runtimePaths ? { runtimePaths: config.runtimePaths } : {}), ...(tenantDeployment ? { tenantDeployment } : {}), ...(fleetLifecycle ? { fleetLifecycle } : {}), ...(fleetTelemetry ? { fleetTelemetry } : {}), secondBrain, episodicTurns, contextAssembler, infra, effectMediation, lifecycle, heartbeat, referenceRefresher, promptLayer, boot, manifest, posture, selfImprovementBus, driftMonitor, referenceMonitor, solveOutcomeWire, calibrationWire, ...(revertSignal ? { revertSignal } : {}), triggerIngress, mcpGateway, notifications, authorization, separationOfDuties, registryStore, managedSkillRegistry, tenantRegistry, redactionGateway, harnessCompiler, egressInterceptor, ...(personalDataStore ? { personalDataStore } : {}), ...(bestOfNSolver ? { bestOfNSolver } : {}), ...(resolveWithTests ? { resolveWithTests } : {}), ...(resolveCascadeFn ? { resolveCascade: resolveCascadeFn } : {}), ...(config.identity ? { identity: config.identity } : {}), curriculumLearner, needScheduler, consolidation, skillDistiller, skillCanary, skillRetrieval, memoryConsensus, ...(artifactSelfHeal ? { artifactSelfHeal } : {}), ...(adapterBridge ? { adapterBridge } : {}), ...(governedAnchor ? { governedAnchor } : {}), frontDoor, frontDoorForSubject, ...(skillValidator ? { skillValidator } : {}), ...(skillEvaluator ? { skillEvaluator } : {}), ...(metaHarness ? { metaHarness } : {}), scheduler, budgetLedger, deadLetterQueue, sagaSequencer, nonPersistableRegistry, otelEmitter, vettingGates, governanceSuite, corpusSuite, observability, learningSignals, ...(autoTraining ? { autoTraining } : {}), ...(selfImprovement ? { selfImprovement } : {}), ...(outcomeAdaptation ? { outcomeAdaptation, resetOutcomeAdaptation: resetOutcomeAdaptation!, projectAuditDigest: (projectId: ProjectId, domain: string, value: string) => projectRegistry.namespace(projectId).pseudonym(domain, value) } : {}), ...(audiencePerformanceFor ? { audiencePerformanceFor } : {}), ...(autonomyLoop && projectManager ? { autonomyLoop, projectManager, vetoQueue } : {}), ...(projectRuntime ? { projectRuntime } : {}) };
+  return { providerCheck, memoryRecall, memoryStore, memoryCorrect, frontDoorMessage, memoryCustody, ...(memoryRetentionPolicy === undefined ? {} : { memoryRetentionPolicy }), ...(taskMemoryForCommand ? { taskMemoryForCommand } : {}), spine, witnessSink, witnessExport, ...(clientSigning ? { clientSigning } : {}), ...(cueAblation ? { cueAblation } : {}), ...(projectMerge ? { projectMerge } : {}), ...(repositoryTransactions ? { repositoryTransactions } : {}), ...(releaseBoot === undefined ? {} : { releaseGraph: releaseBoot.graph, releaseLedgers: releaseBoot.ledgers }), ...(externalReviewVerifier === undefined ? {} : { externalReviewVerifier }), ...(nativeBoundaryTransport === undefined ? {} : { nativeBoundaryTransport }), capabilities, observedFailureDefenses, enforcementTier: capabilities.tier, seamAudit, enforcementProfile, spineDurable, egressWitnessed, egressProvider, witnessReconciliation, identityRegistry, gateway, ...(config.runtimePaths ? { runtimePaths: config.runtimePaths } : {}), ...(tenantDeployment ? { tenantDeployment } : {}), ...(fleetLifecycle ? { fleetLifecycle } : {}), ...(fleetTelemetry ? { fleetTelemetry } : {}), secondBrain, episodicTurns, contextAssembler, infra, effectMediation, lifecycle, heartbeat, referenceRefresher, promptLayer, boot, manifest, posture, selfImprovementBus, driftMonitor, referenceMonitor, solveOutcomeWire, calibrationWire, ...(revertSignal ? { revertSignal } : {}), triggerIngress, mcpGateway, notifications, authorization, separationOfDuties, registryStore, managedSkillRegistry, tenantRegistry, redactionGateway, harnessCompiler, egressInterceptor, ...(personalDataStore ? { personalDataStore } : {}), ...(bestOfNSolver ? { bestOfNSolver } : {}), ...(resolveWithTests ? { resolveWithTests } : {}), ...(resolveCascadeFn ? { resolveCascade: resolveCascadeFn } : {}), ...(config.identity ? { identity: config.identity } : {}), curriculumLearner, needScheduler, consolidation, skillDistiller, skillCanary, skillRetrieval, memoryConsensus, ...(artifactSelfHeal ? { artifactSelfHeal } : {}), ...(adapterBridge ? { adapterBridge } : {}), ...(governedAnchor ? { governedAnchor } : {}), frontDoor, frontDoorForSubject, ...(skillValidator ? { skillValidator } : {}), ...(skillEvaluator ? { skillEvaluator } : {}), ...(metaHarness ? { metaHarness } : {}), scheduler, budgetLedger, deadLetterQueue, sagaSequencer, nonPersistableRegistry, otelEmitter, vettingGates, governanceSuite, corpusSuite, observability, learningSignals, ...(autoTraining ? { autoTraining } : {}), ...(selfImprovement ? { selfImprovement } : {}), ...(outcomeAdaptation ? { outcomeAdaptation, resetOutcomeAdaptation: resetOutcomeAdaptation!, projectAuditDigest: (projectId: ProjectId, domain: string, value: string) => projectRegistry.namespace(projectId).pseudonym(domain, value) } : {}), ...(audiencePerformanceFor ? { audiencePerformanceFor } : {}), ...(autonomyLoop && projectManager ? { autonomyLoop, projectManager, vetoQueue } : {}), ...(projectRuntime ? { projectRuntime } : {}) };
 }
 
 /** Deterministic short content hash for auditable version bumps (zero-dep, non-crypto FNV-1a). */

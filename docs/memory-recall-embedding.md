@@ -1,5 +1,7 @@
 # Memory-recall query monetary admission — October 5, 2026
 
+Current 0.0.10-preview.1 source also admits one [manual write](manual-memory-write.md) and [manual correction](manual-memory-correction.md) document consumer. The original ME001 query findings/receipt below retain their 0.0.9-preview.1 source identity; wider document/encoder coverage remains open.
+
 Development source **0.0.9-preview.1** adds monetary admission to the built-in ordinary memory store's query embedding. It reuses the private durable autonomy monetary ledger and existing governed bounded transport. It does not rebuild an index or meter document ingestion, fitness, task encoders or opaque injected stores. Downloadable **0.0.5-preview.1** retains its original contents and qualification.
 
 ## Research and configured route

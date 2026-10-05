@@ -6,7 +6,7 @@
  * survives; `correct`'s new lesson cites the old id for lineage.
  */
 
-import { MemoryStore } from "./store.js";
+import { MemoryStore, type MemoryIngestControls } from "./store.js";
 import { memoryUseExpired, memoryCurrentWithSourcesAt, memoryPrivateUseAllowed, memorySourceClosure, memoryExcerptText, MAX_MEMORY_EXCERPT_BYTES,
   type MemoryCustody, type DerivedMemoryCustody, type ManualMemoryCustody, type SourceOnlyManualMemoryCustody, type RetainedManualMemoryCustody, type MemoryKind, type MemoryScope, type TrustTier, type Origin } from "./model.js";
 import type { CapturedMemoryRetentionPolicy } from "./retention.js";
@@ -283,14 +283,14 @@ export interface RecallArgs {
   readonly projectId?: string;
 }
 
-export async function memoryStore(store: MemoryStore, args: StoreArgs): Promise<{ id: string } | null> {
+export async function memoryStore(store: MemoryStore, args: StoreArgs, controls?: MemoryIngestControls): Promise<{ id: string } | null> {
   const lesson = await store.ingest(args.content, {
     origin: "self", // a manual, human-entered memory
     ...(args.kind !== undefined ? { kind: args.kind } : {}),
     ...(args.scope !== undefined ? { scope: args.scope } : {}),
     ...(args.agentId !== undefined ? { agentId: args.agentId } : {}),
     ...(args.projectId !== undefined ? { projectId: args.projectId } : {}),
-  });
+  }, controls);
   return lesson ? { id: lesson.id } : null;
 }
 
@@ -314,8 +314,8 @@ export function memoryForget(store: MemoryStore, id: string, projectId?: string)
  * Correct = prepare, then supersede atomically in the store. Rejection or failed preparation leaves the old
  * item intact. Returns null for a missing/retired/foreign item, rejected replacement or conflicting change.
  */
-export async function memoryCorrect(store: MemoryStore, id: string, newContent: string, projectId?: string): Promise<{ oldId: string; newId: string } | null> {
-  return store.correct(id, newContent, projectId);
+export async function memoryCorrect(store: MemoryStore, id: string, newContent: string, projectId?: string, controls?: MemoryIngestControls): Promise<{ oldId: string; newId: string } | null> {
+  return store.correct(id, newContent, projectId, controls);
 }
 
 

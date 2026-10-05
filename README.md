@@ -18,7 +18,7 @@ its affected launcher pin and original checksum.
 
 ## Current development source
 
-**0.0.9-preview.1** adds [memory-recall query monetary admission](docs/memory-recall-embedding.md) for one explicitly configured direct encoder. It retains the fresh official price observation under an explicit
+**0.0.10-preview.1** adds [manual memory writes](docs/manual-memory-write.md) and [manual corrections](docs/manual-memory-correction.md) to monetary admission for one direct encoder, retaining [memory-recall query admission](docs/memory-recall-embedding.md). It retains the fresh official price observation under an explicit
 maximum-age policy for the direct DeepSeek `deepseek-flash` provider-check route.
 Stale, missing, unreadable or unsupported prices refuse before model dispatch.
 Read [research, configuration and limits](docs/provider-check-pricing.md).
@@ -39,7 +39,7 @@ node dist/src/main.js version
 node dist/src/main.js demo recovery
 ```
 
-Expected source version: `keep 0.0.9-preview.1`. The recovery experiment uses synthetic
+Expected source version: `keep 0.0.10-preview.1`. The recovery experiment uses synthetic
 local outbox effects and no model calls. Its 24 cases exercise accounting,
 uncertain acknowledgements and fresh-process restart. A passing demonstration
 has narrower scope than complete source or installed-artifact qualification.
@@ -54,6 +54,8 @@ Keep has CLI, gateway and client interfaces, project and memory storage, skill v
 This remains a research preview. Use synthetic data and isolated test resources while evaluating it. It is not qualified for unattended consequential production work, universal spending enforcement or exactly-once effects across arbitrary remote services. [Known limitations](docs/research-preview.md#interpreting-the-result) describe those boundaries.
 
 ## Read further
+
+- [October 5 manual write and correction checkpoint](docs/manual-memory-correction.md)
 
 - [October 5 memory-recall query checkpoint](docs/memory-recall-embedding.md)
 

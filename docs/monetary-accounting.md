@@ -1,5 +1,7 @@
 # Monetary accounting on metered model calls
 
+The 0.0.10-preview.1 development checkpoint adds [manual document writes](manual-memory-write.md) and [manual corrections](manual-memory-correction.md) to the shared monetary ledger. Combined exact-source qualification and publication are recorded separately. Earlier receipts retain their original source coverage; other document/task/fitness consumers remain outside this change.
+
 This describes the corrected development implementation. It does not change the
 results or contents of the historical research-preview release.
 
@@ -32,7 +34,7 @@ have zero token fees in composition; this does not measure hosting costs or atte
 that arbitrary injected development code is network-free.
 
 The October 5 development source meters `provider-check` and built-in FrontDoor
-model calls through this ledger. [One ordinary memory-recall query route](memory-recall-embedding.md) now also uses it under an explicit dated price declaration. Other direct interactive calls and document/task/fitness embeddings remain outside this monetary coverage. Bounded embedding work has a separate request/byte/window budget. The velocity
+model calls through this ledger. [One ordinary memory-recall query route](memory-recall-embedding.md) now also uses it under an explicit dated price declaration. Manual POST /memory and POST /memory/correct document embeddings also use it under explicit document consent/pricing/write authority. Other direct interactive calls and other document/task/fitness embeddings remain outside this monetary coverage. Bounded embedding work has a separate request/byte/window budget. The velocity
 breaker measures rate after calls; its post-call error does not establish non-execution.
 These distinctions are why Keep does not advertise a universal spending ceiling.
 
