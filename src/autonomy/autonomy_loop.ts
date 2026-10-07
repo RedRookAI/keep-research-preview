@@ -123,6 +123,8 @@ export interface AutonomyLoopConfig {
   readonly permissionPolicy?: ProjectPermissionPolicy;
   /** Optional enterprise/personal intent classifier adapter; deterministic router remains the shared floor. */
   readonly intentRouter?: ProjectIntentRouter;
+  /** Selected Codex role needs an owner decision before any model preparation. */
+  readonly requireGenerationApproval?: true;
   /** Optional personal/enterprise corpus adapter; admitted tri-research sources provide the shared built-in floor. */
   readonly projectRetriever?: ProjectRetriever;
   readonly projectRetrievalLimit?: number;
@@ -276,7 +278,7 @@ export function buildAutonomyLoop(cfg: AutonomyLoopConfig): AutonomyLoop {
   const researchRetrievalAvailable = (cfg.research?.transports?.length ?? 0) > 0;
   const planStage = buildPlanStageExecutor(cfg.projectPlanner);
   const canonicalExecutors: StageExecutors = {
-    understand: buildUnderstandStageExecutor(cfg.intentRouter),
+    understand: buildUnderstandStageExecutor(cfg.intentRouter, cfg.requireGenerationApproval === true),
     research: async (state) => {
       const decision = decideProjectResearch(state, researchRetrievalAvailable);
       if (!decision.required) return { output: { decision, disposition: "not-required" }, control: "advance", headline: decision.reason };

@@ -42,8 +42,15 @@ export interface CodexAccountClientOptions {
   readonly maxCapturedOutputBytes: number;
   readonly maxElapsedMs: number;
 }
+export interface CodexAccountFailure {
+  readonly reason: "cancelled" | "deadline" | "protocol-refusal" | "output-limit" | "input-pipe" | "spawn-error" | "incomplete-output";
+  readonly phase: "none" | "thread-started" | "turn-started" | "turn-completed";
+  readonly exitCode: number | null;
+  readonly locallyClosed: boolean;
+  readonly category: "unknown" | "configuration" | "authentication" | "model-unavailable";
+}
 export class CodexAccountError extends Error {
-  constructor(message: string, readonly dispatch: "not-started" | "entered") {
+  constructor(message: string, readonly dispatch: "not-started" | "entered", readonly diagnostics?: CodexAccountFailure) {
     super(message); this.name = "CodexAccountError";
   }
 }
@@ -97,6 +104,14 @@ export class CodexAccountClient {
         const child = spawn(this.options.executable, args, { cwd: dir, env: environment, detached: true, stdio: ["pipe", "pipe", "pipe"] });
         let failure: string | undefined, pending = "", bytes = 0, text: string | undefined, rawMessage: string | undefined, usage: CodexAccountUsage | undefined;
         let thread = false, started = false, completed = false;
+        let reason: CodexAccountFailure["reason"] = "incomplete-output", stderr = "";
+        const diagnostic = (exitCode: number | null = null, locallyClosed = false): CodexAccountFailure => Object.freeze({
+          reason, phase: completed ? "turn-completed" : started ? "turn-started" : thread ? "thread-started" : "none",
+          exitCode, locallyClosed,
+          category: /failed to load bootstrap configuration|unexpected argument|unknown field/iu.test(stderr) ? "configuration"
+            : /401 Unauthorized|authentication failed/iu.test(stderr) ? "authentication"
+            : /model not found|model is not available/iu.test(stderr) ? "model-unavailable" : "unknown",
+        });
         const decoder = new StringDecoder("utf8");
         const stop = (reason: string) => {
           failure ??= reason;
@@ -104,13 +119,13 @@ export class CodexAccountClient {
         };
         const interrupt = (reason: string) => {
           stop(reason);
-          reject(new CodexAccountError(reason, "entered"));
+          reject(new CodexAccountError(reason, "entered", diagnostic()));
           child.stdin.destroy(); child.stdout.destroy(); child.stderr.destroy(); child.unref();
         };
-        const abort = () => interrupt("Codex invocation cancelled; remote work may have occurred");
+        const abort = () => { if (!failure) reason = "cancelled"; interrupt("Codex invocation cancelled; remote work may have occurred"); };
         request.signal?.addEventListener("abort", abort, { once: true });
         if (request.signal?.aborted) abort();
-        const timer = setTimeout(() => interrupt("Codex deadline elapsed; remote work may have occurred"), this.options.maxElapsedMs);
+        const timer = setTimeout(() => { if (!failure) reason = "deadline"; interrupt("Codex deadline elapsed; remote work may have occurred"); }, this.options.maxElapsedMs);
         const line = (value: string) => {
           if (!value.trim() || failure) return;
           try {
@@ -138,17 +153,17 @@ export class CodexAccountClient {
               completed = true; return;
             }
             throw new Error();
-          } catch { stop("Codex returned invalid, incomplete or unsupported activity; invocation remains uncertain"); }
+          } catch { if (!failure) reason = "protocol-refusal"; stop("Codex returned invalid, incomplete or unsupported activity; invocation remains uncertain"); }
         };
         child.stdout.on("data", (chunk: Buffer) => {
           bytes += chunk.length;
-          if (bytes > this.options.maxCapturedOutputBytes) { stop("Codex output exceeds its admitted bytes"); return; }
+          if (bytes > this.options.maxCapturedOutputBytes) { if (!failure) reason = "output-limit"; stop("Codex output exceeds its admitted bytes"); return; }
           pending += decoder.write(chunk);
           for (;;) { const end = pending.indexOf("\n"); if (end < 0) break; line(pending.slice(0, end)); pending = pending.slice(end + 1); }
         });
-        child.stderr.on("data", (chunk: Buffer) => { bytes += chunk.length; if (bytes > this.options.maxCapturedOutputBytes) stop("Codex output exceeds its admitted bytes"); });
-        child.stdin.on("error", () => stop("Codex input pipe closed; invocation remains uncertain"));
-        child.once("error", () => stop("Codex process could not execute"));
+        child.stderr.on("data", (chunk: Buffer) => { bytes += chunk.length; if (bytes > this.options.maxCapturedOutputBytes) { if (!failure) reason = "output-limit"; stop("Codex output exceeds its admitted bytes"); } else stderr += chunk.toString("utf8"); });
+        child.stdin.on("error", () => { if (!failure) reason = "input-pipe"; stop("Codex input pipe closed; invocation remains uncertain"); });
+        child.once("error", () => { if (!failure) reason = "spawn-error"; stop("Codex process could not execute"); });
         child.once("close", code => {
           locallyClosed = true;
           clearTimeout(timer); request.signal?.removeEventListener("abort", abort);
@@ -156,7 +171,7 @@ export class CodexAccountClient {
           rmSync(dir, { recursive: true, force: true });
           pending += decoder.end(); if (pending) line(pending);
           if (failure || code !== 0 || !completed || text === undefined || !usage)
-            reject(new CodexAccountError(failure ?? "Codex did not complete with verified output/usage", "entered"));
+            reject(new CodexAccountError(failure ?? "Codex did not complete with verified output/usage", "entered", diagnostic(code, true)));
           else resolve({ text, usage, requestedModel: this.options.model, reportedModel: null, billingBasis: "chatgpt-subscription",
             allocatedPlanCostUsd: null, modelWireAttempts: null, cliInvocations: 1 });
         });

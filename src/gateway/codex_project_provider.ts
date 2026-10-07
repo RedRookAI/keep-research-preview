@@ -72,7 +72,8 @@ export class CodexProjectProvider implements ModelProvider {
       return { text: result.text, model: this.name, tokensIn: result.usage.inputTokens, tokensOut: result.usage.outputTokens, usageComplete: true };
     } catch (error) {
       if (error instanceof CodexAccountError && error.dispatch === "not-started") entered = false;
-      this.spine.stage({ type: "identity.action", actor: "codex.project-generation", payload: { event: entered ? "uncertain" : "not-started", id, binding: this.binding } });
+      this.spine.stage({ type: "identity.action", actor: "codex.project-generation", payload: { event: entered ? "uncertain" : "not-started", id, binding: this.binding,
+        ...(error instanceof CodexAccountError && error.diagnostics ? { diagnostics: error.diagnostics } : {}) } });
       throw error;
     }
   }

@@ -1,0 +1,14 @@
+{
+  "exit": 0,
+  "elapsed_seconds": 13.358736739028245,
+  "files": [
+    "understand_stage",
+    "project_loop",
+    "autonomy_loop",
+    "codex_project_provider"
+  ],
+  "compile_included": true,
+  "existing_profile_reused": true,
+  "host_policy_changed": false,
+  "recovery_demo": null
+}

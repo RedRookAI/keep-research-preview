@@ -15,7 +15,7 @@ function fixture(mode="success",maxInvocations=1) {
  writeFileSync(executable,`#!${process.execPath}
 const fs=require('node:fs');process.stdin.resume();process.stdin.on('end',()=>{
  fs.writeFileSync(${JSON.stringify(record)},'entered');
- if(${JSON.stringify(mode)}==='fail'){console.log('bad-json');return;}
+ if(${JSON.stringify(mode)}==='fail'){console.error('PRIVATE-TEST-SECRET');console.log('bad-json');return;}
  for(const x of [{type:'thread.started',thread_id:'fixture'},{type:'turn.started'},{type:'item.completed',item:{id:'1',type:'agent_message',text:JSON.stringify({text:'proposal'})}},{type:'turn.completed',usage:{input_tokens:10,cached_input_tokens:2,output_tokens:5}}])console.log(JSON.stringify(x));
 });`,{mode:0o700});
  const descriptor:CodexProjectDescriptor={executable,executableSha256:createHash('sha256').update(readFileSync(executable)).digest('hex'),cliVersion:'codex-cli 0.159.3',model:'fixture',maxSubmittedPromptBytes:4096,maxCapturedOutputBytes:4096,maxElapsedMs:2000,maxInvocations,processing:'owner-public-repository'};
@@ -38,6 +38,7 @@ test('entered failure and a pending claim prevent restart dispatch',async()=>{
  const f=fixture('fail',3);try{
   const p=new CodexProjectProvider(f.descriptor,f.spine());
   await assert.rejects(p.generate(generationRequest(p,{prompt:'p'})));
+  const failed=f.spine().currentEvents().at(-1);assert.equal(failed?.payload['event'],'uncertain');assert.ok(failed?.payload['diagnostics']);assert.equal(JSON.stringify(failed).includes('PRIVATE-TEST-SECRET'),false);
   await assert.rejects(new CodexProjectProvider(f.descriptor,f.spine()).generate(generationRequest(p,{prompt:'p'})),/prior work is uncertain/);
  }finally{rmSync(f.root,{recursive:true,force:true});}
 });

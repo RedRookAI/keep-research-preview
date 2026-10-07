@@ -56,3 +56,5 @@ A successful scripted walkthrough demonstrates this workflow, not general model 
 - [Licensing and attribution](docs/licensing.md)
 
 Source checkpoint0.0.13-preview.1 adds [owner-project Codex generation](docs/codex-project.md), using existing subscription access. New downloadable qualification and the real issue case study are pending; the release above remains the latest qualified download.
+
+The Codex source checkpoint remains experimental: its first installed native attempt failed without usable output. The follow-up approval and diagnostic fixes are recorded in the [case status and tickets](docs/maintenance/codex-case-20261007/INDEX.md). No successful real-model case or new qualified download is claimed.

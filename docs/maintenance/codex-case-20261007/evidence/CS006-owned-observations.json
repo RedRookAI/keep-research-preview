@@ -1,0 +1,16 @@
+{
+  "parent_connection_environment_present": {
+    "HTTPS_PROXY": false,
+    "HTTP_PROXY": false,
+    "ALL_PROXY": false,
+    "NO_PROXY": false,
+    "SSL_CERT_FILE": false,
+    "SSL_CERT_DIR": false,
+    "NODE_EXTRA_CA_CERTS": false,
+    "CODEX_HOME": false
+  },
+  "native_config_has_custom_account_endpoint": false,
+  "first_attempt_stderr_retained": false,
+  "model_work": "unknown; no usable output received",
+  "no_replay": true
+}

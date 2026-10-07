@@ -65,7 +65,7 @@ export function captureProjectIntent(goal: string, route: RouteResult): ProjectI
  * The artifact and clarification question are preserved under every posture. Only interaction
  * differs; downstream effect boundaries still enforce authority independently.
  */
-export function buildUnderstandStageExecutor(router: ProjectIntentRouter = new IntentShapeRouter()): StageExecutor {
+export function buildUnderstandStageExecutor(router: ProjectIntentRouter = new IntentShapeRouter(), requireGenerationApproval = false): StageExecutor {
   return async (state): Promise<StageResult> => {
     const route = await router.route({ text: state.goal });
     const artifact = captureProjectIntent(state.goal, route);
@@ -81,6 +81,9 @@ export function buildUnderstandStageExecutor(router: ProjectIntentRouter = new I
         headline: "The request has multiple plausible interpretations.",
         detail: route.clarifyingQuestion ?? route.note,
       };
+    }
+    if (requireGenerationApproval) {
+      return { output: artifact, control: "approval-required", headline: "Approve Codex generation for this owner public-repository goal." };
     }
     if (route.shape === "ambiguous") {
       return {

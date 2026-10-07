@@ -1,0 +1,29 @@
+{
+  "status": "FIRST_INSTALLED_ATTEMPT_FAILED_UNCONFIRMED",
+  "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n2 !== 0\n",
+  "elapsedSeconds": 1.932,
+  "codexEvents": [
+    {
+      "event": "claimed",
+      "id": "5a1a311b-d8b2-49c5-927b-ef7a43faa037",
+      "binding": "ebef15fa3a21f9c1152b1a5c3287859018de6ef73eb1d89156e05e3c1465835c",
+      "billingBasis": "chatgpt-subscription",
+      "requestedModel": "gpt-6.1-sol",
+      "processing": "owner-public-repository",
+      "promptSha256": "7295f4d581e4468c6b218fbff2a01bc2fba42b14247c4f3571959ade512e9827",
+      "allocatedPlanCostUsd": null
+    },
+    {
+      "event": "uncertain",
+      "id": "5a1a311b-d8b2-49c5-927b-ef7a43faa037",
+      "binding": "ebef15fa3a21f9c1152b1a5c3287859018de6ef73eb1d89156e05e3c1465835c"
+    }
+  ],
+  "completed_generation_results": 0,
+  "model_wire_requests": "unknown",
+  "token_usage": "unknown",
+  "allocatedPlanCostUsd": null,
+  "source_unchanged": true,
+  "new_model_attempt_authorized": false,
+  "assertion_interpretation": "Pre-approval observer found two ledger rows: one claimed invocation and its uncertainty record; this is not two model calls or a retained native exit code."
+}

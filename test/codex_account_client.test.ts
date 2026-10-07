@@ -14,6 +14,7 @@ const args=process.argv.slice(2),record=${JSON.stringify(record)},mode=${JSON.st
 let input='';process.stdin.on('data',b=>{input+=b});process.stdin.on('end',()=>{
  fs.writeFileSync(record,JSON.stringify({args,input,apiKey:process.env.OPENAI_API_KEY??null,codexKey:process.env.CODEX_API_KEY??null}));
  const send=x=>process.stdout.write(JSON.stringify(x)+'\\n');
+ if(mode==='native-config'){process.stderr.write('failed to load bootstrap configuration PRIVATE-TEST-SECRET');process.exitCode=7;return;}
  send({type:'thread.started',thread_id:'owned-fixture'});send({type:'turn.started'});
  if(mode==='timeout'||mode==='cancel'){setInterval(()=>{},1000);return;}
  if(mode==='tool'){send({type:'item.started',item:{type:'command_execution',command:'never executed by fixture'}});return;}
@@ -88,4 +89,21 @@ test("cancellation after a live invocation began remains entered work", async ()
     controller.abort();
     await assert.rejects(pending, (e: unknown) => e instanceof CodexAccountError && e.dispatch === "entered");
   } finally { controller.abort(); rmSync(f.root, { recursive: true, force: true }); }
+});
+
+test("native failure diagnostics preserve phase/exit and never serialize stderr secrets",async()=>{
+ const f=fixture("native-config");try{
+  await assert.rejects(f.client.generate({billingBasis:"chatgpt-subscription",prompt:"p"}),(e:unknown)=>{
+   assert.ok(e instanceof CodexAccountError);assert.equal(e.dispatch,"entered");
+   assert.deepEqual(e.diagnostics,{reason:"incomplete-output",phase:"none",exitCode:7,locallyClosed:true,category:"configuration"});
+   assert.equal(JSON.stringify(e).includes("PRIVATE-TEST-SECRET"),false);assert.equal(e.message.includes("PRIVATE-TEST-SECRET"),false);return true;
+  });
+ }finally{rmSync(f.root,{recursive:true,force:true});}
+});
+test("deadline diagnostic does not upgrade local or remote closure",async()=>{
+ const f=fixture("timeout");try{
+  await assert.rejects(f.client.generate({billingBasis:"chatgpt-subscription",prompt:"p"}),(e:unknown)=>{
+   assert.ok(e instanceof CodexAccountError);assert.equal(e.diagnostics?.reason,"deadline");assert.equal(e.diagnostics?.locallyClosed,false);assert.equal(e.diagnostics?.exitCode,null);return true;
+  });
+ }finally{rmSync(f.root,{recursive:true,force:true});}
 });

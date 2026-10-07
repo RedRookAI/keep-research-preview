@@ -1,0 +1,31 @@
+{
+  "status": "QUALIFIED_EXACT_SOURCE",
+  "source_head": "7ed31a358bd7b1c0ae0e8479bfb15320f7aecbbd",
+  "phases": {
+    "ordinary": {
+      "files": 537,
+      "tests": 5310,
+      "pass": 5310,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "release/security": {
+      "files": 1,
+      "tests": 34,
+      "pass": 34,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "native": {
+      "files": 18,
+      "tests": 139,
+      "pass": 139,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  "limits": "Same-agent owned offline fixture; final later source is not covered by this full pass."
+}

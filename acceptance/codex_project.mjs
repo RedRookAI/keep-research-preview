@@ -50,13 +50,15 @@ try {
   for (const args of [["solve"], ["solve", "fix", "--posture=autonomous"], ["solve", "fix"]]) {
     await command(args, { ...base, KEEP_DATA_DIR: join(root, "invalid-data") }, 2); assert.equal(existsSync(join(root, "invalid-data")), false);
   }
-  const output = await command(["solve", "Correct retryLimit in src/retry.mjs to seven; preserve unrelated behavior."]);
+  const output = await command(["solve", "Fix retryLimit in src/retry.mjs: expected value seven, actual value zero. Implement the smallest change and test it; preserve unrelated behavior."]);
   const runId = /Run: ([^\s]+)/u.exec(output)?.[1]; assert.ok(runId, output); assert.equal(calls.length, 0);
   let origin = await start(); const token = readFileSync(join(data, "owner-token"), "utf8").trim();
   const remote = () => ({ ...base, KEEP_GATEWAY_URL: origin, KEEP_GATEWAY_TOKEN: token });
   const observe = async () => { const response = await fetch(origin + "/project?runId=" + runId, { headers: { authorization: "Bearer " + token }, signal: AbortSignal.timeout(5000) }); assert.equal(response.status, 200); return response.json(); };
   const initial = await observe(); writeFileSync(join(root, "initial.json"), JSON.stringify(initial, null, 2));
-  assert.equal(initial.project.status, "waiting-approval"); assert.equal(calls.length, 0);
+  assert.equal(initial.project.status, "waiting-approval"); assert.equal(calls.length, 0); assert.equal(initial.project.artifacts.understand.intent.shape, "concrete-task");
+  await command(["project", "resume", runId, "--approve=wrong-decision"], remote());
+  assert.equal(calls.length,0);assert.equal((await observe()).project.status,"waiting-approval");
   await command(["project", "resume", runId, "--approve=" + initial.project.wait.decisionId], remote());
   const result = await observe(); writeFileSync(join(root, "outcome.json"), JSON.stringify({ ...result, controlledCalls: calls.length, controlledErrors: errors }, null, 2));
   assert.deepEqual(errors, []); assert.equal(result.project.artifacts.implement.solve.solved, true, JSON.stringify(result));

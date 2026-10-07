@@ -50,3 +50,12 @@ test("understanding preserves the canonical durable goal ceiling and rejects mal
   assert.equal(projectGoalByteLimit(), 1_000_000);
   assert.throws(() => captureProjectIntent("\0", { shape: "concrete-task", confidence: 1, via: "rule", note: "n" }), /non-empty bounded text/);
 });
+
+for (const posture of ["autonomous","policy-calibrated","approval-required"] as const) {
+ test(`Codex explicit generation approval holds clear goals under ${posture}`,async()=>{
+  const result=await buildUnderstandStageExecutor(undefined,true)(state("implement and test a markdown parser",posture));
+  assert.equal(result.control,"approval-required");assert.match(result.headline??"",/Approve Codex generation/);
+  const artifact=result.output as ReturnType<typeof captureProjectIntent>;
+  assert.equal(artifact.intent.shape,"concrete-task");assert.equal(artifact.ambiguity.detected,false);
+ });
+}

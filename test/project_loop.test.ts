@@ -575,3 +575,17 @@ test("crash window: a fresh store sees reconciliation while an executor is in fl
   const completed = await running;
   assert.equal(completed.state.status, "completed");
 });
+
+test("Codex clear-goal approval rejects wrong and declined decisions before subsequent work",async()=>{
+ const {buildUnderstandStageExecutor}=await import("../src/autonomy/understand_stage.js");
+ const spine=newSpine();let subsequentWork=0;
+ const loop=new ProjectLoop(spine,narrator(spine),allExecutors({understand:buildUnderstandStageExecutor(undefined,true),research:async()=>{subsequentWork++;return adv("research");}}));
+ const held=await loop.run(loop.init("codex-clear-decline","implement and test a markdown parser","approval-required"));
+ assert.equal(held.state.status,"waiting-approval");assert.equal(subsequentWork,0);
+ const wrong=await loop.resume(held.state.runId,{approval:{decisionId:"wrong",approved:true}});
+ assert.equal(wrong.state.status,"waiting-approval");assert.equal(subsequentWork,0);
+ assert.equal(held.state.wait?.kind,"approval");
+ const wait=held.state.wait;if(wait?.kind!=="approval")throw Error("missing decision");
+ const declined=await loop.resume(wrong.state.runId,{approval:{decisionId:wait.decisionId,approved:false}});
+ assert.equal(declined.state.status,"waiting-capability");assert.equal(subsequentWork,0);
+});

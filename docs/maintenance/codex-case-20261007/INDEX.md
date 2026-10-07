@@ -46,3 +46,19 @@ Goal is blocked pending the requested additional30minutes of cumulative server-t
 ## Resumed allowance and implementation checkpoint
 
 User approved an additional1800testseconds October7. Cumulative total9000seconds retains earlier charges and the unchanged2CPU/4GiB/0swap/512PID envelope. No reset or new enforcement. The generation-only subscription project integration is now implemented and undergoing installed qualification; source will be0.0.13-preview.1. Downloadable0.0.12 remains the latest qualified release until the new bytes pass their checks. No real generation has occurred at this checkpoint.
+
+## First installed attempt and scoped follow-ups
+
+Source7ed31a358bd7b1c0ae0e8479bfb15320f7aecbbd passed5310ordinary+34security+139native=5483 tests. A later native bootstrap correction removes invalid built-in provider retry overrides;14focused checks pass. The corrected candidate was independently installed offline with1566runtime files verified and passed demos, controlled Codex approval/proposal/restart/veto, required-jail controls, checksum quickstart and two backup tracks. This does not carry the full source pass onto the later changed runtime.
+
+The first installed clear-goal account attempt failed: one CLI invocation was claimed and left uncertain, zero usable generation results, unknown model wire requests/token usage/cost. It reached planning before the expected approval gate. No rerun, source landing or new public binary release. CS002 and CS003 remain unconfirmed.
+
+Required dependency order: [CS005 approval gate](CS005.md) and [CS006 native-failure investigation](CS006.md) supply prerequisites for another declared CS003 attempt; CS004 still requires final exact source/artifact/publication qualification. CS005 is implementation work with focused runtime acceptance; CS006 is an investigation only. Scope remains one case batch, not unlimited success chasing.
+
+## Current handoff
+
+CS005's clear-goal source gate and CS007's secret-safe phase/exit/category diagnostics are confirmed scoped implementations. CS006 is a completed bounded investigation with the native cause explicitly unknown. CS002 genuine account support, CS003 actual model case and CS004 final downloadable/public qualification remain unconfirmed. The first uncertain invocation remains retained and was not resent. Model/cost/token/wire facts absent from the first trace remain unknown.
+
+Next action requires a separately approved batch: at most1200additional testseconds, unchanged2CPU/4GiB/0swap/512PID, plus one explicitly authorized further installed account attempt if the owner accepts the retained uncertainty. Do not silently clear the claim, reset cumulative accounting, reuse the older full-source pass for changed code or evade the hold by changing data directories. If a separate experimental directory is expressly authorized, label it a new experiment; it does not reconcile or cancel the first one. Otherwise continue only non-inference work within the remaining approved allowance.
+
+Planning audit: no cycles; CS005 and CS007 supply scoped source prerequisites, CS006 names the unresolved native cause/uncertainty decision, and affected CS003/CS004 stay provisional. No extra benchmark framework, VM, dependency, shared policy, API billing provider or other-instance changes.
