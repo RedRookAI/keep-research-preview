@@ -1,6 +1,6 @@
-# Active Codex-backed case-study goal — October 7, 2026
+# Blocked Codex-backed case-study goal — October 7, 2026
 
-[Researched plan and scoped tickets](docs/maintenance/codex-case-20261007/INDEX.md). Existing CLI reports ChatGPT login; no separate paid provider is authorized. One upstream bug baseline is reproduced (1fail/2pass), with zero model requests. Current missing prerequisite: installed Codex provider/usage/authority integration; later tickets remain provisional. The old test allowance is preserved and has about239 seconds remaining. No new capability, version or release is claimed. Earlier completed checkpoints below are historical.
+[Researched plan and scoped tickets](docs/maintenance/codex-case-20261007/INDEX.md). Existing CLI reports ChatGPT login; no separate paid provider is authorized. The upstream bug baseline and compatibility investigation are saved. A privately backed-up transport prototype passes10controlled fixture checks and typecheck; installed Codex solve/subscription admission and actual model use remain unfinished. About189seconds remain in the original test envelope; the requested additional30testminutes is not yet approved. Goal blocked pending that approval, with its original scope unchanged. No new installed capability/version/release or successful real-model case is claimed. Earlier completed checkpoints below are historical.
 
 # Completed downloadable portfolio preview — October 5, 2026
 
