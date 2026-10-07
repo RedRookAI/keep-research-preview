@@ -94,7 +94,9 @@
     "docs/manual-memory-correction.md",
     "docs/installed-solve.md",
     "acceptance/installed_solve.mjs",
-    "docs/portfolio-walkthrough.md"
+    "docs/portfolio-walkthrough.md",
+    "docs/codex-project.md",
+    "acceptance/codex_project.mjs"
   ],
   "exports": {
     ".": "./dist/src/index.js",
