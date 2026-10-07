@@ -45,10 +45,9 @@ test("Codex transport preserves explicit subscription provenance, arguments and 
     assert.equal(record.apiKey, null); assert.equal(record.codexKey, null);
     assert.ok(record.args.includes("--ignore-user-config") && record.args.includes("--ephemeral"));
     assert.ok(record.args.includes('forced_login_method="chatgpt"'));
-    assert.ok(record.args.includes("model_providers.openai.request_max_retries=0"));
-    assert.ok(record.args.includes("model_providers.openai.stream_max_retries=0"));
+    assert.ok(!record.args.some((arg: string) => arg.startsWith("model_providers.openai.")), "built-in provider IDs cannot be overridden");
     assert.equal(record.args[record.args.indexOf("--sandbox") + 1], "read-only");
-    assert.ok(record.args.includes("shell_tool") && record.args.includes("unified_exec"));
+    assert.ok(record.args.includes("features.shell_tool=false") && record.args.includes("features.unified_exec=false"));
     assert.match(record.input, /Return a proposal/u);
   } finally {
     if (oldApiKey === undefined) delete process.env["OPENAI_API_KEY"]; else process.env["OPENAI_API_KEY"] = oldApiKey;

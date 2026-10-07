@@ -87,9 +87,9 @@ export class CodexAccountClient {
       if (process.env[key] !== undefined) environment[key] = process.env[key];
     const args = ["exec", "--ignore-user-config", "--strict-config", "--ephemeral", "--json", "--skip-git-repo-check", "--sandbox", "read-only",
       "--disable", "shell_tool", "--disable", "unified_exec", "--disable", "shell_snapshot",
-      "--disable", "skill_mcp_dependency_install", "-c", 'web_search="disabled"',
+      "--disable", "skill_mcp_dependency_install", "-c", "experimental_use_unified_exec_tool=false", "-c", "features.shell_tool=false", "-c", "features.unified_exec=false", "-c", "features.shell_snapshot=false", "-c", "features.skill_mcp_dependency_install=false",
+      "-c", 'web_search="disabled"',
       "-c", 'forced_login_method="chatgpt"', "-c", 'model_provider="openai"',
-      "-c", "model_providers.openai.request_max_retries=0", "-c", "model_providers.openai.stream_max_retries=0",
       "--model", this.options.model, "--output-schema", schema, "-"];
     let locallyClosed = false;
     try {
