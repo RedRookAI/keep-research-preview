@@ -1,10 +1,10 @@
 # A configured repository goal with solve
 
-Keep **0.0.12-preview.1** includes installed solve through the project runtime. First try `keep demo project` for the scripted walkthrough, then configure an actual provider and your own repository as below.
+Keep **0.0.13-preview.1** includes installed solve through the project runtime. First try `keep demo project` for the scripted walkthrough, then configure an actual provider and your own repository as below.
 
 Configure the provider using the existing provider profile/environment contract. Repository work also requires KEEP_REPOSITORY, KEEP_WORKSPACE_BASE (separate from the source), KEEP_REVISION (exact commit), KEEP_REPO_REF, KEEP_BASE_BRANCH (defaults to main, must point at that commit), and KEEP_TEST_COMMAND with optional KEEP_TEST_ARGS_JSON. Run `keep doctor` first; its readiness result is configuration evidence, not a model-quality or production-host qualification. `keep onboard` captures directives; it does not configure these execution settings.
 
-The automated solver requires a model price known to its existing accounting path. An unknown remote-compatible model price refuses before wire, including for a loopback endpoint; locality does not imply a zero fee. A readiness result does not establish current prices or funded execution. This ticket preserves that gate and its existing diagnostic limits.
+For existing API-priced providers, the automated solver requires a model price known to its existing accounting path. An unknown remote-compatible model price refuses before wire, including for a loopback endpoint; locality does not imply a zero fee. A readiness result does not establish current prices or funded execution. This ticket preserves that gate and its existing diagnostic limits.
 
 ```sh
 keep solve "Correct the retry limit; preserve unrelated behavior and tests"
@@ -26,3 +26,5 @@ keep merge <run-id> veto --proposal=<sha256>
 A decision does not grant missing merge authority. Inspect a refused or held result; do not treat exit success for a recorded decision as proof that source changes landed. The original repository remains unchanged while a proposal awaits a decision. Existing owner-token checks and organization session/roster/custody restrictions apply; remote gateway solve uses the same authenticated project endpoint.
 
 IS001 acceptance uses an installed package and a controlled loopback model endpoint. It establishes command routing, approval, a useful test-fixture edit and review/restart behavior. It does not establish real-model success rates, production isolation, live organization onboarding or a newly qualified release archive.
+
+For existing ChatGPT Codex access, explicitly select the [owner public-repository Codex project role](codex-project.md). It records subscription token usage and unknown attributable dollar cost, without a separate API key or guessed token price. The account-managed limit contract differs from the API-priced path; the guide states its supported limits. New downloadable qualification remains pending.
