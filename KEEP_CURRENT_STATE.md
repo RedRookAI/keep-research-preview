@@ -1,3 +1,7 @@
+# Active Codex-backed case-study goal — October 7, 2026
+
+[Researched plan and scoped tickets](docs/maintenance/codex-case-20261007/INDEX.md). Existing CLI reports ChatGPT login; no separate paid provider is authorized. One upstream bug baseline is reproduced (1fail/2pass), with zero model requests. Current missing prerequisite: installed Codex provider/usage/authority integration; later tickets remain provisional. The old test allowance is preserved and has about239 seconds remaining. No new capability, version or release is claimed. Earlier completed checkpoints below are historical.
+
 # Completed downloadable portfolio preview — October 5, 2026
 
 **Keep 0.0.12-preview.1** is publicly downloadable: [release](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1), [quickstart](docs/quickstart.md), [walkthrough](docs/portfolio-walkthrough.md), [five confirmed scoped tickets](docs/maintenance/portfolio-preview-20261005/INDEX.md).
