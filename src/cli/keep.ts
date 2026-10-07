@@ -148,6 +148,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     return 2;
   }
   const capturedCredential = captured ? await loadCapturedCredential(captured.credentialReference, runtimeEnv) : undefined;
+  if (captured?.codexProject && directDomainRequested) throw new Error("Codex public-project role does not support domain workflows");
   const encoderCredential = captured ? await loadCapturedCredential(captured.encoderCredentialReference, runtimeEnv) : undefined;
   const repositoryFreeProviderCheck = (argv[0] ?? "").toLowerCase() === "provider-check";
   const intent = captured ? undefined : resolveRuntimeIntent(runtimeEnv, { repositoryRequired: !directDomainRequested && !repositoryFreeProviderCheck });
@@ -193,11 +194,12 @@ export async function main(argv: readonly string[]): Promise<number> {
   const memory = (() => { const memoryProvider = createConfiguredProvider(captured?.memoryProvider ?? runtime!.memoryProvider); const memSpine = new Spine(new FileSpineStore(join(dataDir, "memory")), new InProcessLock(), new SchemaRegistry()); return new MemoryStore(memSpine, new ModelGateway(memoryProvider)); })();
   const app = composeKeep({
     dataDir,
+    ...(captured?.codexProject ? { codexProject: captured.codexProject } : {}),
     ...((captured?.providerCheckPricing ?? intent?.providerCheckPricing) ? { providerCheckPricing: (captured?.providerCheckPricing ?? intent?.providerCheckPricing)! } : {}),
     ...(memoryRetentionPolicy === undefined ? {} : { memoryRetentionPolicy }),
     ...(semanticEncoder ? { semanticEncoder } : {}),
     ...(workerId === undefined ? {} : { projectRuntimeOwnerId: workerId, projectRuntimePaused: argv.includes("--paused") }),
-    ...(domainSurfaceRequested ? { enableDomainWorkflows: true as const } : {}),
+    ...(domainSurfaceRequested && !captured?.codexProject ? { enableDomainWorkflows: true as const } : {}),
     frontDoorMemory: memory,
     ...(provider.mode === "local"
       ? { provider: createConfiguredProvider(provider), ...(captured?.residency ? { residency: captured.residency } : {}) }

@@ -6,9 +6,11 @@
  * loads an adapter named by configuration. Only built-in dialect objects can cross this boundary.
  */
 
-import { execFileSync } from "node:child_process";
-import { realpathSync, statSync } from "node:fs";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { execFileSync, spawnSync } from "node:child_process";
+import { realpathSync, statSync, readFileSync, constants } from "node:fs";
+import { createHash } from "node:crypto";
+import { delimiter, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { captureCodexProjectDescriptor, type CodexProjectDescriptor } from "../gateway/codex_project_provider.js";
 import { HttpProvider } from "../gateway/http_provider.js";
 import { LocalProvider } from "../gateway/local_provider.js";
 import type { ModelProvider } from "../gateway/gateway.js";
@@ -54,6 +56,7 @@ export interface CapturedInstalledProjectConfig {
 }
 
 export interface CapturedRuntimeContract {
+  readonly codexProject?: CodexProjectDescriptor;
   readonly providerCheckPricing?: { readonly maxAgeMs: number };
   readonly encoder?: EncoderProfile;
   readonly encoderCredentialReference?: CredentialReference;
@@ -209,7 +212,29 @@ export function captureRuntimeContract(
     };
   }
   const installedProject = captureInstalledProject(env, context, options.projectRequired === true);
-  return Object.freeze({ provider, ...(providerCheckPricing ? { providerCheckPricing } : {}), ...(credentialReference ? { credentialReference } : {}), ...(remoteProcessing ? { remoteProcessing } : {}), ...(residency ? { residency } : {}), ...(externalRouting ? { externalRouting } : {}), memoryProvider: localMemoryProvider(), ...(installedProject ? { installedProject } : {}), ...(releaseAdmission ? { releaseAdmission } : {}), ...(organization ? { organization } : {}), ...(encoder ? { encoder } : {}), ...(encoderCredential ? { encoderCredentialReference: encoderCredential } : {}) });
+  let codexProject: CodexProjectDescriptor | undefined;
+  if (env["KEEP_PROJECT_MODEL"] !== undefined) {
+    if (env["KEEP_PROJECT_MODEL"] !== "codex" || provider.mode !== "local" || organization || encoder || !installedProject ||
+        env["KEEP_CODEX_PROCESSING"] !== "owner-public-repository")
+      throw new RuntimeConfigError("KEEP_PROJECT_MODEL", "Codex requires an owner public-repository project, local non-project roles and explicit processing consent");
+    const wanted = env["KEEP_CODEX_EXECUTABLE"];
+    const candidates = wanted ? [wanted] : (process.env.PATH ?? "").split(delimiter).map(p => join(p, "codex"));
+    const command = candidates.find(p => { try { const s = statSync(p); return isAbsolute(p) && s.isFile() && (s.mode & constants.S_IXUSR) !== 0; } catch { return false; } });
+    if (!command) throw new RuntimeConfigError("KEEP_CODEX_EXECUTABLE", "installed Codex CLI not found");
+    const executable = realpathSync(command);
+    if ([installedProject.repository.root, installedProject.workspaceBase.root].some(p => executable === p || executable.startsWith(p + sep)))
+      throw new RuntimeConfigError("KEEP_CODEX_EXECUTABLE", "must be outside source and workspace");
+    const positive = (name: string) => { const value = required(env, name); if (!/^[1-9][0-9]*$/u.test(value) || !Number.isSafeInteger(Number(value))) throw new RuntimeConfigError(name, "requires an explicit positive integer"); return Number(value); };
+    const cliVersion = execFileSync(executable, ["--version"], { encoding: "utf8", timeout: 5000, maxBuffer: 4096 }).trim();
+    const login = spawnSync(executable, ["login", "status"], { encoding: "utf8", timeout: 5000, maxBuffer: 4096, stdio: ["ignore", "pipe", "pipe"] });
+    // Some versions print login status on stderr; inspect both without copying credentials.
+    const status = (login.stdout + login.stderr).trim();
+    if (login.error || login.status !== 0 || !/^Logged in using ChatGPT$/u.test(status)) throw new RuntimeConfigError("KEEP_CODEX_EXECUTABLE", "requires an existing ChatGPT login");
+    codexProject = captureCodexProjectDescriptor({ executable, cliVersion, executableSha256: createHash("sha256").update(readFileSync(executable)).digest("hex"),
+      model: required(env, "KEEP_CODEX_MODEL"), processing: "owner-public-repository", maxInvocations: positive("KEEP_CODEX_MAX_INVOCATIONS"),
+      maxSubmittedPromptBytes: positive("KEEP_CODEX_MAX_PROMPT_BYTES"), maxCapturedOutputBytes: positive("KEEP_CODEX_MAX_OUTPUT_BYTES"), maxElapsedMs: positive("KEEP_CODEX_TIMEOUT_MS") });
+  } else if (Object.keys(env).some(k => k.startsWith("KEEP_CODEX_"))) throw new RuntimeConfigError("KEEP_PROJECT_MODEL", "Codex options require an explicit project model selection");
+  return Object.freeze({ provider, ...(codexProject ? { codexProject } : {}), ...(providerCheckPricing ? { providerCheckPricing } : {}), ...(credentialReference ? { credentialReference } : {}), ...(remoteProcessing ? { remoteProcessing } : {}), ...(residency ? { residency } : {}), ...(externalRouting ? { externalRouting } : {}), memoryProvider: localMemoryProvider(), ...(installedProject ? { installedProject } : {}), ...(releaseAdmission ? { releaseAdmission } : {}), ...(organization ? { organization } : {}), ...(encoder ? { encoder } : {}), ...(encoderCredential ? { encoderCredentialReference: encoderCredential } : {}) });
 }
 
 export function resolveRuntimeConfig(

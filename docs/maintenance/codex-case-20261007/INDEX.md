@@ -7,9 +7,9 @@ Goal activated October 7, 2026. User requirement: use Codex for this work; no se
 | Ticket | Output | Dependency | Status |
 |---|---|---|---|
 | [CS001](CS001.md) | Verified task baseline and a supported Codex integration decision | Existing public release and dated research | Confirmed investigation; compatibility decision recorded |
-| [CS002](CS002.md) | One owner-installed solve can obtain genuine Codex output without a separate API key | CS001 supplies compatible usage/authority/limit contract | Provisional until those decisions are resolved |
+| [CS002](CS002.md) | One owner-installed solve can obtain genuine Codex output without a separate API key | CS001 supplies compatible usage/authority/limit contract | Implementing; controlled source journey passed, installed acceptance pending |
 | [CS003](CS003.md) | One real-model task has an inspectable patch and independent outcome | CS002 supplies installed working Codex path; CS001 frozen task/checker | Provisional |
-| [CS004](CS004.md) | Public package/source/docs and case evidence agree | CS002 tested code, CS003 honest observed outcome | Provisional; new-code artifact qualification needs approved allowance |
+| [CS004](CS004.md) | Public package/source/docs and case evidence agree | CS002 tested code, CS003 honest observed outcome | Provisional; additional30testminutes approved October7 |
 
 Existing scope/output reused: PF001/PF002/PF003 installed demo/package/release machinery and IS001 project approval/proposal workflow. Do not reopen their source-bound evidence or build a benchmark service, install SDK dependencies, create a VM, change global Codex settings/auth, or interfere with another instance. Use one agent and serial product work. Public publication and private backups follow the existing project protocol.
 
@@ -42,3 +42,7 @@ Coverage: CS001 resolves actual prerequisites; CS002 delivers one coherent suppo
 ## Resource approval handoff
 
 Goal is blocked pending the requested additional30minutes of cumulative server-test runtime. The original7200-second envelope has about189seconds remaining and is preserved. User working principle7 prohibits silently extending it. The upstream bug baseline and Codex compatibility investigation are saved; a private bounded transport prototype typechecks and passes10controlled CLI-fixture checks. It is not installed solve integration, actual model evidence or a release. CS002/CS003/CS004 remain unconfirmed. No real case-model requests or separate API spending. Resume the same full objective after resource approval; do not activate a substitute goal.
+
+## Resumed allowance and implementation checkpoint
+
+User approved an additional1800testseconds October7. Cumulative total9000seconds retains earlier charges and the unchanged2CPU/4GiB/0swap/512PID envelope. No reset or new enforcement. The generation-only subscription project integration is now implemented and undergoing installed qualification; source will be0.0.13-preview.1. Downloadable0.0.12 remains the latest qualified release until the new bytes pass their checks. No real generation has occurred at this checkpoint.

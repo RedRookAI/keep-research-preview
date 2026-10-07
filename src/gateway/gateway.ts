@@ -23,6 +23,9 @@ import type { BoundedEmbeddingOptions, BoundedEmbeddingResult } from "./http_pro
 export type Embedding = readonly number[];
 
 export interface GenerateRequest {
+  readonly billingBasis?: "chatgpt-subscription";
+  /** Trusted project-command check; new account transports recheck after durable admission. */
+  readonly assertAuthority?: () => void;
   readonly prompt: string;
   readonly maxTokens?: number;
   /** Optional stricter attempt ceiling. A supporting transport must never raise it. */
@@ -45,6 +48,7 @@ export interface GenerateResult {
 
 /** A model provider adapter. Injected at the composition root; never imported by domain code. */
 export interface ModelProvider {
+  readonly generationMode?: "codex-account";
   readonly name: string;
   /** True if this provider needs no network egress (air-gap / sovereignty safe). */
   readonly isLocal: boolean;
@@ -55,6 +59,13 @@ export interface ModelProvider {
   embed(texts: readonly string[]): Promise<Embedding[]>;
   /** Optional governed bounded transport. Absence never falls back to unmetered embed. */
   embedBounded?(texts: readonly string[], options: BoundedEmbeddingOptions): Promise<BoundedEmbeddingResult>;
+}
+
+/** The operator-selected account role explicitly uses observable process limits, not an API token ceiling. */
+export function generationRequest(model: ModelProvider, request: GenerateRequest): GenerateRequest {
+  if (model.generationMode !== "codex-account") return request;
+  const { maxTokens: _apiTokenCeiling, ...rest } = request;
+  return { ...rest, maxAttempts: 1, billingBasis: "chatgpt-subscription" };
 }
 
 /** Commercial-use license classes for embedding backends (SOTA licensing gate). */

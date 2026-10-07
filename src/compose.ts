@@ -1,3 +1,4 @@
+import { CodexProjectProvider, captureCodexProjectDescriptor, codexProjectIdentity } from "./gateway/codex_project_provider.js";
 /**
  * Composition root (Phase 0.5) — the single place ports bind to adapters.
  *
@@ -226,6 +227,8 @@ import type { SecretRequirement, BootPolicy, BootCheckResult } from "./boot/secr
 import { FleetAdmissionLifecycle, type FleetLifecyclePolicy } from "./fleet/fleet_lifecycle.js";
 
 export interface KeepConfig {
+  /** Explicit owner-only public repository generation role; separate from API-priced/global embedding roles. */
+  readonly codexProject?: import("./gateway/codex_project_provider.js").CodexProjectDescriptor;
   /** Operator-owned policy; not request-supplied retention or disclosure authority. */
   readonly memoryRetentionPolicy?: MemoryRetentionPolicy;
   readonly dataDir: string;
@@ -819,6 +822,8 @@ export function composeKeep(config: KeepConfig): KeepApp {
   if (config.sourceLanding === true && config.repositoryMaterialization === undefined) throw new Error("compose: sourceLanding requires exact repository materialization");
   const bootDescriptor = config.remoteProvider === undefined ? undefined : captureRemoteProviderDescriptor(config.remoteProvider);
   const ownerDescriptor = config.ownerProvider === undefined ? undefined : captureRemoteProviderDescriptor(config.ownerProvider);
+  const codexDescriptor = config.codexProject ? captureCodexProjectDescriptor(config.codexProject) : undefined;
+  if (codexDescriptor && (config.remoteProvider || config.ownerProvider || config.developmentProvider || config.identity || config.tenantDeployment || config.solve || config.projectEditor || config.domainWorkflow || config.domainWorkflows || config.enableDomainWorkflows || !config.repositoryMaterialization)) throw new Error("Codex public-project role cannot borrow organization, custom solver or domain authority");
   if (bootDescriptor !== undefined && config.release === undefined && config.verifiedRelease === undefined) throw new Error("compose: an organization remote provider descriptor requires A4 installed-release verification");
   const descriptorDigest = bootDescriptor === undefined ? undefined : remoteProviderIdentityDigest(bootDescriptor);
   const releaseBoot: ReleaseBootResult | undefined = bootDescriptor === undefined ? undefined : config.verifiedRelease ?? verifyInstalledReleaseAtBoot({ ...config.release!, providerDescriptorDigest: descriptorDigest! });
@@ -1198,6 +1203,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
   const meteredProvider = outcomeAdaptation
     ? new OutcomeAdaptiveProvider(baseMeteredProvider, resolveOutcomeAdaptation, adaptationCapabilities)
     : baseMeteredProvider;
+  const projectModel: ModelProvider = codexDescriptor ? new CodexProjectProvider(codexDescriptor, spine) : meteredProvider;
   // Effective solver: an operator-supplied `solve` wins; else a `workspace` activates Keep's BUILT-IN Agentless solver
   // (using the composed provider — local by default, a frontier model in prod). Neither → autonomy stays opt-in/off.
   // Round-1 wiring: the operator's kill-switch handle, threaded into the built-in solver so a tripped
@@ -1229,7 +1235,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
   const vettingGates = buildVettingGates({ capability: provider instanceof LocalProvider ? "lean" : "none" });
   const builtInSolve = solverWorkspace
     ? buildDefaultSolver({
-        spine, model: meteredProvider, workspace: solverWorkspace, identityRegistry, rootIdentity: solverRootIdentity!, repository: solverRepository, budgetEnvelopeId: autonomyBudgetEnvelope.id,
+        spine, model: projectModel, workspace: solverWorkspace, identityRegistry, rootIdentity: solverRootIdentity!, repository: solverRepository, budgetEnvelopeId: autonomyBudgetEnvelope.id,
         governance: { vetPatch: vettingGates.vetPatch, spine },
         goalCheckRunnerFor: (repoRef, check) => {
           const tester = defaultProjectTesterFor?.(check);
@@ -1915,7 +1921,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
   }
   if (config.domainWorkflow && config.projectEditor) throw new Error("compose: domainWorkflow and projectEditor are mutually exclusive production strategies");
   if (config.domainWorkflow && (config.projectTester || config.projectTestRequiredTier || config.projectTestIsolation)) throw new Error("compose: domainWorkflow cannot silently discard software project-test configuration");
-  const projectEditor = config.projectEditor ?? (!config.solve && solverWorkspace && !config.domainWorkflow ? buildModelProjectEditPlanner(meteredProvider, solverWorkspace, solverRepository,
+  const projectEditor = config.projectEditor ?? (!config.solve && solverWorkspace && !config.domainWorkflow ? buildModelProjectEditPlanner(projectModel, solverWorkspace, solverRepository,
     { prepareGoalCheck: config.testCommand !== undefined && typeof solverWorkspace.dir === "function" && config.projectTester === undefined }) : undefined);
   if (config.projectTester && !solverWorkspace) throw new Error("compose: projectTester requires a canonical workspace for content-bound source evidence");
   const projectTester = config.domainWorkflow ? undefined : config.projectTester ?? (defaultProjectTesterFor = (check?: NonNullable<import("./solve/issue_model.js").EditPlan["goalCheck"]>) => {
@@ -2083,11 +2089,11 @@ export function composeKeep(config: KeepConfig): KeepApp {
   const softwarePreparation = preparationWorkspace === undefined ? undefined : {
     binding: createHash("sha256").update(canonicalize({ version: "keep.native-preparation/v1",
       source: preparationSource!.authorityRoot(), repository: solverRepository, materialization,
-      provider: descriptorDigest ?? (ownerDescriptor ? remoteProviderIdentityDigest(ownerDescriptor) : randomUUID()),
+      provider: codexDescriptor ? codexProjectIdentity(codexDescriptor) : descriptorDigest ?? (ownerDescriptor ? remoteProviderIdentityDigest(ownerDescriptor) : randomUUID()),
     })).digest("hex"),
     workspace: preparationWorkspace,
-    editor: buildModelProjectEditPlanner(meteredProvider, preparationWorkspace, solverRepository),
-    solve: buildDefaultSolver({ spine, model: meteredProvider, workspace: preparationWorkspace,
+    editor: buildModelProjectEditPlanner(projectModel, preparationWorkspace, solverRepository),
+    solve: buildDefaultSolver({ spine, model: projectModel, workspace: preparationWorkspace,
       identityRegistry, rootIdentity: solverRootIdentity!, repository: solverRepository, budgetEnvelopeId: autonomyBudgetEnvelope.id }),
   };
   // Only the installed, command-bound native path owns this operation. Opaque custom
@@ -2169,12 +2175,13 @@ export function composeKeep(config: KeepConfig): KeepApp {
         // remain usable now, but cannot silently recover as a different port later.
         binding: createHash("sha256").update(canonicalize({ version: "keep.native-project-runtime/v1", materialization: materialization ?? null,
           runtimePaths: config.runtimePaths ?? null, testCommand: config.testCommand ?? null,
-          provider: descriptorDigest ?? (ownerDescriptor ? remoteProviderIdentityDigest(ownerDescriptor) : randomUUID()),
+          provider: codexDescriptor ? codexProjectIdentity(codexDescriptor) : descriptorDigest ?? (ownerDescriptor ? remoteProviderIdentityDigest(ownerDescriptor) : randomUUID()),
           ...(encoderIdentity === undefined ? {} : { semanticEncoder: encoderIdentity }),
           posture: config.projectPosture ?? null, tenant: config.tenantDeployment?.tenantId ?? null,
         })).digest("hex"),
         validate: (command, projectId) => {
           restoreCommandPrincipal(command, projectId);
+          if (codexDescriptor && command.memoryContext !== undefined) throw new Error("Codex public-project role does not admit private task memory");
           if (command.memoryContext !== undefined) {
             if (!taskMemoryForCommand) throw new Error("selected task memory executor is unavailable");
             taskMemoryForCommand(command, projectId);

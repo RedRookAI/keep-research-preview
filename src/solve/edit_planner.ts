@@ -5,7 +5,7 @@
  */
 
 import { createHash } from "node:crypto";
-import type { ModelProvider } from "../gateway/gateway.js";
+import { generationRequest, type ModelProvider } from "../gateway/gateway.js";
 import type { Issue, EditPlan, SearchReplaceEdit } from "./issue_model.js";
 import type { LocalizationResult, RepoFile } from "./localize.js";
 import { TaskMemoryUnavailableError, type TaskMemoryContext, type TaskMemoryEmbeddingControls } from "../memory/task_context.js";
@@ -124,7 +124,7 @@ export async function planEdits(
     emit({ outcome: "dispatch", call, inputBytes, provider: model.name, isLocal: model.isLocal });
     let response;
     try {
-      response = await model.generate({ prompt, maxTokens: opts.maxTokens ?? 1500, ...(opts.signal ? { signal: opts.signal } : {}), ...(opts.hints ? { hints: opts.hints } : {}) });
+      response = await model.generate(generationRequest(model, { prompt, maxTokens: opts.maxTokens ?? 1500, ...(opts.signal ? { signal: opts.signal } : {}), ...(opts.hints ? { hints: opts.hints } : {}), ...(opts.assertAuthority ? { assertAuthority: opts.assertAuthority } : {}) }));
     } catch { return stop(opts.signal?.aborted ? "planning cancelled" : "model failed to produce an edit plan"); }
     if (opts.signal?.aborted) return stop("planning cancelled after dispatch");
     emit({ outcome: "response", call, model: response.model, providerRoute: response.providerRoute,
@@ -173,8 +173,8 @@ export async function planEdits(
         try { assertCurrent(); } catch (error) { return memoryRefusal(error); }
         emit({ outcome: "goal-check-dispatch", call: call + 1, inputBytes: bytes, provider: model.name });
         let checked;
-        try { checked = await model.generate({ prompt: checkPrompt, maxTokens: 4000,
-          ...(opts.signal ? { signal: opts.signal } : {}), hints: { ...(opts.hints ?? {}), taskRole: "goal_test" } }); }
+        try { checked = await model.generate(generationRequest(model, { prompt: checkPrompt, maxTokens: 4000,
+          ...(opts.signal ? { signal: opts.signal } : {}), hints: { ...(opts.hints ?? {}), taskRole: "goal_test" }, ...(opts.assertAuthority ? { assertAuthority: opts.assertAuthority } : {}) })); }
         catch { return stop("goal check generation unavailable"); }
         emit({ outcome: "goal-check-response", call: call + 1, model: checked.model,
           reportedTokensIn: checked.tokensIn, reportedTokensOut: checked.tokensOut });

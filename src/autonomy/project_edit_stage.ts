@@ -103,7 +103,7 @@ export function buildModelProjectEditPlanner(model: ModelProvider, workspace: Wo
       });
       const generation = { model: model.name, tokensIn: 0, tokensOut: 0 };
       const observedModel: ModelProvider = {
-        name: model.name, isLocal: model.isLocal, embed: texts => model.embed(texts),
+        name: model.name, isLocal: model.isLocal, ...(model.generationMode ? { generationMode: model.generationMode } : {}), embed: texts => model.embed(texts),
         generate: async request => {
           const result = await model.generate(request);
           generation.model = result.model;

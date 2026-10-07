@@ -54,3 +54,5 @@ A successful scripted walkthrough demonstrates this workflow, not general model 
 - [Contributing and pinned source builds](WORKFLOW.md)
 - [Security and private reporting](SECURITY.md)
 - [Licensing and attribution](docs/licensing.md)
+
+Source checkpoint0.0.13-preview.1 adds [owner-project Codex generation](docs/codex-project.md), using existing subscription access. New downloadable qualification and the real issue case study are pending; the release above remains the latest qualified download.

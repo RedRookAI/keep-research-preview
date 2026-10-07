@@ -46,6 +46,7 @@ export function inspectInstalledReadiness(env: Readonly<Record<string, string | 
   checks.push(ok("repository", `${contract.installedProject!.repository.root}@${contract.installedProject!.revision}`));
   checks.push(ok("workspace", `${contract.installedProject!.workspaceBase.root}/${contract.installedProject!.repoRef} is isolated from source`));
   checks.push(ok("provider", contract.provider.mode === "local" ? "offline deterministic provider selected (not real local inference)" : `${contract.provider.authority}/${contract.provider.location} ${contract.provider.mode} ${new URL(contract.provider.baseUrl).origin} model=${contract.provider.model}; purpose=${contract.remoteProcessing!.purpose}; region=${contract.remoteProcessing!.region}`));
+  if (contract.codexProject) checks.push(ok("project-model", `Codex ChatGPT subscription; remote owner/public-repository generation; API dollar price/output-token/wire-attempt guarantees unavailable; CLI=${contract.codexProject.cliVersion}; model=${contract.codexProject.model}`));
   checks.push(checkCredential(contract, options));
   checks.push(checkRelease(contract, options));
   if (contract.encoder !== undefined) {

@@ -1,3 +1,4 @@
+import { generationRequest } from "../gateway/gateway.js";
 /**
  * SolvePipeline: hierarchical two-stage localizer (Increment 13b).
  *
@@ -114,7 +115,7 @@ export class HierarchicalLocalizer implements Localizer {
 
     let selection: { path: string; symbols?: string[] }[] = [];
     try {
-      const res = await this.model.generate({ prompt, maxTokens: 512 });
+      const res = await this.model.generate(generationRequest(this.model, { prompt, maxTokens: 512 }));
       selection = parseSelection(res.text);
       stages.push("llm-rerank");
     } catch {

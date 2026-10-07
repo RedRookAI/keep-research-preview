@@ -377,3 +377,21 @@ test("installed test isolation selection is exact, optional and captured without
     assert.equal("identity" in capture("required"), false, "a project label cannot create organization identity");
   }
 });
+
+
+test("installed Codex project selection requires existing account login, explicit consent and limits",()=>{
+ const root=mkdtempSync(join(tmpdir(),"keep-codex-config-")), executable=join(root,"codex");
+ const script=(login:string)=>`#!${process.execPath}\nif(process.argv.includes('--version'))console.log('codex-cli 0.159.3');else console.error(${JSON.stringify(login)});`;
+ const env={KEEP_PROVIDER:"local",KEEP_PROJECT_MODEL:"codex",KEEP_CODEX_EXECUTABLE:executable,KEEP_CODEX_MODEL:"fixture",KEEP_CODEX_PROCESSING:"owner-public-repository",KEEP_CODEX_MAX_INVOCATIONS:"2",KEEP_CODEX_MAX_PROMPT_BYTES:"65536",KEEP_CODEX_MAX_OUTPUT_BYTES:"262144",KEEP_CODEX_TIMEOUT_MS:"5000",KEEP_REPOSITORY:"/repo",KEEP_WORKSPACE_BASE:"/workspaces",KEEP_REVISION:REVISION,KEEP_REPO_REF:"sample",KEEP_TEST_COMMAND:"node"};
+ const capture=(overlay:Record<string,string|undefined>={})=>captureRuntimeContract({...env,...overlay},{...context,resolveCommit:()=>REVISION},{projectRequired:true});
+ try{
+  writeFileSync(executable,script("Logged in using ChatGPT"),{mode:0o700});
+  assert.equal(capture().codexProject?.processing,"owner-public-repository");
+  assert.throws(()=>capture({KEEP_CODEX_MAX_INVOCATIONS:"0"}),/positive integer/);
+  assert.throws(()=>capture({KEEP_CODEX_PROCESSING:undefined}),/consent/);
+  assert.throws(()=>capture({KEEP_PROJECT_MODEL:undefined}),/explicit project model/);
+  assert.throws(()=>capture({KEEP_CODEX_EXECUTABLE:"/repo/codex"}),/not found/);
+  writeFileSync(executable,script("Logged in using an API key"),{mode:0o700});
+  assert.throws(()=>capture(),/existing ChatGPT login/);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
