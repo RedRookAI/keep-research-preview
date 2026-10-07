@@ -6,7 +6,7 @@ Goal activated October 7, 2026. User requirement: use Codex for this work; no se
 
 | Ticket | Output | Dependency | Status |
 |---|---|---|---|
-| [CS001](CS001.md) | Verified task baseline and a supported Codex integration decision | Existing public release and dated research | Baseline/auth verified; integration decision actionable |
+| [CS001](CS001.md) | Verified task baseline and a supported Codex integration decision | Existing public release and dated research | Confirmed investigation; compatibility decision recorded |
 | [CS002](CS002.md) | One owner-installed solve can obtain genuine Codex output without a separate API key | CS001 supplies compatible usage/authority/limit contract | Provisional until those decisions are resolved |
 | [CS003](CS003.md) | One real-model task has an inspectable patch and independent outcome | CS002 supplies installed working Codex path; CS001 frozen task/checker | Provisional |
 | [CS004](CS004.md) | Public package/source/docs and case evidence agree | CS002 tested code, CS003 honest observed outcome | Provisional; new-code artifact qualification needs approved allowance |
@@ -36,3 +36,5 @@ Observable end result: an installed `keep solve` uses Codex's supported existing
 The original7200-second cumulative test envelope has about239 seconds left. It is not reset by this goal. Keep existing2CPU/4GiB/0swap/512PID containment and no model/API spending changes. Additional full source/native/new-package qualification needs an explicitly approved extension. Proposed extension for review:1800 additional test wall seconds (30minutes), total9000 seconds, same controls; not yet authorized or installed. Preparation and read-only work can continue meanwhile.
 
 Coverage: CS001 resolves actual prerequisites; CS002 delivers one coherent supported operation including necessary billing/authority compatibility; CS003 verifies the real task; CS004 publishes the integrated result. No cycles or duplicate preview work. A thin supported CLI adapter is preferable to a new provider framework, but remaining interface questions must be resolved before CS002 becomes actionable. Any material unrelated defect gets a separate small ticket. Version stays0.0.12-preview.1 for planning/docs; code publication uses the established next-checkpoint bump, with separate exact-artifact qualification.
+
+[CS001 compatibility decision](CS001-decision.md) is confirmed as an investigation result. The next implementation question is explicit subscription admission at the project/gateway seam. Integration, actual model attempt and new package qualification remain unconfirmed.

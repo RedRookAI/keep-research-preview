@@ -1,0 +1,23 @@
+# CS001 decision — supported Codex access needs a distinct usage contract
+
+Checked October7,2026. This is an investigation result, not implemented integration or a model inference.
+
+| Requirement | Observed evidence | Decision |
+|---|---|---|
+| Existing account access | CLI0.159.3 reports ChatGPT login; official automation docs support saved login reuse | Use supported CLI/account-managed authentication; no separate API key, auth extraction or account changes |
+| Installed Keep entrypoint | runtime_config.ProviderMode and captureRuntimeContract accept local/API dialects only; local is a stub | Current0.0.12 cannot select Codex; code prerequisite is necessary |
+| Closed provider identity | provider_descriptor captures exact inert HTTP descriptor keys; arbitrary factories are refused | Add an explicit owner Codex descriptor; never disguise it as HTTP/local or weaken the existing descriptor |
+| Honest usage/billing | cost_model expects USD-per-million rates; metered_provider projects API tokens and metered_gateway reserves/settles USD | Subscription usage needs an explicit distinct admission/accounting contract; do not register guessed/zero API prices or claim total cost known |
+| Generation behavior | Existing ModelProvider carries prompt/text/usage; CLI supports structured final output; official app-server can report thread/turn/model/usage state | Prefer an owned generation-only official client using existing CLI, without adding an SDK dependency or letting Codex perform uncontrolled workspace edits |
+| Remote data/authority | Codex subprocess communicates with a remote service; Keep has owner/organization and residency boundaries | Explicit owner-only admission and processing consent; isLocal must remain false; embeddings and organization authority are not implicitly granted |
+| Retry/tools/config | Official configuration documents shell_tool/unified_exec switches, request/stream retry controls and forced_chatgpt login; CLI invocation can override config without changing shared files | Disable execution tools/automatic retries in the supported process invocation; reject unexpected tool activity or auth mode. Verify installed-version behavior during implementation |
+| Caller bounds | Installed schemas lack direct output-token-limit fields; metered_gateway forwards maxTokens and maxAttempts under a priced envelope | A transparent drop-in HTTP-provider substitution is incompatible. New Codex request class must expose supported limits (logical invocations, input/output bytes, deadline/cancellation) and explicitly refuse callers needing unverified hard token/wire-attempt guarantees. No silent downgrade |
+| Recovery | Existing project/recovery budgets and source/workspace/proposal controls are present | Keep those mechanisms; bind the new Codex descriptor/usage contract to restart, preserve uncertain work and avoid automatic replay |
+
+Supported next implementation scope: one explicitly selected owner-installed Codex solve operation, generation-only with a subscription-aware admission policy and its own typed capability declaration. Keep control of materialization, edits, test execution and proposal decisions. Preserve existing API-priced paths and local embedding behavior. Runtime validation must establish actual configured limits and no-tool behavior; published research/schema inspection alone does not establish them.
+
+Unresolved implementation decision: finalize the exact subscription request/usage interface at the existing project/gateway composition seam. There is no verified hard per-turn output-token control in the inspected interface. Therefore CS002 remains provisional until this interface explicitly handles unsupported guarantees and can preserve current API callers unchanged. This is the named next engineering question, not a reason to search additional papers or create a provider framework.
+
+Task provenance: upstream issue20, release v2.0.0, commit21c557c7f14a112eebe196abd98d085f5fcfcf5e, MIT/no production dependencies. Source/checker identities are fixed before inference. Actual baseline is one failing Unicode-hyphen check and two passing preservation checks. Historical solution/training overlap, mechanically adapted AVA assertion and unrun full upstream suite remain disclosed. No Codex generation request has occurred.
+
+Sources reused: [SWE-bench](https://arxiv.org/abs/2310.06770), [official authentication](https://learn.chatgpt.com/docs/auth), [automation](https://learn.chatgpt.com/docs/non-interactive-mode), [app-server](https://learn.chatgpt.com/docs/app-server), [configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference). CLI/schema/code observations are recorded separately; source comments are not authority to change permissions.
