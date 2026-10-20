@@ -30,6 +30,14 @@ The downloadable walkthrough uses controlled local responses in place of a live 
 
 **Evidence.** Diffs, test results and records make behavior inspectable. Hash-linked records bind recorded data; they do not independently establish that every event is truthful or complete. Current qualification was administered by the developer on controlled fixtures.
 
+## Planned OpenClaw client
+
+The selected design is a thin optional submission/status tool plugin targeting OpenClaw 2026.10.5. It calls Keep's project runtime; it does not introduce another solver. The plugin and Keep run as separate processes: the selected OpenClaw package requires Node 24.16+ on the Node 24 line, or Node 26.1+, while Keep retains its documented Node 22 runtime. This design is not yet implemented or installed.
+
+The client will receive a separate expiring, revocable credential for its configured repository and own-job status. Human generation approval remains in Keep. The approval handoff must preserve the original submitting agent and grant, and recheck both human approval authority and the agent's live authority before dispatch. Giving the plugin the owner's bearer token would not meet that contract.
+
+Submission will reuse Keep's durable idempotency journal. A lost response must recover the same request/job; a fresh tool-call identifier cannot establish that earlier work did not happen. The example profile must exclude direct execution and source/credential access through other tools, with its actual catalog and process boundaries checked in an owned fixture. Native plugin code remains trusted OpenClaw host code. [Upstream tool-plugin interfaces](https://docs.openclaw.ai/plugins/tool-plugins) inform this design; they do not qualify Keep's integration.
+
 ## Implementation entry points
 
 | Responsibility | Source |
