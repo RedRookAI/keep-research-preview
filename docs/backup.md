@@ -52,7 +52,9 @@ Handled-error cleanup is not proof of recovery from every possible process crash
 ## Recovering the OpenClaw client candidate
 
 The 0.0.16 development candidate adds client state outside Keep's data directory.
-Its combined installed recovery is not yet qualified. The existing capture API
+An installed synthetic journey has exercised protected recovery of that state,
+its pending proposal and invocation history. This is development evidence;
+qualification of a matching downloadable release remains separate. The capture API
 accepts one installed product root and one state root; it does not discover an
 OpenClaw profile, external repositories or recovery keys. A successful capture or
 `RESTORE_COMPLETE.json` therefore describes that capture's roots, not the whole
@@ -86,6 +88,10 @@ Capture a consistent set:
    their writers remain stopped. Copy the complete SQLite directory as one
    stopped set, not just the main database while a client is active. No second
    Keep backup service or archive format is required.
+   If files are staged first, compare the staged contents and permissions with
+   the stopped originals before capture. Copy tools can change directory modes.
+   Preserve symbolic links explicitly without following them into unlisted
+   components; retain and verify their referenced runtime identities separately.
 3. Review every exclusion against the inventory. Sensitive material belongs in
    protected private storage; a best-effort capture with omitted credentials is
    incomplete. Retain the original permissions and the external recovery keys.
@@ -98,6 +104,18 @@ matching client journal, profile/session state, configuration and repository dat
 before attempting client recovery. Reconcile absolute paths, endpoint, source
 revision and permissions deliberately. A binding or credential change can hold
 unresolved plugin work; do not erase the journal to make a new submission succeed.
+
+Preserve file-level auditability when the operator's backup mechanism packages
+external components into an archive. Retain a private manifest identifying each
+component and its files, relative paths, sizes, permissions and content digests.
+Bind the manifest and archive to the authenticated backup set, then compare the
+restored files against that manifest before enabling writers. An archive digest
+alone cannot identify a missing journal or changed file. Protect the manifest
+alongside the data: paths and digests can themselves disclose private information.
+Packaging must preserve the complete journals, original request keys, decision
+records and invocation history; it must not replace them with a summary. These
+checks establish preservation of captured evidence, not completeness of the
+original event recording or knowledge of events after capture.
 
 Before activation, reconcile grant expiry and revocations against current
 authority evidence outside the old snapshot. Restored local records cannot reveal
@@ -113,6 +131,17 @@ job. That tool may resend the original saved POST with its original key if the
 acknowledgement was lost. It must not be treated as a new goal. Missing original
 state, incompatible journal versions and unresolved authority require operator
 reconciliation; a fresh directory, session or key is not a recovery shortcut.
+
+For upgrades, retain the previous package and captured state, and try the new
+package against a restored copy first. The installed development journey read a
+signed, protected `0.0.12-preview.1` capture using the `0.0.16-preview.1` candidate.
+It retained uncertain operations for both owner and server-injected tenant
+fixtures, refused duplicate dispatch, and preserved a queued project's original
+command. The changed opaque provider binding held that command for reconciliation;
+the check does not establish that every older command can resume automatically.
+The tenant fixture supplied server-side identity and does not establish an
+organization authentication deployment. Neither old release bytes nor original
+state were modified by the upgrade.
 
 ## Filesystem Spine history capacity
 

@@ -54,6 +54,15 @@ test("restricted native submission, durable replay, exact human approval and own
     for (const path of ["/project/resume", "/project/merge", "/project/revert", "/delegation/issue", "/worker/resume", "/config"]) assert.equal((await f.call(token, "POST", path, {})).status, 403);
     assert.equal((await f.call(token, "GET", "/projects")).status, 403);
     assert.equal((await f.call(token, "POST", "/project", { ...request, posture: "autonomous" })).status, 400);
+    const vague = JSON.parse((await f.call(token, "POST", "/project", { goal: "fix this", idempotencyKey: "openclaw-vague-submission-001" })).body);
+    const vagueHeld = await waitForCheckpoint(f, vague.projectId, vague.runId);
+    assert.equal(vagueHeld.project.artifacts.understand.ambiguity.detected, true);
+    assert.equal(vagueHeld.project.artifacts.understand.generationApprovalRequired, true);
+    const vagueDecision = { runId: vague.runId, approval: { decisionId: vagueHeld.project.wait.decisionId, approved: false } };
+    assert.equal((await f.call(token, "POST", "/project/resume", vagueDecision)).status, 403);
+    assert.equal((await f.call(f.owner, "POST", "/project/resume", vagueDecision)).status, 200);
+    assert.equal(JSON.parse((await f.call(token, "GET", "/project/jobs", undefined, { jobId: vague.jobId })).body).review.generationDecision, "declined");
+    assert.equal(f.count(), 0);
     const declined = JSON.parse((await f.call(token, "POST", "/project", { ...request, idempotencyKey: "openclaw-declined-submission-001" })).body);
     const held = await waitForCheckpoint(f, declined.projectId, declined.runId);
     const decline = { runId: declined.runId, approval: { decisionId: held.project.wait.decisionId, approved: false } };

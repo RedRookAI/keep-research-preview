@@ -43,6 +43,28 @@ function protectedAncestors(path: string, invokingUid: number): void {
   }
 }
 
+/** Owner-selected location, fixed executable identity. Never resolve through PATH. */
+function openRequiredJailLauncher(path = BWRAP_PATH): number {
+  if (!isAbsolute(text(path))) throw new Error("required-jail launcher must be an absolute path");
+  const canonical = realpathSync(path);
+  protectedAncestors(dirname(canonical), 0);
+  const fd = openSync(canonical, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  try {
+    const s = fstatSync(fd);
+    if (!s.isFile() || s.uid !== 0 || (s.mode & 0o6022) !== 0 || (s.mode & 0o111) === 0)
+      throw new Error("untrusted required-jail launcher");
+    if (createHash("sha256").update(readFileSync(fd)).digest("hex") !== BWRAP_SHA256)
+      throw new Error("required-jail launcher identity mismatch");
+    return fd;
+  } catch (error) { closeSync(fd); throw error; }
+}
+
+/** Read-only prerequisite inspection; does not launch a namespace or repository code. */
+export function inspectRequiredJailLauncher(path?: string): void {
+  if (process.platform !== "linux" || process.arch !== "x64") throw new Error("required project jail needs the qualified Linux x64 backend");
+  closeSync(openRequiredJailLauncher(path));
+}
+
 // x86_64 only: reject other ABIs, asynchronous alternate socket dispatch, Unix
 // socket creation and all Unix socketpair types except private STREAM/SEQPACKET.
 // Keep bind/connect available for the operator's explicit network opt-in.
@@ -97,8 +119,8 @@ export function prepareRequiredJail(command: string, args: readonly string[], ja
       if (!s.isFile() || s.uid !== 0 || (s.mode & 0o6022) !== 0 || (s.mode & 0o111) === 0) throw new Error("untrusted required-jail launcher");
       return fd;
     };
-    const shell = trustedBinary("/usr/bin/bash"), launcher = trustedBinary(BWRAP_PATH);
-    if (createHash("sha256").update(readFileSync(launcher)).digest("hex") !== BWRAP_SHA256) throw new Error("required-jail launcher identity mismatch");
+    const shell = trustedBinary("/usr/bin/bash"), launcher = openRequiredJailLauncher(jail.jailExecutable);
+    descriptors.push(launcher);
     for (const [alias, target] of [["/bin", "usr/bin"], ["/lib", "usr/lib"], ["/lib64", "usr/lib64"]]) {
       if (readlinkSync(alias!) !== target) throw new Error("required jail needs the qualified merged-/usr layout");
     }

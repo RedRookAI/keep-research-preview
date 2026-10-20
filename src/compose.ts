@@ -458,6 +458,8 @@ export interface KeepConfig {
   readonly testCommand?: { readonly command: string; readonly args: readonly string[]; readonly timeoutMs?: number; readonly cpuLimitSec?: number; readonly maxOutputBytes?: number; readonly envAllowlist?: readonly string[];
     /** true/omitted requests best effort; false permits fallback; required refuses unprotected setup. */
     readonly namespaceJail?: boolean | "required";
+    /** Trusted owner selection; only valid with required jail. */
+    readonly jailExecutable?: string;
     readonly readOnlyPaths?: readonly string[];
     readonly allowWritePaths?: readonly string[];
     readonly allowNet?: boolean };
@@ -1278,6 +1280,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
       const dirOf = (ref: string): string => ws.dir!(ref);
       const innerFor = sandboxedRunnerFor(dirOf, tc.command, tc.args, {
         ...(tc.namespaceJail !== undefined ? { namespaceJail: tc.namespaceJail } : {}),
+        ...(tc.jailExecutable !== undefined ? { jailExecutable: tc.jailExecutable } : {}),
         ...(tc.readOnlyPaths ? { readOnlyPaths: tc.readOnlyPaths } : {}),
         ...(tc.allowWritePaths ? { allowWritePaths: tc.allowWritePaths } : {}),
         ...(tc.allowNet !== undefined ? { allowNet: tc.allowNet } : {}),
@@ -1981,6 +1984,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
         return new IsolatedTestRunner(
         new SandboxedCommandRunner({ command: test.command, args: test.args, projectDir,
           ...(test.namespaceJail !== undefined ? { namespaceJail: test.namespaceJail } : {}),
+          ...(test.jailExecutable !== undefined ? { jailExecutable: test.jailExecutable } : {}),
           ...(test.readOnlyPaths ? { readOnlyPaths: test.readOnlyPaths } : {}),
           ...(test.allowWritePaths ? { allowWritePaths: test.allowWritePaths } : {}),
           ...(test.allowNet !== undefined ? { allowNet: test.allowNet } : {}),

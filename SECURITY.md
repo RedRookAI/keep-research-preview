@@ -47,6 +47,17 @@ Linux x64 with the expected merged `/usr` layout and the exact launcher identity
 checked in [the implementation](src/infra/required_project_jail.ts). Other binaries
 or operating arrangements require qualification; a version string is insufficient.
 
+For the TypeScript project runner, the operator may set
+`KEEP_TEST_JAIL_EXECUTABLE` to an absolute protected installation path when
+`KEEP_TEST_NAMESPACE_JAIL=required`. The default is
+`/opt/keep/bubblewrap/0.13.0/bwrap`. Both selections require the same fixed hash,
+root ownership, protected ancestry and non-setuid/nonwritable executable checks;
+the path is not accepted from repository or model input. `keep doctor` checks
+launcher presence and trust without running repository code or exercising
+namespaces. Every actual required-jail execution still checks the launcher and
+setup result, refusing unsupported host policy. This setting does not change
+the separate native custody transport configuration or install a host helper.
+
 The task receives a read-only system tool tree, its project and explicitly allowed
 write directories, optional `readOnlyPaths`, and fresh temporary directories.
 Network access is off unless `allowNet: true` is explicitly selected. Unix socket

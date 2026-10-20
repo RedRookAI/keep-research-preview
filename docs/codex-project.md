@@ -1,8 +1,8 @@
 # Codex for owner repository projects
 
-Development source **0.0.16-preview.1** adds a project generation role using an existing signed-in Codex CLI. It is experimental: the first installed native attempt produced no usable response and left one invocation uncertain. The installed live-account workflow remains unqualified, and the **0.0.12-preview.1** download does not support this selector.
+Development source **0.0.17-preview.1** adds a project generation role using an existing signed-in Codex CLI. It is experimental: two installed native attempts produced no accepted result and retained uncertain invocations. The installed live-account workflow remains unqualified, and the **0.0.12-preview.1** download does not support this selector.
 
-Keep's intended division of responsibility is structured generation through Codex, with edits, tests, approval and proposals controlled by Keep. Effective native execution restrictions have not been established; see the limits below.
+Keep's intended division of responsibility is structured generation through Codex, with edits, tests, approval and proposals controlled by Keep. A source-derived generation-only CLI candidate has passed a credential-free tool-catalog check; stock CLI flags do not establish that boundary. The candidate's distribution and genuine account workflow remain unfinished; see the limits below.
 
 Use an existing ChatGPT Codex login on the same machine. Keep checks `codex --version` and `codex login status`; it does not copy authentication files or change global configuration. Select a public repository you own or are authorized to process. Configure the repository/test variables in [repository settings](installed-solve.md#repository-settings), then explicitly set:
 
@@ -28,9 +28,17 @@ Before generation, the installed native path rechecks the pinned source commit a
 
 The matching 0.163.0 [tool-assembly source](https://github.com/openai/codex/blob/83086188ae0614bd882818ff1aa23f3194962012/codex-rs/core/src/tools/spec_plan.rs) separately registers `apply_patch` from model/environment metadata, outside the shell-feature check. Its [startup tool policy](https://github.com/openai/codex/blob/83086188ae0614bd882818ff1aa23f3194962012/codex-rs/ext/extension-api/src/tool_policy.rs) can express an empty allowlist, but this review has not established a supported way to supply that policy through the current `codex exec` adapter. Shell exclusions and read-only sandboxing must not be described as a complete generation-only tool catalog.
 
+## Generation-only native candidate
+
+The development candidate is derived from upstream Codex 0.163.0 with a narrow startup-policy change: an empty allowed-tools ceiling is applied before session/router construction and retained in thread initialization. Its distinct version is `0.163.0-keep-generation.1`. A credential-free native consumer observed empty outgoing tool catalogs and refusal of an unadvertised tool request. This is stronger evidence than requesting read-only mode or detecting a tool event after execution, but applies to that measured candidate and fixture.
+
+The candidate executable SHA-256 is `b65e3073945a8401b64393b0f1ca81be0e2816e90c810b2835751eb08d304176`. It is not a published installable artifact. Dependency admission, matching third-party notices, portable distribution and the genuine account-backed result remain open. Do not substitute an arbitrary stock executable and assume equivalent enforcement. [Current dependency status](dependency-status.md).
+
 ## Compatibility and qualification
 
-The version check now identifies CLI 0.163.0; the first failed native attempt used 0.159.3. Metadata from a newer CLI does not explain that earlier failure or qualify the installed account route. The process profile now explicitly disables apps, hooks and multi-agent features as well as shell tools, snapshots and dependency installation. Duplicate and ineffective unified-exec opt-outs have been removed. The profile version is part of the durable generation identity, so a previously queued command cannot silently adopt a different profile. Complete pre-execution tool exclusion remains unverified.
+The version check now identifies CLI 0.163.0; the first failed native attempt used 0.159.3. Metadata from a newer CLI does not explain that earlier failure or qualify the installed account route. The process profile now explicitly disables apps, hooks and multi-agent features as well as shell tools, snapshots and dependency installation. Duplicate and ineffective unified-exec opt-outs have been removed. The profile version is part of the durable generation identity, so a previously queued command cannot silently adopt a different profile. Complete pre-execution tool exclusion is not established for the stock CLI by these flags.
+
+The generation transport recognizes the specific Codex0.163.0 startup warning that its optional code-mode host is absent and will fail closed. It records only the warning code `code-mode-host-unavailable`, and still requires a completed structured answer with usage. Unknown errors, tool activity and incomplete results continue to refuse. This compatibility behavior uses generation profile v3, so queued work and follow-up authorizations bound to older profiles cannot silently adopt it. Handling a warning does not establish tool exclusion or qualify an installed account-backed workflow.
 
 Select the actual native executable with `KEEP_CODEX_EXECUTABLE` when preparing the supported profile. Keep hashes the selected executable before dispatch. Use the platform binary supplied by the trusted installation, rather than its Node launcher; do not change a shared installation to select it. Direct-native installed operation remains to be qualified. Measure the actual native executable as well as any launcher. Hashing a Node wrapper alone does not bind the platform binary it loads. This review did not change the installed CLI, authentication or global configuration.
 
@@ -39,3 +47,28 @@ Select the actual native executable with `KEEP_CODEX_EXECUTABLE` when preparing 
 Controlled source checks cover explicit generation approval and safe error diagnostics. They do not establish success of the installed live-account route or qualify a downloadable release. The first native failure's cause remains unresolved; diagnostic categories are hints, not proof of zero remote work or authority to retry.
 
 Retain the uncertain invocation. Do not automatically retry or use a new data directory to bypass the retained claim. Use the [qualified download](quickstart.md) for established preview capabilities. See [validation evidence](evidence.md), [architecture](architecture.md) and [release priorities](../ROADMAP.md) for the current scope.
+
+### Explicit owner follow-up after uncertainty
+
+The development source adds a local owner command for bounded follow-up work. It does not reconcile remote work or qualify the native generation route. An uncertain attempt remains uncertain and consumes its original invocation allowance.
+
+With `KEEP_DATA_DIR` pointing at the existing instance, run:
+
+```sh
+keep codex-usage status
+```
+
+This needs the existing local owner credential, but no provider setup or model call. It reports the total claims and exact IDs of unresolved attempts, without prompt text or native diagnostics. An explicit `KEEP_OWNER_TOKEN_FILE` or `KEEP_OWNER_TOKEN` must match the instance's protected owner token. Remote gateway clients cannot administer account usage.
+
+After reviewing a recorded uncertain failure and authorizing further account use, configure the intended personal Codex project and its total allowance. For example, one old claimed attempt plus two approved follow-ups requires `KEEP_CODEX_MAX_INVOCATIONS=3`. Substitute the actual ID from status:
+
+```sh
+keep codex-usage authorize-followup \
+  --uncertain=ACTUAL_UNCERTAIN_CLAIM_ID \
+  --expected-claims=1 \
+  --additional-invocations=2
+```
+
+List every unresolved claim ID separated by commas. A still-pending invocation cannot be acknowledged as a recorded uncertain failure. Changed claim counts or incomplete IDs refuse rather than authorize different work. The command records the current generation identity and a finite additional allowance; it invokes no model and resumes no job. Repeating the same acknowledgement before new dispatch adds no allowance. Normal project approval, source/grant checks and runtime restrictions still apply.
+
+The authorization survives restart. Successful follow-ups consume its allowance; another uncertain failure stops further dispatch until an owner reviews the new complete set of uncertain claims. Changing the model, executable, profile or configured limits cannot transfer an old authorization to that new identity. Configured totals never refund previous claims, including the original uncertain one. This is an owner acknowledgement of risk and bounded additional use, not evidence that the earlier remote work stopped or that Codex's generation-only tool restriction has been established.

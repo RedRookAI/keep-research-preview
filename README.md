@@ -22,7 +22,7 @@ PASS  Restart retained the proposal without replay
 PASS  Wrong token refused; exact proposal vetoed; original source unchanged
 ```
 
-The demo uses **two scripted local responses and simulated approval/veto decisions**, with no model account or paid request. The workspace edits, tests and retained artifacts are real. You need Node.js 22.23.2, npm and Git; installation needs no Rust or C compiler. [Walkthrough and evidence](docs/portfolio-walkthrough.md).
+The demo uses **two scripted local responses and simulated approval/veto decisions**, with no model account or paid request. The workspace edits, tests and retained artifacts are real. For current runtime guidance, use Node.js 22.23.3 or later on Node 22, npm and Git; installation needs no Rust or C compiler. [Walkthrough and evidence](docs/portfolio-walkthrough.md).
 
 ## How it works
 
@@ -40,14 +40,14 @@ flowchart LR
 - **Retain interrupted work.** Durable project records distinguish pending, completed and uncertain outcomes instead of assuming a retry is safe.
 - **Make limits visible.** The demo's best-effort isolation and the opt-in required project jail have different prerequisites and evidence.
 
-[Architecture and trust boundaries](docs/architecture.md) · [Security model](SECURITY.md) · [Validation evidence](docs/evidence.md)
+[Architecture and trust boundaries](docs/architecture.md) · [Security model](SECURITY.md) · [Validation evidence](docs/evidence.md) · [Dependency status](docs/dependency-status.md)
 
 ## Current status
 
 | Component | Status |
 |---|---|
 | Download | **0.0.12-preview.1**, qualified Linux x64 research preview. [Release and checksums](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1). |
-| Development source | **0.0.16-preview.1**. Adds a native-project browser console with saved local instance controls, exact decisions, diffs and check results. The Codex account integration remains experimental and its installed workflow remains unqualified. No matching qualified download is published. [Status and limits](docs/codex-project.md). |
+| Development source | **0.0.17-preview.1**. Retains the native-project console and adds owned jail-helper selection, narrow Codex diagnostic compatibility, exact bounded follow-up administration and an ambiguity approval repair. The Codex account integration remains experimental and its installed workflow remains unqualified. No matching qualified download is published. [Status and limits](docs/codex-project.md). |
 | OpenClaw | Development candidate's packaged plugin passed the controlled native OpenClaw workflow: restricted submission/status, separate human approval, tested proposal and fresh-process recovery. Genuine Codex work and a qualified combined download remain pending. [Client setup and limits](integrations/openclaw/README.md). |
 
 Keep is a research preview. The supplied demonstrations establish specific workflow and recovery behavior, with developer-administered evidence. They do not establish general model quality, production enterprise isolation or independently audited security. [Supported scope and roadmap](ROADMAP.md).

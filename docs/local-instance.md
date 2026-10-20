@@ -60,3 +60,25 @@ Stop authenticates and checks the exact recorded worker identity. It requests sh
 An existing live worker is reported instead of duplicated. If startup acknowledgement is lost, Keep retains `startup-pending.json` and refuses automatic relaunch. Inspect this instance's private diagnostic/lifecycle records to resolve its actual state. Do not remove another instance's records, reset project state or launch again under a new directory to evade uncertain work.
 
 For a remote development box, the loopback address is local to that box. Use an SSH tunnel to reach it from your own browser or client; this command does not expose Keep publicly or change host networking.
+
+## Selecting an existing required-jail helper
+
+Before `keep instance init`, an operator with the qualified Bubblewrap0.13.0
+helper in a protected root-owned installation can select it explicitly:
+
+```sh
+export KEEP_TEST_NAMESPACE_JAIL=required
+export KEEP_TEST_JAIL_EXECUTABLE=/absolute/protected/keep/bwrap
+```
+
+Initialization saves these settings in the private instance profile. The expected
+helper bytes and ownership checks remain fixed; no global installation, `/opt`
+mount or host-policy change is performed. Omit the path to retain the existing
+`/opt/keep/bubblewrap/0.13.0/bwrap` default. A selected path requires required mode;
+it cannot silently enable a best-effort fallback.
+
+With the ordinary project settings configured, `keep doctor` reports missing or
+untrusted helper prerequisites without a model call. A trusted-helper result
+does not prove namespace enforcement or generation readiness: actual repository
+checks must report their setup result. Existing host namespace permissions are
+still required. See [the execution boundary](../SECURITY.md#opt-in-required-project-boundary-experimental).

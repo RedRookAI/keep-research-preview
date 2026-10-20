@@ -43,6 +43,8 @@ export interface CapturedTestCommand {
   readonly maxOutputBytes: number;
   readonly envAllowlist: readonly string[];
   readonly namespaceJail?: boolean | "required";
+  /** Trusted owner selection; only valid with required jail. */
+  readonly jailExecutable?: string;
 }
 
 export interface CapturedInstalledProjectConfig {
@@ -420,7 +422,11 @@ function captureTestCommand(env: Readonly<Record<string, string | undefined>>): 
   if (selection !== undefined && selection !== "required" && selection !== "best-effort" && selection !== "off")
     throw new RuntimeConfigError("KEEP_TEST_NAMESPACE_JAIL", "must be required, best-effort or off");
   const namespaceJail = selection === "required" ? "required" : selection === "best-effort" ? true : selection === "off" ? false : undefined;
-  return { command, args, timeoutMs: boundedInteger(env["KEEP_TEST_TIMEOUT_MS"], "KEEP_TEST_TIMEOUT_MS", DEFAULT_TEST_TIMEOUT_MS, 1_000, 60 * 60_000), cpuLimitSec: boundedInteger(env["KEEP_TEST_CPU_LIMIT_SEC"], "KEEP_TEST_CPU_LIMIT_SEC", DEFAULT_TEST_CPU_LIMIT_SEC, 1, 3_600), maxOutputBytes: boundedInteger(env["KEEP_TEST_MAX_OUTPUT_BYTES"], "KEEP_TEST_MAX_OUTPUT_BYTES", DEFAULT_TEST_MAX_OUTPUT_BYTES, 1_024, 64 * 1024 * 1024), envAllowlist: [...new Set(envAllowlist)].sort(), ...(namespaceJail !== undefined ? { namespaceJail } : {}) };
+  const jailExecutable = env["KEEP_TEST_JAIL_EXECUTABLE"];
+  if (jailExecutable !== undefined) bounded(jailExecutable, "KEEP_TEST_JAIL_EXECUTABLE");
+  if (jailExecutable !== undefined && (selection !== "required" || !jailExecutable || jailExecutable.includes("\0") || !isAbsolute(jailExecutable)))
+    throw new RuntimeConfigError("KEEP_TEST_JAIL_EXECUTABLE", "requires an absolute qualified helper path and KEEP_TEST_NAMESPACE_JAIL=required");
+  return { command, args, timeoutMs: boundedInteger(env["KEEP_TEST_TIMEOUT_MS"], "KEEP_TEST_TIMEOUT_MS", DEFAULT_TEST_TIMEOUT_MS, 1_000, 60 * 60_000), cpuLimitSec: boundedInteger(env["KEEP_TEST_CPU_LIMIT_SEC"], "KEEP_TEST_CPU_LIMIT_SEC", DEFAULT_TEST_CPU_LIMIT_SEC, 1, 3_600), maxOutputBytes: boundedInteger(env["KEEP_TEST_MAX_OUTPUT_BYTES"], "KEEP_TEST_MAX_OUTPUT_BYTES", DEFAULT_TEST_MAX_OUTPUT_BYTES, 1_024, 64 * 1024 * 1024), envAllowlist: [...new Set(envAllowlist)].sort(), ...(namespaceJail !== undefined ? { namespaceJail } : {}), ...(jailExecutable !== undefined ? { jailExecutable } : {}) };
 }
 
 function stringArray(raw: string, field: string): readonly string[] {

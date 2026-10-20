@@ -41,6 +41,13 @@ Open the same worker's [project console](local-instance.md#open-the-project-cons
 
 Keep rechecks the original command, live grant, current human approval authority and configured source before generation. An expired/revoked grant, changed binding or source, declined/stale decision or absent original command prevents dispatch. Native preparation carries its live authority check across awaited work. Generation approval does not grant proposal landing; exact proposal review remains a separate human operation. A wrong proposal digest cannot create a durable veto.
 
+Vague requests retain their clarification question at the Codex generation approval
+step. Review that question and the goal before approving, or decline the request.
+Earlier preview versions saved some ambiguity steps without the generation marker.
+The current owner can decline that exact saved step using its original live client
+grant; affirmative approval remains held. The old checkpoint is retained and the
+decline records its legacy context alongside the deciding human and original agent.
+
 To revoke locally, select the existing `KEEP_DATA_DIR` and run:
 
 ```sh

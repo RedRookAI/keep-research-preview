@@ -1,6 +1,6 @@
 # Install Keep and inspect a tested proposal
 
-Keep **0.0.12-preview.1** is a Linux x64 research preview. You need Node.js 22.23.2 and npm; the repository walkthrough also needs Git. The installed package includes compiled JavaScript, its existing bundled TypeScript dependency and three native executables. No Rust or C compiler is needed to install or run the walkthrough.
+Keep **0.0.12-preview.1** is a Linux x64 research preview. Use Node.js 22.23.3 or later on Node 22 and npm; the repository walkthrough also needs Git. The installed package includes compiled JavaScript, its existing bundled TypeScript dependency and three native executables. No Rust or C compiler is needed to install or run the walkthrough. The original installed qualification used Node 22.23.2; the updated runtime guidance follows a published dependency fix and is not a rerun of that qualification. See [dependency status](dependency-status.md).
 
 ## Download, verify and run
 
@@ -43,9 +43,9 @@ Required-jail operations need the exact reviewed Bubblewrap launcher and a quali
 
 ## Build from source
 
-The default branch is development source **0.0.16-preview.1**, not the source of the qualified download above. Its experimental [Codex project role](codex-project.md) has separate limits and remains unqualified as an installed workflow. To inspect the downloadable preview’s exact source, use the source archive linked in [the release record](../KEEP_RELEASE.md).
+The default branch is development source **0.0.17-preview.1**, not the source of the qualified download above. Its experimental [Codex project role](codex-project.md) has separate limits and remains unqualified as an installed workflow. To inspect the downloadable preview’s exact source, use the source archive linked in [the release record](../KEEP_RELEASE.md).
 
-Contributors need isolated Linux x64 resources, Node.js 22.23.2/npm/Git, pinned Rust 1.97.1 with its musl target and host C build tools. Follow [Contributing](../WORKFLOW.md); the build verifies existing pinned tools rather than fetching replacements.
+Contributors need isolated Linux x64 resources, Node.js 22.23.3 or later on Node 22, npm and Git, pinned Rust 1.97.1 with its musl target and host C build tools. Follow [Contributing](../WORKFLOW.md); the build verifies existing pinned tools rather than fetching replacements.
 
 ```sh
 git clone https://github.com/RedRookAI/keep-research-preview.git

@@ -24,6 +24,10 @@ This is same-agent evidence on one owned Linux host, with network disabled, exis
 
 Archives bind the qualified source above. The release tag adds external receipts and reconciled documentation; full source results do not become results for that later documentation commit. This companion is outside both archives to avoid circular checksums. Archived documentation records the source snapshot before publication; use this companion and the release-tag documentation for current download identities. Original releases/tags/assets are unchanged.
 
+## Current development source
+
+Source **0.0.17-preview.1** contains the scoped recovery, approval and trusted-helper repairs described in [current evidence](docs/evidence.md). It has no matching qualified download. Use the [current dependency guidance](docs/dependency-status.md); the original Node 22.23.2 qualification above is historical. Existing releases, tags and assets are unchanged.
+
 ---
 
 # Previous release records

@@ -58,6 +58,8 @@ export interface NamespaceSupport {
 export interface NamespaceJailSpec {
   /** Explicit required Linux backend; omitted retains legacy best-effort behavior. */
   readonly mode?: "required";
+  /** Trusted operator location for the fixed required-jail binary, never task input. */
+  readonly jailExecutable?: string;
   /** Project write island, plus any explicitly allowed write paths. */
   readonly projectDir: string;
   /** Operator opt-IN: keep the network reachable (skip the net namespace). Default false → network-denied. */

@@ -6,6 +6,7 @@ import { verifyInstalledReleaseAtBoot } from "../graph/release_boot.js";
 import { remoteProviderIdentityDigest } from "../gateway/provider_descriptor.js";
 import { captureRuntimeContract, RuntimeConfigError, type CapturedRuntimeContract, type RuntimeConfigContext } from "./runtime_config.js";
 import { loadMemoryRetentionProfile } from "./memory_retention_profile.js";
+import { inspectRequiredJailLauncher } from "../infra/required_project_jail.js";
 
 export type DoctorStatus = "ready" | "missing-input" | "unsupported" | "security-refusal";
 export interface DoctorCheck { readonly name: string; readonly status: DoctorStatus; readonly detail: string; }
@@ -20,6 +21,7 @@ export interface DoctorOptions {
   readonly stat?: typeof statSync;
   readonly measurePackage?: (root: string) => string;
   readonly verifyRelease?: (contract: CapturedRuntimeContract, packageRoot: string) => void;
+  readonly inspectJailLauncher?: typeof inspectRequiredJailLauncher;
 }
 
 const ok = (name: string, detail: string): DoctorCheck => ({ name, status: "ready", detail });
@@ -63,6 +65,15 @@ export function inspectInstalledReadiness(env: Readonly<Record<string, string | 
     checks.push({ ...checkRelease(encoderContract, options), name: "encoder-release-admission" });
   }
   checks.push(checkCommand(contract.installedProject!.testCommand.command, options));
+  if (contract.installedProject!.testCommand.namespaceJail === "required") {
+    try {
+      (options.inspectJailLauncher ?? inspectRequiredJailLauncher)(contract.installedProject!.testCommand.jailExecutable);
+      checks.push(ok("required-jail-launcher", "fixed launcher bytes and protected ownership verified; namespace setup has not been exercised"));
+    } catch (error) {
+      checks.push({ name: "required-jail-launcher", status: (error as NodeJS.ErrnoException).code === "ENOENT" ? "missing-input" : "security-refusal",
+        detail: "Required jail helper is absent or untrusted. Select the qualified root-owned helper with KEEP_TEST_JAIL_EXECUTABLE; namespace policy must also be supported. No installation or execution was attempted." });
+    }
+  }
   const ready = checks.every((check) => check.status === "ready");
   return { ready, contract, checks };
 }

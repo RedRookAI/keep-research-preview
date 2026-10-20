@@ -5,10 +5,20 @@ Results apply to the named source revision or archive, not automatically to the 
 | Profile | Result and scope |
 |---|---|
 | Downloadable **0.0.12-preview.1** | Qualified Linux x64 preview: 5,468 selected source tests, installed scripted repository workflow, recovery and named boundary controls. Exact artifact identities and receipt below. |
-| Development **0.0.16-preview.1** | Native project console, restricted client admission and experimental Codex account integration. The first genuine native attempt produced no usable response and retained an uncertain invocation. No corresponding qualified download. |
+| Development **0.0.17-preview.1** | Scoped diagnostic, trusted-helper and approval repairs, bounded owner follow-up administration, and retained recovery evidence. Two genuine native attempts remain uncertain; no corresponding qualified download. |
 | OpenClaw runtime | Packaged plugin passed the controlled installed OpenClaw 2026.10.5 / Node 24.22.0 workflow with scripted local providers. Actual native tools, separate human approval, tested proposal, fresh-process status and veto were observed. [Receipt and limits](qualification/openclaw-2026-10-20.json). |
 
 The useful repository demo uses two scripted local responses and simulated operator decisions. Its edits, tests and retained proposal are inspectable; this is workflow evidence, not a measurement of model quality. See [architecture](architecture.md), [Codex limits](codex-project.md) and [security boundaries](../SECURITY.md).
+
+## October 20 recovery and approval source checkpoint
+
+Source **0.0.17-preview.1** carries four reviewed product changes: exact owner-authorized follow-up without refunding uncertainty; narrow handling of the known optional-host startup warning; trusted owned selection of the pinned required-jail helper; and Codex generation approval that retains clarification and original caller custody for vague requests. A legacy markerless pending ambiguity can be declined by the exact authorized human; it cannot be affirmatively approved through that compatibility path.
+
+Focused emitting compilation and checks passed on the respective implementation candidates. Controlled installed observations also covered interruption without stopping another owned job, preserved request/proposal identity across recovery, explicit expired/revoked-authority refusal, and native OpenClaw outage/disabled-plugin refusal without direct-execution fallback. Synthetic providers and developer-administered fixtures were used. These observations are bounded to their recorded source/module inputs, not a fresh qualification of every file or the new package version. [Source checkpoint receipt](qualification/recovery-source-2026-10-20.json).
+
+The actual public export passed emitting compilation and **48 checks across five affected test files**, with zero failures or skips. These source checks used Node 22.23.2; they do not establish patched-runtime admission or a new installed archive.
+
+Both uncertain genuine account invocations remain charged and unresolved. No genuine repository success, final combined download, complete dependency clearance, outside audit or universal OpenClaw containment is inferred. [Dependency status](dependency-status.md) records the current release blockers. Historical compatibility and download receipts below keep their original versions and identities.
 
 ## October 20 OpenClaw source checkpoint
 

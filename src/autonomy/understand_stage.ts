@@ -76,15 +76,19 @@ export function buildUnderstandStageExecutor(router: ProjectIntentRouter = new I
         headline: "The request references attachments, but this text-only project run has no authenticated attachment input.",
       };
     }
+    if (requireGenerationApproval) {
+      return { output: { ...artifact, generationApprovalRequired: true }, control: "approval-required",
+        headline: route.shape === "ambiguous"
+          ? `Review the ambiguous request before approving Codex generation. ${route.clarifyingQuestion ?? route.note}`
+          : "Approve Codex generation for this owner public-repository goal.",
+        ...(route.shape === "ambiguous" ? { detail: route.clarifyingQuestion ?? route.note } : {}) };
+    }
     if (route.shape === "ambiguous" && state.posture !== "autonomous") {
       return {
         output: artifact, control: "approval-required",
         headline: "The request has multiple plausible interpretations.",
         detail: route.clarifyingQuestion ?? route.note,
       };
-    }
-    if (requireGenerationApproval) {
-      return { output: { ...artifact, generationApprovalRequired: true }, control: "approval-required", headline: "Approve Codex generation for this owner public-repository goal." };
     }
     if (route.shape === "ambiguous") {
       return {

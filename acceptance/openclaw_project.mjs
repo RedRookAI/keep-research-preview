@@ -5,12 +5,14 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { chmodSync, chownSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const installed = process.env.KEEP_INSTALLED_PACKAGE_ROOT, claw = process.env.KEEP_OPENCLAW_PACKAGE_ROOT;
 const clawNode = process.env.KEEP_OPENCLAW_NODE, root = process.argv[2];
 const uid = Number(process.env.KEEP_OPENCLAW_FIXTURE_UID);
+const jailExecutable = process.env.KEEP_TEST_JAIL_EXECUTABLE;
+assert.ok(jailExecutable === undefined || isAbsolute(jailExecutable), "explicit helper selection must be absolute");
 assert.ok(installed && claw && clawNode && root, "explicit installed Keep/OpenClaw/Node paths and a new fixture directory required");
 assert.equal(process.platform, "linux"); assert.equal(process.getuid(), 0, "fixture parent needs permission to drop only its child identity");
 assert.ok(Number.isSafeInteger(uid) && uid > 0, "explicit unprivileged child UID required; no system user is created");
@@ -20,16 +22,19 @@ const keepRoot = join(root, "keep-private"), agentRoot = join(root, "openclaw-cl
 mkdirSync(keepRoot, { mode: 0o700 }); mkdirSync(agentRoot, { mode: 0o700 }); chownSync(agentRoot, uid, uid);
 const source = join(keepRoot, "source"), workspace = join(keepRoot, "workspaces"), data = join(keepRoot, "data");
 mkdirSync(source); mkdirSync(workspace); mkdirSync(join(source, "src"));
+const outsideSentinel = join(keepRoot, "outside-sentinel"); writeFileSync(outsideSentinel, "unchanged");
 writeFileSync(join(source, "src/retry.mjs"), "export const retryLimit = 0;\n");
-writeFileSync(join(source, "retry.test.mjs"), "import test from 'node:test';import assert from 'node:assert/strict';import {retryLimit} from './src/retry.mjs';test('limit',()=>assert.equal(retryLimit,7));\n");
+writeFileSync(join(source, "retry.test.mjs"), "import test from 'node:test';import assert from 'node:assert/strict';import {retryLimit} from './src/retry.mjs';test('limit',()=>assert.equal(retryLimit,7));\n"
+  + (jailExecutable ? `import fs from 'node:fs';test('outside write refused',()=>assert.throws(()=>fs.writeFileSync(${JSON.stringify(outsideSentinel)},'wrong')));\n` : ""));
 const git = args => { const r = spawnSync("git", ["-c", "core.hooksPath=/dev/null", "-c", "commit.gpgSign=false", ...args], { cwd: source, encoding: "utf8", env: { PATH: process.env.PATH, HOME: keepRoot, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" } }); assert.equal(r.status, 0, r.stderr); return r.stdout.trim(); };
 git(["init", "--quiet", "--initial-branch=main"]); git(["add", "."]); git(["-c", "user.name=Keep Fixture", "-c", "user.email=keep@example.invalid", "commit", "--quiet", "-m", "controlled source"]);
 const callFile = join(keepRoot, "controlled-calls.json"), executable = join(keepRoot, "codex-fixture");
+const startupWarning = "Code Mode is unavailable because failed to spawn code-mode host /controlled/codex-code-mode-host: host executable was not found. Code mode will fail closed; enable `features.code_mode_host` and install `codex-code-mode-host`.";
 writeFileSync(executable, `#!${process.execPath}
 const fs=require('node:fs');let prompt='';process.stdin.on('data',b=>prompt+=b);process.stdin.on('end',()=>{
 const path=${JSON.stringify(callFile)},calls=fs.existsSync(path)?JSON.parse(fs.readFileSync(path,'utf8')):[];calls.push(prompt);fs.writeFileSync(path,JSON.stringify(calls));
 const value=calls.length===2?{body:"assert.equal((await import('./src/retry.mjs')).retryLimit,7);"}:{action:"plan",rationale:"Correct limit",edits:[{file:"src/retry.mjs",search:"retryLimit = 0",replace:"retryLimit = 7",intent:"Correct limit"}]};
-for(const e of [{type:'thread.started',thread_id:'controlled'},{type:'turn.started'},{type:'item.completed',item:{type:'agent_message',text:JSON.stringify({text:JSON.stringify(value)})}},{type:'turn.completed',usage:{input_tokens:10,cached_input_tokens:0,output_tokens:5}}])console.log(JSON.stringify(e));});`, { mode: 0o700 });
+for(const e of [{type:'thread.started',thread_id:'controlled'},{type:'item.completed',item:{type:'error',message:${JSON.stringify(startupWarning)}}},{type:'turn.started'},{type:'item.completed',item:{type:'agent_message',text:JSON.stringify({text:JSON.stringify(value)})}},{type:'turn.completed',usage:{input_tokens:10,cached_input_tokens:0,output_tokens:5}}])console.log(JSON.stringify(e));});`, { mode: 0o700 });
 const { composeKeep } = await import(pathToFileURL(join(installed, "dist/src/compose.js")));
 const { startGatewayServer } = await import(pathToFileURL(join(installed, "dist/src/gateway/http_gateway.js")));
 const { runOpenClawClientCommand } = await import(pathToFileURL(join(installed, "dist/src/cli/openclaw_client.js")));
@@ -37,7 +42,8 @@ const profilePath = join(keepRoot, "client.json"), issuedToken = join(keepRoot, 
 const app = composeKeep({ dataDir: data, openclawClientProfile: profilePath, sourceLanding: true,
   repositoryMaterialization: { sourceDir: source, workspaceBase: workspace, repoRef: "project", commit: git(["rev-parse", "HEAD"]), baseBranch: "main" },
   runtimePaths: { repository: source, workspace }, projectPosture: "autonomous",
-  testCommand: { command: process.execPath, args: ["--test", "--test-reporter=tap", "retry.test.mjs"], timeoutMs: 5000, cpuLimitSec: 2, maxOutputBytes: 16384, envAllowlist: [] },
+  testCommand: { command: process.execPath, args: ["--test", "--test-reporter=tap", "retry.test.mjs"], timeoutMs: 5000, cpuLimitSec: 2, maxOutputBytes: 16384, envAllowlist: [],
+    ...(jailExecutable ? { namespaceJail: "required", jailExecutable } : {}) },
   codexProject: { executable, executableSha256: createHash("sha256").update(readFileSync(executable)).digest("hex"), cliVersion: "codex-cli 0.163.0", model: "fixture-model", maxSubmittedPromptBytes: 65536, maxCapturedOutputBytes: 262144, maxElapsedMs: 5000, maxInvocations: 2, processing: "owner-public-repository" },
 });
 writeFileSync(join(keepRoot, "owner-token"), ownerToken, { mode: 0o600 });
@@ -113,11 +119,19 @@ try {
   assert.equal(state?.status, "waiting-approval"); assert.equal(counts(), 0);
   const runId = state.runId, original = app.projectRuntime.commandForJob(runId, projectId);
   assert.equal(original.principal.grantId, profile.grantId);
+  const selfApproval = await fetch(gateway.origin + "/project/resume", { method: "POST", headers: { authorization: `Bearer ${clientToken}`, "content-type": "application/json" }, body: JSON.stringify({ runId, approval: { decisionId: state.wait.decisionId, approved: true } }) });
+  assert.equal(selfApproval.status, 403); assert.equal(counts(), 0);
   const request = async (path, body) => { const response = await fetch(gateway.origin + path, { method: "POST", headers: { authorization: `Bearer ${ownerToken}`, "content-type": "application/json" }, body: JSON.stringify(body) }); assert.equal(response.status, 200); return response.json(); };
   await request("/project/resume", { runId, approval: { decisionId: state.wait.decisionId, approved: true } });
   state = app.projectManager.session(projectId).lastCheckpoint();
   const evidence = state.artifacts.implement?.solve?.proposalEvidence;
   assert.ok(evidence?.checks.testsPassed); assert.equal(counts(), 2);
+  const processIsolation = state.artifacts.vet_artifact?.isolation?.processIsolation;
+  if (jailExecutable) assert.equal(processIsolation?.namespaceSetup, "launcher-confirmed");
+  assert.equal(readFileSync(outsideSentinel, "utf8"), "unchanged");
+  const completed = app.spine.currentEvents().filter(event => event.actor === "codex.project-generation" && event.payload.event === "completed");
+  assert.equal(completed.length, 2);
+  assert.ok(completed.every(event => JSON.stringify(event.payload.warnings) === '["code-mode-host-unavailable"]'));
   assert.equal(readFileSync(join(source, "src/retry.mjs"), "utf8"), "export const retryLimit = 0;\n");
   await agent("status", "status-fresh-process"); assert.equal(app.projectManager.list().length, 1); assert.equal(counts(), 2);
   assert.ok(toolResults.some(result => result.phase === "status-fresh-process" && String(result.text).includes(runId)), "actual tool observation must reach the native OpenClaw consumer");
@@ -125,6 +139,7 @@ try {
   await agent("status", "status-after-veto"); assert.equal(counts(), 2);
   const receipt = { status: "PASS", keepVersion: JSON.parse(readFileSync(join(installed, "package.json"))).version, openclawVersion: "2026.10.5", nodeVersion: runtimeIdentity.version, nodeComponents: runtimeIdentity.versions, nodeExecutableSha256: createHash("sha256").update(readFileSync(clawNode)).digest("hex"), runtimeSecurityAdmission: "separate release-admission record required", consumerUid: uid, projectId, runId,
     effectiveModelTools: catalogs, actualNativeCliToolDispatch: true, originalGrantPreserved: true, sourceUnchanged: true, proposalChecksPassed: true, freshProcessSameJob: true, ownerVetoRecorded: true, controlledCodexCalls: 2, liveAccountCalls: 0,
+    nativeStartupWarningHandled: true, restrictedSelfApprovalRefused: true, outsideSentinelUnchanged: true, processIsolation,
     scope: "Controlled installed consumer, scripted local model routes and explicit simulated owner decisions; not genuine Codex quality, production isolation or final release qualification." };
   writeFileSync(join(root, "result.json"), JSON.stringify(receipt, null, 2), { mode: 0o600 }); console.log(JSON.stringify(receipt));
 } finally {

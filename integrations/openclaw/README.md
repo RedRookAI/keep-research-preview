@@ -7,7 +7,7 @@ Two optional native tools connect OpenClaw to Keep's repository workflow:
 
 The plugin cannot approve, merge, change configuration or choose arbitrary endpoints, identities, source paths or commands through tool arguments. Human decisions happen in the same Keep browser console used by the direct CLI.
 
-This **0.0.16-preview.1 candidate** targets **OpenClaw 2026.10.5**. Its Node engine floor is **24.18.1–24.x or ≥26.5.1**, stricter than OpenClaw's compatibility minimum because of [published Node security fixes](https://nodejs.org/en/blog/vulnerability/july-2026-security-releases). Use a current patched release in an admitted runtime; the engine range alone is not security admission. Keep's core remains on its Node 22 line. A controlled installed consumer passed native plugin loading, the actual two-tool model catalog, submission, human approval, tested proposal, fresh-process status and veto on **Node 24.22.0**. Both model routes were scripted loopback fixtures, with no live account call. This establishes that measured SDK workflow; genuine Codex operation and final downloadable release qualification remain pending. [Compatibility evidence](https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/openclaw-2026-10-20.json).
+This **0.0.17-preview.1 candidate** targets **OpenClaw 2026.10.5**. Its Node engine floor is **24.18.1–24.x or ≥26.5.1**, stricter than OpenClaw's compatibility minimum because of [published Node security fixes](https://nodejs.org/en/blog/vulnerability/july-2026-security-releases). Use a current patched release in an admitted runtime; the engine range alone is not security admission. Keep's core remains on its Node 22 line. A controlled installed consumer passed native plugin loading, the actual two-tool model catalog, submission, human approval, tested proposal, fresh-process status and veto on **Node 24.22.0**. Both model routes were scripted loopback fixtures, with no live account call. This establishes that measured SDK workflow; genuine Codex operation and final downloadable release qualification remain pending. [Compatibility evidence](https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/openclaw-2026-10-20.json).
 
 As checked on **October 20, 2026**, Node has [announced security updates for October 21](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases) affecting the 22, 24 and 26 lines. Final runtime admission remains pending the published fixes and their applicability. The earlier private Node 24.16.0 fixture is not an admitted release runtime; no shared-host upgrade is required by this candidate.
 
@@ -18,7 +18,7 @@ First configure Keep's experimental personal public-repository Codex role and is
 Use a dedicated OpenClaw profile you own. Install the packaged plugin in that profile, using the selected runtime's local install command:
 
 ```sh
-openclaw plugins install npm-pack:./redrookai-openclaw-keep-0.0.16-preview.1.tgz
+openclaw plugins install npm-pack:./redrookai-openclaw-keep-0.0.17-preview.1.tgz
 ```
 
 OpenClaw can apply plugin installation to a running Gateway. Select the dedicated profile before running installation; this is not an instruction to modify another claw. No global plugin registration or ClawHub publication is required.

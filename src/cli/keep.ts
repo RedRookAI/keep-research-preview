@@ -16,7 +16,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Spine } from "../spine/spine.js";
 import { FileSpineStore } from "../spine/store.js";
-import { InProcessLock } from "../lock/lock.js";
+import { InProcessLock, FileSystemLock } from "../lock/lock.js";
 import { SchemaRegistry } from "../spine/upcaster.js";
 import { ModelGateway } from "../gateway/gateway.js";
 import { MemoryStore } from "../memory/store.js";
@@ -41,6 +41,7 @@ import { runRecoveryDemo } from "./recovery_demo.js";
 import { runProjectDemo } from "./project_demo.js";
 import { runInstanceCommand } from "./instance.js";
 import { runOpenClawClientCommand } from "./openclaw_client.js";
+import { runCodexUsageCommand } from "./codex_usage.js";
 
 const SYSTEM_RELEASE_TRUST_ROOT = "/etc/keep/release-root.cbor";
 
@@ -56,6 +57,16 @@ export function executingPackageRoot(): string {
 
 export async function main(argv: readonly string[]): Promise<number> {
   if (argv[0] === "instance") return runInstanceCommand(argv.slice(1), text => process.stdout.write(text + "\n"));
+  if (argv[0] === "codex-usage" && argv[1] === "status") {
+    try {
+      if (process.env["KEEP_GATEWAY_URL"]) throw new Error("Codex usage administration is a local owner operation");
+      const dataDir = resolve(process.env["KEEP_DATA_DIR"] ?? join(homedir(), ".keep"));
+      const expected = readProtectedToken(join(dataDir, "owner-token"), "owner authority token");
+      const presented = process.env["KEEP_OWNER_TOKEN"] ?? (process.env["KEEP_OWNER_TOKEN_FILE"] ? readProtectedToken(process.env["KEEP_OWNER_TOKEN_FILE"], "presented owner authority token") : expected);
+      const spine = new Spine(new FileSpineStore(dataDir, { fsync: true }), new FileSystemLock(join(dataDir, ".locks")), new SchemaRegistry());
+      return runCodexUsageCommand(spine, argv.slice(1), expected.length === presented.length && timingSafeEqual(Buffer.from(expected), Buffer.from(presented)), undefined, text => process.stdout.write(text + "\n"));
+    } catch (error) { process.stderr.write(`Codex usage inspection refused: ${(error as Error).message}\n`); return 2; }
+  }
   if (argv[0] === "openclaw-client" && argv[1] === "revoke") {
     try {
       if (process.env["KEEP_GATEWAY_URL"]) throw new Error("client revocation is a local owner operation");
@@ -148,7 +159,7 @@ export async function main(argv: readonly string[]): Promise<number> {
   }
   const dataDir = resolve(runtimeEnv["KEEP_DATA_DIR"] ?? join(homedir(), ".keep"));
   const directDomainRequested = argv.some((arg) => arg.startsWith("--domain="));
-  const projectCommand = workerRequested || solveRequested || argv[0] === "openclaw-client" || (!directDomainRequested && ["project", "projects", "merge", "revert"].includes((argv[0] ?? "").toLowerCase()));
+  const projectCommand = workerRequested || solveRequested || argv[0] === "openclaw-client" || argv[0] === "codex-usage" || (!directDomainRequested && ["project", "projects", "merge", "revert"].includes((argv[0] ?? "").toLowerCase()));
   const domainSurfaceRequested = directDomainRequested || (argv[0] === "serve" && argv.includes("--gateway"));
   const organizationCommand = runtimeEnv["KEEP_PROVIDER_AUTHORITY"]?.toLowerCase() === "organization";
   let captured: CapturedRuntimeContract | undefined;
@@ -234,6 +245,7 @@ export async function main(argv: readonly string[]): Promise<number> {
   });
 
   if (argv[0] === "openclaw-client") return runOpenClawClientCommand(app, argv.slice(1), expectedOwnerToken !== undefined && presentedOwnerToken !== undefined && expectedOwnerToken.length === presentedOwnerToken.length && timingSafeEqual(Buffer.from(expectedOwnerToken), Buffer.from(presentedOwnerToken)), text => process.stdout.write(text + "\n"));
+  if (argv[0] === "codex-usage") return runCodexUsageCommand(app.spine, argv.slice(1), !organization && captured?.codexProject !== undefined && expectedOwnerToken !== undefined && presentedOwnerToken !== undefined && expectedOwnerToken.length === presentedOwnerToken.length && timingSafeEqual(Buffer.from(expectedOwnerToken), Buffer.from(presentedOwnerToken)), captured?.codexProject, text => process.stdout.write(text + "\n"));
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const io: CliIO = {
     write: (text) => process.stdout.write(text + "\n"),

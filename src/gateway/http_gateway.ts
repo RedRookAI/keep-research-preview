@@ -807,14 +807,20 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
       const ref = command.principal, grantId = app.authorization.attribution(principal)?.grantId;
       if (ref.id !== principal.id || ref.kind !== principal.kind || ref.tenant !== principal.tenant || ref.grantId !== grantId) {
         try {
+          const understanding = prior?.artifacts["understand"] as { generationApprovalRequired?: unknown; ambiguity?: { detected?: unknown } } | undefined;
+          // Older ambiguity checkpoints predate the Codex marker. Preserve them:
+          // only an exact human decline is compatible, never affirmative dispatch.
+          const legacyAmbiguityDecline = app.projectGenerationApprovalRequired === true && input.approval?.approved === false
+            && understanding?.generationApprovalRequired === undefined && understanding?.ambiguity?.detected === true;
           if (!sec.restrictedClientProfile || Object.keys(b).sort().join(",") !== "approval,runId" || !input.approval
             || prior?.wait?.kind !== "approval" || prior.stage !== "understand" || prior.wait.decisionId !== input.approval.decisionId
-            || (prior.artifacts["understand"] as { generationApprovalRequired?: unknown } | undefined)?.generationApprovalRequired !== true) throw new Error("not a pending generation decision");
+            || (understanding?.generationApprovalRequired !== true && !legacyAmbiguityDecline)) throw new Error("not a pending generation decision");
           const profile = readRestrictedClientProfile(sec.restrictedClientProfile);
           assertRestrictedHuman(app, profile, principal, command);
           delegatedDecision = { event: "openclaw.human-generation-decision", runId, projectId: project.id, commandDigest: original.commandDigest,
             binding: command.binding, checkpointRevision: prior.revision, decisionId: input.approval.decisionId, approved: input.approval.approved,
-            humanPrincipalId: principal.id, agentPrincipalId: ref.id, grantId: ref.grantId };
+            humanPrincipalId: principal.id, agentPrincipalId: ref.id, grantId: ref.grantId,
+            ...(legacyAmbiguityDecline ? { decisionContext: "legacy-ambiguity-decline" } : {}) };
           return undefined;
         } catch { throw new NativeProjectCommandUnavailableError("authority"); }
       }

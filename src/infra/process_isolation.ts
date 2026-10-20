@@ -129,6 +129,7 @@ export class ProcessIsolationAdapter {
     let required: RequiredJailLaunch | undefined;
     processIsolation = processPlanObservation(policy.namespaceJail, policy.cpuLimitSec, [], "policy-refusal");
     if (policy.namespaceJail?.mode !== undefined && policy.namespaceJail.mode !== "required") return refuse("unsupported namespace-jail mode");
+    if (policy.namespaceJail?.jailExecutable !== undefined && policy.namespaceJail.mode !== "required") return refuse("jailExecutable requires the required namespace policy");
     if (policy.namespaceJail?.mode === "required") {
       if (this.requestedPlatform !== "linux") return refuse("required project jail needs the Linux backend");
       try { required = prepareRequiredJail(command, args, policy.namespaceJail, policy.cpuLimitSec, this.scrubEnv(policy.envAllowlist), deadline); }

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CodexAccountClient, CodexAccountError, type CodexAccountRequest } from "../src/gateway/codex_account_client.js";
 
-function fixture(mode: string) {
+function fixture(mode: string, stream?: string) {
   const root = mkdtempSync(join(tmpdir(), "keep-codex-client-test-"));
   const executable = join(root, "codex-fixture"), record = join(root, "record.json");
   const script = `#!${process.execPath}
@@ -13,6 +13,7 @@ import fs from 'node:fs';
 const args=process.argv.slice(2),record=${JSON.stringify(record)},mode=${JSON.stringify(mode)};
 let input='';process.stdin.on('data',b=>{input+=b});process.stdin.on('end',()=>{
  fs.writeFileSync(record,JSON.stringify({args,input,apiKey:process.env.OPENAI_API_KEY??null,codexKey:process.env.CODEX_API_KEY??null}));
+ if(${JSON.stringify(stream ?? null)}!==null){process.stdout.write(${JSON.stringify(stream ?? "")});return;}
  const send=x=>process.stdout.write(JSON.stringify(x)+'\\n');
  if(mode==='native-config'){process.stderr.write('failed to load bootstrap configuration PRIVATE-TEST-SECRET');process.exitCode=7;return;}
  send({type:'thread.started',thread_id:'owned-fixture'});send({type:'turn.started'});
@@ -26,6 +27,8 @@ let input='';process.stdin.on('data',b=>{input+=b});process.stdin.on('end',()=>{
  else send({type:'turn.completed',usage:{input_tokens:9,cached_input_tokens:mode==='usage-invalid'?10:2,output_tokens:4}});
  if(mode==='late-error')send({type:'error',message:'late failure'});
 });
+
+
 `;
   writeFileSync(executable, script, { mode: 0o700 });
   const client = new CodexAccountClient({ executable, model: "fixture-model", maxSubmittedPromptBytes: 4096, maxCapturedOutputBytes: 4096, maxElapsedMs: mode === "timeout" ? 80 : 2000 });
@@ -106,6 +109,44 @@ test("deadline diagnostic does not upgrade local or remote closure",async()=>{
  const f=fixture("timeout");try{
   await assert.rejects(f.client.generate({billingBasis:"chatgpt-subscription",prompt:"p"}),(e:unknown)=>{
    assert.ok(e instanceof CodexAccountError);assert.equal(e.diagnostics?.reason,"deadline");assert.equal(e.diagnostics?.locallyClosed,false);assert.equal(e.diagnostics?.exitCode,null);return true;
+  });
+ }finally{rmSync(f.root,{recursive:true,force:true});}
+});
+
+// Sanitized native0.163.0 capture: host path/thread identity replaced, events intact.
+const startupCapture = [
+  {type:"thread.started",thread_id:"captured-native-thread"},
+  {type:"item.completed",item:{id:"item_0",type:"error",message:"Code Mode is unavailable because failed to spawn code-mode host /private/SECRET-HOST/codex-code-mode-host: host executable was not found. Code mode will fail closed; enable `features.code_mode_host` and install `codex-code-mode-host`."}},
+  {type:"turn.started"},
+  {type:"item.completed",item:{id:"item_1",type:"agent_message",text:JSON.stringify({text:"catalog fixture complete"})}},
+  {type:"turn.completed",usage:{input_tokens:20,cached_input_tokens:0,cache_write_input_tokens:0,output_tokens:10,reasoning_output_tokens:0}},
+];
+const streamOf = (events: readonly unknown[]) => events.map(x=>JSON.stringify(x)).join("\n")+"\n";
+
+test("native nonfatal startup warning permits completed generation and exposes only a safe warning code",async()=>{
+ const f=fixture("replay",streamOf(startupCapture));try{
+  const result=await f.client.generate({billingBasis:"chatgpt-subscription",prompt:"p"});
+  assert.equal(result.text,"catalog fixture complete");
+  assert.deepEqual(result.usage,{inputTokens:20,cachedInputTokens:0,outputTokens:10});
+  assert.deepEqual(result.warnings,["code-mode-host-unavailable"]);
+  assert.equal(JSON.stringify(result).includes("SECRET-HOST"),false);
+ }finally{rmSync(f.root,{recursive:true,force:true});}
+});
+
+for(const [name,events,knownWarning] of [
+ ["unknown startup error",[startupCapture[0],{type:"item.completed",item:{type:"error",message:"PRIVATE-CREDENTIAL unknown startup failure"}},...startupCapture.slice(2)],false],
+ ["warning without completed turn",startupCapture.slice(0,2),true],
+ ["warning followed by tool activity",[...startupCapture.slice(0,3),{type:"item.started",item:{type:"command_execution",command:"PRIVATE-CREDENTIAL"}}],true],
+ ["warning followed by fatal turn",[...startupCapture.slice(0,3),{type:"turn.failed",error:{message:"PRIVATE-CREDENTIAL"}}],true],
+ ["warning followed by missing usage",[...startupCapture.slice(0,4),{type:"turn.completed"}],true],
+ ["warning after completed turn",[...startupCapture,startupCapture[1]],true],
+] as const)test(`native ${name} still refuses without leaking diagnostics`,async()=>{
+ const f=fixture("replay",streamOf(events));try{
+  await assert.rejects(f.client.generate({billingBasis:"chatgpt-subscription",prompt:"p"}),(e:unknown)=>{
+   assert.ok(e instanceof CodexAccountError);assert.equal(e.dispatch,"entered");
+   assert.deepEqual(e.diagnostics?.warnings,knownWarning?["code-mode-host-unavailable"]:undefined);
+   assert.equal(JSON.stringify(e).includes("SECRET-HOST"),false);
+   assert.equal(JSON.stringify(e).includes("PRIVATE-CREDENTIAL"),false);return true;
   });
  }finally{rmSync(f.root,{recursive:true,force:true});}
 });

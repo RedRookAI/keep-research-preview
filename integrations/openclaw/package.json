@@ -1,13 +1,29 @@
 {
   "name": "@redrookai/openclaw-keep",
-  "version": "0.0.16-preview.1",
+  "version": "0.0.17-preview.1",
   "description": "Restricted Keep submission and status tools for OpenClaw",
   "type": "module",
   "main": "index.mjs",
   "license": "MIT",
   "author": "Red Rook AI LLC",
-  "files": ["index.mjs", "client.mjs", "contracts.mjs", "openclaw.plugin.json", "example.openclaw.json", "README.md", "LICENSE"],
-  "engines": { "node": ">=24.18.1 <25 || >=26.5.1" },
-  "peerDependencies": { "openclaw": "2026.10.5" },
-  "openclaw": { "extensions": ["./index.mjs"] }
+  "files": [
+    "index.mjs",
+    "client.mjs",
+    "contracts.mjs",
+    "openclaw.plugin.json",
+    "example.openclaw.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=24.18.1 <25 || >=26.5.1"
+  },
+  "peerDependencies": {
+    "openclaw": "2026.10.5"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.mjs"
+    ]
+  }
 }

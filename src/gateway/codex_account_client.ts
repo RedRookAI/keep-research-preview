@@ -13,6 +13,8 @@ export interface CodexAccountUsage {
   readonly cachedInputTokens: number;
   readonly outputTokens: number;
 }
+/** Stable codes only: native diagnostics can contain private host paths or data. */
+export type CodexAccountWarning = "code-mode-host-unavailable";
 export interface CodexAccountResult {
   readonly text: string;
   readonly requestedModel: string;
@@ -22,6 +24,7 @@ export interface CodexAccountResult {
   readonly allocatedPlanCostUsd: null;
   readonly modelWireAttempts: null;
   readonly cliInvocations: 1;
+  readonly warnings?: readonly CodexAccountWarning[];
 }
 export interface CodexAccountRequest {
   readonly billingBasis: "chatgpt-subscription";
@@ -48,6 +51,7 @@ export interface CodexAccountFailure {
   readonly exitCode: number | null;
   readonly locallyClosed: boolean;
   readonly category: "unknown" | "configuration" | "authentication" | "model-unavailable";
+  readonly warnings?: readonly CodexAccountWarning[];
 }
 export class CodexAccountError extends Error {
   constructor(message: string, readonly dispatch: "not-started" | "entered", readonly diagnostics?: CodexAccountFailure) {
@@ -57,8 +61,13 @@ export class CodexAccountError extends Error {
 const counter = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0;
 
 /** Part of the durable generation binding. Metadata confirms these settings, not a tool-admission proof. */
-export const CODEX_GENERATION_PROFILE = "keep.codex-generation/v2";
+export const CODEX_GENERATION_PROFILE = "keep.codex-generation/v3";
 const DISABLED_FEATURES = ["shell_tool", "shell_snapshot", "skill_mcp_dependency_install", "apps", "hooks", "multi_agent"] as const;
+
+// Codex0.163.0 collect_warning emits a running, nonfatal warning as an error item.
+// Recognize only this pinned missing-host diagnostic, never arbitrary error text.
+// Tool exclusion is established by the measured native policy, not this message.
+const MISSING_CODE_MODE_HOST = /^Code Mode is unavailable because failed to spawn code-mode host \/(?:[^\r\n]*\/)?codex-code-mode-host: host executable was not found\. Code mode will fail closed; enable `features\.code_mode_host` and install `codex-code-mode-host`\.$/u;
 
 export class CodexAccountClient {
   readonly isLocal = false;
@@ -107,10 +116,12 @@ export class CodexAccountClient {
         const child = spawn(this.options.executable, args, { cwd: dir, env: environment, detached: true, stdio: ["pipe", "pipe", "pipe"] });
         let failure: string | undefined, pending = "", bytes = 0, text: string | undefined, rawMessage: string | undefined, usage: CodexAccountUsage | undefined;
         let thread = false, started = false, completed = false;
+        const warnings: CodexAccountWarning[] = [];
         let reason: CodexAccountFailure["reason"] = "incomplete-output", stderr = "";
         const diagnostic = (exitCode: number | null = null, locallyClosed = false): CodexAccountFailure => Object.freeze({
           reason, phase: completed ? "turn-completed" : started ? "turn-started" : thread ? "thread-started" : "none",
           exitCode, locallyClosed,
+          ...(warnings.length ? { warnings: Object.freeze([...warnings]) } : {}),
           category: /failed to load bootstrap configuration|unexpected argument|unknown field/iu.test(stderr) ? "configuration"
             : /401 Unauthorized|authentication failed/iu.test(stderr) ? "authentication"
             : /model not found|model is not available/iu.test(stderr) ? "model-unavailable" : "unknown",
@@ -135,6 +146,12 @@ export class CodexAccountClient {
             const event = JSON.parse(value) as Record<string, unknown>;
             if (event.type === "thread.started" && !thread && !started) { thread = true; return; }
             if (event.type === "turn.started" && thread && !started) { started = true; return; }
+            if (thread && !started && !completed && event.type === "item.completed") {
+              const item = event.item as { type?: unknown; message?: unknown } | undefined;
+              if (item?.type === "error" && typeof item.message === "string" && MISSING_CODE_MODE_HOST.test(item.message) && !warnings.length) {
+                warnings.push("code-mode-host-unavailable"); return;
+              }
+            }
             if (!started || completed) throw new Error();
             if (["item.started", "item.updated", "item.completed"].includes(String(event.type))) {
               const item = event.item as { type?: unknown; text?: unknown } | undefined;
@@ -176,7 +193,8 @@ export class CodexAccountClient {
           if (failure || code !== 0 || !completed || text === undefined || !usage)
             reject(new CodexAccountError(failure ?? "Codex did not complete with verified output/usage", "entered", diagnostic(code, true)));
           else resolve({ text, usage, requestedModel: this.options.model, reportedModel: null, billingBasis: "chatgpt-subscription",
-            allocatedPlanCostUsd: null, modelWireAttempts: null, cliInvocations: 1 });
+            allocatedPlanCostUsd: null, modelWireAttempts: null, cliInvocations: 1,
+            ...(warnings.length ? { warnings: Object.freeze([...warnings]) } : {}) });
         });
         child.stdin.end(prompt);
       });

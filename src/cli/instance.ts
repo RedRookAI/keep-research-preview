@@ -11,7 +11,7 @@ interface InstanceProfile { readonly schema: "keep.instance/v1"; readonly enviro
 const PROFILE = "instance.json";
 const CURRENT = "current-worker.json";
 const PENDING = "startup-pending.json";
-const FIELDS = new Set(["KEEP_OPENCLAW_CLIENT_PROFILE", "KEEP_PROVIDER", "KEEP_DATA_DIR", "KEEP_REPOSITORY", "KEEP_WORKSPACE_BASE", "KEEP_REVISION", "KEEP_REPO_REF", "KEEP_BASE_BRANCH", "KEEP_TEST_COMMAND", "KEEP_TEST_ARGS_JSON", "KEEP_TEST_NAMESPACE_JAIL", "KEEP_PROJECT_MODEL", "KEEP_CODEX_PROCESSING", "KEEP_CODEX_EXECUTABLE", "KEEP_CODEX_MODEL", "KEEP_CODEX_MAX_INVOCATIONS", "KEEP_CODEX_MAX_PROMPT_BYTES", "KEEP_CODEX_MAX_OUTPUT_BYTES", "KEEP_CODEX_TIMEOUT_MS"]);
+const FIELDS = new Set(["KEEP_OPENCLAW_CLIENT_PROFILE", "KEEP_PROVIDER", "KEEP_DATA_DIR", "KEEP_REPOSITORY", "KEEP_WORKSPACE_BASE", "KEEP_REVISION", "KEEP_REPO_REF", "KEEP_BASE_BRANCH", "KEEP_TEST_COMMAND", "KEEP_TEST_ARGS_JSON", "KEEP_TEST_NAMESPACE_JAIL", "KEEP_TEST_JAIL_EXECUTABLE", "KEEP_PROJECT_MODEL", "KEEP_CODEX_PROCESSING", "KEEP_CODEX_EXECUTABLE", "KEEP_CODEX_MODEL", "KEEP_CODEX_MAX_INVOCATIONS", "KEEP_CODEX_MAX_PROMPT_BYTES", "KEEP_CODEX_MAX_OUTPUT_BYTES", "KEEP_CODEX_TIMEOUT_MS"]);
 const CODEX_FIELDS = [...FIELDS].filter(key => key === "KEEP_PROJECT_MODEL" || key.startsWith("KEEP_CODEX_"));
 const within = (parent: string, child: string): boolean => child === parent || child.startsWith(parent + sep);
 
@@ -95,6 +95,7 @@ export async function runInstanceCommand(args: readonly string[], write: (text: 
         KEEP_TEST_COMMAND: option("test-command")!, KEEP_TEST_ARGS_JSON: JSON.stringify(testArgs) };
       for (const key of [...CODEX_FIELDS, "KEEP_OPENCLAW_CLIENT_PROFILE"]) if (process.env[key] !== undefined) environment[key] = process.env[key]!;
       if (process.env.KEEP_TEST_NAMESPACE_JAIL !== undefined) environment.KEEP_TEST_NAMESPACE_JAIL = process.env.KEEP_TEST_NAMESPACE_JAIL;
+      if (process.env.KEEP_TEST_JAIL_EXECUTABLE !== undefined) environment.KEEP_TEST_JAIL_EXECUTABLE = process.env.KEEP_TEST_JAIL_EXECUTABLE;
       captureRuntimeContract(runtimeEnvironment({ schema: "keep.instance/v1", environment }), { cwd: process.cwd() }, { projectRequired: true });
       writePrivate(join(directory, PROFILE), { schema: "keep.instance/v1", environment });
       write(`Instance saved: ${directory}\nRepository: ${repository}@${revision}\nStart: keep instance start ${directory}\n${environment.KEEP_PROJECT_MODEL === "codex" ? "Codex selected; startup is not a generation qualification." : "Generation is not configured. The local stub will start with dispatch paused."}`);

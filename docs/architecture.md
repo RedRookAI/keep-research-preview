@@ -20,7 +20,7 @@ flowchart TD
     Runtime <--> State[Durable project and effect records]
 ```
 
-The downloadable walkthrough uses controlled local responses in place of a live provider. The experimental Codex source uses a signed-in native CLI for remote generation. Development source 0.0.16 adds the restricted OpenClaw client and native project console shown above. The packaged plugin passed its controlled installed SDK workflow; genuine Codex output and the final combined download remain unqualified. The 0.0.12 qualified download predates these additions.
+The downloadable walkthrough uses controlled local responses in place of a live provider. The experimental Codex source uses a signed-in native CLI for remote generation. Development source 0.0.17 retains the restricted OpenClaw client and native project console shown above. The packaged plugin passed its controlled installed SDK workflow; genuine Codex output and the final combined download remain unqualified. The 0.0.12 qualified download predates these additions.
 
 ## The main boundaries
 
@@ -34,11 +34,19 @@ The downloadable walkthrough uses controlled local responses in place of a live 
 
 **Evidence.** Diffs, test results and records make behavior inspectable. Hash-linked records bind recorded data; they do not independently establish that every event is truthful or complete. Current qualification was administered by the developer on controlled fixtures.
 
+## What makes an operation auditable
+
+The review unit is the operation and its retained history. Follow the submitted goal and original caller through its bound source revision, authorization, generation claims, workspace edits, repository checks and exact proposal decision. A separate human decision must remain attributable to that human without replacing the submitting agent's identity. A refusal or uncertain external result is part of the record, including after restart.
+
+Keep's journals and proposal artifacts support this reconstruction. The OpenClaw client retains its request key and submission journal so a fresh conversation or lost response does not silently create new work. Recovery must preserve those records together with the matching configuration, repository contents and file permissions. The [backup procedure](backup.md#recovering-the-openclaw-client-candidate) requires a protected file manifest as well as authenticated archives; an archive digest alone cannot identify a missing journal.
+
+The host and evidence administrator remain trusted. Hashes can expose changed recorded bytes, but cannot prove that an administrator recorded every event or that an external service stopped. Developer-administered checks demonstrate specific behavior; independent custody and outside verification remain separate work.
+
 ## OpenClaw development candidate
 
 The optional native plugin targets OpenClaw 2026.10.5 and calls Keep's existing project runtime. The plugin runs inside the trusted OpenClaw process, separate from Keep; no second solver is introduced. The candidate's Node engine floor is 24.18.1 on the Node 24 line, or 26.5.1 and later, while Keep retains its documented Node 22 runtime. These are compatibility floors, not final security admission. Exact runtime selection and current security notices are covered in the [plugin guide](../integrations/openclaw/README.md).
 
-Keep's implemented client admission issues a separate expiring, revocable credential bound to the configured project runtime. Its authenticated routes submit a goal and inspect the original own job. Human generation approval remains in Keep. The handoff records the deciding human separately, preserves the original submitting agent and grant, and rechecks live authority/source before dispatch. The scoped Keep-side controlled checks have passed; that does not establish native OpenClaw loading or live-account success. [Admission contract](openclaw-client.md).
+Keep's implemented client admission issues a separate expiring, revocable credential bound to the configured project runtime. Its authenticated routes submit a goal and inspect the original own job. Human generation approval remains in Keep. The handoff records the deciding human separately, preserves the original submitting agent and grant, and rechecks live authority/source before dispatch. Native OpenClaw loading and the controlled installed workflow have also been observed with scripted providers; genuine account-backed success remains unqualified. [Admission contract](openclaw-client.md).
 
 The client records the canonical goal/key in a private SQLite journal before HTTP; the server uses its existing durable idempotency journal. A lost response recovers the same request/job. The outstanding conversation survives a session reset, so a fresh tool-call identifier cannot establish that earlier work did not happen. The journal contains private submitted text and must be retained with matching client/session state.
 

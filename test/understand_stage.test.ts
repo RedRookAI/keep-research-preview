@@ -57,5 +57,13 @@ for (const posture of ["autonomous","policy-calibrated","approval-required"] as 
   assert.equal(result.control,"approval-required");assert.match(result.headline??"",/Approve Codex generation/);
   const artifact=result.output as ReturnType<typeof captureProjectIntent>;
   assert.equal(artifact.intent.shape,"concrete-task");assert.equal(artifact.ambiguity.detected,false);
+  assert.equal(artifact.generationApprovalRequired,true);
+ });
+ test(`Codex ambiguity retains its question and generation approval marker under ${posture}`,async()=>{
+  const result=await buildUnderstandStageExecutor(undefined,true)(state("fix this",posture));
+  const artifact=result.output as ReturnType<typeof captureProjectIntent>;
+  assert.equal(result.control,"approval-required");assert.equal(artifact.generationApprovalRequired,true);
+  assert.equal(artifact.ambiguity.detected,true);assert.ok(artifact.ambiguity.clarificationQuestion);
+  assert.match(result.headline??"",/ambiguous request.*Codex generation/);assert.equal(result.detail,artifact.ambiguity.clarificationQuestion);
  });
 }

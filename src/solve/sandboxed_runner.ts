@@ -41,6 +41,8 @@ export interface SandboxedCommandConfig {
    * refuses unsupported/unsafe setup instead of falling back.
    */
   readonly namespaceJail?: boolean | "required";
+  /** Trusted owner selection; only valid with required jail. */
+  readonly jailExecutable?: string;
   /** Explicit readonly inputs/tool roots for the required Linux backend. */
   readonly readOnlyPaths?: readonly string[];
   /** Operator opt-IN allowance: keep the network reachable for the child (default: network-DENIED). */
@@ -88,6 +90,8 @@ export class SandboxedCommandRunner implements TestRunner {
         failureKind: "harness", processCompletion: "not-started",
         processIsolation: copyProcessIsolationObservation({ ...missing, namespacePolicy: "unsupported", namespaceSetup: "unverified" }) };
     }
+    if (this.cfg.jailExecutable !== undefined && this.cfg.namespaceJail !== "required")
+      return { results: [], runnerError: "jailExecutable requires the required namespace policy", failureKind: "harness", processCompletion: "not-started" };
     const precheck = executionStopReason(execution);
     if (precheck) return { results: [], runnerError: `${precheck} before test dispatch`, failureKind: "harness", processCompletion: "not-started" };
     if (this.cfg.namespaceJail === "required" && this.cfg.allowNet !== undefined && typeof this.cfg.allowNet !== "boolean") {
@@ -111,6 +115,7 @@ export class SandboxedCommandRunner implements TestRunner {
       ...(jailOn ? { namespaceJail: {
         projectDir: this.cfg.projectDir,
         ...(this.cfg.namespaceJail === "required" ? { mode: "required" as const } : {}),
+        ...(this.cfg.jailExecutable !== undefined ? { jailExecutable: this.cfg.jailExecutable } : {}),
         ...(this.cfg.readOnlyPaths ? { readOnlyPaths: this.cfg.readOnlyPaths } : {}),
         ...(this.cfg.allowNet ? { allowNet: true } : {}),
         ...(this.cfg.allowWritePaths ? { allowWritePaths: this.cfg.allowWritePaths } : {}),
@@ -156,7 +161,7 @@ export function sandboxedRunnerFor(
   projectDirOf: (repoRef: string) => string,
   command: string,
   args: readonly string[],
-  opts: { timeoutMs?: number; cpuLimitSec?: number; maxOutputBytes?: number; envAllowlist?: readonly string[]; namespaceJail?: boolean | "required"; readOnlyPaths?: readonly string[]; allowNet?: boolean; allowWritePaths?: readonly string[]; adapter?: ProcessIsolationAdapter } = {},
+  opts: { timeoutMs?: number; cpuLimitSec?: number; maxOutputBytes?: number; envAllowlist?: readonly string[]; namespaceJail?: boolean | "required"; jailExecutable?: string; readOnlyPaths?: readonly string[]; allowNet?: boolean; allowWritePaths?: readonly string[]; adapter?: ProcessIsolationAdapter } = {},
 ): (repoRef: string) => TestRunner {
   return (repoRef: string) =>
     new SandboxedCommandRunner({
@@ -167,6 +172,7 @@ export function sandboxedRunnerFor(
       ...(opts.envAllowlist ? { envAllowlist: opts.envAllowlist } : {}),
       // BUILD-ORDER 1.3 — jail is default-ON; opt-out and opt-in allowances flow through unchanged.
       ...(opts.namespaceJail !== undefined ? { namespaceJail: opts.namespaceJail } : {}),
+      ...(opts.jailExecutable !== undefined ? { jailExecutable: opts.jailExecutable } : {}),
       ...(opts.readOnlyPaths ? { readOnlyPaths: opts.readOnlyPaths } : {}),
       ...(opts.allowNet ? { allowNet: opts.allowNet } : {}),
       ...(opts.allowWritePaths ? { allowWritePaths: opts.allowWritePaths } : {}),

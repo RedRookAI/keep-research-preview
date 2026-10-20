@@ -1,0 +1,110 @@
+{
+  "schema": "keep.source-checkpoint/v1",
+  "checkedDate": "2026-10-20",
+  "sourceVersion": "0.0.17-preview.1",
+  "status": "SCOPED_SOURCE_EXPORT_PASS",
+  "implementationHead": "df6085d623308649f80c33630eaa3da762b2b885",
+  "evidence": [
+    {
+      "change": "owner follow-up administration",
+      "emittingCompile": "PASS",
+      "focusedChecks": 8,
+      "failed": 0,
+      "skipped": 0,
+      "candidate": "d2c4949"
+    },
+    {
+      "change": "diagnostic compatibility",
+      "emittingCompile": "PASS",
+      "focusedChecks": 29,
+      "failed": 0,
+      "skipped": 0,
+      "candidate": "982b674"
+    },
+    {
+      "change": "owned helper setup",
+      "emittingCompile": "PASS",
+      "focusedChecks": 27,
+      "failed": 0,
+      "skipped": 0,
+      "candidate": "314bd06",
+      "correction": "abbd0c8: nonregular-helper refusal, emitting compile and four affected checks passed"
+    },
+    {
+      "change": "ambiguity approval custody",
+      "emittingCompile": "PASS",
+      "focusedChecks": 15,
+      "failed": 0,
+      "skipped": 0,
+      "candidate": "aad2cdd"
+    }
+  ],
+  "controlledInstalledObservations": [
+    "required-jail proposal, outside-source preservation, restart and exact veto with two scripted generations",
+    "console cancellation retains a reconciliation hold; independent owned job completes",
+    "protected recovery preserves journals, original authority and uncertainty; expiry and externally reconciled revocation refuse",
+    "native OpenClaw outage exposes only submission/status; disabled plugin refuses before model request",
+    "legacy ambiguity exact decline succeeds; affirmative legacy approval and restricted self-approval refuse"
+  ],
+  "accountCallsDuringTheseScopedRepairs": 0,
+  "genuineAccountOutcome": "Two prior uncertain claims retained; no accepted genuine repository proposal",
+  "qualificationBoundary": "Per-change source/module-bound evidence. No final source17 installed archive, independent audit, production isolation or dependency clearance. Previous receipts retain their own identities.",
+  "implementationProductFilesSha256": {
+    "acceptance/openclaw_project.mjs": "e5cd409cd1a95a9165ba71ea937ce509372deebca05adeea1bfeb3de74401a27",
+    "src/autonomy/understand_stage.ts": "82b169c546a7a82657d77266d0875499056bd27aec27987693b3741d86d0dfc0",
+    "src/cli/cli_core.ts": "e7adbbc060c76f2da40509c1fbc1190356404318084a3aee94b492abd335c6fa",
+    "src/cli/codex_usage.ts": "0850c67250cd713d563bc0895ce8e3e67bc8c38415a6188dcab9ca27171b983a",
+    "src/cli/doctor.ts": "1c9fc4e53616f9345e247e3db92527e435c4eb05854234b999dae179b59a27e4",
+    "src/cli/instance.ts": "dbce472adc2c97956c61f003411a27c5689095fd2c793431e2a23ef04614baf2",
+    "src/cli/keep.ts": "d102415cc9c5fb7e1fe74b37fc87771ce31c8f6cd014780f2a4b23db36b63ab2",
+    "src/cli/runtime_config.ts": "3aeceb105277d2b465ab9e74d66707925f4dfb4108642c7b7481fe35350f8904",
+    "src/compose.ts": "06fdbda7f8ec87bbb11f8eea12497610cf1e15f89b0e19a06a8828d4318200bf",
+    "src/gateway/codex_account_client.ts": "d25b60c611f7d7ab293eabfe2e1ee665531863e7260ab8e0f0cfb7a4c57886d3",
+    "src/gateway/codex_project_provider.ts": "256ac3e38b040c49908daf759580ac57a841fc4d058fa1c12377c2bcce2f450f",
+    "src/gateway/http_gateway.ts": "2b75416112a295f318657d92d3e9c2a7fe0fd4293e91dac452eb8d361a63f118",
+    "src/infra/isolation_backend.ts": "7c315aa27163a5a6a31a2e0ea2f4fc4aa111aef7fa74939c255fc4e8d67e8504",
+    "src/infra/process_isolation.ts": "878fd827e6c77c36aa93ea7791a7d39befc157d1d9ca06f4eade6515d0d2a3cc",
+    "src/infra/required_project_jail.ts": "9d3e7581cf7d01a7778e9efc5311bdfe5a2e27395ef15ee2686f981a03c6c488",
+    "src/solve/sandboxed_runner.ts": "2d33407860f7141dc2441ff64c0495962a2c8256f7db3d7b0371e8cd6ed96963",
+    "test/codex_account_client.test.ts": "d0d51aedaa129cf6b9a7a087f304d6337cd21299af910fdda8878ce9350aa44f",
+    "test/codex_project_provider.test.ts": "dabd97ae7d9b08ae529adb4c7621d22e2c2d87789b979f33d69b642bf31d109f",
+    "test/required_project_jail_selection.test.ts": "253f5d5c04cb94026811bea036a1fd4fbeb6ed3898a0778206906244fc767966",
+    "test/restricted_client.test.ts": "1426e0479e3e30733fc136d28328216ce2bab30b4fced060184180924f21ee04",
+    "test/understand_stage.test.ts": "331041ba87ca61ec286e49d030c6dc791b39b61ba103d76de6c07a278142b196"
+  },
+  "publicProductFilesSha256": {
+    "acceptance/openclaw_project.mjs": "e5cd409cd1a95a9165ba71ea937ce509372deebca05adeea1bfeb3de74401a27",
+    "src/autonomy/understand_stage.ts": "82b169c546a7a82657d77266d0875499056bd27aec27987693b3741d86d0dfc0",
+    "src/cli/cli_core.ts": "e7adbbc060c76f2da40509c1fbc1190356404318084a3aee94b492abd335c6fa",
+    "src/cli/codex_usage.ts": "0850c67250cd713d563bc0895ce8e3e67bc8c38415a6188dcab9ca27171b983a",
+    "src/cli/doctor.ts": "1c9fc4e53616f9345e247e3db92527e435c4eb05854234b999dae179b59a27e4",
+    "src/cli/instance.ts": "dbce472adc2c97956c61f003411a27c5689095fd2c793431e2a23ef04614baf2",
+    "src/cli/keep.ts": "d102415cc9c5fb7e1fe74b37fc87771ce31c8f6cd014780f2a4b23db36b63ab2",
+    "src/cli/runtime_config.ts": "3aeceb105277d2b465ab9e74d66707925f4dfb4108642c7b7481fe35350f8904",
+    "src/compose.ts": "06fdbda7f8ec87bbb11f8eea12497610cf1e15f89b0e19a06a8828d4318200bf",
+    "src/gateway/codex_account_client.ts": "d25b60c611f7d7ab293eabfe2e1ee665531863e7260ab8e0f0cfb7a4c57886d3",
+    "src/gateway/codex_project_provider.ts": "256ac3e38b040c49908daf759580ac57a841fc4d058fa1c12377c2bcce2f450f",
+    "src/gateway/http_gateway.ts": "2b75416112a295f318657d92d3e9c2a7fe0fd4293e91dac452eb8d361a63f118",
+    "src/infra/isolation_backend.ts": "7c315aa27163a5a6a31a2e0ea2f4fc4aa111aef7fa74939c255fc4e8d67e8504",
+    "src/infra/process_isolation.ts": "878fd827e6c77c36aa93ea7791a7d39befc157d1d9ca06f4eade6515d0d2a3cc",
+    "src/infra/required_project_jail.ts": "9d3e7581cf7d01a7778e9efc5311bdfe5a2e27395ef15ee2686f981a03c6c488",
+    "src/solve/sandboxed_runner.ts": "2d33407860f7141dc2441ff64c0495962a2c8256f7db3d7b0371e8cd6ed96963",
+    "test/codex_account_client.test.ts": "d0d51aedaa129cf6b9a7a087f304d6337cd21299af910fdda8878ce9350aa44f",
+    "test/codex_project_provider.test.ts": "dabd97ae7d9b08ae529adb4c7621d22e2c2d87789b979f33d69b642bf31d109f",
+    "test/required_project_jail_selection.test.ts": "253f5d5c04cb94026811bea036a1fd4fbeb6ed3898a0778206906244fc767966",
+    "test/restricted_client.test.ts": "1426e0479e3e30733fc136d28328216ce2bab30b4fced060184180924f21ee04",
+    "test/understand_stage.test.ts": "331041ba87ca61ec286e49d030c6dc791b39b61ba103d76de6c07a278142b196"
+  },
+  "publicExportChecks": {
+    "emittingCompile": "PASS",
+    "testFiles": 5,
+    "tests": 48,
+    "passed": 48,
+    "failed": 0,
+    "skipped": 0,
+    "nodeVersion": "22.23.2",
+    "nativeBuilds": 0,
+    "accountCalls": 0,
+    "boundary": "Actual public source export, preserving public-specific adaptations. Development check runtime predates current Node guidance; this is not patched-runtime or installed-archive admission."
+  }
+}
