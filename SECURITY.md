@@ -1,8 +1,14 @@
 # Security boundary and disclosure
 
-Keep is an incomplete research platform. It is not currently qualified for
-unattended consequential production use. The supported first demonstration uses
-synthetic data and a local test outbox, with no live model or external service.
+Keep is a research preview and is not qualified for unattended consequential
+production use. The repository walkthrough uses a synthetic repository and
+scripted local responses; the companion recovery experiment uses a local test
+outbox. Neither demonstration requires a live model or external account.
+
+The latest qualified download is **0.0.12-preview.1**. Development source
+**0.0.13-preview.1** adds an experimental Codex account path whose installed
+workflow remains unqualified. OpenClaw runtime integration is planned. See [architecture](docs/architecture.md), [current status](ROADMAP.md)
+and [validation evidence](docs/evidence.md) for the supported boundaries.
 
 ## What the mechanisms establish
 

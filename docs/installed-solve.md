@@ -1,30 +1,62 @@
-# A configured repository goal with solve
+# Configure a repository goal
 
-Keep **0.0.13-preview.1** includes installed solve through the project runtime. First try `keep demo project` for the scripted walkthrough, then configure an actual provider and your own repository as below.
+The qualified **0.0.12-preview.1** download includes `keep solve` through the project runtime with an API-compatible provider. The existing-account [Codex project role](codex-project.md) is experimental **0.0.13-preview.1 source only**; it is not in that download. Start with [the account-free walkthrough](quickstart.md) to inspect the workflow without configuring a provider.
 
-Configure the provider using the existing provider profile/environment contract. Repository work also requires KEEP_REPOSITORY, KEEP_WORKSPACE_BASE (separate from the source), KEEP_REVISION (exact commit), KEEP_REPO_REF, KEEP_BASE_BRANCH (defaults to main, must point at that commit), and KEEP_TEST_COMMAND with optional KEEP_TEST_ARGS_JSON. Run `keep doctor` first; its readiness result is configuration evidence, not a model-quality or production-host qualification. `keep onboard` captures directives; it does not configure these execution settings.
+## Repository settings
 
-For existing API-priced providers, the automated solver requires a model price known to its existing accounting path. An unknown remote-compatible model price refuses before wire, including for a loopback endpoint; locality does not imply a zero fee. A readiness result does not establish current prices or funded execution. This ticket preserves that gate and its existing diagnostic limits.
+Choose a repository you own or are authorized to process. Keep requires an exact commit and a separate existing directory for its working copies.
+
+| Variable | Value |
+|---|---|
+| `KEEP_REPOSITORY` | Path to the source Git working tree, trusted by the current OS user. |
+| `KEEP_WORKSPACE_BASE` | Existing directory disjoint from the source: neither may contain the other. |
+| `KEEP_REVISION` | Exact lowercase 40- or 64-hex commit ID that exists in the source repository. |
+| `KEEP_REPO_REF` | Repository identifier as one canonical path component. |
+| `KEEP_BASE_BRANCH` | Existing local branch pointing at that exact commit; defaults to `main`. |
+| `KEEP_TEST_COMMAND` | Executable for the repository's own checks. |
+| `KEEP_TEST_ARGS_JSON` | Optional JSON array of arguments, such as `["test"]` for an npm test command; defaults to `[]`. |
+| `KEEP_TEST_NAMESPACE_JAIL` | Optional `required`, `best-effort` or `off` selection. Only `required` demands the measured launcher and qualified namespace setup. |
+
+Use predefined repository checks that distinguish the requested fix from unrelated behavior. Best-effort/default execution does not establish the required jail's boundary. Review the [execution limits and prerequisites](../SECURITY.md#opt-in-required-project-boundary-experimental) before running repository code.
+
+## Provider settings
+
+For existing Codex access, use the [source-only account setup](codex-project.md), then return to the commands below. That route uses your existing login without a separate API key. Its live installed workflow remains unqualified.
+
+For an already authorized API-compatible provider, the existing configuration is:
+
+| Variable | Value |
+|---|---|
+| `KEEP_PROVIDER` | `openai-compatible` or `anthropic-compatible`. The separate `local` mode is a deterministic stub, not a local language model. |
+| `KEEP_PROVIDER_AUTHORITY` | Explicitly `owner` for a personal configuration. Organization mode has separate release, identity and custody requirements. |
+| `KEEP_PROVIDER_BASE_URL`, `KEEP_PROVIDER_MODEL` | Authorized endpoint and supported model identifier. HTTPS is required except for explicit loopback endpoints. |
+| `KEEP_PROVIDER_LOCATION` | `local` or `external`, matching the processing location. Loopback can be inferred as local. |
+| `KEEP_PROVIDER_API_KEY`, `KEEP_PROVIDER_API_KEY_FILE`, `KEEP_PROVIDER_API_KEY_STDIN` | Select exactly one credential source; stdin selection is exactly `1`. An owner-local loopback fixture may omit credentials. Keep secrets out of repository files and logs. |
+| `KEEP_REMOTE_PROCESSING_PURPOSE`, `KEEP_REMOTE_PROCESSING_REGION` | Declared purpose and region for processing. |
+
+The API-priced solver requires a model price known to its accounting path. Unknown remote-compatible model prices refuse before a request, including on loopback; locality does not imply a zero fee. Readiness does not establish current prices, funded execution or model quality. This guide does not require purchasing API access.
+
+Run `keep doctor` after configuration. A readiness result checks configuration; it does not qualify the model or production host. `keep onboard` captures directives and does not supply these execution settings.
+
+## Request and review a proposal
 
 ```sh
 keep solve "Correct the retry limit; preserve unrelated behavior and tests"
 ```
 
-Solve accepts a description and no options. It starts with approval required, including when KEEP_PROJECT_POSTURE is autonomous. The printed run and decision identify the next operation:
+Solve accepts a description and no options. It starts with approval required, including when `KEEP_PROJECT_POSTURE` is `autonomous`. The printed run and decision identify the next operation:
 
 ```sh
 keep project resume <run-id> --approve=<decision-id>
 ```
 
-Keep materializes the exact source revision into a workspace. The runtime records the change proposal, diff/rollback information and test results; follow its printed controls. Pending project work uses project resume/merge controls, rather than the injected legacy solver's `keep review` queue. A merge decision is bound to the exact proposal digest:
+Keep materializes the exact source revision into a workspace and records the proposal, diff, rollback information and test results. Follow its printed controls. Pending project work uses project resume/merge controls rather than the legacy `keep review` queue. A merge decision is bound to the exact proposal digest:
 
 ```sh
 keep merge <run-id> approve --proposal=<sha256>
 keep merge <run-id> veto --proposal=<sha256>
 ```
 
-A decision does not grant missing merge authority. Inspect a refused or held result; do not treat exit success for a recorded decision as proof that source changes landed. The original repository remains unchanged while a proposal awaits a decision. Existing owner-token checks and organization session/roster/custody restrictions apply; remote gateway solve uses the same authenticated project endpoint.
+A decision does not grant missing merge authority. Inspect a refused or held result; a successfully recorded decision does not prove that source changes landed. The original repository remains unchanged while a proposal awaits a decision. Existing owner-token checks and organization session/roster/custody restrictions apply; the remote gateway uses the same authenticated project endpoint.
 
-IS001 acceptance uses an installed package and a controlled loopback model endpoint. It establishes command routing, approval, a useful test-fixture edit and review/restart behavior. It does not establish real-model success rates, production isolation, live organization onboarding or a newly qualified release archive.
-
-For existing ChatGPT Codex access, explicitly select the [owner public-repository Codex project role](codex-project.md). It records subscription token usage and unknown attributable dollar cost, without a separate API key or guessed token price. The account-managed limit contract differs from the API-priced path; the guide states its supported limits. New downloadable qualification remains pending.
+The [installed-solve receipt](qualification/installed-solve-2026-10-05.json) records an installed controlled-endpoint check of routing, approval, a useful fixture edit and review/restart behavior. The [download qualification](qualification/preview-2026-10-05.json) covers the later packaged preview. Neither establishes arbitrary real-model success, live organization onboarding or production isolation.

@@ -91,11 +91,15 @@ test("documented expected-checksum gate stops before install on mismatch or miss
   const guide = readFileSync(join(root, "docs/quickstart.md"), "utf8");
   const block = guide.match(/```sh\n(\(\n[\s\S]*?\n\))\n```/u)?.[1];
   assert.ok(block, "documented install block missing");
+  // Installation follows the qualified release, which can precede development source.
+  const archive = block.match(/'(?<archive>keep-[0-9]+\.[0-9]+\.[0-9]+-preview\.[0-9]+\.tgz)'/u)?.groups?.archive;
+  assert.ok(archive, "documented release archive missing");
+  assert.ok(block.includes(`./${archive}`), "checksum and installation archives must match");
   for (const variant of ["matching", "mismatch", "malformed", "unset", "missing-archive"] as const) {
     const fixture = mkdtempSync(join(tmpdir(), "keep-checksum-guide-"));
     try {
       const bytes = Buffer.from("synthetic archive: never installed or executed\n");
-      if (variant !== "missing-archive") writeFileSync(join(fixture, `keep-${pkg.version}.tgz`), bytes);
+      if (variant !== "missing-archive") writeFileSync(join(fixture, archive), bytes);
       const bin = join(fixture, "bin"), sentinel = join(fixture, "calls");
       mkdirSync(bin);
       writeFileSync(join(bin, "npm"), `#!/bin/sh

@@ -1,8 +1,11 @@
 # Contributing to Keep
 
-The current public source and downloadable Linux x64 preview are **0.0.12-preview.1**.
-Use [the evidence record](docs/evidence.md) and [exact release identities](KEEP_RELEASE.md).
-The release tag adds documentation to the exact qualified source; historical receipts keep their original identities.
+The development source is **0.0.13-preview.1**; the latest qualified Linux x64
+download is **0.0.12-preview.1**. The experimental Codex integration in source is
+not included in that download. Start with [installation](docs/quickstart.md) to try
+the preview, or [architecture](docs/architecture.md) to inspect the design.
+Use [validation evidence](docs/evidence.md) and [exact release identities](KEEP_RELEASE.md)
+when assessing results. Historical receipts remain bound to their tested source.
 
 Start with the problem, the relevant implementation and an observable acceptance
 criterion. Explain significant tradeoffs, preserve unrelated work, and include
@@ -104,15 +107,21 @@ results, remaining failures and environment. A local repeat is not independent
 replication. See [Security](SECURITY.md) before reporting vulnerabilities and
 [Licensing](docs/licensing.md) before distributing artifacts.
 
-## Commit, checkpoint and release protocol
+## Changes and releases
 
-Adopted October 5, 2026. Apply this cadence to future Keep work within the user's agreed scope.
+Contributions should contain a coherent product change, its meaningful checks and
+the documentation needed to use or maintain it. Keep internal task plans, account
+details, raw operational logs and development-session bookkeeping out of public
+changes. A short reviewed design explanation or roadmap update can be useful;
+publishing every working note is not a requirement.
 
-- Research current primary sources and actual consumers for each ticket, implement the smallest change, then vet useful/refused/recovery outcomes and reconcile affected docs. Commit each vetted ticket and push it to private Git. During longer work, save clearly labeled incomplete checkpoints privately rather than leave the only copy on this box.
-- Combine related vetted tickets into a coherent public source checkpoint. Publish at least once per active development day when there is meaningful new work. If code is not ready, a reviewed public progress/documentation update can meet that cadence without exporting unvetted code. Do not create empty commits on unchanged days. An explicit goal's publication requirement still applies at its stopping point.
-- Advance the source version once per published code checkpoint, not per ticket or private commit. Align private/public package metadata, lockfiles, CLI version and current documentation before qualifying that checkpoint. Documentation-only corrections or protocol updates can retain the version; their Git commit identifies the change.
-- Reuse each ticket's relevant vetting evidence. At the public batch boundary, run the necessary combined/export checks on the exact source and package metadata being published. Repeat passed checks only after relevant changes, failures or new material evidence. Preserve original source-bound receipts; never transfer them to an untested revision or binary.
-- Prepare downloadable releases separately after the combined changes pass the normal exact-archive and installed-consumer qualification. A public source push is not a newly qualified binary release. Preserve earlier archive/version/checksum records and state the distinction in the docs.
-- Verify successful Git publication and keep current state clear about privately completed work, pending public changes and the last published checkpoint. Publishing a batch does not activate another ticket or expand a goal.
+Use focused checks during development and the required combined checks for the
+exact source/artifact being published. Repeat a passed check when a relevant
+change, failure or new concern warrants it. Preserve source-bound results and
+actual limitations; a documentation-only edit does not qualify changed runtime code.
 
-This is a written working protocol. It installs no hook, timer, service or resource enforcement and changes no other instance's instructions or workspace.
+Source updates and downloadable releases are separate. Align package metadata and
+user instructions when preparing a new code release, qualify its actual archive
+and installed consumer, and preserve earlier versions, tags and checksums.
+Documentation corrections can retain the source version. A source push alone does
+not establish a new qualified download.

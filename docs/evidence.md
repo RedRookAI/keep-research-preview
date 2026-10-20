@@ -1,12 +1,24 @@
-# October 5 downloadable portfolio preview
+# Validation evidence
+
+Results apply to the named source revision or archive, not automatically to the current branch. All recorded qualification was administered by the development session; no outside audit or independent replication is claimed.
+
+| Profile | Result and scope |
+|---|---|
+| Downloadable **0.0.12-preview.1** | Qualified Linux x64 preview: 5,468 selected source tests, installed scripted repository workflow, recovery and named boundary controls. Exact artifact identities and receipt below. |
+| Development **0.0.13-preview.1** | Experimental Codex account integration. Controlled source checks do not qualify the installed live-account workflow; the first native attempt produced no usable response and retained an uncertain invocation. No corresponding qualified download. |
+| OpenClaw runtime | Planned. Static inspection of skill declarations does not establish a running client integration. |
+
+The useful repository demo uses two scripted local responses and simulated operator decisions. Its edits, tests and retained proposal are inspectable; this is workflow evidence, not a measurement of model quality. See [architecture](architecture.md), [Codex limits](codex-project.md) and [security boundaries](../SECURITY.md).
+
+## October 5 downloadable portfolio preview
 
 **0.0.12-preview.1**, exact source `3e4e3e3990fcc6262d6a20491d067f2563b95bb1`: **5,468** complete selected source tests (5,295 ordinary, 34 release/security, 139 native), zero failures/skips. Scripts-enabled packaging and a fresh unprivileged offline installation matched **1,560** runtime files. The installed repository walkthrough produced an actual patch with two passing tests after simulated approval, retained its proposal over restart, refused a wrong token and preserved original source after veto; two scripted local responses, zero paid requests. Installed recovery passed 24 cases. Required-jail allow/refuse, two protected backup/restore tracks, the exact quickstart and wrong-checksum refusal passed. [Receipt](qualification/preview-2026-10-05.json), [release identities](../KEEP_RELEASE.md) and [walkthrough boundaries](portfolio-walkthrough.md).
 
-This closes this downloadable checkpoint and its first-use scenario. It does not establish real-model quality, live organization custody, independently administered replication or production isolation. Earlier records below remain historical and retain their original source/archive identities and narrower scopes.
+This establishes the named downloadable checkpoint and its first-use scenario. It does not establish real-model quality, live organization custody, independently administered replication or production isolation. The ordinary and release/security phases passed in a retained run whose native phase failed; the complete native phase then passed after a fixture-only correction, on unchanged source. These are combined phase results, not one successful all-phase command. Earlier records below retain their original identities and narrower scopes.
 
 Installed solve source **0.0.11-preview.1**: exact public `376aba8f248d2517c68f3866ce8d54c692aa3999` and private `954d4eb56b44b341cd927c11f47c9a4e385e2059` each passed **157 relevant tests in 8 files**, zero failures/skips, emitting typecheck and **24 recovery checks**. An installed test-only package byte-matched **1557 production dist files** and produced a proposal with two passing tests after explicit approval, preserved source, refused a wrong token and retained the proposal over restart without model replay. Two controlled HTTP calls; zero paid vendor requests. [Receipt](qualification/installed-solve-2026-10-05.json) and [guide](installed-solve.md) separate owner/process fixture evidence, reused native binaries, source qualification and the downloadable archive at that checkpoint. Earlier receipts below retain their original identities.
 
-# Evidence and limitations
+## Historical source checkpoints
 
 Combined **0.0.10-preview.1** manual create/correct source: exact tested public revision `a957571b107f8567038cabe3f017ecd2a6596bb8` and private revision `2b311f144034d3441c88c2891384c51dc2cdedbc` each passed **721 tests in 44 files**, zero failures/skips, emitting typecheck and **24** synthetic recovery checks. CLI reports `keep 0.0.10-preview.1`; zero paid vendor requests. [Combined receipt](qualification/manual-memory-create-correct-2026-10-05.json), [write](manual-memory-write.md) and [correction](manual-memory-correction.md) guides state scope and limits. Earlier source/installed-artifact receipts below retain original identities.
 

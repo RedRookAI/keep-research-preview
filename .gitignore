@@ -23,3 +23,8 @@ docs/review/evidence/*.stream.partial.jsonl
 
 # tree_guard transient sentinel (never commit)
 .keep-tree-sentinel.json
+
+# Internal planning and session state belong in the private working repository.
+/docs/maintenance/
+/KEEP_CURRENT_STATE.md
+/docs/completion-map-2026-10-04.json

@@ -1,18 +1,18 @@
 # Keep
 
-Turn a repository goal into a tested, reviewable proposal, with an audit trail and explicit decisions.
+**Repository automation with explicit control.**
 
-Keep is a self-hosted agent platform for ongoing projects. Its repository workflow combines a separate working copy, test execution, review controls and recoverable project state. This Linux x64 research preview lets you try that workflow before configuring a model account.
+Keep turns a repository goal into a tested, reviewable change proposal. It prepares edits in a separate working copy and records the tests, decisions and recovery state behind the result. The project explores how to give AI agents useful responsibility while keeping consequential actions accountable.
 
-## Try a change you can inspect
+## Try the preview
 
-Follow the [checksum-first installation guide](docs/quickstart.md), then run:
+Install the [Linux x64 preview](docs/quickstart.md), then run:
 
 ```sh
 keep demo project
 ```
 
-You need Node.js 22.23.2, npm and Git. No API key, Rust or C compiler is needed for the installed walkthrough. It creates its own temporary repository and uses two scripted local responses; sample approval and veto actions are simulated.
+The walkthrough creates a sample repository, proposes a change, runs its tests and prints the actual diff. It also checks approval before dispatch, restart without replay, rejection of a wrong token, and source preservation after veto. Open the printed evidence directory to inspect the files and results.
 
 ```text
 PASS  Approval gate held: 0 model calls before sample approval
@@ -22,39 +22,43 @@ PASS  Restart retained the proposal without replay
 PASS  Wrong token refused; exact proposal vetoed; original source unchanged
 ```
 
-The command prints the real proposed diff and the directory containing the sample repository, edited workspace, test results and command records. You can inspect the result rather than taking a model's word for it. [What the walkthrough demonstrates](docs/portfolio-walkthrough.md) explains the scripted responses and evidence limits.
+The demo uses **two scripted local responses and simulated approval/veto decisions**, with no model account or paid request. The workspace edits, tests and retained artifacts are real. You need Node.js 22.23.2, npm and Git; installation needs no Rust or C compiler. [Walkthrough and evidence](docs/portfolio-walkthrough.md).
+
+## How it works
 
 ```mermaid
 flowchart LR
-    Goal[Repository goal] --> Approval[Approval gate]
-    Approval --> Workspace[Separate workspace]
-    Workspace --> Tests[Repository and goal tests]
-    Tests --> Proposal[Reviewable diff]
-    Proposal --> Decision[Exact proposal decision]
+    Goal[Repository goal] --> Approval[Approval decision]
+    Approval --> Workspace[Separate working copy]
+    Workspace --> Checks[Repository and goal checks]
+    Checks --> Proposal[Diff and review evidence]
+    Proposal --> Decision[Proposal-bound decision]
 ```
 
-For the companion recovery experiment, run `keep demo recovery`: 24 synthetic checks, no model calls. For your own repository, [configure a provider and repository](docs/installed-solve.md), run `keep doctor`, then `keep solve "your goal"`.
+- **Separate proposal from source.** Inspect the proposed files and tests before an authorized landing operation.
+- **Bind decisions to the result.** Review controls identify the exact proposal; recording a decision does not grant missing execution authority.
+- **Retain interrupted work.** Durable project records distinguish pending, completed and uncertain outcomes instead of assuming a retry is safe.
+- **Make limits visible.** The demo's best-effort isolation and the opt-in required project jail have different prerequisites and evidence.
 
-## Current preview
+[Architecture and trust boundaries](docs/architecture.md) · [Security model](SECURITY.md) · [Validation evidence](docs/evidence.md)
 
-**0.0.12-preview.1**, Linux x64. [Release and downloads](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1) · [Installation](docs/quickstart.md) · [Exact release record](KEEP_RELEASE.md).
+## Current status
 
-This preview includes the repository walkthrough, installed solve wiring, budget-bound FrontDoor/provider diagnostics and manual memory/query monetary admission from the recent source checkpoints. The package carries compiled JavaScript, its existing bundled TypeScript dependency and three genuine native executables. Ordinary installation needs no native toolchain.
+| Component | Status |
+|---|---|
+| Download | **0.0.12-preview.1**, qualified Linux x64 research preview. [Release and checksums](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1). |
+| Development source | **0.0.13-preview.1**. The Codex account integration is experimental and its installed workflow remains unqualified. No matching qualified download is published. [Status and limits](docs/codex-project.md). |
+| OpenClaw | Required runtime integration is planned. Existing support inspects foreign skill declarations; it does not supervise a running OpenClaw instance. |
 
-The measured Bubblewrap 0.13.0 pin remains required for required-jail operations. Installing the package does not install a host launcher or change security policy. Optional native transport has separate [custody prerequisites](SECURITY.md#optional-native-refusal-transport-installation-prerequisites).
+Keep is a research preview. The supplied demonstrations establish specific workflow and recovery behavior, with developer-administered evidence. They do not establish general model quality, production enterprise isolation or independently audited security. [Supported scope and roadmap](ROADMAP.md).
 
-A successful scripted walkthrough demonstrates this workflow, not general model quality, live organization onboarding or production isolation. Keep remains a research preview, with [explicit open requirements](docs/completion-map.md) and [evidence boundaries](docs/evidence.md). The older releases retain their original artifacts and qualification identities.
+## Documentation
 
-## Explore the project
+- [Install and run](docs/quickstart.md)
+- [Configure repository work](docs/installed-solve.md) and [experimental Codex access](docs/codex-project.md)
+- [Recovery experiment](docs/research-preview.md) and [backup compatibility](docs/backup.md)
+- [Memory](docs/semantic-memory.md), [skill registry](docs/skill-registry.md) and [usage accounting](docs/monetary-accounting.md)
+- [Build and contribute](WORKFLOW.md)
+- [Release identities](KEEP_RELEASE.md), [license and attribution](docs/licensing.md)
 
-- [Repository walkthrough and retained artifacts](docs/portfolio-walkthrough.md)
-- [Use a configured model on your repository](docs/installed-solve.md)
-- [Memory](docs/semantic-memory.md), [skills](docs/skill-registry.md), [backups](docs/backup.md) and [monetary accounting](docs/monetary-accounting.md)
-- [Qualification evidence](docs/evidence.md) and [remaining work](docs/completion-map.md)
-- [Contributing and pinned source builds](WORKFLOW.md)
-- [Security and private reporting](SECURITY.md)
-- [Licensing and attribution](docs/licensing.md)
-
-Source checkpoint0.0.13-preview.1 adds [owner-project Codex generation](docs/codex-project.md), using existing subscription access. New downloadable qualification and the real issue case study are pending; the release above remains the latest qualified download.
-
-The Codex source checkpoint remains experimental: its first installed native attempt failed without usable output. The follow-up approval and diagnostic fixes are recorded in the [case status and tickets](docs/maintenance/codex-case-20261007/INDEX.md). No successful real-model case or new qualified download is claimed.
+Released under the [MIT license](LICENSE).
