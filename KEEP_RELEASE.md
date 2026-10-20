@@ -1,3 +1,31 @@
+# Keep 0.0.19-preview.1 — combined repository workspace preview
+
+The combined Linux x64 archive includes Keep, bundled TypeScript, the restricted
+OpenClaw plugin and the measured Codex generation.2 engine with source support.
+[Run from the archive](docs/combined-preview.md) · [Real result](docs/genuine-codex-walkthrough.md) · [Matching release and qualification](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-20.1).
+
+Exact checksums and installed observations are supplied in the release companion
+published with that archive. This copy records the source snapshot before those
+external receipts; it does not checksum or qualify itself. Use the matching
+companion for the final artifact identity. Historical releases remain unchanged.
+
+Supported profile: Linux x64 / Ubuntu24.04 library baseline, patched Node22 for
+Keep and supported patched Node24 for OpenClaw2026.10.5. The archive runs directly;
+Node22's advisory-matched bundled npm10 installer is not part of this route.
+The local plugin has no runtime dependencies. Required-jail work additionally
+needs the measured Bubblewrap0.13.0 helper and working host namespaces.
+
+The native generation.2 identity is
+`fdd9a1a3e86fc2213e4c0bd9c9b278080f38d756a5256e3217092a30e48d98c1`.
+Its included source-support archive is
+`c319b4804408ec2ed9e90e9a6966f227a0905342ddebbf64538e1d68d079cd60`.
+The genuine developer-administered case used this engine with actual Keep and
+native OpenClaw dispatch; tool selection was scripted and Codex generation real.
+It is one observed integration case, not a model-quality benchmark or production
+enterprise certification. See [dependency conditions](docs/dependency-status.md).
+
+---
+
 # Keep 0.0.12-preview.1 — inspect a tested repository proposal
 
 Release: `keep-preview-2026-10-05.1` · Linux x64 · Node.js 22.23.2/npm/Git.

@@ -1,6 +1,6 @@
 {
   "name": "@redrookai/openclaw-keep",
-  "version": "0.0.18-preview.1",
+  "version": "0.0.19-preview.1",
   "description": "Restricted Keep submission and status tools for OpenClaw",
   "type": "module",
   "main": "index.mjs",

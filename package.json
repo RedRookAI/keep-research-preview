@@ -1,6 +1,6 @@
 {
   "name": "keep",
-  "version": "0.0.18-preview.1",
+  "version": "0.0.19-preview.1",
   "description": "Self-hostable, provider-agnostic build orchestrator with consequence-gated autonomy",
   "main": "dist/src/index.js",
   "scripts": {
@@ -108,7 +108,12 @@
     "integrations/openclaw/README.md",
     "integrations/openclaw/LICENSE",
     "docs/openclaw-client.md",
-    "acceptance/openclaw_project.mjs"
+    "acceptance/openclaw_project.mjs",
+    "bin/keep",
+    "docs/combined-preview.md",
+    "docs/genuine-codex-walkthrough.md",
+    "docs/examples/codex-unicode/",
+    "docs/images/codex-proposal-checks.png"
   ],
   "exports": {
     ".": "./dist/src/index.js",

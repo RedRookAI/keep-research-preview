@@ -1,4 +1,6 @@
-# Install Keep and inspect a tested proposal
+# Historical 0.0.12 installation
+
+For the current combined preview, use [the direct archive guide](combined-preview.md). It includes the Codex generation engine and OpenClaw plugin and does not invoke Node22's bundled npm installer. The instructions below retain the older release's exact identity.
 
 Keep **0.0.12-preview.1** is a Linux x64 research preview. Use Node.js 22.23.3 or later on Node 22 and npm; the repository walkthrough also needs Git. The installed package includes compiled JavaScript, its existing bundled TypeScript dependency and three native executables. No Rust or C compiler is needed to install or run the walkthrough. The original installed qualification used Node 22.23.2; the updated runtime guidance follows a published dependency fix and is not a rerun of that qualification. See [dependency status](dependency-status.md).
 

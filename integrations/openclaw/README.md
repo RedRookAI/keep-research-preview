@@ -7,9 +7,9 @@ Two optional native tools connect OpenClaw to Keep's repository workflow:
 
 The plugin cannot approve, merge, change configuration or choose arbitrary endpoints, identities, source paths or commands through tool arguments. Human decisions happen in the same Keep browser console used by the direct CLI.
 
-This **0.0.18-preview.1 candidate** targets **OpenClaw 2026.10.5**. Its Node engine floor is **24.18.1–24.x or ≥26.5.1**, stricter than OpenClaw's compatibility minimum because of [published Node security fixes](https://nodejs.org/en/blog/vulnerability/july-2026-security-releases). Use a current patched release in an admitted runtime; the engine range alone is not security admission. Keep's core remains on its Node 22 line. A controlled installed consumer passed native plugin loading, the actual two-tool model catalog, submission, human approval, tested proposal, fresh-process status and veto on **Node 24.22.0**. Both model routes were scripted loopback fixtures, with no live account call. This establishes that measured SDK workflow; a later genuine Codex follow-up also passed with actual console decisions and source preservation. [Inspect that result](https://github.com/RedRookAI/keep-research-preview/blob/main/docs/genuine-codex-walkthrough.md). Final downloadable release qualification remains pending. [Compatibility evidence](https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/openclaw-2026-10-20.json).
+This **0.0.19-preview.1 plugin** targets **OpenClaw 2026.10.5**. Its Node engine floor is **24.18.1–24.x or ≥26.5.1**, stricter than OpenClaw's compatibility minimum because of [published Node security fixes](https://nodejs.org/en/blog/vulnerability/july-2026-security-releases). Use a current patched release in an admitted runtime; the engine range alone is not security admission. Keep's core remains on its Node 22 line. A controlled installed consumer passed native plugin loading, the actual two-tool model catalog, submission, human approval, tested proposal, fresh-process status and veto on **Node 24.22.0**. Both model routes were scripted loopback fixtures, with no live account call. This establishes that measured SDK workflow; a later genuine Codex follow-up also passed with actual console decisions and source preservation. [Inspect that result](https://github.com/RedRookAI/keep-research-preview/blob/main/docs/genuine-codex-walkthrough.md). Use the combined preview release record for exact downloadable-archive qualification. [Compatibility evidence](https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/openclaw-2026-10-20.json).
 
-As checked on **October 20, 2026**, Node has [announced security updates for October 21](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases) affecting the 22, 24 and 26 lines. Final runtime admission remains pending the published fixes and their applicability. The earlier private Node 24.16.0 fixture is not an admitted release runtime; no shared-host upgrade is required by this candidate.
+As checked on **October 20, 2026**, Node has [announced security updates for October 21](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases) affecting the 22, 24 and 26 lines. Those announced future fixes are not installed or claimed here; follow the current release record for the dated supported runtime and dependency conditions. The earlier private Node 24.16.0 fixture is not an admitted release runtime; no shared-host upgrade is required by this candidate.
 
 ## Configure an owned OpenClaw profile
 
@@ -18,12 +18,20 @@ First configure Keep's experimental personal public-repository Codex role and is
 Use a dedicated OpenClaw profile you own. Install the packaged plugin in that profile, using the selected runtime's local install command:
 
 ```sh
-openclaw plugins install npm-pack:./redrookai-openclaw-keep-0.0.18-preview.1.tgz
+openclaw --profile keep-portfolio plugins install ./redrookai-openclaw-keep-0.0.19-preview.1.tgz --force --accept-capabilities --no-enable
 ```
+
+Verify the release checksum and review this local package first. The flags record local-source/capability consent in this dedicated profile; `--no-enable` leaves it inactive until configured. A direct archive path is intentional: the `npm-pack:` prefix selects a different managed-npm installation route. The observed dependency-free direct install invoked no npm command.
 
 OpenClaw can apply plugin installation to a running Gateway. Select the dedicated profile before running installation; this is not an instruction to modify another claw. No global plugin registration or ClawHub publication is required.
 
 Merge `example.openclaw.json` into that owned profile's configuration. Retain the profile's model/provider plugins. If it already has `plugins.allow`, append `keep` while preserving the existing provider entries; that plugin list is separate from the two-tool allowlist. Replace the example endpoint and private paths. Copy `clientId`, `grantId` and `commandBinding` from the issued client profile. Set `openclawAgentId` to the trusted OpenClaw agent that will use Keep. Give that process its restricted token file, readable only by its user, and a private owned state directory. Choose `requestTimeoutMs` for the local request deadline. The example's zero binding and placeholder grant are not working credentials.
+
+After completing that configuration, enable this plugin in the same profile:
+
+```sh
+openclaw --profile keep-portfolio plugins enable keep --accept-capabilities
+```
 
 Keep the effective tool catalog restricted to exactly `keep_submit` and `keep_status`. The example uses an explicit allowlist, declares both tools optional and disables native tool-search/Code Mode catalog wrappers for this direct two-tool interface. Preserve those settings when merging the example. Verify the actual admitted catalog: configuration text alone is insufficient evidence. Shell, filesystem mutation, general HTTP/browser, agent spawning and approval/admin tools do not belong in this profile. The plugin process must also lack source-write access and access to Keep owner/Codex credentials. An allowlist is not operating-system isolation.
 
@@ -47,7 +55,7 @@ Only an observed terminal outcome releases the conversation for another explicit
 
 The journal contains the submitted goal and job observations. Keep it private, retain it across restarts and back it up with the other operator-owned client state. Keep's own job journal and Codex invocation claims remain the server authority; changing plugin state cannot erase those claims.
 
-For backup, stop this profile's writers and retain the entire `stateDirectory`, including any SQLite sidecars, together with the matching configuration, restricted credential and logical session state. A Keep data-directory backup alone does not include them. Restore the matching set before recovery; reconcile later grant revocations against current owner evidence before activating restored writers. See the [component recovery procedure](https://github.com/RedRookAI/keep-research-preview/blob/main/docs/backup.md#recovering-the-openclaw-client-candidate). This candidate's combined installed recovery remains unqualified.
+For backup, stop this profile's writers and retain the entire `stateDirectory`, including any SQLite sidecars, together with the matching configuration, restricted credential and logical session state. A Keep data-directory backup alone does not include them. Restore the matching set before recovery; reconcile later grant revocations against current owner evidence before activating restored writers. See the [component recovery procedure](https://github.com/RedRookAI/keep-research-preview/blob/main/docs/backup.md#recovering-the-openclaw-client-candidate). Installed synthetic recovery and upgrade were observed at their declared scope; exact-release evidence is separate, and offsite runtime reconstruction is not established.
 
 ## Package contents and limits
 

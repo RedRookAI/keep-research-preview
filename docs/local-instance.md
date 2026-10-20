@@ -1,6 +1,6 @@
 # Start a local Keep instance
 
-The development source adds `keep instance` to save setup and operate one local project worker. The qualified 0.0.12 download predates these commands. Use the current development build until a matching release is published.
+The [combined preview](combined-preview.md) includes `keep instance` to save setup and operate one local project worker. The historical 0.0.12 download predates these commands.
 
 ## Save the setup
 
@@ -45,7 +45,7 @@ observed job state; refresh to inspect subsequent activity. A cancellation reque
 does not undo effects or establish that a remote model stopped. Jobs requiring
 reconciliation remain held before any retry. Focused gateway/browser checks passed,
 including cancellation of one queued job while a separate project completes its
-work. This addition is not included in the qualified download.
+work. The historical 0.0.12 download predates this addition.
 
 ## Stop and reopen
 

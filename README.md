@@ -12,10 +12,10 @@ A genuine Codex follow-up produced a working Unicode-regex fix through Keep and 
 
 ## Try the preview
 
-Install the [Linux x64 preview](docs/quickstart.md), then run:
+Extract the [combined Linux x64 preview](docs/combined-preview.md), select its supported Node runtime, then run:
 
 ```sh
-keep demo project
+./bin/keep demo project
 ```
 
 The walkthrough creates a sample repository, proposes a change, runs its tests and prints the actual diff. It also checks approval before dispatch, restart without replay, rejection of a wrong token, and source preservation after veto. Open the printed evidence directory to inspect the files and results.
@@ -52,9 +52,9 @@ flowchart LR
 
 | Component | Status |
 |---|---|
-| Download | **0.0.12-preview.1**, qualified Linux x64 research preview. [Release and checksums](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1). |
-| Development source | **0.0.18-preview.1**. Adds literal patch replacement, applicability checks before goal-test generation, browser-compatible console decisions and explicit native-plugin exclusion. A genuine installed Codex/OpenClaw follow-up now passes at its documented scope. No matching qualified download is published. [Status and limits](docs/codex-project.md). |
-| OpenClaw | Development candidate's packaged plugin passed the controlled native OpenClaw workflow: restricted submission/status, separate human approval, tested proposal and fresh-process recovery. A genuine Codex follow-up also passed with actual console approval/veto. Final combined-download qualification remains pending. [Client setup and limits](integrations/openclaw/README.md). |
+| Download | **0.0.19-preview.1**, combined Linux x64 preview with the generation-only engine and OpenClaw plugin. [Release record](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-20.1) · [Run from the archive](docs/combined-preview.md). |
+| Development source | **0.0.19-preview.1**. Includes literal patch replacement, applicability checks before goal-test generation, browser-compatible console decisions and explicit native-plugin exclusion. A genuine installed Codex/OpenClaw follow-up now passes at its documented scope. The combined archive adds a direct startup command and bundled runtime dependencies. [Status and limits](docs/codex-project.md). |
+| OpenClaw | Development candidate's packaged plugin passed the controlled native OpenClaw workflow: restricted submission/status, separate human approval, tested proposal and fresh-process recovery. A genuine Codex follow-up also passed with actual console approval/veto. See the matching release record for exact-archive qualification. [Client setup and limits](integrations/openclaw/README.md). |
 
 Keep is a research preview. The supplied demonstrations establish specific workflow and recovery behavior, with developer-administered evidence. They do not establish general model quality, production enterprise isolation or independently audited security. [Supported scope and roadmap](ROADMAP.md).
 
