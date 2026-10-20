@@ -1,5 +1,9 @@
 # Validation evidence
 
+## Combined preview0.0.19
+
+The [combined archive](combined-preview.md) passed unprivileged extraction and direct startup, both disclosed demos, instance/console lifecycle and native OpenClaw plugin installation/configuration/load. It invoked neither npm nor a live account. [Exact artifacts, supported profile and evidence](qualification/combined-preview-2026-10-20.json). The525production modules match the retained genuine workflow except reviewed comments/diagnostic wording; source18's88focused checks and unchanged source12native bytes are explicitly reused. This is scoped integrated-preview qualification, not a new full-suite count or production certification.
+
 ## Current genuine result
 
 The [genuine Codex/OpenClaw follow-up](genuine-codex-walkthrough.md) now has an inspectable proposed patch, unchanged independent checker (three passing cases), actual console approval/veto, fresh-process status and source preservation. It is developer-administered evidence on a historical case, with scripted OpenClaw tool selection and real Codex generation. Final exact-archive qualification remains separate.

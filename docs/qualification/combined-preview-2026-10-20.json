@@ -1,0 +1,184 @@
+{
+  "schema": "keep.combined-preview-qualification/v1",
+  "status": "PASS_SCOPED_LOCAL_QUALIFICATION",
+  "checkedUtc": "2026-10-20T17:57:46.615982+00:00",
+  "version": "0.0.19-preview.1",
+  "sourceCommit": "74e12f4235fb30b51179396b94a5dc7c14d2541d",
+  "sourceTree": "5f3ba30640774b552ed8fa41e4443c0dd5fa248d",
+  "release": "https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-20.1",
+  "artifacts": [
+    {
+      "role": "combined",
+      "filename": "keep-combined-0.0.19-preview.1-linux-x64.tar.gz",
+      "sha256": "42625af9b7be8a493f9309f6822e137f2365c4ae3accfe869750e4be535c53c7",
+      "bytes": 123426124
+    },
+    {
+      "kind": "core",
+      "filename": "keep-0.0.19-preview.1.tgz",
+      "sha256": "bd29dde78ae59cdbc194507dead3d16eec3633dc203a355d303294fa2f16e972",
+      "bytes": 11329178,
+      "files": 2346,
+      "version": "0.0.19-preview.1"
+    },
+    {
+      "kind": "plugin",
+      "filename": "redrookai-openclaw-keep-0.0.19-preview.1.tgz",
+      "sha256": "fe0fc6ac9ac3feef99173c12c3321f4415745510cb6c5d9352d07206a6ce9e0d",
+      "bytes": 12692,
+      "files": 8,
+      "version": "0.0.19-preview.1"
+    },
+    {
+      "role": "source",
+      "filename": "keep-source-preview-2026-10-20.1.tar.gz",
+      "sha256": "1d61b632be931fdfcb2de2981b52edca89970fcbc90d612bf7c1b103b7fa0de4",
+      "bytes": 17121360,
+      "sourceCommit": "74e12f4235fb30b51179396b94a5dc7c14d2541d",
+      "sourceTree": "5f3ba30640774b552ed8fa41e4443c0dd5fa248d",
+      "scope": "Matching public source snapshot. Qualification receipts and final checksum companion are external to avoid self-reference."
+    },
+    {
+      "role": "native-source-support",
+      "filename": "native2-distribution-support-20261020.tar.gz",
+      "sha256": "c319b4804408ec2ed9e90e9a6966f227a0905342ddebbf64538e1d68d079cd60",
+      "bytes": 1288678
+    }
+  ],
+  "evidenceAdministration": "Same development agent on one owned Linux host; developer-administered, not outside certification.",
+  "supportedProfile": {
+    "platform": "Linux x64; Ubuntu24.04 library baseline",
+    "keepNode": "22.23.3",
+    "keepNodeSha256": "fde6a4bf8d0562f7751d1a2d6cb9b417c4cfe107bbcb0aa3e9a24e125e348f48",
+    "openclaw": "2026.10.5",
+    "openclawNode": "24.22.0",
+    "openclawNodeSha256": "67ca5783febb8bf85736c79fcdd92c8d6d465a0eb2a082672bcdfa76a506751c",
+    "nativeVariant": "0.163.0-keep-generation.2",
+    "nativeSha256": "fdd9a1a3e86fc2213e4c0bd9c9b278080f38d756a5256e3217092a30e48d98c1",
+    "generationProfile": "keep.codex-generation/v4",
+    "requiredJailHelper": "Bubblewrap0.13.0, external protected non-setuid installation; working namespaces required",
+    "helperSha256": "e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f",
+    "userScope": "Owner-directed public repository work; trusted host/plugin. Organization custody and production isolation are separate obligations."
+  },
+  "exactArchiveObserved": {
+    "unprivilegedConsumer": true,
+    "pathContainsSpaces": true,
+    "directExtraction": true,
+    "version": "0.0.19-preview.1",
+    "outdatedNodeRefused": true,
+    "bundledNativeStarts": true,
+    "projectDemo": {
+      "status": "PASS",
+      "version": "0.0.19-preview.1",
+      "controlledModelCalls": 2,
+      "sourceUnchanged": true,
+      "restartNoReplay": true,
+      "wrongTokenRefused": true,
+      "explicitApprovalBeforeDispatch": true,
+      "modelResponses": "scripted-loopback"
+    },
+    "recoveryDemoChecks": 24,
+    "instanceStartStatusConsoleStop": true,
+    "consoleHttpStatus": 200,
+    "consoleReferrerPolicy": "same-origin",
+    "unconfiguredGenerationStayedPaused": true,
+    "localPluginArchiveInstalled": true,
+    "pluginConfiguredThenEnabled": true,
+    "pluginVersion": "0.0.19-preview.1",
+    "pluginLoaded": true,
+    "toolAllowlist": [
+      "keep_submit",
+      "keep_status"
+    ],
+    "npmInvocations": 0,
+    "accountRequests": 0,
+    "nativeBuilds": 0
+  },
+  "genuineWorkflow": {
+    "record": "../examples/codex-unicode/result.json",
+    "walkthrough": "../genuine-codex-walkthrough.md",
+    "measuredPackageVersion": "0.0.17-preview.1 private repaired bytes; public source17 predates repairs",
+    "nativeMatchesThisArchive": true,
+    "finalRuntimeComparison": {
+      "modules": 525,
+      "byteIdentical": 515,
+      "commentsOnly": 7,
+      "reviewedHostNeutralDiagnosticText": 3,
+      "otherDifferences": 0
+    },
+    "liveCodexFollowupCliInvocations": 2,
+    "unchangedIndependentChecks": {
+      "pass": 3,
+      "fail": 0
+    },
+    "originalBaseline": {
+      "pass": 2,
+      "fail": 1
+    },
+    "actualBrowserApprovalAndExactVeto": true,
+    "freshNativeOpenclawStatus": true,
+    "originalSourcePreserved": true,
+    "openclawToolSelection": "Scripted loopback; actual native CLI/plugin tool dispatch. Codex generation was genuine.",
+    "earlierFailuresAndTwoUncertainClaimsRetained": true,
+    "scope": "One frozen historical public issue, possible training overlap. No model success-rate claim; provider-internal retries and allocated subscription cost unknown. No new live request for release qualification."
+  },
+  "reusedChecks": {
+    "source18": "Emitting compilation and88focused checks passed,0failed/skipped; TypeScript source/test files unchanged in source19.",
+    "firstPartyNative": "Native source/build inputs unchanged from qualified source12; exact native and TypeScript bundled dependency bytes retained. Historical full-suite counts stay bound to source12, not a new source19phase-all claim.",
+    "installedOperations": "Earlier scoped authority/jail outage/ambiguity, cancellation and synthetic recovery/upgrade observations reused only for matching runtime. Final525module comparison above preserves scope."
+  },
+  "contentReview": {
+    "regularFiles": 2350,
+    "coreFiles": 2346,
+    "compiledModules": 525,
+    "publicDocumentationFiles": 54,
+    "primaryLocalDocumentationLinks": 124,
+    "pathTraversalOrSpecialArchiveMembers": false,
+    "rawPrivateTicketsOrAccountTraces": false,
+    "nativeSupport": "All1036conservative normal/build graph entries have supplied attribution inputs;65recovered exact notices,12published declarations with canonical terms and original source;12MPL-only sources included. Not1036binary-linked packages or legal certification."
+  },
+  "dependencyAdmission": {
+    "checkedDate": "2026-10-20",
+    "decision": "GO_FOR_DECLARED_DIRECT_ARCHIVE_PROFILE",
+    "currentNodeBranches": [
+      "22.23.3",
+      "24.22.0"
+    ],
+    "currentOpenclaw": "2026.10.5",
+    "runtimeBuiltInUndici": [
+      "6.28.1",
+      "7.29.1"
+    ],
+    "nativeRustls": "0.23.46",
+    "nestedNpmVersionMatchesRetained": {
+      "advisoryLocationPairs": 24,
+      "locations": 10,
+      "advisoryUrls": 12,
+      "packages": [
+        "brace-expansion",
+        "http-cache-semantics",
+        "ip-address",
+        "postcss-selector-parser",
+        "undici"
+      ]
+    },
+    "node22BundledNpm": "10.9.9 has additional installer matches; rejected for this installation route. It is external, not shipped or invoked by the combined archive.",
+    "disposition": "Direct core startup and the dependency-free local-plugin route invoked no npm. Named nested callers were assessed; generic npm maintenance, arbitrary extensions/Bun and untrusted installer inputs are outside this admission. Version matches are retained, not relabeled fixed.",
+    "nativeConditions": "Generation-only empty tool policy, ephemeral/session restrictions and explicitly disabled native plugins/apps/hooks/multi-agent features; source-assessed feature/caller conditions bind the measured v4 engine.",
+    "libraries": "Actual final engine/Node/helper mappings matched the recorded Ubuntu vendor-fixed library bytes.",
+    "futureNodeAnnouncement": "October21security updates are announced but not yet published at this check; no future fix is claimed installed.",
+    "universalVulnerabilityClearance": false,
+    "sources": [
+      "https://nodejs.org/en/blog/release/v22.23.3",
+      "https://nodejs.org/en/blog/release/v24.22.0",
+      "https://nodejs.org/en/blog/vulnerability/october-2026-security-releases",
+      "https://github.com/containers/bubblewrap/security/advisories"
+    ]
+  },
+  "retainedCorrections": "Earlier archive candidates omitted linked docs and used a different OpenClaw installer route. Saved-content observer assumptions were corrected without changing product behavior. First final-consumer attempt could not read the private development Node path; the same verified runtime was copied into the consumer directory and the existing extracted package passed. Earlier failed observations remain failed.",
+  "limits": [
+    "No production enterprise certification, outside audit, general model quality result, offsite reconstruction or macOS/Windows qualification.",
+    "Final plugin load used a synthetic non-dispatched client configuration. Its genuine submit/status/approval/veto evidence belongs to the measured earlier repaired package, with explicit final runtime comparison.",
+    "Historical0.0.4affected bytes and prior immutable releases remain unchanged."
+  ]
+}

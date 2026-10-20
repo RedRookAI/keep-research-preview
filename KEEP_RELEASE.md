@@ -4,10 +4,29 @@ The combined Linux x64 archive includes Keep, bundled TypeScript, the restricted
 OpenClaw plugin and the measured Codex generation.2 engine with source support.
 [Run from the archive](docs/combined-preview.md) · [Real result](docs/genuine-codex-walkthrough.md) · [Matching release and qualification](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-20.1).
 
-Exact checksums and installed observations are supplied in the release companion
-published with that archive. This copy records the source snapshot before those
-external receipts; it does not checksum or qualify itself. Use the matching
-companion for the final artifact identity. Historical releases remain unchanged.
+Qualified combined preview source: `74e12f4235fb30b51179396b94a5dc7c14d2541d`.
+
+[Qualification record](docs/qualification/combined-preview-2026-10-20.json) · [Download](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-20.1).
+
+| Artifact | SHA256 | Bytes |
+|---|---|---|
+| `keep-combined-0.0.19-preview.1-linux-x64.tar.gz` | `42625af9b7be8a493f9309f6822e137f2365c4ae3accfe869750e4be535c53c7` | 123426124 |
+| `keep-0.0.19-preview.1.tgz` | `bd29dde78ae59cdbc194507dead3d16eec3633dc203a355d303294fa2f16e972` | 11329178 |
+| `redrookai-openclaw-keep-0.0.19-preview.1.tgz` | `fe0fc6ac9ac3feef99173c12c3321f4415745510cb6c5d9352d07206a6ce9e0d` | 12692 |
+| `keep-source-preview-2026-10-20.1.tar.gz` | `1d61b632be931fdfcb2de2981b52edca89970fcbc90d612bf7c1b103b7fa0de4` | 17121360 |
+| `native2-distribution-support-20261020.tar.gz` | `c319b4804408ec2ed9e90e9a6966f227a0905342ddebbf64538e1d68d079cd60` | 1288678 |
+
+The exact combined archive passed unprivileged extraction, direct CLI startup,
+both disclosed demos, instance start/status/console/stop and native OpenClaw
+plugin install/configuration/load. The check made zero account requests, npm
+calls or native builds. The generation.2 engine and production runtime match the
+recorded genuine follow-up at the scope described in the qualification record.
+
+The archive contains a source-snapshot copy of this companion from before these
+external receipts. Checksums here refer to the exact written assets; neither
+the archive nor its source snapshot claims to checksum or qualify itself. The
+release tag adds these receipts without changing the archived source identity.
+Historical full-suite results remain bound to their original versions.
 
 Supported profile: Linux x64 / Ubuntu24.04 library baseline, patched Node22 for
 Keep and supported patched Node24 for OpenClaw2026.10.5. The archive runs directly;
