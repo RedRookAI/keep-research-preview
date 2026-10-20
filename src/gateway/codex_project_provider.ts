@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { types } from "node:util";
 import type { Spine } from "../spine/spine.js";
 import type { ModelProvider, GenerateRequest, GenerateResult, Embedding } from "./gateway.js";
-import { CodexAccountClient, CodexAccountError, type CodexAccountClientOptions } from "./codex_account_client.js";
+import { CODEX_GENERATION_PROFILE, CodexAccountClient, CodexAccountError, type CodexAccountClientOptions } from "./codex_account_client.js";
 
 export interface CodexProjectDescriptor extends CodexAccountClientOptions {
   readonly executableSha256: string;
@@ -24,7 +24,7 @@ export function captureCodexProjectDescriptor(input: CodexProjectDescriptor): Co
 }
 export function codexProjectIdentity(input: CodexProjectDescriptor): string {
   const d = captureCodexProjectDescriptor(input);
-  return createHash("sha256").update(JSON.stringify(keysForIdentity(d))).digest("hex");
+  return createHash("sha256").update(JSON.stringify({ profile: CODEX_GENERATION_PROFILE, descriptor: keysForIdentity(d) })).digest("hex");
 }
 function keysForIdentity(d: CodexProjectDescriptor) { return Object.fromEntries(Object.entries(d).sort(([a], [b]) => a.localeCompare(b))); }
 

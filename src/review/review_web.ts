@@ -17,7 +17,7 @@
  * the Host/CSRF/token checks stay as the innermost layer.
  */
 
-import { timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { KeepApp } from "../compose.js";
 import { assembleDecisionPacket } from "../cli/decision_packet.js";
 import { listPendingReviews, needsDecision, getPacketInputs, applyReviewDecision, isDecided } from "./review_core.js";
@@ -40,6 +40,8 @@ export interface WebResponse {
   readonly body: string;
 }
 export interface WebSecurity {
+  /** Optional native-project surface, behind this handler's existing browser boundary. */
+  readonly projectConsole?: (req: WebRequest, principal: Principal, csrf: string) => Promise<WebResponse>;
   /** The per-run secret required to use the UI (printed at startup). */
   readonly token: string;
   /** The exact same-origin the server serves on, e.g. "http://127.0.0.1:7777". */
@@ -114,9 +116,23 @@ export async function handleReviewRequest(app: KeepApp, req: WebRequest, sec: We
 }
 
 /** N=1 / single-owner: the per-run token authenticates the owner. Unchanged behavior. */
-function handleSingleOwner(app: KeepApp, req: WebRequest, sec: WebSecurity): WebResponse {
+async function handleSingleOwner(app: KeepApp, req: WebRequest, sec: WebSecurity): Promise<WebResponse> {
   const cookies = parseCookies(req.headers["cookie"]);
   const cookieOk = safeEqual(cookies["keep_token"], sec.token);
+  if (sec.projectConsole && (req.path === "/console" || req.path.startsWith("/console/"))) {
+    // A password form keeps the owner credential out of URLs and rendered page data.
+    if (req.path === "/console/login" && req.method === "POST") {
+      if (!originOk(req, sec)) return textRes(403, "Forbidden: cross-origin request refused.");
+      if (!safeEqual(parseForm(req.body)["token"], sec.token)) return textRes(401, "Sign-in failed. Check the instance credential.");
+      return redirect("/console", { "Set-Cookie": `keep_token=${encodeURIComponent(sec.token)}; Path=/console; HttpOnly; SameSite=Strict${sec.origin.startsWith("https://") ? "; Secure" : ""}` });
+    }
+    if (!cookieOk && req.path !== "/console/style.css") {
+      if (req.method !== "GET") return textRes(401, "Unauthorized: sign in to the console.");
+      return htmlRes(200, `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · Keep</title><link rel="stylesheet" href="/console/style.css"></head><body><main class="signin"><a class="brand" href="/console">KEEP</a><h1>Your workspace, under control.</h1><p>Sign in with this instance's gateway credential. It stays on this machine and is never placed in a URL.</p><form method="post" action="/console/login"><label>Instance credential<input name="token" type="password" required autocomplete="current-password" autofocus></label><button>Open console</button></form></main></body></html>`);
+    }
+    const csrf = createHmac("sha256", sec.token).update("keep.native-project-console/v1").digest("hex");
+    return route(app, req, sec, sec.principal, csrf, false);
+  }
   const queryOk = safeEqual(req.query["token"], sec.token);
   if (!cookieOk && !queryOk) {
     return textRes(401, "Unauthorized. Start Keep with `keep serve` and open the printed URL (it contains your token).");
@@ -176,7 +192,11 @@ function originOk(req: WebRequest, sec: WebSecurity): boolean {
 }
 
 /** Shared routing for both modes, given the resolved acting principal + the CSRF token to enforce. */
-function route(app: KeepApp, req: WebRequest, sec: WebSecurity, principal: Principal, csrf: string, loggedIn: boolean): WebResponse {
+async function route(app: KeepApp, req: WebRequest, sec: WebSecurity, principal: Principal, csrf: string, loggedIn: boolean): Promise<WebResponse> {
+  if (sec.projectConsole && (req.path === "/console" || req.path.startsWith("/console/"))) {
+    if (req.method === "POST" && (!originOk(req, sec) || !safeEqual(parseForm(req.body)["csrf"], csrf))) return textRes(403, "Forbidden: invalid origin or CSRF token.");
+    return sec.projectConsole(req, principal, csrf);
+  }
   if (req.method === "GET" && req.path === "/") return htmlRes(200, renderListPage(app, principal, loggedIn));
   if (req.method === "GET" && req.path === "/style.css") {
     return { status: 200, headers: { "Content-Type": "text/css; charset=utf-8", ...secHeaders }, body: STYLE };

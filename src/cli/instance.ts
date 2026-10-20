@@ -123,7 +123,7 @@ export async function runInstanceCommand(args: readonly string[], write: (text: 
         const worker = await launchNativeWorker(["serve", "--gateway", "--project-worker", "--detach", `--port=${port}`, ...(paused ? ["--paused"] : [])], runtimeEnvironment(profile));
         writePrivate(join(directory, CURRENT), worker);
         unlinkSync(join(directory, PENDING));
-        write(`Keep is running: ${worker.origin}\nWorker: ${worker.workerId}\nDispatch: ${paused ? "paused" : "enabled"}\nState: ${profile.environment.KEEP_DATA_DIR}\nWorkspaces: ${profile.environment.KEEP_WORKSPACE_BASE}\nLifecycle records: ${join(directory, "data", "native-workers")}\nPrivate startup diagnostics: ${worker.stderrLog ?? "not recorded"}\nStatus: keep instance status ${directory}\nProjects: keep instance projects ${directory}\nStop: keep instance stop ${directory}`);
+        write(`Keep is running: ${worker.origin}\nConsole: ${worker.origin}/console\nSign-in credential file (private): ${join(directory, "data", "gateway-token")}\nWorker: ${worker.workerId}\nDispatch: ${paused ? "paused" : "enabled"}\nState: ${profile.environment.KEEP_DATA_DIR}\nWorkspaces: ${profile.environment.KEEP_WORKSPACE_BASE}\nLifecycle records: ${join(directory, "data", "native-workers")}\nPrivate startup diagnostics: ${worker.stderrLog ?? "not recorded"}\nStatus: keep instance status ${directory}\nProjects: keep instance projects ${directory}\nStop: keep instance stop ${directory}`);
         return 0;
       }
       const worker = workerAt(directory);
@@ -131,7 +131,7 @@ export async function runInstanceCommand(args: readonly string[], write: (text: 
         write(`Keep is stopped. State retained: ${profile.environment.KEEP_DATA_DIR}\nStart: keep instance start ${directory}`); return action === "projects" ? 1 : 0;
       }
       const current = await status(directory, worker);
-      if (action === "status") write(`Keep is running: ${worker.origin}\nWorker: ${worker.workerId}\nDispatch: ${String(current.state)}\nState: ${profile.environment.KEEP_DATA_DIR}\nSaved generation setup: ${profile.environment.KEEP_PROJECT_MODEL === "codex" ? "Codex selected; live compatibility qualification is separate" : "not configured (local stub)"}\nProfile edits apply after an owned stop/start.`);
+      if (action === "status") write(`Keep is running: ${worker.origin}\nConsole: ${worker.origin}/console\nSign-in credential file (private): ${join(directory, "data", "gateway-token")}\nWorker: ${worker.workerId}\nDispatch: ${String(current.state)}\nState: ${profile.environment.KEEP_DATA_DIR}\nSaved generation setup: ${profile.environment.KEEP_PROJECT_MODEL === "codex" ? "Codex selected; live compatibility qualification is separate" : "not configured (local stub)"}\nProfile edits apply after an owned stop/start.`);
       else if (action === "projects") write(JSON.stringify(await request(directory, worker, "GET", "/projects"), null, 2));
       else {
         await request(directory, worker, "POST", "/worker/stop", { workerId: worker.workerId });

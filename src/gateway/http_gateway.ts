@@ -54,7 +54,8 @@ import { presentAdaptiveText, type AdaptiveBehavior } from "../learning/outcome_
 import { ProjectSessionConflictError } from "../session/project_session_persistence.js";
 import { ProjectSubmissionConflictError } from "../session/project_job_journal.js";
 import { ProjectSubmissionUncertainError, type ProjectJobContext } from "../session/project_runtime.js";
-import type { IdentityLayer } from "../review/review_web.js";
+import { handleReviewRequest, type IdentityLayer } from "../review/review_web.js";
+import { handleProjectConsole } from "../review/project_console.js";
 import { SessionCapacityError, type SessionReservation } from "../identity/session_store.js";
 
 export interface GatewayRequest {
@@ -1491,7 +1492,20 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
       const headers: Record<string, string> = {};
       for (const [k, v] of Object.entries(req.headers)) if (typeof v === "string") headers[k.toLowerCase()] = v;
       const greq: GatewayRequest = { method: req.method ?? "GET", path: url.pathname, query, headers, body };
-      const resp = await handleGatewayRequest(app, greq, { token, ...(workerControl ? { workerControl } : {}), ...(opts.principalFor ? { principalFor: opts.principalFor } : {}), ...(opts.identity ? { identity: opts.identity } : {}) });
+      const browserRoute = url.pathname === "/console" || url.pathname.startsWith("/console/") || (opts.identity !== undefined && ["/login", "/logout", "/style.css"].includes(url.pathname));
+      let resp;
+      if (greq.method === "GET" && url.pathname === "/" && !headers["authorization"] && !query["token"]) {
+        resp = { status: 303, headers: { location: "/console", "cache-control": "no-store" }, body: "" };
+      } else if (browserRoute) {
+        if (opts.principalFor) resp = json(403, { error: "browser sign-in requires a configured identity session" });
+        else resp = await handleReviewRequest(app, greq, {
+          token, origin: `http://${host}:${port}`, allowedHosts: [`${host}:${port}`, `localhost:${port}`], principal: OWNER,
+          ...(opts.identity ? { identity: opts.identity } : {}),
+          projectConsole: (request, principal, csrf) => handleProjectConsole(request, csrf, (method, path, query = {}, body) => handleGatewayRequest(app, {
+            method, path, query, body: body === undefined ? "" : JSON.stringify(body), headers: { authorization: `Bearer ${token}` },
+          }, { token, ...(opts.identity ? { principalFor: () => principal } : {}) }), { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline") }),
+        });
+      } else resp = await handleGatewayRequest(app, greq, { token, ...(workerControl ? { workerControl } : {}), ...(opts.principalFor ? { principalFor: opts.principalFor } : {}), ...(opts.identity ? { identity: opts.identity } : {}) });
       res.writeHead(resp.status, { ...resp.headers });
       res.end(resp.body);
     })().catch(() => { if (!res.headersSent) { res.writeHead(500, { "content-type": "text/plain" }); res.end("Internal error."); } }).finally(() => { activeRequests--; });

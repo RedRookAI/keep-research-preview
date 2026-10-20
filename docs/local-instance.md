@@ -26,11 +26,17 @@ keep instance status /absolute/path/to/my-keep
 keep instance projects /absolute/path/to/my-keep
 ```
 
-Start prints the actual local API address, worker identity, retained-state location, private diagnostic path and lifecycle commands. It uses an available loopback port by default. Choose `--port=7788` when you need a fixed port; an occupied port fails without stopping the existing listener. `--paused` explicitly starts a configured model worker with dispatch paused.
+Start prints the actual local API and console addresses, worker identity, retained-state location, private diagnostic path and lifecycle commands. It uses an available loopback port by default. Choose `--port=7788` when you need a fixed port; an occupied port fails without stopping the existing listener. `--paused` explicitly starts a configured model worker with dispatch paused.
 
 The worker survives the launching terminal. Its owner token remains in a private file and these commands authenticate without printing it. Standard output from the worker's legacy pairing display is suppressed; startup errors go to its private stderr log. Lifecycle records are under `data/native-workers/`. Treat those files as private operational data.
 
-The printed address currently serves the project API. The native-project browser console is separate development work; do not expect the older review queue to display these jobs.
+## Open the project console
+
+Open the printed loopback address in your browser; it redirects to `/console`. Sign in with the credential in this instance's private `data/gateway-token` file. The password form sends it to the same origin and installs an HttpOnly, SameSite cookie; the credential is not included in a URL or rendered page. Treat it as an owner credential and keep it private.
+
+The console lists retained native projects and opens their current stage, pending decision, jobs, activity, proposal diff and repository checks. Unavailable checks appear as unavailable. Approve or decline an exact pending step, or approve/veto the exact displayed proposal. The result distinguishes workspace changes from a recorded source landing; approval alone does not mean the source changed. Refresh shows the latest persisted state without starting or replaying work. The older review queue remains a separate surface for its existing consumers.
+
+The console uses the same project APIs and authority checks as other clients, with Host, Origin and CSRF checks for browser actions. Organization deployments use their configured identity sessions; header-only custom principal resolvers do not fall back to owner browser access. The worker's dispatch remains paused until deliberately enabled through its existing controls. Signing in or opening a project never starts generation.
 
 ## Stop and reopen
 
