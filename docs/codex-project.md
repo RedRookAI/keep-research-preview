@@ -1,6 +1,6 @@
 # Codex for owner repository projects
 
-Development source **0.0.13-preview.1** adds a project generation role using an existing signed-in Codex CLI. It is experimental: the first installed native attempt produced no usable response and left one invocation uncertain. The installed live-account workflow remains unqualified, and the **0.0.12-preview.1** download does not support this selector.
+Development source **0.0.14-preview.1** adds a project generation role using an existing signed-in Codex CLI. It is experimental: the first installed native attempt produced no usable response and left one invocation uncertain. The installed live-account workflow remains unqualified, and the **0.0.12-preview.1** download does not support this selector.
 
 Keep's intended division of responsibility is structured generation through Codex, with edits, tests, approval and proposals controlled by Keep. Effective native execution restrictions have not been established; see the limits below.
 

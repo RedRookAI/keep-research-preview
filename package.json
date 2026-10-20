@@ -1,6 +1,6 @@
 {
   "name": "keep",
-  "version": "0.0.13-preview.1",
+  "version": "0.0.14-preview.1",
   "description": "Self-hostable, provider-agnostic build orchestrator with consequence-gated autonomy",
   "main": "dist/src/index.js",
   "scripts": {
@@ -96,7 +96,10 @@
     "acceptance/installed_solve.mjs",
     "docs/portfolio-walkthrough.md",
     "docs/codex-project.md",
-    "acceptance/codex_project.mjs"
+    "acceptance/codex_project.mjs",
+    "docs/local-instance.md",
+    "docs/architecture.md",
+    "ROADMAP.md"
   ],
   "exports": {
     ".": "./dist/src/index.js",

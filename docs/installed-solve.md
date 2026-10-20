@@ -1,6 +1,6 @@
 # Configure a repository goal
 
-The qualified **0.0.12-preview.1** download includes `keep solve` through the project runtime with an API-compatible provider. The existing-account [Codex project role](codex-project.md) is experimental **0.0.13-preview.1 source only**; it is not in that download. Start with [the account-free walkthrough](quickstart.md) to inspect the workflow without configuring a provider.
+The qualified **0.0.12-preview.1** download includes `keep solve` through the project runtime with an API-compatible provider. The existing-account [Codex project role](codex-project.md) is experimental **0.0.14-preview.1 source only**; it is not in that download. Start with [the account-free walkthrough](quickstart.md) to inspect the workflow without configuring a provider.
 
 ## Repository settings
 

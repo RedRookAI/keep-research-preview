@@ -47,14 +47,14 @@ flowchart LR
 | Component | Status |
 |---|---|
 | Download | **0.0.12-preview.1**, qualified Linux x64 research preview. [Release and checksums](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1). |
-| Development source | **0.0.13-preview.1**. The Codex account integration is experimental and its installed workflow remains unqualified. No matching qualified download is published. [Status and limits](docs/codex-project.md). |
+| Development source | **0.0.14-preview.1**. Adds saved local instance setup and start/status/stop controls. The Codex account integration remains experimental and its installed workflow remains unqualified. No matching qualified download is published. [Status and limits](docs/codex-project.md). |
 | OpenClaw | Required runtime integration is planned. Existing support inspects foreign skill declarations; it does not supervise a running OpenClaw instance. |
 
 Keep is a research preview. The supplied demonstrations establish specific workflow and recovery behavior, with developer-administered evidence. They do not establish general model quality, production enterprise isolation or independently audited security. [Supported scope and roadmap](ROADMAP.md).
 
 ## Documentation
 
-- [Install and run](docs/quickstart.md)
+- [Install and run](docs/quickstart.md) and [operate a development instance](docs/local-instance.md)
 - [Configure repository work](docs/installed-solve.md) and [experimental Codex access](docs/codex-project.md)
 - [Recovery experiment](docs/research-preview.md) and [backup compatibility](docs/backup.md)
 - [Memory](docs/semantic-memory.md), [skill registry](docs/skill-registry.md) and [usage accounting](docs/monetary-accounting.md)

@@ -1,6 +1,6 @@
 # Contributing to Keep
 
-The development source is **0.0.13-preview.1**; the latest qualified Linux x64
+The development source is **0.0.14-preview.1**; the latest qualified Linux x64
 download is **0.0.12-preview.1**. The experimental Codex integration in source is
 not included in that download. Start with [installation](docs/quickstart.md) to try
 the preview, or [architecture](docs/architecture.md) to inspect the design.

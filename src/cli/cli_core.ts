@@ -121,6 +121,7 @@ Commands:
   demo project         Walk through a tested repository proposal with scripted local responses.
   demo recovery        Inspect 24 synthetic recovery checks; no model calls.
   doctor               Validate installed project readiness without calls or mutation.
+  instance             Save, start, inspect and stop an owned local Keep instance.
   provider configure   Save a non-secret local/external, owner/organization provider profile.
   provider show        Show the active non-secret provider profile.
   encoder configure    Save a separate non-secret semantic encoder profile (docs/semantic-memory.md).

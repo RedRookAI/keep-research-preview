@@ -6,7 +6,7 @@ scripted local responses; the companion recovery experiment uses a local test
 outbox. Neither demonstration requires a live model or external account.
 
 The latest qualified download is **0.0.12-preview.1**. Development source
-**0.0.13-preview.1** adds an experimental Codex account path whose installed
+**0.0.14-preview.1** adds an experimental Codex account path whose installed
 workflow remains unqualified. OpenClaw runtime integration is planned. See [architecture](docs/architecture.md), [current status](ROADMAP.md)
 and [validation evidence](docs/evidence.md) for the supported boundaries.
 

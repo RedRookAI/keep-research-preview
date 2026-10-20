@@ -39,6 +39,7 @@ import { loadMemoryRetentionProfile, memoryRetentionProfileFromArgs, writeMemory
 
 import { runRecoveryDemo } from "./recovery_demo.js";
 import { runProjectDemo } from "./project_demo.js";
+import { runInstanceCommand } from "./instance.js";
 
 const SYSTEM_RELEASE_TRUST_ROOT = "/etc/keep/release-root.cbor";
 
@@ -53,6 +54,7 @@ export function executingPackageRoot(): string {
 }
 
 export async function main(argv: readonly string[]): Promise<number> {
+  if (argv[0] === "instance") return runInstanceCommand(argv.slice(1), text => process.stdout.write(text + "\n"));
   if (argv[0] === "demo" && !["project", "recovery"].includes(argv[1] ?? "")) {
     process.stderr.write("Usage: keep demo project | keep demo recovery\n"); return 2;
   }
