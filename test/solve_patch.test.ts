@@ -10,7 +10,7 @@ import { SchemaRegistry } from "../src/spine/upcaster.js";
 import { InProcessLock } from "../src/lock/lock.js";
 import { RollbackLedger } from "../src/control/rollback.js";
 
-import { InMemoryFileTree, applyEditPlan, canApply } from "../src/solve/patch.js";
+import { InMemoryFileTree, applyEditPlan, canApply, resolveEditPlan } from "../src/solve/patch.js";
 import type { EditPlan } from "../src/solve/issue_model.js";
 
 function newLedger(): RollbackLedger {
@@ -177,4 +177,21 @@ test("fuzzyFind returns null for absent or ambiguous, a match for unique", () =>
 test("reindent shifts a zero-indent replacement to the file's indent base", () => {
   const out = reindent("return 2;", "        ", ""); // model sent 0 indent; file has 8 spaces
   assert.equal(out, "        return 2;");
+});
+
+test("literal replacement tokens survive strict/fuzzy resolution, application and rollback", async () => {
+  const replacement = ["$&", "$$", "$'", "$`", "$1", "$<named>"].join("|");
+  for (const fuzzyFallback of [false, true]) {
+    const before = "  old\n", tree = new InMemoryFileTree({ "a.ts": before }), ledger = newLedger();
+    const edit = plan([{ file: "a.ts", search: fuzzyFallback ? "\told" : "old", replace: replacement, intent: "literal generated source" }]);
+    const resolved = await resolveEditPlan(edit, tree, { fuzzyFallback });
+    assert.equal(resolved.ok, true);
+    assert.equal(resolved.nextContent.get("a.ts"), "  " + replacement + "\n");
+    assert.equal(await tree.read("a.ts"), before, "validation is read-only");
+    const applied = await applyEditPlan(edit, tree, ledger, { issueId: "literal-" + fuzzyFallback, fuzzyFallback });
+    assert.equal(applied.applied, true);
+    assert.equal(await tree.read("a.ts"), "  " + replacement + "\n");
+    await ledger.rollback(1, "literal replacement check");
+    assert.equal(await tree.read("a.ts"), before);
+  }
 });

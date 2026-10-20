@@ -17,6 +17,7 @@ import { SolvePipeline, isCanonicalAdmittedSolveResult } from "../src/solve/solv
 import { selectBestOfN } from "../src/resolve/best_of_n.js";
 import { buildDefaultSolver } from "../src/solve/default_solver.js";
 import { InMemoryWorkspace } from "../src/solve/workspace.js";
+import { planEdits } from "../src/solve/edit_planner.js";
 import { Spine } from "../src/spine/spine.js";
 import { FileSpineStore } from "../src/spine/store.js";
 import { SchemaRegistry } from "../src/spine/upcaster.js";
@@ -566,4 +567,45 @@ test("task memory revoked while registering rollback refuses the initial commit 
   assert.equal(result.solved, false); assert.match(result.gaveUpReason ?? "", /selected task memory unavailable: authority/);
   assert.equal(result.recovery?.pendingAttemptId, undefined);
   assert.equal(await workspace.tree(repositoryRef).read("src/value.ts"), original);
+});
+
+
+test("native planning corrects an unusable edit before generating its goal check", async () => {
+  const files = [{ path: "src/value.ts", content: original }], calls: GenerateRequest[] = [];
+  const model: ModelProvider = {
+    name: "applicability-fixture", isLocal: true, embed: async () => [],
+    generate: async request => {
+      calls.push(request);
+      if (calls.length === 1) return { text: plan([{ ...allowedEdit, search: "missing source" }]), model: "fixture", tokensIn: 1, tokensOut: 1 };
+      if (calls.length === 2) {
+        assert.notEqual(request.hints?.["taskRole"], "goal_test");
+        assert.ok(request.prompt.includes('"status":"not-found"'));
+        assert.ok(request.prompt.includes(original));
+        return { text: plan([allowedEdit]), model: "fixture", tokensIn: 1, tokensOut: 1 };
+      }
+      assert.equal(calls.length, 3);
+      assert.equal(request.hints?.["taskRole"], "goal_test");
+      assert.ok(!request.prompt.includes("value = 2"), "replacement is withheld from check generation");
+      return { text: JSON.stringify({ body: "assert.equal(2, 2);" }), model: "fixture", tokensIn: 1, tokensOut: 1 };
+    },
+  };
+  const result = await planEdits(issue, { suspects: [{ path: "src/value.ts", score: 1, isTest: false }], stages: ["bm25"] }, files, model,
+    { parsePlan: parseProjectEditPlan, prepareGoalCheck: true, maxModelCalls: 3 });
+  assert.deepEqual(result.edits, [allowedEdit]); assert.ok(result.goalCheck); assert.equal(calls.length, 3);
+  assert.equal(files[0]!.content, original);
+});
+
+test("native planning stops repeated absent or ambiguous searches without a goal-check call", async () => {
+  for (const search of ["missing", "same"]) {
+    let calls = 0;
+    const content = "same same\n", files = [{ path: "src/value.ts", content }];
+    const model: ModelProvider = { name: "repeated-bad-plan", isLocal: true, embed: async () => [], generate: async request => {
+      calls++; assert.notEqual(request.hints?.["taskRole"], "goal_test");
+      return { text: plan([{ ...allowedEdit, search }]), model: "fixture", tokensIn: 1, tokensOut: 1 };
+    } };
+    const result = await planEdits(issue, { suspects: [{ path: "src/value.ts", score: 1, isTest: false }], stages: ["bm25"] }, files, model,
+      { parsePlan: parseProjectEditPlan, prepareGoalCheck: true, maxModelCalls: 4 });
+    assert.equal(result.edits.length, 0); assert.match(result.rationale, /repeated non-applicable/); assert.equal(calls, 2);
+    assert.equal(files[0]!.content, content);
+  }
 });

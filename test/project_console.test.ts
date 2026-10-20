@@ -18,6 +18,7 @@ test("native console signs in without a URL credential, shows real waits and con
     const project = JSON.parse(started.body);
     assert.equal(project.status, "waiting-approval");
     const loginPage = await fetch(server.origin + "/console");
+    assert.equal(loginPage.headers.get("referrer-policy"), "same-origin", "native form POSTs must retain their same-origin Origin header");
     assert.equal(loginPage.status, 200); assert.ok(!(await loginPage.text()).includes(token));
     const signedIn = await fetch(server.origin + "/console/login", { method: "POST", redirect: "manual", headers: { origin: server.origin, "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ token }) });
     assert.equal(signedIn.status, 303);
@@ -26,12 +27,15 @@ test("native console signs in without a URL credential, shows real waits and con
     const cookie = setCookie.split(";")[0]!;
     const list = await (await fetch(server.origin + "/console", { headers: { cookie } })).text();
     assert.ok(list.includes(project.projectId)); assert.ok(!list.includes(token)); assert.ok(!list.includes("<script>alert"));
-    const detail = await (await fetch(server.origin + `/console/project?projectId=${project.projectId}`, { headers: { cookie } })).text();
+    const detailResponse = await fetch(server.origin + `/console/project?projectId=${project.projectId}`, { headers: { cookie } });
+    assert.equal(detailResponse.headers.get("referrer-policy"), "same-origin");
+    const detail = await detailResponse.text();
     assert.match(detail, /No repository check result is recorded yet/);
     assert.match(detail, /&lt;script&gt;/); assert.ok(!detail.includes(token));
     const csrf = /name="csrf" value="([^"]+)"/u.exec(detail)![1]!;
     const decide = (decisionId: string, origin = server.origin, csrfValue = csrf) => fetch(server.origin + "/console/resume", { method: "POST", headers: { cookie, origin, "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ csrf: csrfValue, projectId: project.projectId, runId: project.runId, decisionId, action: "decline" }) });
     assert.equal((await decide(project.wait.decisionId, "https://foreign.invalid")).status, 403);
+    assert.equal((await decide(project.wait.decisionId, "null")).status, 403, "opaque origins remain refused");
     assert.equal((await decide(project.wait.decisionId, server.origin, token)).status, 403);
     assert.equal((await decide("stale-decision")).status, 409);
     const result = await decide(project.wait.decisionId);

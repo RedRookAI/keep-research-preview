@@ -96,7 +96,7 @@ function esc(s: string): string {
 
 // ─── responses ───
 
-const secHeaders = { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer", "Content-Security-Policy": "default-src 'none'; style-src 'self'; form-action 'self'; base-uri 'none'" };
+const secHeaders = { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "same-origin", "Content-Security-Policy": "default-src 'none'; style-src 'self'; form-action 'self'; base-uri 'none'" };
 function htmlRes(status: number, body: string, extra: Record<string, string> = {}): WebResponse {
   return { status, headers: { "Content-Type": "text/html; charset=utf-8", ...secHeaders, ...extra }, body };
 }

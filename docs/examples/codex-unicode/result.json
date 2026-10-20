@@ -1,0 +1,60 @@
+{
+  "schema": "keep.genuine-example/v1",
+  "checkedDate": "2026-10-20",
+  "status": "SOLVED_GENUINE_FOLLOWUP",
+  "case": {
+    "upstream": "https://github.com/sindresorhus/escape-string-regexp",
+    "issue": "https://github.com/sindresorhus/escape-string-regexp/issues/20",
+    "sourceCommit": "21c557c7f14a112eebe196abd98d085f5fcfcf5e",
+    "originalIndexSha256": "48b8be4119e6f09b8942c490397fc047da012e0cc223d75a76363856af68fce4",
+    "checkerSha256": "f56ef0d4d0aeaaf8d9947a00f0f17f36193fece65714c779fdcd2eb282f54a99"
+  },
+  "execution": {
+    "modelRequested": "gpt-6.1-sol",
+    "modelReported": null,
+    "nativeVariant": "codex-cli 0.163.0-keep-generation.2",
+    "nativeSha256": "fdd9a1a3e86fc2213e4c0bd9c9b278080f38d756a5256e3217092a30e48d98c1",
+    "generationProfile": "keep.codex-generation/v4",
+    "keepRuntime": "22.23.3",
+    "openclaw": "2026.10.5",
+    "openclawRuntime": "24.22.0",
+    "openclawToolSelection": "scripted local model; actual native CLI/plugin tool dispatch",
+    "codexGeneration": "genuine existing ChatGPT subscription login",
+    "successfulFollowupCliInvocations": 2,
+    "reportedUsage": {
+      "inputTokens": 14837,
+      "cachedInputTokens": 0,
+      "outputTokens": 711
+    },
+    "internalWireAttempts": null,
+    "allocatedPlanCostUsd": null,
+    "measuredKeepPackageVersion": "0.0.17-preview.1",
+    "measuredCoreArchiveSha256": "de8f65bfba9f215ad1ab3242f0cd1706fe1ea65a583c81d53bfcd483b98e3328",
+    "measuredPluginArchiveSha256": "9ecdca90708986d22a3035ca998102ef232545c2977f2509c3e085adc1271e90",
+    "sourceCheckpointWithRepairs": "0.0.18-preview.1"
+  },
+  "observations": {
+    "originalBaseline": {
+      "fail": 1,
+      "pass": 2
+    },
+    "independentAfter": {
+      "pass": 3,
+      "fail": 0
+    },
+    "independentJail": "required; launcher-confirmed; no degraded namespace setup",
+    "proposalTestsPassed": true,
+    "sourceUnchanged": true,
+    "freshOpenclawProcessSameJob": true,
+    "consoleGenerationApproval": "developer-administered owner decision",
+    "consoleProposalDecision": "veto of exact displayed digest",
+    "sourceLanding": false
+  },
+  "scope": "One historical public issue and developer-administered follow-up; not a model-quality benchmark, outside audit, production certification or final archive qualification. Earlier failures and uncertainty were retained. The current source checkpoint also contains separately checked repairs; exact download qualification remains separate.",
+  "files": {
+    "proposal.patch": "5efa61f25619af377c6f1696a308fc237f4d4ff4ad97bbc5a6c9b4f87e481c61",
+    "check.mjs": "f56ef0d4d0aeaaf8d9947a00f0f17f36193fece65714c779fdcd2eb282f54a99",
+    "UPSTREAM-LICENSE": "48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0",
+    "independent-check.tap": "d8ab74391ef69c4f1a078f06643a1b50aebaf1f5ca70bc1466e27cc7295c2735"
+  }
+}

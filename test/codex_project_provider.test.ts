@@ -88,10 +88,11 @@ test('Codex warning codes survive completed and uncertain provider outcomes with
  }
 });
 
-test('native diagnostic profile change cannot inherit an older owner follow-up authorization',async()=>{
+for (const profile of ['keep.codex-generation/v2','keep.codex-generation/v3'])
+test(`current native profile cannot inherit an owner follow-up authorization for ${profile}`,async()=>{
  const f=fixture('success',2);try{
   const id=priorUncertainty(f),spine=f.spine();
-  const oldBinding=createHash('sha256').update(JSON.stringify({profile:'keep.codex-generation/v2',descriptor:Object.fromEntries(Object.entries(f.descriptor).sort(([a],[b])=>a.localeCompare(b)))})).digest('hex');
+  const oldBinding=createHash('sha256').update(JSON.stringify({profile,descriptor:Object.fromEntries(Object.entries(f.descriptor).sort(([a],[b])=>a.localeCompare(b)))})).digest('hex');
   assert.notEqual(codexProjectIdentity(f.descriptor),oldBinding);
   spine.stage({type:'identity.action',actor:'codex.project-generation',payload:{event:'followup-authorized',binding:oldBinding,uncertainClaimIds:[id],expectedClaims:1,additionalInvocations:1}});
   const p=new CodexProjectProvider(f.descriptor,spine);

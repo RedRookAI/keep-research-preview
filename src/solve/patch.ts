@@ -175,7 +175,7 @@ export async function resolveEditPlan(
     if (!originals.has(edit.file)) originals.set(edit.file, current);
     const occ = countOccurrences(current, edit.search);
     if (occ === 1) {
-      nextContent.set(edit.file, current.replace(edit.search, edit.replace));
+      nextContent.set(edit.file, current.replace(edit.search, () => edit.replace));
       perEdit.push({ file: edit.file, status: "applied" });
       continue;
     }
@@ -188,7 +188,7 @@ export async function resolveEditPlan(
       const fuzzy = fuzzyFind(current, edit.search);
       if (fuzzy) {
         const reindented = reindent(edit.replace, fuzzy.fileIndent, fuzzy.searchIndent);
-        nextContent.set(edit.file, current.replace(fuzzy.matched, reindented));
+        nextContent.set(edit.file, current.replace(fuzzy.matched, () => reindented));
         perEdit.push({ file: edit.file, status: "applied" });
         continue;
       }
@@ -257,7 +257,7 @@ export async function canApply(plan: EditPlan, tree: FileTree): Promise<boolean>
   for (const edit of plan.edits) {
     const current = buffer.get(edit.file) ?? (await tree.read(edit.file));
     if (current === undefined || countOccurrences(current, edit.search) !== 1) return false;
-    buffer.set(edit.file, current.replace(edit.search, edit.replace));
+    buffer.set(edit.file, current.replace(edit.search, () => edit.replace));
   }
   return true;
 }

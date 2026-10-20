@@ -26,7 +26,7 @@ Archives bind the qualified source above. The release tag adds external receipts
 
 ## Current development source
 
-Source **0.0.17-preview.1** contains the scoped recovery, approval and trusted-helper repairs described in [current evidence](docs/evidence.md). It has no matching qualified download. Use the [current dependency guidance](docs/dependency-status.md); the original Node 22.23.2 qualification above is historical. Existing releases, tags and assets are unchanged.
+Source **0.0.18-preview.1** contains the recovered generation route, literal patch/application checks, browser form compatibility and native-plugin exclusion described in [current evidence](docs/evidence.md), with a genuine Codex/OpenClaw follow-up. It has no matching qualified download. Use the [current dependency guidance](docs/dependency-status.md); the original Node 22.23.2 qualification above is historical. Existing releases, tags and assets are unchanged.
 
 ---
 

@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { generationRequest, type ModelProvider } from "../gateway/gateway.js";
 import type { Issue, EditPlan, SearchReplaceEdit } from "./issue_model.js";
 import type { LocalizationResult, RepoFile } from "./localize.js";
+import { resolveEditPlan } from "./patch.js";
 import { TaskMemoryUnavailableError, type TaskMemoryContext, type TaskMemoryEmbeddingControls } from "../memory/task_context.js";
 
 export interface PlanEditsOptions {
@@ -147,6 +148,27 @@ export async function planEdits(
         catch (error) { return stop(!opts.memoryContext && error instanceof Error ? error.message : "project edit proposal refused"); }
       } else plan = strictPlan(obj, allowed);
       if (!plan) return stop("invalid whole edit proposal");
+      // Native project plans use exact literal semantics. Validate in memory before
+      // spending a separate generation on a check for an unusable proposal.
+      if (opts.parsePlan) {
+        const resolved = await resolveEditPlan(plan, {
+          read: async path => byPath.get(path)?.content,
+          write: async () => { throw new Error("planning validation cannot write"); },
+        });
+        try { assertCurrent(); } catch (error) { return memoryRefusal(error); }
+        if (!resolved.ok) {
+          emit({ outcome: "proposal-refused", call, reason: "not-applicable" });
+          const fingerprint = "invalid-plan:" + createHash("sha256").update(JSON.stringify(plan)).digest("hex");
+          if (seen.has(fingerprint)) return stop("repeated non-applicable project edit proposal");
+          if (call === maxCalls) return stop("non-applicable project edit proposal; planning model call budget exhausted");
+          seen.add(fingerprint);
+          const failed = resolved.perEdit.find(edit => edit.status !== "applied")!;
+          transcript += "\nUNTRUSTED PLAN VALIDATION\n" + JSON.stringify({ file: failed.file, status: failed.status, reason: failed.reason })
+            + "\nCopy search text exactly from the admitted literal source below, preserving backslashes. Return a corrected whole plan; no file has changed.\n"
+            + (byPath.get(failed.file)?.content ?? "").slice(0, 4096);
+          continue;
+        }
+      }
       if (opts.prepareGoalCheck) {
         if (call >= maxCalls) return stop("no shared planning call remains for the goal check");
         // The check author sees request, original source and retrieved evidence, not

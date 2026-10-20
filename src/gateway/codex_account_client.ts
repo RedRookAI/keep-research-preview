@@ -61,8 +61,8 @@ export class CodexAccountError extends Error {
 const counter = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0;
 
 /** Part of the durable generation binding. Metadata confirms these settings, not a tool-admission proof. */
-export const CODEX_GENERATION_PROFILE = "keep.codex-generation/v3";
-const DISABLED_FEATURES = ["shell_tool", "shell_snapshot", "skill_mcp_dependency_install", "apps", "hooks", "multi_agent"] as const;
+export const CODEX_GENERATION_PROFILE = "keep.codex-generation/v4";
+const DISABLED_FEATURES = ["shell_tool", "shell_snapshot", "skill_mcp_dependency_install", "apps", "hooks", "multi_agent", "plugins"] as const;
 
 // Codex0.163.0 collect_warning emits a running, nonfatal warning as an error item.
 // Recognize only this pinned missing-host diagnostic, never arbitrary error text.

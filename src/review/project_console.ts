@@ -27,7 +27,7 @@ function diffView(diff: string): string {
   const files = diff.split("\n").filter(line => line.startsWith("+++ b/")).map(line => line.slice(6));
   return `${files.length ? `<ul class="files">${files.map(file => `<li>${esc(file)}</li>`).join("")}</ul>` : ""}<pre class="diff">${diff.split("\n").map(line => `<span class="${line.startsWith("+") ? "added" : line.startsWith("-") ? "removed" : line.startsWith("@@") ? "hunk" : "context"}">${esc(line)}\n</span>`).join("")}</pre>`;
 }
-const security = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer", "Content-Security-Policy": "default-src 'none'; style-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" };
+const security = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "same-origin", "Content-Security-Policy": "default-src 'none'; style-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" };
 function page(title: string, content: string, status = 200): WebResponse {
   return { status, headers: { ...security, "Content-Type": "text/html; charset=utf-8" }, body: `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · Keep</title><link rel="stylesheet" href="/console/style.css"></head><body><header><a class="brand" href="/console">KEEP<span>Workspace control</span></a><nav><a href="/console">Projects</a></nav></header><main>${content}</main><footer>Keep · Local project console · State and evidence from your running instance</footer></body></html>` };
 }

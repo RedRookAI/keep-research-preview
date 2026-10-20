@@ -1,5 +1,11 @@
 # Validation evidence
 
+## Current genuine result
+
+The [genuine Codex/OpenClaw follow-up](genuine-codex-walkthrough.md) now has an inspectable proposed patch, unchanged independent checker (three passing cases), actual console approval/veto, fresh-process status and source preservation. It is developer-administered evidence on a historical case, with scripted OpenClaw tool selection and real Codex generation. Final exact-archive qualification remains separate.
+
+Source **0.0.18-preview.1** passed emitting TypeScript compilation and **88 focused checks across six affected test files**, with zero failures or skips, on Node 22.23.3. These check the exported transport/profile, browser decisions, patch semantics and planner integration; they do not qualify a combined downloadable archive.
+
 Results apply to the named source revision or archive, not automatically to the current branch. All recorded qualification was administered by the development session; no outside audit or independent replication is claimed.
 
 | Profile | Result and scope |
@@ -18,7 +24,7 @@ Focused emitting compilation and checks passed on the respective implementation 
 
 The actual public export passed emitting compilation and **48 checks across five affected test files**, with zero failures or skips. These source checks used Node 22.23.2; they do not establish patched-runtime admission or a new installed archive.
 
-Both uncertain genuine account invocations remain charged and unresolved. No genuine repository success, final combined download, complete dependency clearance, outside audit or universal OpenClaw containment is inferred. [Dependency status](dependency-status.md) records the current release blockers. Historical compatibility and download receipts below keep their original versions and identities.
+Both uncertain genuine account invocations remain charged and unresolved. At that source17 checkpoint, no genuine repository success was inferred. The later genuine result above does not infer a final combined download, complete dependency clearance, outside audit or universal OpenClaw containment. [Dependency status](dependency-status.md) records the current release blockers. Historical compatibility and download receipts below keep their original versions and identities.
 
 ## October 20 OpenClaw source checkpoint
 

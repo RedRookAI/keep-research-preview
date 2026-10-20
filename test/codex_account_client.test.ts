@@ -52,7 +52,7 @@ test("Codex transport preserves explicit subscription provenance, arguments and 
     assert.ok(!record.args.some((arg: string) => arg.startsWith("model_providers.openai.")), "built-in provider IDs cannot be overridden");
     assert.equal(record.args[record.args.indexOf("--sandbox") + 1], "read-only");
     const disabled = record.args.flatMap((arg: string, i: number) => arg === "--disable" ? [record.args[i + 1]] : []);
-    assert.deepEqual(disabled, ["shell_tool", "shell_snapshot", "skill_mcp_dependency_install", "apps", "hooks", "multi_agent"]);
+    assert.deepEqual(disabled, ["shell_tool", "shell_snapshot", "skill_mcp_dependency_install", "apps", "hooks", "multi_agent", "plugins"]);
     assert.ok(!record.args.some((arg: string) => /unified_exec|experimental_use/u.test(arg)), "ignored/legacy opt-outs must not be represented as effective controls");
     assert.match(record.input, /Return a proposal/u);
   } finally {
