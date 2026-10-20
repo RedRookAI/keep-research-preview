@@ -43,7 +43,7 @@ Required-jail operations need the exact reviewed Bubblewrap launcher and a quali
 
 ## Build from source
 
-The default branch is development source **0.0.15-preview.1**, not the source of the qualified download above. Its experimental [Codex project role](codex-project.md) has separate limits and remains unqualified as an installed workflow. To inspect the downloadable preview’s exact source, use the source archive linked in [the release record](../KEEP_RELEASE.md).
+The default branch is development source **0.0.16-preview.1**, not the source of the qualified download above. Its experimental [Codex project role](codex-project.md) has separate limits and remains unqualified as an installed workflow. To inspect the downloadable preview’s exact source, use the source archive linked in [the release record](../KEEP_RELEASE.md).
 
 Contributors need isolated Linux x64 resources, Node.js 22.23.2/npm/Git, pinned Rust 1.97.1 with its musl target and host C build tools. Follow [Contributing](../WORKFLOW.md); the build verifies existing pinned tools rather than fetching replacements.
 

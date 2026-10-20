@@ -10,7 +10,7 @@
 
 import { createInterface } from "node:readline";
 import { mkdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,6 +40,7 @@ import { loadMemoryRetentionProfile, memoryRetentionProfileFromArgs, writeMemory
 import { runRecoveryDemo } from "./recovery_demo.js";
 import { runProjectDemo } from "./project_demo.js";
 import { runInstanceCommand } from "./instance.js";
+import { runOpenClawClientCommand } from "./openclaw_client.js";
 
 const SYSTEM_RELEASE_TRUST_ROOT = "/etc/keep/release-root.cbor";
 
@@ -55,6 +56,15 @@ export function executingPackageRoot(): string {
 
 export async function main(argv: readonly string[]): Promise<number> {
   if (argv[0] === "instance") return runInstanceCommand(argv.slice(1), text => process.stdout.write(text + "\n"));
+  if (argv[0] === "openclaw-client" && argv[1] === "revoke") {
+    try {
+      if (process.env["KEEP_GATEWAY_URL"]) throw new Error("client revocation is a local owner operation");
+      const dataDir = resolve(process.env["KEEP_DATA_DIR"] ?? join(homedir(), ".keep"));
+      const expected = readProtectedToken(join(dataDir, "owner-token"), "owner authority token");
+      const presented = process.env["KEEP_OWNER_TOKEN"] ?? (process.env["KEEP_OWNER_TOKEN_FILE"] ? readProtectedToken(process.env["KEEP_OWNER_TOKEN_FILE"], "presented owner authority token") : expected);
+      return runOpenClawClientCommand(composeKeep({ dataDir }), argv.slice(1), expected.length === presented.length && timingSafeEqual(Buffer.from(expected), Buffer.from(presented)), text => process.stdout.write(text + "\n"));
+    } catch (error) { process.stderr.write(`OpenClaw client revocation refused: ${(error as Error).message}\n`); return 2; }
+  }
   if (argv[0] === "demo" && !["project", "recovery"].includes(argv[1] ?? "")) {
     process.stderr.write("Usage: keep demo project | keep demo recovery\n"); return 2;
   }
@@ -138,7 +148,7 @@ export async function main(argv: readonly string[]): Promise<number> {
   }
   const dataDir = resolve(runtimeEnv["KEEP_DATA_DIR"] ?? join(homedir(), ".keep"));
   const directDomainRequested = argv.some((arg) => arg.startsWith("--domain="));
-  const projectCommand = workerRequested || solveRequested || (!directDomainRequested && ["project", "projects", "merge", "revert"].includes((argv[0] ?? "").toLowerCase()));
+  const projectCommand = workerRequested || solveRequested || argv[0] === "openclaw-client" || (!directDomainRequested && ["project", "projects", "merge", "revert"].includes((argv[0] ?? "").toLowerCase()));
   const domainSurfaceRequested = directDomainRequested || (argv[0] === "serve" && argv.includes("--gateway"));
   const organizationCommand = runtimeEnv["KEEP_PROVIDER_AUTHORITY"]?.toLowerCase() === "organization";
   let captured: CapturedRuntimeContract | undefined;
@@ -174,6 +184,8 @@ export async function main(argv: readonly string[]): Promise<number> {
   const runtime = captured ? undefined : resolveRuntimeConfig(runtimeEnv, { cwd: process.cwd(), repositoryRequired: !directDomainRequested && !repositoryFreeProviderCheck });
   const project = captured?.installedProject;
   const organization = captured?.organization === undefined ? undefined : loadInstalledOrganizationRuntime(captured.organization);
+  const openclawClientProfile = runtimeEnv["KEEP_OPENCLAW_CLIENT_PROFILE"];
+  if ((openclawClientProfile !== undefined || argv[0] === "openclaw-client") && (!captured?.codexProject || organization)) throw new Error("OpenClaw client admission requires the personal public-repository Codex profile");
   const retentionPath = runtimeEnv["KEEP_MEMORY_RETENTION_PROFILE"];
   const capturedRetention = retentionPath === undefined ? undefined : loadMemoryRetentionProfile(retentionPath, organizationProvider ? "organization" : "owner");
   const memoryRetentionPolicy = capturedRetention === undefined ? undefined : {
@@ -195,6 +207,7 @@ export async function main(argv: readonly string[]): Promise<number> {
   // probation memory is therefore local-only; remote mode remains honest rather than writing before release admission.
   const memory = (() => { const memoryProvider = createConfiguredProvider(captured?.memoryProvider ?? runtime!.memoryProvider); const memSpine = new Spine(new FileSpineStore(join(dataDir, "memory")), new InProcessLock(), new SchemaRegistry()); return new MemoryStore(memSpine, new ModelGateway(memoryProvider)); })();
   const app = composeKeep({
+    ...(openclawClientProfile ? { openclawClientProfile } : {}),
     dataDir,
     ...(captured?.codexProject ? { codexProject: captured.codexProject } : {}),
     ...((captured?.providerCheckPricing ?? intent?.providerCheckPricing) ? { providerCheckPricing: (captured?.providerCheckPricing ?? intent?.providerCheckPricing)! } : {}),
@@ -220,6 +233,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     ...(organization ? { identity: organization.identity, delegationParentFor: organization.parentFor } : {}),
   });
 
+  if (argv[0] === "openclaw-client") return runOpenClawClientCommand(app, argv.slice(1), expectedOwnerToken !== undefined && presentedOwnerToken !== undefined && expectedOwnerToken.length === presentedOwnerToken.length && timingSafeEqual(Buffer.from(expectedOwnerToken), Buffer.from(presentedOwnerToken)), text => process.stdout.write(text + "\n"));
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const io: CliIO = {
     write: (text) => process.stdout.write(text + "\n"),
@@ -228,13 +242,15 @@ export async function main(argv: readonly string[]): Promise<number> {
 
   // Installed solve uses the canonical project runtime; no second SolveFn pipeline is injected here.
   const deps: CliDeps = { app, readFile: (p) => readFileSync(p, "utf8"), tokenStore: new FileGatewayTokenStore(join(dataDir, "gateway-token")), ...(presentedOwnerToken === undefined ? {} : { gatewayToken: presentedOwnerToken }), ...(expectedOwnerToken === undefined ? {} : { gatewayExpectedToken: expectedOwnerToken }),
-    ...(workerId === undefined ? {} : { serveGateway: async (workerApp, options) => {
+    ...(workerId === undefined && openclawClientProfile === undefined ? {} : { serveGateway: async (workerApp, options) => {
       if (workerApp.projectRuntime === undefined) throw new Error("native project worker requires a durable runtime");
-      const handle = await startGatewayServer(workerApp, { ...options, worker: { id: workerId,
+      const handle = await startGatewayServer(workerApp, { ...options, ...(openclawClientProfile ? { restrictedClientProfile: openclawClientProfile } : {}), ...(workerId === undefined ? {} : { worker: { id: workerId,
         onStopped: () => { recordNativeWorker(dataDir, { workerId, pid: process.pid, origin: handle.origin, tokenFile: join(dataDir, "gateway-token") }, "stopped"); },
-      } });
-      const receipt = recordNativeWorker(dataDir, { workerId, pid: process.pid, origin: handle.origin, tokenFile: join(dataDir, "gateway-token") }, "ready");
-      if (managedId !== undefined) process.send!(receipt);
+      } }) });
+      if (workerId !== undefined) {
+        const receipt = recordNativeWorker(dataDir, { workerId, pid: process.pid, origin: handle.origin, tokenFile: join(dataDir, "gateway-token") }, "ready");
+        if (managedId !== undefined) process.send!(receipt);
+      }
       return handle;
     } }),
   };

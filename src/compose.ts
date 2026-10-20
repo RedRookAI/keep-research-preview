@@ -76,6 +76,7 @@ import type { FileTree } from "./solve/patch.js";
 import type { TestRunner } from "./solve/validate.js";
 import { OWNER, RbacAuthorizer, type AuthorizationPort, type Principal, type Permission } from "./identity/rbac.js";
 import { DelegationRegistry, type DelegationParentResolver } from "./identity/delegation_registry.js";
+import { ownsRestrictedCommand, readRestrictedClientProfile } from "./gateway/restricted_client.js";
 import { assembleSecondBrain, type SecondBrainSystem } from "./personalization/second_brain_system.js";
 import { CryptoShredKeyStore } from "./keystore/keystore.js";
 import { FileWrappedKeyPersistence } from "./keystore/file_wrapped_key_persistence.js";
@@ -276,6 +277,8 @@ export interface KeepConfig {
   readonly nativeBoundaryTransport?: PackagedNativeBoundaryOptions;
   /** A3: canonical installed-runtime path identities. Repository and workspace stay distinct. */
   readonly runtimePaths?: { readonly repository: string; readonly workspace: string };
+  /** Personal restricted-client admission; read again before native generation. */
+  readonly openclawClientProfile?: string;
   /** Shared-process deployment admission. Routing remains owned by the canonical gateway. */
   readonly tenantDeployment?: {
     readonly tenantId: string;
@@ -737,6 +740,8 @@ export interface KeepApp {
   readonly audiencePerformanceFor?: (projectId: ProjectId) => AudiencePerformanceCorpus;
   /** Durable bounded background execution; absent when the configured Spine is not durable. */
   readonly projectRuntime?: ProjectRuntime;
+  /** The composed understand stage holds generation for an exact human decision. */
+  readonly projectGenerationApprovalRequired?: boolean;
   /** Current original-principal/consent reconstruction; absent for unsupported executors. */
   readonly taskMemoryForCommand?: (command: NativeProjectCommand, projectId: ProjectId) => TaskMemoryContext;
   /** One atomic durable capacity/reversibility/provenance/correlation lifecycle when explicitly configured. */
@@ -2086,12 +2091,41 @@ export function composeKeep(config: KeepConfig): KeepApp {
     },
     tree: () => { throw new Error("native preparation has no live write tree"); },
   };
+  const nativeCommandCurrent = (runId: string, projectId: ProjectId | undefined, goal: string): boolean => {
+    if (projectId === undefined || projectRuntime === undefined || materialization === undefined) return false;
+    try {
+      if (realpathSync(materialization.sourceDir) !== preparationSource?.authorityRoot()
+        || realpathSync(materialization.workspaceBase) !== operationWorkspaceRoot) return false;
+      const command = projectRuntime.assertCommandForJob(runId, projectId);
+      if (command.goal !== goal || command.domainWorkflowKind !== undefined) return false;
+      const git = (args: string[]) => execFileSync("git", ["--no-optional-locks", "-c", "core.fsmonitor=false", ...args], {
+        cwd: materialization.sourceDir, encoding: "utf8", timeout: 5000, maxBuffer: 1_000_000,
+      }).trim();
+      if (git(["rev-parse", "--verify", "HEAD"]) !== materialization.commit || git(["status", "--porcelain=v1", "--untracked-files=normal"]) !== "") return false;
+      if (command.principal.kind === "agent" && command.principal.tenant === undefined) {
+        if (!config.openclawClientProfile) return false;
+        const profile = readRestrictedClientProfile(config.openclawClientProfile);
+        if (profile.expiresAt <= Date.now() || !ownsRestrictedCommand(profile, command) || !authorization.authorize(OWNER, "review.approve").allow) return false;
+        const state = projectCheckpoints?.load(runId), original = projectRuntime.job(runId, new Set([projectId]));
+        const approved = spine.replay().some(event => {
+          const p = event.payload;
+          return event.type === "identity.action" && event.actor === "openclaw-client" && p["event"] === "openclaw.human-generation-decision"
+            && p["runId"] === runId && p["projectId"] === projectId && p["binding"] === command.binding && p["commandDigest"] === original?.commandDigest
+            && p["humanPrincipalId"] === OWNER.id && p["agentPrincipalId"] === command.principal.id && p["grantId"] === command.principal.grantId
+            && p["approved"] === true && typeof p["decisionId"] === "string" && state?.consumedSignals.includes(`approval:${p["decisionId"]}:approved`);
+        });
+        if (!approved) return false;
+      }
+      return true;
+    } catch { return false; }
+  };
   const softwarePreparation = preparationWorkspace === undefined ? undefined : {
     binding: createHash("sha256").update(canonicalize({ version: "keep.native-preparation/v1",
       source: preparationSource!.authorityRoot(), repository: solverRepository, materialization,
       provider: codexDescriptor ? codexProjectIdentity(codexDescriptor) : descriptorDigest ?? (ownerDescriptor ? remoteProviderIdentityDigest(ownerDescriptor) : randomUUID()),
     })).digest("hex"),
     workspace: preparationWorkspace,
+    authorize: nativeCommandCurrent,
     editor: buildModelProjectEditPlanner(projectModel, preparationWorkspace, solverRepository),
     solve: buildDefaultSolver({ spine, model: projectModel, workspace: preparationWorkspace,
       identityRegistry, rootIdentity: solverRootIdentity!, repository: solverRepository, budgetEnvelopeId: autonomyBudgetEnvelope.id }),
@@ -2108,17 +2142,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
         preparation: softwarePreparation.binding, workspace: operationWorkspaceRoot,
         test: config.testCommand, runtimePaths: config.runtimePaths ?? null,
       })).digest("hex"),
-      authorize: (runId: string, projectId: ProjectId | undefined, goal: string): boolean => {
-        if (projectId === undefined || projectRuntime === undefined) return false;
-        try {
-          if (realpathSync(materialization!.workspaceBase) !== operationWorkspaceRoot
-            || realpathSync(materialization!.sourceDir) !== preparationSource!.authorityRoot()) return false;
-          const command = projectRuntime.commandForJob(runId, projectId);
-          if (command.goal !== goal || command.domainWorkflowKind !== undefined) return false;
-          restoreCommandPrincipal(command, projectId);
-          return true;
-        } catch { return false; }
-      },
+      authorize: nativeCommandCurrent,
     } : undefined;
   const autonomyLoop = projectManager !== undefined && projectCheckpoints !== undefined
     ? buildAutonomyLoop({ spine, ...(codexDescriptor ? { requireGenerationApproval: true as const } : {}), ...(softwareOperation === undefined ? {} : { softwareOperation }), ...(softwarePreparation === undefined ? {} : { softwarePreparation }), solve: observedSolve ?? (async () => { throw new Error("unreachable unconfigured software solver"); }), softwareStrategyAvailable: observedSolve !== undefined, vetoQueue, checkpoints: projectCheckpoints, engineeringStatusProjections, manager: projectManager, ...(outcomeAdaptation ? { runInProjectContext: <T>(projectId: ProjectId, subjectId: string, run: () => Promise<T>) => adaptationProjectContext.run({ projectId, subjectId }, run) } : {}), ...(config.projectPosture ? { posture: config.projectPosture } : {}), ...(config.projectPermissionPolicy ? { permissionPolicy: config.projectPermissionPolicy } : {}), ...(config.projectResearch ? { research: config.projectResearch } : {}), ...(config.projectIntentRouter ? { intentRouter: config.projectIntentRouter } : {}), ...(config.projectRetriever ? { projectRetriever: config.projectRetriever } : {}), ...(config.projectRetrievalLimit !== undefined ? { projectRetrievalLimit: config.projectRetrievalLimit } : {}), ...(solverWorkspace ? { projectWorkspace: solverWorkspace } : {}), ...(config.projectLocalizer ? { projectLocalizer: config.projectLocalizer } : {}), ...(config.projectLocalizationTopK !== undefined ? { projectLocalizationTopK: config.projectLocalizationTopK } : {}), ...(config.projectPlanner ? { projectPlanner: config.projectPlanner } : {}), ...(projectEditor ? { projectEditor, solveConsumesAdmittedEdit: true as const } : {}), ...(projectTester ? { projectTester } : {}), ...(composedDomainWorkflow ? { domainWorkflow: composedDomainWorkflow } : {}), ...(composedDomainWorkflows ? { domainWorkflows: composedDomainWorkflows } : {}), ...((config.repoRef ?? materialization?.repoRef) ? { repoRef: config.repoRef ?? materialization!.repoRef } : {}), nonPersistable: nonPersistableRegistry, tracer: observability.recorder, lessonsForGoal: (goal) => skillRetrieval.retrieve({ taskShape: goal }).map((r) => r.skill.id) })
@@ -2296,7 +2320,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
       developmentFixture,
     });
   })();
-  return { providerCheck, memoryRecall, memoryStore, memoryCorrect, frontDoorMessage, memoryCustody, ...(memoryRetentionPolicy === undefined ? {} : { memoryRetentionPolicy }), ...(taskMemoryForCommand ? { taskMemoryForCommand } : {}), spine, witnessSink, witnessExport, ...(clientSigning ? { clientSigning } : {}), ...(cueAblation ? { cueAblation } : {}), ...(projectMerge ? { projectMerge } : {}), ...(repositoryTransactions ? { repositoryTransactions } : {}), ...(releaseBoot === undefined ? {} : { releaseGraph: releaseBoot.graph, releaseLedgers: releaseBoot.ledgers }), ...(externalReviewVerifier === undefined ? {} : { externalReviewVerifier }), ...(nativeBoundaryTransport === undefined ? {} : { nativeBoundaryTransport }), capabilities, observedFailureDefenses, enforcementTier: capabilities.tier, seamAudit, enforcementProfile, spineDurable, egressWitnessed, egressProvider, witnessReconciliation, identityRegistry, gateway, ...(config.runtimePaths ? { runtimePaths: config.runtimePaths } : {}), ...(tenantDeployment ? { tenantDeployment } : {}), ...(fleetLifecycle ? { fleetLifecycle } : {}), ...(fleetTelemetry ? { fleetTelemetry } : {}), secondBrain, episodicTurns, contextAssembler, infra, effectMediation, lifecycle, heartbeat, referenceRefresher, promptLayer, boot, manifest, posture, selfImprovementBus, driftMonitor, referenceMonitor, solveOutcomeWire, calibrationWire, ...(revertSignal ? { revertSignal } : {}), triggerIngress, mcpGateway, notifications, authorization, separationOfDuties, registryStore, managedSkillRegistry, tenantRegistry, redactionGateway, harnessCompiler, egressInterceptor, ...(personalDataStore ? { personalDataStore } : {}), ...(bestOfNSolver ? { bestOfNSolver } : {}), ...(resolveWithTests ? { resolveWithTests } : {}), ...(resolveCascadeFn ? { resolveCascade: resolveCascadeFn } : {}), ...(config.identity ? { identity: config.identity } : {}), curriculumLearner, needScheduler, consolidation, skillDistiller, skillCanary, skillRetrieval, memoryConsensus, ...(artifactSelfHeal ? { artifactSelfHeal } : {}), ...(adapterBridge ? { adapterBridge } : {}), ...(governedAnchor ? { governedAnchor } : {}), frontDoor, frontDoorForSubject, ...(skillValidator ? { skillValidator } : {}), ...(skillEvaluator ? { skillEvaluator } : {}), ...(metaHarness ? { metaHarness } : {}), scheduler, budgetLedger, deadLetterQueue, sagaSequencer, nonPersistableRegistry, otelEmitter, vettingGates, governanceSuite, corpusSuite, observability, learningSignals, ...(autoTraining ? { autoTraining } : {}), ...(selfImprovement ? { selfImprovement } : {}), ...(outcomeAdaptation ? { outcomeAdaptation, resetOutcomeAdaptation: resetOutcomeAdaptation!, projectAuditDigest: (projectId: ProjectId, domain: string, value: string) => projectRegistry.namespace(projectId).pseudonym(domain, value) } : {}), ...(audiencePerformanceFor ? { audiencePerformanceFor } : {}), ...(autonomyLoop && projectManager ? { autonomyLoop, projectManager, vetoQueue } : {}), ...(projectRuntime ? { projectRuntime } : {}) };
+  return { providerCheck, memoryRecall, memoryStore, memoryCorrect, frontDoorMessage, memoryCustody, ...(memoryRetentionPolicy === undefined ? {} : { memoryRetentionPolicy }), ...(taskMemoryForCommand ? { taskMemoryForCommand } : {}), spine, witnessSink, witnessExport, ...(clientSigning ? { clientSigning } : {}), ...(cueAblation ? { cueAblation } : {}), ...(projectMerge ? { projectMerge } : {}), ...(repositoryTransactions ? { repositoryTransactions } : {}), ...(releaseBoot === undefined ? {} : { releaseGraph: releaseBoot.graph, releaseLedgers: releaseBoot.ledgers }), ...(externalReviewVerifier === undefined ? {} : { externalReviewVerifier }), ...(nativeBoundaryTransport === undefined ? {} : { nativeBoundaryTransport }), capabilities, observedFailureDefenses, enforcementTier: capabilities.tier, seamAudit, enforcementProfile, spineDurable, egressWitnessed, egressProvider, witnessReconciliation, identityRegistry, gateway, ...(config.runtimePaths ? { runtimePaths: config.runtimePaths } : {}), ...(tenantDeployment ? { tenantDeployment } : {}), ...(fleetLifecycle ? { fleetLifecycle } : {}), ...(fleetTelemetry ? { fleetTelemetry } : {}), secondBrain, episodicTurns, contextAssembler, infra, effectMediation, lifecycle, heartbeat, referenceRefresher, promptLayer, boot, manifest, posture, selfImprovementBus, driftMonitor, referenceMonitor, solveOutcomeWire, calibrationWire, ...(revertSignal ? { revertSignal } : {}), triggerIngress, mcpGateway, notifications, authorization, separationOfDuties, registryStore, managedSkillRegistry, tenantRegistry, redactionGateway, harnessCompiler, egressInterceptor, ...(personalDataStore ? { personalDataStore } : {}), ...(bestOfNSolver ? { bestOfNSolver } : {}), ...(resolveWithTests ? { resolveWithTests } : {}), ...(resolveCascadeFn ? { resolveCascade: resolveCascadeFn } : {}), ...(config.identity ? { identity: config.identity } : {}), curriculumLearner, needScheduler, consolidation, skillDistiller, skillCanary, skillRetrieval, memoryConsensus, ...(artifactSelfHeal ? { artifactSelfHeal } : {}), ...(adapterBridge ? { adapterBridge } : {}), ...(governedAnchor ? { governedAnchor } : {}), frontDoor, frontDoorForSubject, ...(skillValidator ? { skillValidator } : {}), ...(skillEvaluator ? { skillEvaluator } : {}), ...(metaHarness ? { metaHarness } : {}), scheduler, budgetLedger, deadLetterQueue, sagaSequencer, nonPersistableRegistry, otelEmitter, vettingGates, governanceSuite, corpusSuite, observability, learningSignals, ...(autoTraining ? { autoTraining } : {}), ...(selfImprovement ? { selfImprovement } : {}), ...(outcomeAdaptation ? { outcomeAdaptation, resetOutcomeAdaptation: resetOutcomeAdaptation!, projectAuditDigest: (projectId: ProjectId, domain: string, value: string) => projectRegistry.namespace(projectId).pseudonym(domain, value) } : {}), ...(audiencePerformanceFor ? { audiencePerformanceFor } : {}), ...(autonomyLoop && projectManager ? { autonomyLoop, projectManager, vetoQueue } : {}), projectGenerationApprovalRequired: codexDescriptor !== undefined, ...(projectRuntime ? { projectRuntime } : {}) };
 }
 
 /** Deterministic short content hash for auditable version bumps (zero-dep, non-crypto FNV-1a). */

@@ -41,16 +41,29 @@ function preparationFixture() {
       { file: "billing.ts", search: "retryLimit = 0", replace: "retryLimit = 7", intent: "bounded proposal" },
     ] }), model: "preparation-fixture", tokensIn: 1, tokensOut: 1 };
   } };
-  const editor = buildModelProjectEditPlanner(model, workspace, "repo");
+  let authorized = true, revokeDuringPreparation = false;
+  const actualEditor = buildModelProjectEditPlanner(model, workspace, "repo");
+  const editor: typeof actualEditor = { prepare: async (...args) => {
+    if (revokeDuringPreparation) { await Promise.resolve(); authorized = false; }
+    return actualEditor.prepare(...args);
+  } };
   const prepare = buildDefaultSolver({ spine, model, workspace, runnerFor: forbidden });
   const build = (binding = "a".repeat(64), cost = 0, executionAvailable = false) => buildAutonomyLoop({ spine, checkpoints,
     solve: forbidden, repoRef: "repo", projectWorkspace: { files: forbidden, tree: forbidden },
-    softwarePreparation: { binding, workspace, editor, solve: prepare },
+    softwarePreparation: { binding, workspace, editor, solve: prepare, authorize: () => authorized },
     ...(executionAvailable ? { softwareOperation: { binding: "c".repeat(64), authorize: () => true } } : {}),
     estimatedActionCostUsd: cost, spendCap: { canAfford: () => false },
   });
-  return { build, spine, workspace, checkpoints, counts: () => ({ calls, effects }) };
+  return { build, spine, workspace, checkpoints, counts: () => ({ calls, effects }), revokeBeforeGeneration: () => { revokeDuringPreparation = true; } };
 }
+
+test("preparation forwards live command authority across the awaited editor boundary", async () => {
+  const fixture = preparationFixture(); fixture.revokeBeforeGeneration();
+  const result = await fixture.build().runProject("Correct the invoice retry limit in billing.ts.", { runId: "revoked-preparation", stepBudget: 50 });
+  assert.notEqual(result.state.status, "completed");
+  assert.deepEqual(fixture.counts(), { calls: 0, effects: 0 });
+  assert.equal(await fixture.workspace.tree("repo").read("billing.ts"), "export const retryLimit = 0;\n");
+});
 
 test("ordinary held billing goal prepares without effects; resume cannot execute or repeat the model", async () => {
   const fixture = preparationFixture(), loop = fixture.build();

@@ -56,6 +56,7 @@ import { ProjectSubmissionConflictError } from "../session/project_job_journal.j
 import { ProjectSubmissionUncertainError, type ProjectJobContext } from "../session/project_runtime.js";
 import { handleReviewRequest, type IdentityLayer } from "../review/review_web.js";
 import { handleProjectConsole } from "../review/project_console.js";
+import { assertRestrictedCurrent, assertRestrictedHuman, matchesRestrictedBearer, readRestrictedClientProfile, restrictedClientPrincipal, restrictedProjectStatus, type RestrictedClientProfile } from "./restricted_client.js";
 import { SessionCapacityError, type SessionReservation } from "../identity/session_store.js";
 
 export interface GatewayRequest {
@@ -74,6 +75,8 @@ export interface GatewayResponse {
 
 export interface GatewaySecurity {
   readonly token: string;
+  /** Personal owner-created admission, reloaded on every operation. Never an enterprise resolver. */
+  readonly restrictedClientProfile?: string;
   readonly workerControl?: { readonly id: string; readonly state: () => "running" | "paused" | "stopping"; readonly requestStop: () => boolean; readonly setPaused?: (paused: boolean) => boolean };
   /** Map an authenticated request to a principal (org RBAC). Absent → OWNER (n=1, zero-friction). */
   readonly principalFor?: (req: GatewayRequest) => Principal | undefined;
@@ -190,7 +193,27 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
   if (req.method === "GET" && req.path === "/health") return json(200, { ok: true });
 
   // TOKEN-AUTHED: everything else requires the token. No unauthenticated caller drives a run.
-  if (!isAuthed(req, sec.token, sec.principalFor === undefined && sec.identity === undefined)) return json(401, { error: "unauthorized" });
+  let restricted: RestrictedClientProfile | undefined;
+  let restrictedPrincipal: Principal | undefined;
+  if (!isAuthed(req, sec.token, sec.principalFor === undefined && sec.identity === undefined)) {
+    try {
+      if (!sec.restrictedClientProfile || sec.principalFor || sec.identity) return json(401, { error: "unauthorized" });
+      restricted = readRestrictedClientProfile(sec.restrictedClientProfile);
+      if (!matchesRestrictedBearer(req.headers["authorization"], restricted)) return json(401, { error: "unauthorized" });
+      restrictedPrincipal = restrictedClientPrincipal(app, restricted);
+    } catch { return json(401, { error: "restricted client admission unavailable" }); }
+    if (req.method === "GET" && ["/project", "/project/jobs"].includes(req.path)) {
+      const keys = Object.keys(req.query);
+      const key = req.path === "/project" ? "runId" : "jobId";
+      if (keys.length !== 1 || keys[0] !== key || !req.query[key]) return json(400, { error: "an exact own-work job identifier is required" });
+      try { const status = restrictedProjectStatus(app, restricted, req.query[key]!); return status ? json(200, status) : json(404, { error: "job not found" }); }
+      catch { return json(404, { error: "job unavailable" }); }
+    }
+    if (req.method !== "POST" || req.path !== "/project") return json(403, { error: "restricted client supports submission and own-work status only" });
+    const body = parseBody(req.body);
+    if (!body || Object.keys(body).sort().join(",") !== "goal,idempotencyKey" || typeof body["idempotencyKey"] !== "string") return json(400, { error: "restricted submission requires only goal and idempotencyKey" });
+    req = { ...req, body: JSON.stringify({ ...body, background: true, posture: "approval-required" }) };
+  }
 
   if (sec.identity !== undefined && sec.principalFor !== undefined) return json(500, { error: "gateway identity configuration is ambiguous" });
   const boundTenant = app.tenantDeployment?.rootAdmission.tenantId;
@@ -227,7 +250,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     : sec.principalFor === undefined ? undefined : resolvedEnterprisePrincipal(sec.principalFor(req)); }
   catch { return json(403, { error: "forbidden", reason: "authenticated principal could not be resolved" }); }
   if ((sec.principalFor !== undefined || sec.identity !== undefined) && resolvedPrincipal === undefined) return json(403, { error: "forbidden", reason: "authenticated principal could not be resolved" });
-  const principal: Principal = resolvedPrincipal ?? OWNER;
+  const principal: Principal = restrictedPrincipal ?? resolvedPrincipal ?? OWNER;
   if (boundTenant !== undefined && principal.tenant !== boundTenant) return refuseTenantBoundary(req.method === "GET" ? 404 : 403);
   const personalMode = sec.principalFor === undefined && sec.identity === undefined;
   const tenant = personalMode ? undefined : principal.tenant!;
@@ -656,11 +679,13 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
       const digest = (value: unknown): string => createHash("sha256").update(canonicalize(value)).digest("hex");
       try {
         const tracked = await app.projectRuntime.submitOnce({
-          keyDigest: digest(["keep.project.submission/v1", principal.tenant ?? null, principal.kind, principal.id, idempotencyKey]),
+          keyDigest: digest(restricted ? ["keep.openclaw.submission/v1", restricted.clientId, restricted.grantId, restricted.commandBinding, principal.id, idempotencyKey]
+            : ["keep.project.submission/v1", principal.tenant ?? null, principal.kind, principal.id, idempotencyKey]),
           requestDigest: digest(b),
         }, () => {
           // Coordination may have awaited another process; revocation remains authoritative.
           if (!can(app.authorization, principal, "change.solve")) throw new Error("project submission authority was revoked");
+          if (restricted) assertRestrictedCurrent(app, sec.restrictedClientProfile!, restricted);
           let project;
           if (b["projectId"] === undefined) {
             project = app.projectManager!.create({ name: "Keep project", ...(principal.tenant === undefined ? {} : { tenant: principal.tenant }) });
@@ -684,6 +709,10 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
           }) };
         }, 1, "autonomy project run");
         void tracked.completion?.catch(() => undefined);
+        if (restricted) {
+          try { assertRestrictedCurrent(app, sec.restrictedClientProfile!, restricted); }
+          catch { return json(403, { error: "restricted client authority changed; retain the original submission key" }); }
+        }
         if (!app.projectManager.list().some(record => record.id === tracked.projectId && visibleProject(record))) return json(404, { error: "project not found" });
         return json(202, { projectId: tracked.projectId, jobId: tracked.jobId, runId: tracked.jobId, status: tracked.replayed ? "observed" : "accepted", replayed: tracked.replayed, ...(memoryContext ? { memoryCopyNotice: TASK_MEMORY_COPY_NOTICE } : {}) });
       } catch (error) {
@@ -764,6 +793,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     const project = lookup.value;
     if (project === undefined) return json(404, { error: "project run is not bound to a durable project" });
     const denied = gate(app.autonomyLoop.resumePermission(runId, input)); if (denied) return denied;
+    let delegatedDecision: Record<string, unknown> | undefined;
     const memoryForResume = () => {
       const original = app.projectRuntime!.job(runId, new Set([project.id]));
       const prior = app.projectManager!.session(project.id).lastCheckpoint();
@@ -773,10 +803,20 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
         return undefined;
       }
       let command: NativeProjectCommand;
-      try { command = app.projectRuntime!.commandForJob(runId, project.id); } catch { throw new NativeProjectCommandUnavailableError("custody"); }
+      try { command = app.projectRuntime!.assertCommandForJob(runId, project.id); } catch { throw new NativeProjectCommandUnavailableError("custody"); }
       const ref = command.principal, grantId = app.authorization.attribution(principal)?.grantId;
       if (ref.id !== principal.id || ref.kind !== principal.kind || ref.tenant !== principal.tenant || ref.grantId !== grantId) {
-        throw new NativeProjectCommandUnavailableError("authority");
+        try {
+          if (!sec.restrictedClientProfile || Object.keys(b).sort().join(",") !== "approval,runId" || !input.approval
+            || prior?.wait?.kind !== "approval" || prior.stage !== "understand" || prior.wait.decisionId !== input.approval.decisionId
+            || (prior.artifacts["understand"] as { generationApprovalRequired?: unknown } | undefined)?.generationApprovalRequired !== true) throw new Error("not a pending generation decision");
+          const profile = readRestrictedClientProfile(sec.restrictedClientProfile);
+          assertRestrictedHuman(app, profile, principal, command);
+          delegatedDecision = { event: "openclaw.human-generation-decision", runId, projectId: project.id, commandDigest: original.commandDigest,
+            binding: command.binding, checkpointRevision: prior.revision, decisionId: input.approval.decisionId, approved: input.approval.approved,
+            humanPrincipalId: principal.id, agentPrincipalId: ref.id, grantId: ref.grantId };
+          return undefined;
+        } catch { throw new NativeProjectCommandUnavailableError("authority"); }
       }
       if (command.memoryContext === undefined) {
         if (prior?.artifacts["memory_context_required"] === true) throw new TaskMemoryUnavailableError("custody");
@@ -791,8 +831,13 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     let run;
     try {
       memoryForResume(); // Refuse before the new resume job is admitted.
-      run = await app.projectRuntime.submit(project.id, 1, context => {
+      run = await app.projectRuntime.submit(project.id, 1, async context => {
         const memoryContext = memoryForResume(); // Fresh original principal and source fence at execution.
+        if (delegatedDecision) {
+          app.spine.stage({ type: "identity.action", actor: "openclaw-client", payload: delegatedDecision });
+          await app.spine.seal();
+          memoryForResume(); // Sealing awaited I/O; both authorities must still be current.
+        }
         return app.autonomyLoop!.resumeManagedProject(project.id, runId, input, { signal: context.signal, trackActivity: context.trackActivity,
           ...(memoryContext === undefined ? {} : { memoryContext }) });
       }, "autonomy project resume");
@@ -818,8 +863,16 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
         const view = session.inspect(), project = view.checkpoint;
         if (!project || project.runId !== runId) return json(404, { error: "project checkpoint not found" });
         const implementation = project.artifacts["implement"] as { solve?: { proposalEvidence?: unknown } } | undefined;
+        let requester: NativeProjectCommand["principal"] | null = null;
+        try { requester = app.projectRuntime?.commandForJob(runId, record.id).principal ?? null; } catch { /* Missing/drifted custody is visible as unavailable, never reconstructed. */ }
+        const decisionHistory = app.spine.replay().flatMap(event => {
+          const payload = event.payload;
+          if (event.type !== "identity.action" || payload["runId"] !== runId || typeof payload["event"] !== "string"
+            || !(payload["event"].startsWith("local_merge.") || (event.actor === "openclaw-client" && payload["event"] === "openclaw.human-generation-decision"))) return [];
+          return [Object.fromEntries(["event", "decision", "decisionId", "approved", "humanPrincipalId", "agentPrincipalId", "status", "reason"].filter(key => payload[key] !== undefined).map(key => [key, payload[key]]))];
+        });
         return json(200, {
-          projectId: record.id, project,
+          projectId: record.id, project, requester, decisionHistory,
           proposal: implementation?.solve?.proposalEvidence ?? null,
           repository: projectRepositoryOutcomes(app.spine, runId),
           session: { record, history: view.history, checkpoint: project, budget: view.budget },
@@ -1437,6 +1490,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
 }
 
 export interface GatewayServerOptions {
+  readonly restrictedClientProfile?: string;
   readonly worker?: { readonly id: string; readonly onStopped: () => void };
   readonly port?: number; // default 7788; 0 = ephemeral (tests)
   readonly host?: string; // default 127.0.0.1 — NEVER default to 0.0.0.0
@@ -1456,6 +1510,10 @@ export interface GatewayServerHandle {
 
 /** Thin socket adapter around the pure handler. Owns only binding, body, and the per-instance token. */
 export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}): Promise<GatewayServerHandle> {
+  if (opts.restrictedClientProfile) {
+    if (opts.identity || opts.principalFor || app.identity || app.tenantDeployment) throw new Error("restricted personal client cannot replace organization admission");
+    readRestrictedClientProfile(opts.restrictedClientProfile);
+  }
   const host = opts.host ?? "127.0.0.1";
   const token = opts.token ?? randomBytes(24).toString("hex");
   const maxBody = opts.maxBodyBytes ?? 1_000_000;
@@ -1503,9 +1561,9 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
           ...(opts.identity ? { identity: opts.identity } : {}),
           projectConsole: (request, principal, csrf) => handleProjectConsole(request, csrf, (method, path, query = {}, body) => handleGatewayRequest(app, {
             method, path, query, body: body === undefined ? "" : JSON.stringify(body), headers: { authorization: `Bearer ${token}` },
-          }, { token, ...(opts.identity ? { principalFor: () => principal } : {}) }), { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline") }),
+          }, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(opts.identity ? { principalFor: () => principal } : {}) }), { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline"), cancel: can(app.authorization, principal, "change.solve") }),
         });
-      } else resp = await handleGatewayRequest(app, greq, { token, ...(workerControl ? { workerControl } : {}), ...(opts.principalFor ? { principalFor: opts.principalFor } : {}), ...(opts.identity ? { identity: opts.identity } : {}) });
+      } else resp = await handleGatewayRequest(app, greq, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(workerControl ? { workerControl } : {}), ...(opts.principalFor ? { principalFor: opts.principalFor } : {}), ...(opts.identity ? { identity: opts.identity } : {}) });
       res.writeHead(resp.status, { ...resp.headers });
       res.end(resp.body);
     })().catch(() => { if (!res.headersSent) { res.writeHead(500, { "content-type": "text/plain" }); res.end("Internal error."); } }).finally(() => { activeRequests--; });

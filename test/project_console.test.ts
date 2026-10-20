@@ -64,3 +64,60 @@ test("proposal console escapes diff, preserves exact digest and displays a held 
   assert.match(result.body, /refused/); assert.match(result.body, /no landing occurred/);
   assert.deepEqual(calls.at(-1), { method: "POST", path: "/project/merge", body: { runId: "r1", decision: "approve", proposalDigest: digest } });
 });
+
+test("console cancellation targets one queued job and preserves another project's useful work", async () => {
+  const root = mkdtempSync(join(tmpdir(), "keep-console-cancel-")), token = "owned-cancellation-fixture";
+  const app = composeKeep({ dataDir: root, projectRuntimePaused: true });
+  const runtime = app.projectRuntime!, manager = app.projectManager!;
+  const projectA = manager.create({ name: "Cancel this job" }), projectB = manager.create({ name: "Keep this work" });
+  let callsA = 0, callsB = 0;
+  const a = runtime.submitTracked(projectA.id, 1, async () => { callsA++; return "unexpected"; });
+  const aSettled = a.completion.then(() => "completed", () => "cancelled");
+  const b = runtime.submitTracked(projectB.id, 1, async () => { callsB++; return "useful control result"; });
+  // Attach immediately so assertion failures still leave owned cleanup safe.
+  const bSettled = b.completion.catch(() => "cancelled during cleanup");
+  const server = await startGatewayServer(app, { port: 0, token });
+  try {
+    const login = await fetch(server.origin + "/console/login", { method: "POST", redirect: "manual", headers: { origin: server.origin }, body: new URLSearchParams({ token }) });
+    assert.equal(login.status, 303);
+    const cookie = login.headers.get("set-cookie")!.split(";")[0]!;
+    const detailUrl = server.origin + `/console/project?projectId=${projectA.id}`;
+    const detail = await (await fetch(detailUrl, { headers: { cookie } })).text();
+    assert.match(detail, /Request cancellation/);
+    const csrf = /name="csrf" value="([^"]+)"/u.exec(detail)![1]!;
+    const cancel = (jobId: string, csrfValue = csrf, origin = server.origin) => fetch(server.origin + "/console/cancel", {
+      method: "POST", headers: { cookie, origin }, body: new URLSearchParams({ csrf: csrfValue, projectId: projectA.id, jobId }),
+    });
+    assert.equal((await cancel(a.jobId, "wrong-csrf")).status, 403);
+    assert.equal((await cancel(a.jobId, csrf, "https://foreign.invalid")).status, 403);
+    assert.equal((await cancel(b.jobId)).status, 404, "a forged project/job pair cannot target another visible project");
+    assert.equal(runtime.job(a.jobId)?.cancellationRequested, undefined);
+    assert.equal(runtime.job(b.jobId)?.cancellationRequested, undefined);
+    const result = await cancel(a.jobId);
+    assert.equal(result.status, 200);
+    const resultPage = await result.text();
+    assert.match(resultPage, /Cancellation request recorded/);
+    assert.match(resultPage, /does not prove/);
+    assert.equal(await aSettled, "cancelled");
+    assert.equal(runtime.job(a.jobId)?.state, "stopped");
+    assert.equal(runtime.job(b.jobId)?.state, "queued");
+    assert.equal(callsA, 0); assert.equal(callsB, 0);
+    assert.equal((await cancel(a.jobId)).status, 409, "a stale form cannot reopen a stopped job");
+    const refreshed = await (await fetch(detailUrl, { headers: { cookie } })).text();
+    assert.match(refreshed, /Cancellation was requested/);
+    assert.doesNotMatch(refreshed, /<button[^>]*>Request cancellation/);
+    runtime.resumeDispatch();
+    assert.equal(await bSettled, "useful control result");
+    assert.equal(callsB, 1); assert.equal(callsA, 0);
+  } finally {
+    await runtime.cancel(a.jobId); await runtime.cancel(b.jobId);
+    await Promise.all([aSettled, bSettled]);
+    await server.close(); rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("console cancellation requires its own solve permission before any API effect", async () => {
+  const api: ConsoleApi = async () => { throw new Error("unauthorized cancellation must not call an API"); };
+  const response = await handleProjectConsole({ method: "POST", path: "/console/cancel", query: {}, headers: {}, body: "" }, "csrf", api, { approve: true, decline: true, cancel: false });
+  assert.equal(response.status, 403);
+});

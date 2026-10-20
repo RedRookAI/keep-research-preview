@@ -139,6 +139,7 @@ export interface AutonomyLoopConfig {
   /** Trusted host port for bounded native preparation; not a self-attested custom solve flag. */
   readonly softwarePreparation?: {
     readonly binding: string;
+    readonly authorize?: (runId: string, projectId: ProjectId | undefined, goal: string) => boolean;
     readonly workspace: Workspace;
     readonly editor: ProjectEditPlanner;
     readonly solve: SolveFn;
@@ -254,8 +255,7 @@ export function buildAutonomyLoop(cfg: AutonomyLoopConfig): AutonomyLoop {
     spine: cfg.spine,
     resolve,
     ...(cfg.softwareOperation === undefined ? {} : { assertAuthority: (state: ProjectState) => {
-      if (Object.hasOwn(state.artifacts, "software_operation")
-        && cfg.softwareOperation!.authorize(state.runId, state.projectId, state.goal) !== true) {
+      if (cfg.softwareOperation!.authorize(state.runId, state.projectId, state.goal) !== true) {
         throw new Error("native project command authority unavailable");
       }
     } }),
@@ -272,6 +272,9 @@ export function buildAutonomyLoop(cfg: AutonomyLoopConfig): AutonomyLoop {
   });
   const preparationExecutors = cfg.softwarePreparation === undefined ? undefined : makeSolveStageExecutors({
     spine: cfg.spine, resolve, executionCeiling: "prepare", projectEditor: cfg.softwarePreparation.editor,
+    ...(cfg.softwarePreparation.authorize === undefined ? {} : { assertAuthority: (state: ProjectState) => {
+      if (cfg.softwarePreparation!.authorize!(state.runId, state.projectId, state.goal) !== true) throw new Error("native preparation command authority unavailable");
+    } }),
     pipeline: { consumesAdmittedEdit: true, run: (issue, _files, context) => cfg.softwarePreparation!.solve(issue, { ...context, executionCeiling: "prepare" }) },
   });
   const triResearch = new TriResearchRuntime(cfg.research ?? {});

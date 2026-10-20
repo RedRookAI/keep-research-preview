@@ -1,6 +1,6 @@
 {
   "name": "keep",
-  "version": "0.0.15-preview.1",
+  "version": "0.0.16-preview.1",
   "description": "Self-hostable, provider-agnostic build orchestrator with consequence-gated autonomy",
   "main": "dist/src/index.js",
   "scripts": {
@@ -99,7 +99,16 @@
     "acceptance/codex_project.mjs",
     "docs/local-instance.md",
     "docs/architecture.md",
-    "ROADMAP.md"
+    "ROADMAP.md",
+    "integrations/openclaw/index.mjs",
+    "integrations/openclaw/client.mjs",
+    "integrations/openclaw/contracts.mjs",
+    "integrations/openclaw/openclaw.plugin.json",
+    "integrations/openclaw/example.openclaw.json",
+    "integrations/openclaw/README.md",
+    "integrations/openclaw/LICENSE",
+    "docs/openclaw-client.md",
+    "acceptance/openclaw_project.mjs"
   ],
   "exports": {
     ".": "./dist/src/index.js",

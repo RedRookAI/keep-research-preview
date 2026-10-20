@@ -7,6 +7,7 @@ export interface ProjectIntentRouter {
 
 export interface ProjectIntentArtifact {
   readonly schemaVersion: 1;
+  readonly generationApprovalRequired?: true;
   readonly input: { readonly kind: "text"; readonly text: string };
   readonly intent: RouteResult;
   readonly ambiguity: {
@@ -83,7 +84,7 @@ export function buildUnderstandStageExecutor(router: ProjectIntentRouter = new I
       };
     }
     if (requireGenerationApproval) {
-      return { output: artifact, control: "approval-required", headline: "Approve Codex generation for this owner public-repository goal." };
+      return { output: { ...artifact, generationApprovalRequired: true }, control: "approval-required", headline: "Approve Codex generation for this owner public-repository goal." };
     }
     if (route.shape === "ambiguous") {
       return {

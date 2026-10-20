@@ -289,7 +289,7 @@ export class GovernedLocalMerge {
     const artifact = state?.artifacts["implement"] as ProjectImplementationArtifact | undefined;
     const solve = artifact?.solve;
     const evidence = solve?.proposalEvidence;
-    if (!evidence || proposalDigest !== evidence.rollback.patchSha256) return this.record(runId, { status: "refused", decision, reason: "proposal digest is missing or does not match the durable reviewed proposal" });
+    if (!evidence || proposalDigest !== evidence.rollback.patchSha256) return this.record(runId, { status: "refused", reason: "proposal digest is missing or does not match the durable reviewed proposal" });
     if (decision === "veto") return this.record(runId, { status: "refused", decision: "veto", reason: "operator vetoed the exact reviewed proposal" });
     if (solve?.validation && (!solve.validation.testsPassed || solve.validation.vettingCleared === false)) {
       return this.record(runId, { status: "refused", reason: "persisted proposal checks did not pass" });

@@ -59,6 +59,11 @@ contains packer-built native executables, not every source-build prerequisite.
 The complete source archive is provided separately. Use the accompanying
 KEEP_RELEASE.md to identify the exact source/package and completed checks.
 
+The optional Keep OpenClaw plugin is original MIT-licensed Keep code. Its exact
+OpenClaw peer and Node runtime are installed separately; their dependency and
+license closure is not covered by Keep's three-package npm inventory above.
+The core package does not bundle OpenClaw or the OpenHands prior-art SDK.
+
 Direct git/GitHub-URL dependency installation is not a qualified route. Use the
 documented source build or the reviewed binary package; binary consumers do not need
 the development packages or source notice checker.

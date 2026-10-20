@@ -6,8 +6,10 @@ scripted local responses; the companion recovery experiment uses a local test
 outbox. Neither demonstration requires a live model or external account.
 
 The latest qualified download is **0.0.12-preview.1**. Development source
-**0.0.15-preview.1** adds an experimental Codex account path whose installed
-workflow remains unqualified. OpenClaw runtime integration is planned. See [architecture](docs/architecture.md), [current status](ROADMAP.md)
+**0.0.16-preview.1** adds an experimental Codex account path whose installed
+workflow remains unqualified. The OpenClaw candidate passed its controlled native
+submission/status workflow with scripted local providers; that does not qualify
+genuine Codex operation or the final combined download. See [architecture](docs/architecture.md), [current status](ROADMAP.md)
 and [validation evidence](docs/evidence.md) for the supported boundaries.
 
 ## What the mechanisms establish

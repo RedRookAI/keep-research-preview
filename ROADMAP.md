@@ -8,6 +8,11 @@ The qualified **0.0.12-preview.1** Linux x64 download includes an account-free r
 
 Configured repository work, memory, skill handling, usage admission and backup interfaces are documented in the source. Each has its own prerequisites and evidence limits. The [release record](KEEP_RELEASE.md) and [validation guide](docs/evidence.md) identify what was actually checked.
 
+Development **0.0.16-preview.1** adds the native project console and a packaged
+OpenClaw client. Its controlled installed workflow passed submission, separate
+human approval, tested proposal, fresh-process status and veto with scripted local
+providers. Genuine Codex work and the final combined download remain release work.
+
 ## Next release priorities
 
 1. **A usable Codex-backed workflow.** Complete the existing-account integration and demonstrate one genuine repository task against predefined tests, retaining unsuccessful outcomes.

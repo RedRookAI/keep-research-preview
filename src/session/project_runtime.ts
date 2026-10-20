@@ -73,6 +73,13 @@ export class ProjectRuntime {
     return this.readCommand(intent);
   }
 
+  /** Fresh configuration and original-principal validation; never substitutes a resuming human. */
+  assertCommandForJob(jobId: string, projectId: ProjectId): NativeProjectCommand {
+    const command = this.commandForJob(jobId, projectId);
+    this.config.commands!.validate(command, projectId);
+    return command;
+  }
+
   get paused(): boolean { return this.dispatchPaused; }
   pauseDispatch(): void { this.dispatchPaused = true; }
   resumeDispatch(): void { this.dispatchPaused = false; this.drain(); void this.recoverQueuedCommands().catch(() => undefined); }

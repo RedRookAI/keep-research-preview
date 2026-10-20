@@ -122,6 +122,7 @@ Commands:
   demo recovery        Inspect 24 synthetic recovery checks; no model calls.
   doctor               Validate installed project readiness without calls or mutation.
   instance             Save, start, inspect and stop an owned local Keep instance.
+  openclaw-client      Issue or revoke a restricted personal OpenClaw client.
   provider configure   Save a non-secret local/external, owner/organization provider profile.
   provider show        Show the active non-secret provider profile.
   encoder configure    Save a separate non-secret semantic encoder profile (docs/semantic-memory.md).

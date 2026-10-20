@@ -1,0 +1,27 @@
+{
+  "tools": {
+    "toolSearch": false,
+    "codeMode": false,
+    "allow": [
+      "keep_submit",
+      "keep_status"
+    ]
+  },
+  "plugins": {
+    "entries": {
+      "keep": {
+        "enabled": true,
+        "config": {
+          "endpoint": "http://127.0.0.1:7788",
+          "clientId": "my-openclaw",
+          "grantId": "REPLACE_WITH_ISSUED_GRANT_ID",
+          "commandBinding": "0000000000000000000000000000000000000000000000000000000000000000",
+          "openclawAgentId": "keep-portfolio",
+          "tokenFile": "/absolute/private/openclaw-client/client-token",
+          "stateDirectory": "/absolute/private/keep-plugin-state",
+          "requestTimeoutMs": 10000
+        }
+      }
+    }
+  }
+}

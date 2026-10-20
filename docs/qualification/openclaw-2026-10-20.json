@@ -1,0 +1,95 @@
+{
+  "schema": "keep.openclaw-compatibility/v1",
+  "checkedDate": "2026-10-20",
+  "status": "CONTROLLED_INSTALLED_PASS",
+  "versions": {
+    "keep": "0.0.16-preview.1",
+    "openclaw": "2026.10.5",
+    "openclawNode": "24.22.0",
+    "keepNode": "22.23.2"
+  },
+  "nodeExecutableSha256": "67ca5783febb8bf85736c79fcdd92c8d6d465a0eb2a082672bcdfa76a506751c",
+  "upstreamOpenclawArchiveSha256": "dbb1bdcf2346292e25f672822b6a9928c234909abe6fee0df5fc4556e769d40e",
+  "installedInputs": {
+    "keepArchiveSha256": "6bf462d99262fb8a7739355883f26049d4f3d9a61d48564be31ecd3c574f99ab",
+    "pluginArchiveSha256": "3516c32b7f1c43d81bc89ea71c8e5cffd8828703b07217ce0c661263f5219f49",
+    "boundary": "Private candidate archives, not published downloads. Runtime module hashes below match source; later operator-profile/harness/doc corrections are identified separately."
+  },
+  "nativeConsumer": {
+    "harness": "acceptance/openclaw_project.mjs",
+    "harnessSha256": "95e887621e48a32a318c73ab856107e067013797835fa16b25433e35410a32be",
+    "entry": "actual OpenClaw agent --local CLI, packaged native V2 plugin",
+    "provider": "scripted loopback OpenAI-compatible transport",
+    "tools": [
+      "keep_status",
+      "keep_submit"
+    ],
+    "configuration": {
+      "agentRoster": "agents.entries",
+      "toolSearch": false,
+      "codeMode": false
+    },
+    "observations": [
+      "generation held before separate simulated human approval",
+      "original requesting agent/grant retained",
+      "tested proposal created in separate workspace",
+      "fresh native CLI processes observed the same job",
+      "exact owner veto recorded; original source unchanged",
+      "unprivileged client denied source writing and owner/auth-file reading"
+    ],
+    "controlledCodexCalls": 2,
+    "liveAccountCalls": 0
+  },
+  "sourceChecks": {
+    "emittingTypecheck": "PASS",
+    "projectConsole": {
+      "pass": 4,
+      "fail": 0,
+      "skip": 0
+    },
+    "journalOnUpdatedNode": {
+      "pass": 3,
+      "fail": 0,
+      "skip": 0
+    },
+    "restrictedAdmissionAndGenerationDecision": {
+      "pass": 3,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "runtimeModulesSha256": {
+    "dist/src/autonomy/autonomy_loop.js": "1dc2636ecfe04899609b997e48399a6f64ccf6d4709cacb0d585cf37a0dd419b",
+    "dist/src/autonomy/understand_stage.js": "9aa725f86665431b314560625e3d9b0fe912c80c7185c356b1ed2d3bc6324741",
+    "dist/src/cli/cli_core.js": "498c870d1b06c45e373d64f7f1e9fcd44e2f6a017647fad41d35eca67b6501c8",
+    "dist/src/cli/instance.js": "316ec7a6aca946dec18b258f027bffcc6d867b6988ec64232ad3ec9815de8d3c",
+    "dist/src/cli/keep.js": "042f13fb2d54ec5eff1bc704123d7ef0465c6e4b5583479d0bca5dee3cf5181c",
+    "dist/src/cli/openclaw_client.js": "5f7b4aba8d20b042a406c1961e16648399e9bf27015d411952d35d3fdc41c945",
+    "dist/src/compose.js": "46cb3b5faac5aeabb9f6580e8975796ace93ffd132cbbcc7a9bea8a844c2a53c",
+    "dist/src/gateway/http_gateway.js": "c0b08554241f74aee8922f1faa3036a5c7d0fc0f7270171ac8fd5c7c9f36b0d9",
+    "dist/src/gateway/restricted_client.js": "d668ec6c97610f171cf3647a2241dc51ea0f99a4efcfb77ff168b93485645eb2",
+    "dist/src/review/project_console.js": "99f60a68a02a4fa75c3280a5fb80479ff22f525bddf1b07de3168ccd89453823",
+    "dist/src/session/project_runtime.js": "98a6480eff29c008c10e57024c1a28605d8ac21d9599bc3839c9dee94fa2b652",
+    "dist/src/solve/governed_local_merge.js": "4d220869378fa674d25591b90898535380ee36e297de20d1ac53e00219765434"
+  },
+  "pluginModulesSha256": {
+    "index.mjs": "9d7a7d000df3dc5e3cc4b49ab1ed0749b833486a3fa8fd833a218ebcf43c5806",
+    "client.mjs": "034b35e591a75e655e05cd338ebfe9980fe425939bc301aeb44d68e01defca74",
+    "contracts.mjs": "e54c4f4fe2f9bada627b56eb8dfc7d8919498bd9d896c8a41aef230d6a154a17",
+    "openclaw.plugin.json": "0ece5ad510ab1874929f5b1557a4801f4fc096ca9c42776817db5ec52fe8a03e",
+    "package.json": "028720b259a3099f40881f4e8f47e19e6954faaf0dd571a24868971c49cae529"
+  },
+  "retainedSetupFailures": [
+    "upstream lifecycle scripts were initially skipped",
+    "legacy agents.list was rejected; changed to keyed entries",
+    "native default tool-search catalog differed from direct two-tool contract; disabled wrappers in operator profile"
+  ],
+  "limits": [
+    "Developer-administered Linux fixture, no independent audit.",
+    "Scripted generation is not genuine Codex output or a model-quality evaluation.",
+    "Optional upstream fs-safe native support was unavailable in this installation; full OpenClaw feature coverage is not claimed.",
+    "Unprivileged fixture separation is not universal containment of plugins or host administrators.",
+    "Current runtime security admission, final combined artifact qualification and genuine Codex walkthrough remain incomplete.",
+    "Original uncertain account work and immutable qualified download identities remain unchanged."
+  ]
+}

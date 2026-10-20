@@ -5,10 +5,29 @@ Results apply to the named source revision or archive, not automatically to the 
 | Profile | Result and scope |
 |---|---|
 | Downloadable **0.0.12-preview.1** | Qualified Linux x64 preview: 5,468 selected source tests, installed scripted repository workflow, recovery and named boundary controls. Exact artifact identities and receipt below. |
-| Development **0.0.13-preview.1** | Experimental Codex account integration. Controlled source checks do not qualify the installed live-account workflow; the first native attempt produced no usable response and retained an uncertain invocation. No corresponding qualified download. |
-| OpenClaw runtime | Planned. Static inspection of skill declarations does not establish a running client integration. |
+| Development **0.0.16-preview.1** | Native project console, restricted client admission and experimental Codex account integration. The first genuine native attempt produced no usable response and retained an uncertain invocation. No corresponding qualified download. |
+| OpenClaw runtime | Packaged plugin passed the controlled installed OpenClaw 2026.10.5 / Node 24.22.0 workflow with scripted local providers. Actual native tools, separate human approval, tested proposal, fresh-process status and veto were observed. [Receipt and limits](qualification/openclaw-2026-10-20.json). |
 
 The useful repository demo uses two scripted local responses and simulated operator decisions. Its edits, tests and retained proposal are inspectable; this is workflow evidence, not a measurement of model quality. See [architecture](architecture.md), [Codex limits](codex-project.md) and [security boundaries](../SECURITY.md).
+
+## October 20 OpenClaw source checkpoint
+
+The native consumer loaded the packaged plugin through the real OpenClaw CLI and
+captured exactly `keep_submit`/`keep_status` on outgoing requests to a scripted
+loopback model. Keep held generation until the fixture's separate human action,
+then produced a proposal with passing repository checks. Fresh CLI processes
+observed the same job and the exact owner veto; the original source stayed
+unchanged. The unprivileged client could not read the fixture's owner/auth files or
+write its source. Focused source checks also passed for client recovery, admission
+and browser cancellation. [Exact inputs and boundaries](qualification/openclaw-2026-10-20.json).
+
+Initial setup failures exposed incomplete upstream package lifecycle setup, a
+legacy agent configuration key and native tool-catalog compaction. These were
+corrected before the successful consumer run. This is developer-administered
+compatibility evidence with local authored responses, not genuine Codex quality,
+complete OpenClaw containment, a new security-certified runtime or a qualified
+combined downloadable release. Prior failed account work and immutable download
+identities remain unchanged.
 
 ## October 5 downloadable portfolio preview
 

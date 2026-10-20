@@ -4,7 +4,7 @@ import type { WebRequest, WebResponse } from "./review_web.js";
 import type { GatewayResponse } from "../gateway/http_gateway.js";
 
 export type ConsoleApi = (method: "GET" | "POST", path: string, query?: Record<string, string>, body?: Record<string, unknown>) => Promise<GatewayResponse>;
-export interface ConsolePermissions { readonly approve: boolean; readonly decline: boolean; }
+export interface ConsolePermissions { readonly approve: boolean; readonly decline: boolean; readonly cancel?: boolean; }
 type Row = Record<string, unknown>;
 const row = (value: unknown): Row => value !== null && typeof value === "object" && !Array.isArray(value) ? value as Row : {};
 const rows = (value: unknown): Row[] => Array.isArray(value) ? value.map(row) : [];
@@ -14,6 +14,15 @@ const pretty = (value: unknown): string => esc(JSON.stringify(value ?? null, nul
 const link = (id: unknown): string => `/console/project?projectId=${encodeURIComponent(String(id))}`;
 const badge = (value: unknown): string => `<span class="badge">${esc(value ?? "Not started")}</span>`;
 const hidden = (name: string, value: unknown): string => `<input type="hidden" name="${name}" value="${esc(value)}">`;
+function jobView(job: Row, projectId: unknown, csrf: string, mayCancel: boolean): string {
+  const active = job["state"] === "queued" || job["state"] === "running";
+  const cancellation = job["cancellationRequested"] === true
+    ? '<p class="notice">Cancellation was requested. Inspect the current state and activity; this does not prove remote work stopped.</p>'
+    : active && mayCancel
+      ? `<form method="post" action="/console/cancel">${hidden("csrf", csrf)}${hidden("projectId", projectId)}${hidden("jobId", job["id"])}<button class="secondary">Request cancellation</button><p class="muted">Applies to this job only. Cancellation does not undo effects or prove remote work stopped.</p></form>`
+      : "";
+  return `<li><strong>${esc(job["label"])}</strong> ${badge(job["state"])}<p class="muted">${esc(job["reason"] ?? "No hold or failure reason recorded.")}</p><small class="mono">${esc(job["id"])}</small>${cancellation}</li>`;
+}
 function diffView(diff: string): string {
   const files = diff.split("\n").filter(line => line.startsWith("+++ b/")).map(line => line.slice(6));
   return `${files.length ? `<ul class="files">${files.map(file => `<li>${esc(file)}</li>`).join("")}</ul>` : ""}<pre class="diff">${diff.split("\n").map(line => `<span class="${line.startsWith("+") ? "added" : line.startsWith("-") ? "removed" : line.startsWith("@@") ? "hunk" : "context"}">${esc(line)}\n</span>`).join("")}</pre>`;
@@ -36,6 +45,25 @@ function isResponse(value: Row | GatewayResponse): value is GatewayResponse { re
 
 export async function handleProjectConsole(req: WebRequest, csrf: string, api: ConsoleApi, permissions: ConsolePermissions): Promise<WebResponse> {
   if (req.path === "/console/style.css" && req.method === "GET") return { status: 200, headers: { ...security, "Content-Type": "text/css; charset=utf-8" }, body: CONSOLE_STYLE };
+  if (req.path === "/console/cancel" && req.method === "POST") {
+    if (!permissions.cancel) return page("Forbidden", "<h1>You cannot cancel project jobs.</h1>", 403);
+    const form = new URLSearchParams(req.body), projectId = form.get("projectId") ?? "", jobId = form.get("jobId") ?? "";
+    if (!projectId || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(jobId))
+      return page("Invalid job", "<h1>Select a recorded project job.</h1>", 400);
+    // Read the exact visible project/job pair; a forged form must not cancel a
+    // different visible project's job. The gateway rechecks change.solve on POST.
+    const observed = await read(api, "/project/jobs", { projectId, jobId });
+    if (isResponse(observed)) return failure(observed);
+    const before = row(observed["job"]);
+    if (before["id"] !== jobId || before["projectId"] !== projectId)
+      return page("Job mismatch", "<h1>This job does not match the selected project.</h1>", 409);
+    if (before["state"] !== "queued" && before["state"] !== "running")
+      return page("Job changed", `<h1>This job is no longer queued or running.</h1><a href="${esc(link(projectId))}">Inspect updated project</a>`, 409);
+    const response = await api("POST", "/project/cancel", {}, { jobId });
+    if (response.status !== 202) return failure(response);
+    const job = row(row(JSON.parse(response.body))["job"]);
+    return page("Cancellation result", `<p class="eyebrow">Job control</p><h1>${job["cancellationRequested"] === true ? "Cancellation request recorded." : "Current job state."}</h1><p>Observed state: ${badge(job["state"])}</p><p>A request does not prove that local activity or a remote provider stopped. Inspect this job before any retry.</p><details><summary>Recorded job evidence</summary><pre>${pretty(job)}</pre></details><a class="button" href="${esc(link(projectId))}">Inspect updated project</a>`);
+  }
   if (req.method === "POST" && ["/console/resume", "/console/merge"].includes(req.path)) {
     const form = new URLSearchParams(req.body), runId = form.get("runId") ?? "", projectId = form.get("projectId") ?? "";
     // Bind both the visible project and its current run before forwarding an exact decision.
@@ -91,7 +119,10 @@ export async function handleProjectConsole(req: WebRequest, csrf: string, api: C
     activities.push(...rows(observed["activities"]));
   }
   const history = rows(row(detail["session"])["history"]);
-  return page(str(selected["name"]), `<a class="back" href="/console">← All projects</a><p class="eyebrow">${esc(selected["lifecycle"])} project</p><div class="heading"><div><h1>${esc(selected["name"])}</h1><p class="muted mono">${esc(projectId)}</p></div><a class="button secondary" href="${esc(link(projectId))}">Refresh state</a></div><div class="metrics"><section><span>Current stage</span><strong class="small">${esc(state["stage"] ?? "Not started")}</strong>${badge(state["status"] ?? selected["status"])}</section><section><span>Workspace</span><strong class="small">${esc(workspace["status"] ?? "unknown")}</strong></section><section><span>Source repository</span><strong class="small">${esc(sourceMerge["status"] ?? "unknown")}</strong><span>Last recorded landing outcome</span></section></div><section class="next"><p class="eyebrow">Next action</p><h2>${wait["kind"] === "approval" ? "This step needs your decision." : "Inspect the current result."}</h2>${action}</section><div class="columns"><section><h2>Changed files &amp; diff</h2>${typeof proposal["diff"] === "string" ? diffView(proposal["diff"]) : '<p class="muted">No executed proposal diff is recorded yet.</p>'}</section><section><h2>Repository checks</h2>${typeof checks["testsPassed"] === "boolean" ? `<p>${badge(checks["testsPassed"] ? "Tests passed" : "Tests failed")}</p><p>Vetting: ${checks["vettingCleared"] === true ? "cleared" : "not cleared"}</p><pre>${pretty(checks)}</pre>` : '<p class="muted">No repository check result is recorded yet.</p>'}</section></div><section><h2>Jobs &amp; activity</h2>${jobRows.length ? `<ul class="timeline">${jobRows.map(job => `<li><strong>${esc(job["label"])}</strong> ${badge(job["state"])}<p class="muted">${esc(job["reason"] ?? "No hold or failure reason recorded.")}</p><small class="mono">${esc(job["id"])}</small></li>`).join("")}</ul>` : '<p class="muted">No jobs recorded.</p>'}${activities.length ? `<h3>Observed activity</h3><ul class="timeline">${activities.map(activity => `<li>${esc(activity["label"])} ${badge(activity["state"])}</li>`).join("")}</ul>` : ""}</section><section><h2>Decisions &amp; delivery</h2><p>Latest recorded decision: <strong>${esc(repository["latestDecision"] ?? "None")}</strong></p><ul class="timeline">${(Array.isArray(state["consumedSignals"]) ? state["consumedSignals"] : []).map(signal => `<li class="mono">${esc(signal)}</li>`).join("")}</ul><details><summary>Delivery evidence</summary><pre>${pretty(repository)}</pre></details></section><details><summary>Project conversation &amp; history</summary><pre>${pretty(history)}</pre></details>`);
+  const requester = row(detail["requester"]), decisions = rows(detail["decisionHistory"]);
+  const attribution = `<p class="muted">Requested by ${esc(requester["kind"] ?? "unavailable identity")}${requester["id"] ? ` · ${esc(requester["id"])}` : ""}</p>`;
+  const decisionHistory = decisions.length ? `<ul class="timeline">${decisions.map(decision => `<li><strong>${esc(decision["event"])}</strong><p>${esc(decision["humanPrincipalId"] ?? "")}${decision["agentPrincipalId"] ? ` · on behalf of ${esc(decision["agentPrincipalId"])}` : ""}${typeof decision["approved"] === "boolean" ? ` · ${decision["approved"] ? "approved" : "declined"}` : ""}</p>${decision["reason"] ? `<p class="muted">${esc(decision["reason"])}</p>` : ""}</li>`).join("")}</ul>` : "";
+  return page(str(selected["name"]), `<a class="back" href="/console">← All projects</a><p class="eyebrow">${esc(selected["lifecycle"])} project</p><div class="heading"><div><h1>${esc(selected["name"])}</h1><p class="muted mono">${esc(projectId)}</p>${attribution}</div><a class="button secondary" href="${esc(link(projectId))}">Refresh state</a></div><div class="metrics"><section><span>Current stage</span><strong class="small">${esc(state["stage"] ?? "Not started")}</strong>${badge(state["status"] ?? selected["status"])}</section><section><span>Workspace</span><strong class="small">${esc(workspace["status"] ?? "unknown")}</strong></section><section><span>Source repository</span><strong class="small">${esc(sourceMerge["status"] ?? "unknown")}</strong><span>Last recorded landing outcome</span></section></div><section class="next"><p class="eyebrow">Next action</p><h2>${wait["kind"] === "approval" ? "This step needs your decision." : "Inspect the current result."}</h2>${action}</section><div class="columns"><section><h2>Changed files &amp; diff</h2>${typeof proposal["diff"] === "string" ? diffView(proposal["diff"]) : '<p class="muted">No executed proposal diff is recorded yet.</p>'}</section><section><h2>Repository checks</h2>${typeof checks["testsPassed"] === "boolean" ? `<p>${badge(checks["testsPassed"] ? "Tests passed" : "Tests failed")}</p><p>Vetting: ${checks["vettingCleared"] === true ? "cleared" : "not cleared"}</p><pre>${pretty(checks)}</pre>` : '<p class="muted">No repository check result is recorded yet.</p>'}</section></div><section><h2>Jobs &amp; activity</h2>${jobRows.length ? `<ul class="timeline">${jobRows.map(job => jobView(job, projectId, csrf, permissions.cancel === true)).join("")}</ul>` : '<p class="muted">No jobs recorded.</p>'}${activities.length ? `<h3>Observed activity</h3><ul class="timeline">${activities.map(activity => `<li>${esc(activity["label"])} ${badge(activity["state"])}</li>`).join("")}</ul>` : ""}</section><section><h2>Decisions &amp; delivery</h2>${decisionHistory}<p>Latest recorded decision: <strong>${esc(repository["latestDecision"] ?? "None")}</strong></p><ul class="timeline">${(Array.isArray(state["consumedSignals"]) ? state["consumedSignals"] : []).map(signal => `<li class="mono">${esc(signal)}</li>`).join("")}</ul><details><summary>Delivery evidence</summary><pre>${pretty(repository)}</pre></details></section><details><summary>Project conversation &amp; history</summary><pre>${pretty(history)}</pre></details>`);
 }
 
 export const CONSOLE_STYLE = `
