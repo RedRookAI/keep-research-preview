@@ -1,5 +1,11 @@
 # Validation evidence
 
+## October 21 portfolio correction and demonstration
+
+The [example export correction](genuine-codex-walkthrough.md#example-export-correction) adds one final newline to the published patch. A fresh exact-upstream reproduction observed the expected one-fail/two-pass baseline, ordinary `git apply` succeeded on the distributed repaired file, and the unchanged checker then passed all three cases. Historical execution receipts and old release bytes are preserved.
+
+The [new account-free recording](portfolio-demo.md) captures the actual installed console and real workspace/check/review behavior using two scripted local responses and automated simulated owner decisions. It is separate from the genuine Codex case below. The recording notes retain an observer-assertion correction and same-job continuation; no model generation was replayed. No native rebuild or full-suite rerun was performed for this presentation-only pass.
+
 ## Combined preview0.0.19
 
 The [combined archive](combined-preview.md) passed unprivileged extraction and direct startup, both disclosed demos, instance/console lifecycle and native OpenClaw plugin installation/configuration/load. It invoked neither npm nor a live account. [Exact artifacts, supported profile and evidence](qualification/combined-preview-2026-10-20.json). The 525 production modules match the retained genuine workflow except reviewed comments/diagnostic wording; source18's 88 focused checks and unchanged source12 native bytes are explicitly reused. This is scoped integrated-preview qualification, not a new full-suite count or production certification.

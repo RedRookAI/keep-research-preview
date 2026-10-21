@@ -1,0 +1,102 @@
+{
+  "schema": "keep.example-export-correction/v1",
+  "checkedDate": "2026-10-21",
+  "correction": "Append one final LF byte to proposal.patch; no edit/test semantics changed.",
+  "historicalExecutionRecord": "result.json",
+  "historicalRecordRule": "result.json and independent-check.tap retain their original October20 identities. Its files.proposal.patch hash identifies the defective original export, not the corrected current file.",
+  "originalExport": {
+    "bytes": 486,
+    "sha256": "5efa61f25619af377c6f1696a308fc237f4d4ff4ad97bbc5a6c9b4f87e481c61",
+    "finalNewline": false
+  },
+  "currentFiles": {
+    "proposal.patch": {
+      "bytes": 487,
+      "sha256": "7765803bb65d27cb5a54d19c08bc5fc407a23cfa4bb70db23e5f33b8a751d77c"
+    },
+    "check.mjs": {
+      "bytes": 935,
+      "sha256": "f56ef0d4d0aeaaf8d9947a00f0f17f36193fece65714c779fdcd2eb282f54a99"
+    },
+    "UPSTREAM-LICENSE": {
+      "bytes": 1109,
+      "sha256": "48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0"
+    },
+    "independent-check.tap": {
+      "bytes": 704,
+      "sha256": "d8ab74391ef69c4f1a078f06643a1b50aebaf1f5ca70bc1466e27cc7295c2735"
+    },
+    "result.json": {
+      "bytes": 2848,
+      "sha256": "e746b9fdaa8495b2e374bc3c80e6907f3a2af0afc6a4a2f52520ed566ad25067"
+    }
+  },
+  "verification": {
+    "upstreamCommit": "21c557c7f14a112eebe196abd98d085f5fcfcf5e",
+    "originalIndexSha256": "48b8be4119e6f09b8942c490397fc047da012e0cc223d75a76363856af68fce4",
+    "node": "v22.23.3",
+    "originalBaseline": {
+      "pass": 2,
+      "fail": 1,
+      "failedCase": "Unicode hyphen"
+    },
+    "gitApplyExit": 0,
+    "patchUsedVerbatim": true,
+    "normalizationDuringVerification": false,
+    "unchangedCheckerSha256": "f56ef0d4d0aeaaf8d9947a00f0f17f36193fece65714c779fdcd2eb282f54a99",
+    "patched": {
+      "pass": 3,
+      "fail": 0
+    },
+    "newModelRequests": 0
+  },
+  "historicalDownloads": [
+    {
+      "filename": "keep-combined-0.0.19-preview.1-linux-x64.tar.gz",
+      "archiveSha256": "42625af9b7be8a493f9309f6822e137f2365c4ae3accfe869750e4be535c53c7",
+      "exampleFiles": [
+        {
+          "member": "keep-0.0.19-preview.1/docs/examples/codex-unicode/proposal.patch",
+          "bytes": 486,
+          "sha256": "5efa61f25619af377c6f1696a308fc237f4d4ff4ad97bbc5a6c9b4f87e481c61",
+          "finalNewline": false
+        }
+      ]
+    },
+    {
+      "filename": "keep-0.0.19-preview.1.tgz",
+      "archiveSha256": "bd29dde78ae59cdbc194507dead3d16eec3633dc203a355d303294fa2f16e972",
+      "exampleFiles": [
+        {
+          "member": "package/docs/examples/codex-unicode/proposal.patch",
+          "bytes": 486,
+          "sha256": "5efa61f25619af377c6f1696a308fc237f4d4ff4ad97bbc5a6c9b4f87e481c61",
+          "finalNewline": false
+        }
+      ]
+    },
+    {
+      "filename": "redrookai-openclaw-keep-0.0.19-preview.1.tgz",
+      "archiveSha256": "fe0fc6ac9ac3feef99173c12c3321f4415745510cb6c5d9352d07206a6ce9e0d",
+      "exampleFiles": []
+    },
+    {
+      "filename": "keep-source-preview-2026-10-20.1.tar.gz",
+      "archiveSha256": "1d61b632be931fdfcb2de2981b52edca89970fcbc90d612bf7c1b103b7fa0de4",
+      "exampleFiles": [
+        {
+          "member": "keep-source-0.0.19-preview.1/docs/examples/codex-unicode/proposal.patch",
+          "bytes": 486,
+          "sha256": "5efa61f25619af377c6f1696a308fc237f4d4ff4ad97bbc5a6c9b4f87e481c61",
+          "finalNewline": false
+        }
+      ]
+    },
+    {
+      "filename": "native2-distribution-support-20261020.tar.gz",
+      "archiveSha256": "c319b4804408ec2ed9e90e9a6966f227a0905342ddebbf64538e1d68d079cd60",
+      "exampleFiles": []
+    }
+  ],
+  "distribution": "The October20 archives stay immutable. The portfolio checkpoint supplies current source and a separately identified corrected example archive; it is not a rebuilt Keep runtime."
+}

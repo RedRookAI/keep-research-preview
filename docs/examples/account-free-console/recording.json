@@ -1,0 +1,50 @@
+{
+  "schema": "keep.account-free-console-recording/v1",
+  "recordedDate": "2026-10-21",
+  "status": "PASS_OBSERVED_WORKFLOW_WITH_RETAINED_RECORDER_CORRECTION",
+  "runtimeVersion": "0.0.19-preview.1",
+  "node": "v22.23.3",
+  "modelResponses": "two scripted loopback responses, not a live model",
+  "operatorDecisions": "automated fixture simulates owner approval and exact-proposal veto through actual console forms",
+  "externalModelRequests": 0,
+  "scriptedResponsesInOriginalSegment": 2,
+  "continuationGenerationRequests": 0,
+  "passedTests": [
+    "limit",
+    "goal: requested outcome"
+  ],
+  "sourceBeforeSha256": "734eb874e43d71a5cbc20b69d134f2d2a96c784ebc7157cdbf4efe4c52902b05",
+  "sourceAfterSha256": "734eb874e43d71a5cbc20b69d134f2d2a96c784ebc7157cdbf4efe4c52902b05",
+  "workspaceSha256": "2ea8b3f67c2c99dc2347031ca040cae561dc04db4c3eaa1f488ac9e93efa6949",
+  "sourceGitDiffEmpty": true,
+  "proposalDigest": "6bfb53666f517a136db6e516a62fb4b033531d7e57f524e69056ef572b1e3176",
+  "recordedEvent": "local_merge.refused",
+  "vetoDecision": "veto",
+  "vetoReason": "operator vetoed the exact reviewed proposal",
+  "restartSameProposal": true,
+  "restartNoReplay": true,
+  "recorderCorrection": "The first capture ended after actual veto: the observer incorrectly expected repository.latestDecision=veto. The canonical journal event is local_merge.refused with decision=veto and the exact-proposal veto reason. The existing job/source/proposal were retained; the recording continued from that state without another solve or model request. The public video joins the two actual recording segments and labels the continuation.",
+  "scope": "Account-free same-developer scripted fixture, not genuine Codex generation, outside review or production containment.",
+  "captureMethod": "Actual browser video; two retained segments joined with disclosure captions below the viewport. No product result reconstructed.",
+  "runtimeRelease": "https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-20.1",
+  "media": {
+    "mp4": {
+      "filename": "keep-account-free-demo.mp4",
+      "bytes": 737957,
+      "sha256": "4d0d380cebcf543a0c39bfbab130cd3b8910a51bba17cacf14af010ad56c2681",
+      "durationSeconds": 52.6,
+      "width": 1280,
+      "height": 1010
+    },
+    "gif": {
+      "filename": "account-free-demo.gif",
+      "bytes": 1967624,
+      "sha256": "8fd0dbeffdeef4eceb3d757b9c646a12cf95044993a8d25382998a525b0dd2d7"
+    },
+    "poster": {
+      "filename": "account-free-demo-poster.png",
+      "bytes": 38358,
+      "sha256": "7b4c20177683c6a006ec8fdcd7991960cffebf22618e783aa7c7bed9e589deb9"
+    }
+  }
+}

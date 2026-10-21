@@ -4,7 +4,7 @@ Keep completed a developer-administered follow-up on [escape-string-regexp issue
 
 ![Actual retained proposal and checks](images/codex-proposal-checks.png)
 
-This is a capture of the actual retained console panels after the exact proposal was vetoed. The [patch](examples/codex-unicode/proposal.patch), [unchanged independent checker](examples/codex-unicode/check.mjs), [test output](examples/codex-unicode/independent-check.tap) and [curated result](examples/codex-unicode/result.json) are available without an account or installation. Upstream code is MIT-licensed; its [license](examples/codex-unicode/UPSTREAM-LICENSE) is retained.
+This is a capture of the actual retained console panels after the exact proposal was vetoed. The [patch](examples/codex-unicode/proposal.patch), [unchanged independent checker](examples/codex-unicode/check.mjs), [test output](examples/codex-unicode/independent-check.tap) and [historical execution record](examples/codex-unicode/result.json) are available without an account or installation. Upstream code is MIT-licensed; its [license](examples/codex-unicode/UPSTREAM-LICENSE) is retained.
 
 ## What ran
 
@@ -13,6 +13,18 @@ The measured core/plugin packages were private development 0.0.17-preview.1 byte
 The predeclared checker reproduced one failing and two passing behaviors on the original source. On the proposed workspace all three passed under the required namespace jail: Unicode hyphen construction/literal matching, preserved escaping of other metacharacters, and empty/non-string input behavior. A fresh native OpenClaw process retrieved the same job. The console then recorded a veto of the exact proposal; the original source stayed unchanged.
 
 OpenClaw's tool-selection model was scripted locally so only Codex performed live generation. Owner approval/veto were administered by the developer. This was a follow-up, not a first-try success: earlier transport failures and an unapplyable generated plan were retained. The work exposed and repaired real browser-origin compatibility, literal replacement and early applicability-checking defects. The historical issue may overlap model training data; this is an integration/usefulness case, not a success-rate benchmark. Provider-internal retries and allocated subscription dollar cost are unknown.
+
+## Example export correction
+
+On October 21, 2026, following Haymitch's review of `9f7645f`, the published `proposal.patch` was repaired by adding its missing final newline. The original 486-byte export caused ordinary `git apply` to report a corrupt patch. The corrected 487-byte file has SHA256 `7765803bb65d27cb5a54d19c08bc5fc407a23cfa4bb70db23e5f33b8a751d77c`.
+
+A fresh checkout of the exact upstream commit produced one Unicode-hyphen failure and two passes. Applying the actual repaired repository file directly with `git apply`, without normalization, then running the unchanged `check.mjs` produced three passes and zero failures. This is a new patch-reproduction check, not another Codex generation or an independent audit.
+
+[Current export hashes and observed correction](examples/codex-unicode/export-correction-2026-10-21.json) · [Corrected standalone example download](https://github.com/RedRookAI/keep-research-preview/releases/download/keep-portfolio-2026-10-21.1/keep-codex-unicode-example-2026-10-21.tar.gz).
+
+The October 20 combined archive, core npm archive and source archive all contain the defective example file; their original bytes, checksums, tags and qualification receipts remain unchanged. The plugin and native source-support archives do not contain this file. Use the current source example or the corrected standalone download for reproduction. Keep's runtime remains 0.0.19-preview.1; no runtime package was rebuilt by this portfolio pass.
+
+The original `result.json` and `independent-check.tap` retain their historical identities. In particular, `result.json`'s patch hash describes the old export; the correction record supplies the current file identity. The earlier screenshot remains a historical capture of the real Codex case, not footage from the new account-free recording.
 
 ## Verify the recorded patch locally
 

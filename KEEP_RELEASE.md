@@ -4,6 +4,10 @@ The combined Linux x64 archive includes Keep, bundled TypeScript, the restricted
 OpenClaw plugin and the measured Codex generation.2 engine with source support.
 [Run from the archive](docs/combined-preview.md) · [Real result](docs/genuine-codex-walkthrough.md) · [Matching release and qualification](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-20.1).
 
+## October 21 portfolio example correction
+
+The runtime/download version remains **0.0.19-preview.1**. Current source repairs the Unicode example patch's missing final newline and adds a fresh, explicitly scripted [console recording](docs/portfolio-demo.md). The October 20 combined, core and source archives retain the defective example; the plugin and native source-support archives do not contain it. Their hashes and historical qualification below remain unchanged. Use the [current corrected example](docs/genuine-codex-walkthrough.md#example-export-correction) or the separately identified example download in the [portfolio checkpoint](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-portfolio-2026-10-21.1). This is an example/docs correction, not a newly built or qualified Keep runtime.
+
 Qualified combined preview source: `74e12f4235fb30b51179396b94a5dc7c14d2541d`.
 
 [Qualification record](docs/qualification/combined-preview-2026-10-20.json) · [Download](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-20.1).

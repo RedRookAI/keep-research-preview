@@ -5,6 +5,8 @@ Use the [release record](../KEEP_RELEASE.md) for its exact download identity,
 checksum and observed qualification. A source checkout is a separate artifact.
 The earlier qualified 0.0.12 download keeps its original identity.
 
+The October 20 combined/core/source archives contain a malformed exported Unicode example patch. The [October 21 example correction](genuine-codex-walkthrough.md#example-export-correction) provides the fixed file and a standalone example download. Those old runtime/archive bytes and receipts remain unchanged.
+
 The new archive includes Keep, its TypeScript dependency, the restricted OpenClaw
 plugin and the measured Codex generation.2 engine with source/attribution support.
 Run Keep directly from the extracted directory; npm is not needed for this path.

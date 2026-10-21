@@ -1,5 +1,7 @@
 # Account-free repository walkthrough
 
+[Watch the freshly recorded console workflow without installing Keep](portfolio-demo.md). Its model responses are scripted locally and owner decisions are simulated through the actual controls. The runnable walkthrough below remains available for deeper inspection.
+
 For the genuine account-backed result, inspect the [recorded Codex/OpenClaw case](genuine-codex-walkthrough.md). The walkthrough below is the separately disclosed account-free fixture.
 
 Run `keep demo project` after installing the matching preview. It runs the actual installed solve/project/merge commands against a temporary sample repository. A controlled loopback endpoint supplies two authored responses: a retry-limit edit and a goal-test body. The walkthrough simulates approval and veto; it does not ask a live model or charge a provider.

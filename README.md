@@ -1,71 +1,54 @@
 # Keep
 
-**Repository automation with explicit control.**
+**AI-generated repository changes you can inspect before they reach your source.**
 
-Keep turns a repository goal into a tested, reviewable change proposal. It prepares edits in a separate working copy and records the tests, decisions and recovery state behind the result. The project explores how to give AI agents useful responsibility while keeping consequential actions accountable.
+Coding agents can produce a plausible patch while leaving the owner to reconstruct what ran, what changed and whether it is safe to retry. Keep turns a repository goal into a checked proposal in a separate working copy, with retained execution evidence and decisions tied to the exact result.
 
-## Inspect a real result
+## See the working preview
 
-A genuine Codex follow-up produced a working Unicode-regex fix through Keep and the native OpenClaw plugin. The unchanged independent checker passed all three cases, fresh-process status returned the same job, and the exact proposal was vetoed while the original source stayed unchanged.
+[![Watch Keep's account-free console demonstration](docs/images/account-free-demo.gif)](https://github.com/RedRookAI/keep-research-preview/releases/download/keep-portfolio-2026-10-21.1/keep-account-free-demo.mp4)
 
-[Inspect the patch, actual console panels and execution record](docs/genuine-codex-walkthrough.md). The record distinguishes live Codex generation from scripted OpenClaw tool selection and developer-administered decisions.
+**Recorded account-free demonstration:** actual Keep console, workspace edits, executable checks, proposed diff, veto and recovery. The two model responses are **scripted locally**; an automated fixture **simulates the owner's approval and veto through the real controls**. No external model request is made. [Watch the MP4](https://github.com/RedRookAI/keep-research-preview/releases/download/keep-portfolio-2026-10-21.1/keep-account-free-demo.mp4) · [Text description, recording details and evidence](docs/portfolio-demo.md).
 
-## Try the preview
+**Separate genuine result:** Codex produced a working Unicode-regex fix through Keep and the native OpenClaw plugin. The unchanged predefined checker passed all three cases; fresh-process status recovered the job, and exact veto preserved the original source. Codex generation was real; OpenClaw tool selection was scripted and decisions were developer-administered. [Inspect the patch, historical console capture and execution record](docs/genuine-codex-walkthrough.md). This is one integration case, not a model success-rate benchmark.
 
-Extract the [combined Linux x64 preview](docs/combined-preview.md), select its supported Node runtime, then run:
+## Run it today
+
+The **0.0.19-preview.1** combined Linux x64 download contains Keep, bundled TypeScript, the measured generation-only Codex engine and the restricted OpenClaw plugin. Extract the archive and select its supported Node 22 runtime; no npm installer or compiler is needed for this route.
 
 ```sh
 ./bin/keep demo project
 ```
 
-The walkthrough creates a sample repository, proposes a change, runs its tests and prints the actual diff. It also checks approval before dispatch, restart without replay, rejection of a wrong token, and source preservation after veto. Open the printed evidence directory to inspect the files and results.
+This runnable account-free walkthrough creates its own sample repository, makes a real workspace edit, executes its checks and prints the actual diff. Its disclosed scripted responses and simulated decisions also exercise restart, wrong-token refusal and veto. [Install and run](docs/quickstart.md) · [Walkthrough and artifacts](docs/portfolio-walkthrough.md).
 
-```text
-PASS  Approval gate held: 0 model calls before sample approval
-PASS  Materialized change: retry limit 0 → 7
-PASS  Tests: limit; goal: requested outcome
-PASS  Restart retained the proposal without replay
-PASS  Wrong token refused; exact proposal vetoed; original source unchanged
-```
+For your own authorized public repository, use your existing Codex login and the bundled engine, configure the repository/check command, then operate an owned Keep instance. OpenClaw's `keep_submit` and `keep_status` tools use that same runtime; decisions stay in Keep's console. [Codex setup](docs/codex-project.md) · [Instance and console](docs/local-instance.md) · [OpenClaw setup](integrations/openclaw/README.md).
 
-The demo uses **two scripted local responses and simulated approval/veto decisions**, with no model account or paid request. The workspace edits, tests and retained artifacts are real. Use Node.js 22.23.3 or later on Node 22 and Git; the direct archive route needs no npm installer, Rust or C compiler. See the dated [dependency guidance](docs/dependency-status.md). [Walkthrough and evidence](docs/portfolio-walkthrough.md).
+The observed profile is Linux x64 with the Ubuntu 24.04 library baseline, Node 22.23.3 for Keep and OpenClaw 2026.10.5 on Node 24.22.0. Required-jail work additionally needs the measured Bubblewrap helper and working namespaces. [Runtime/dependency conditions](docs/dependency-status.md) · [Exact release identities](KEEP_RELEASE.md). The older archives retain an example-file export defect; the [corrected example download](docs/genuine-codex-walkthrough.md#example-export-correction) repairs that file without changing the runtime or rewriting historical receipts.
 
-## How it works
+## Engineering mechanisms
 
-```mermaid
-flowchart LR
-    Goal[Repository goal] --> Approval[Approval decision]
-    Approval --> Workspace[Separate working copy]
-    Workspace --> Checks[Repository and goal checks]
-    Checks --> Proposal[Diff and review evidence]
-    Proposal --> Decision[Proposal-bound decision]
-```
-
-- **Separate proposal from source.** Inspect the proposed files and tests before an authorized landing operation.
-- **Bind decisions to the result.** Review controls identify the exact proposal; recording a decision does not grant missing execution authority.
-- **Retain interrupted work.** Durable project records distinguish pending, completed and uncertain outcomes instead of assuming a retry is safe.
-- **Make limits visible.** The demo's best-effort isolation and the opt-in required project jail have different prerequisites and evidence.
-
-[Architecture and trust boundaries](docs/architecture.md) · [Security model](SECURITY.md) · [Validation evidence](docs/evidence.md) · [Dependency status](docs/dependency-status.md)
-
-## Current status
-
-| Component | Status |
+| Mechanism | Implemented behavior |
 |---|---|
-| Download | **0.0.19-preview.1**, combined Linux x64 preview with the generation-only engine and OpenClaw plugin. [Release record](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-20.1) · [Run from the archive](docs/combined-preview.md). |
-| Development source | **0.0.19-preview.1**. Includes literal patch replacement, applicability checks before goal-test generation, browser-compatible console decisions and explicit native-plugin exclusion. A genuine installed Codex/OpenClaw follow-up now passes at its documented scope. The combined archive adds a direct startup command and bundled runtime dependencies. [Status and limits](docs/codex-project.md). |
-| OpenClaw | The **0.0.19-preview.1** plugin is included in the combined archive. Native submission/status, separate human approval, tested proposal and fresh-process recovery were observed in the controlled workflow and genuine Codex follow-up. The final archive separately passed plugin install/configuration/load. [Client setup and limits](integrations/openclaw/README.md). |
+| Separate workspaces | Materialize a pinned repository revision and prepare edits outside the original source tree. |
+| Validated edits | Check structured edit plans and applicability before applying changes; literal replacements preserve intended bytes. |
+| Executable checks | Run the repository's checks and the goal check, retaining results beside the proposed diff. Passing generated checks alone does not establish correctness. |
+| Durable recovery | Retain jobs, proposals, request identities and uncertain effects across restart; do not assume a lost response makes replay safe. |
+| Proposal-bound decisions | Bind approval/veto to the exact proposal digest. A recorded decision does not grant missing landing authority. |
+| Restricted OpenClaw integration | Give the client separate expiring/revocable submission/status authority, with a durable journal; its tools cannot approve or merge. |
 
-Keep is a research preview. The supplied demonstrations establish specific workflow and recovery behavior, with developer-administered evidence. They do not establish general model quality, production enterprise isolation or independently audited security. [Supported scope and roadmap](ROADMAP.md).
+## Design choices and tradeoffs
 
-## Documentation
+Keep separates generation from execution and review. That makes an actual patch and its checks easier to inspect than a model's claim of success, at the cost of configuration and explicit state to recover. Durable uncertainty can require reconciliation instead of an automatic retry; that is deliberate when an external effect may already have happened.
 
-- [Install and run](docs/quickstart.md) and [operate a development instance](docs/local-instance.md)
-- [Configure repository work](docs/installed-solve.md) and [experimental Codex access](docs/codex-project.md)
-- [OpenClaw plugin](integrations/openclaw/README.md) and [restricted client admission](docs/openclaw-client.md)
-- [Recovery experiment](docs/research-preview.md) and [backup compatibility](docs/backup.md)
-- [Memory](docs/semantic-memory.md), [skill registry](docs/skill-registry.md) and [usage accounting](docs/monetary-accounting.md)
-- [Build and contribute](WORKFLOW.md)
-- [Release identities](KEEP_RELEASE.md), [license and attribution](docs/licensing.md)
+The OpenClaw plugin is a thin client of Keep's existing runtime, rather than a second solver. Native plugin code and the host remain trusted. The default demo's best-effort process boundary and the opt-in required namespace jail have different guarantees; neither is production enterprise certification.
 
-Released under the [MIT license](LICENSE).
+Keep is a **research preview**. The shipped artifact has scoped installed checks and the genuine case above; it does not establish general model quality, live enterprise custody/isolation, platform parity or independently audited security. [Architecture](docs/architecture.md) · [Security boundaries](SECURITY.md) · [Observed evidence](docs/evidence.md) · [Remaining scope](ROADMAP.md).
+
+## People, assistance and further inspection
+
+Keep is a Red Rook AI portfolio project. Product direction and acceptance requirements are owner-led. Implementation, debugging, checks and documentation have been developed with substantial AI assistance, including Codex. The evidence distinguishes generated work, scripted fixtures and developer-administered decisions; it does not attribute every line to unaided human authorship or claim an independent audit.
+
+[Build and contribute](WORKFLOW.md) · [Recovery and backup](docs/backup.md) · [Memory](docs/semantic-memory.md) · [Skill registry](docs/skill-registry.md) · [Usage accounting](docs/monetary-accounting.md) · [License and attribution](docs/licensing.md).
+
+Keep's original code is released under the [MIT license](LICENSE); third-party components retain their own terms.
