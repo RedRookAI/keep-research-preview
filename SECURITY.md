@@ -5,12 +5,17 @@ production use. The repository walkthrough uses a synthetic repository and
 scripted local responses; the companion recovery experiment uses a local test
 outbox. Neither demonstration requires a live model or external account.
 
-The latest qualified download is **0.0.12-preview.1**. Development source
-**0.0.16-preview.1** adds an experimental Codex account path whose installed
-workflow remains unqualified. The OpenClaw candidate passed its controlled native
-submission/status workflow with scripted local providers; that does not qualify
-genuine Codex operation or the final combined download. See [architecture](docs/architecture.md), [current status](ROADMAP.md)
-and [validation evidence](docs/evidence.md) for the supported boundaries.
+The current combined download is **0.0.19-preview.1**, including the generation-only
+Codex engine and restricted OpenClaw plugin. A genuine installed repository case
+passed with real Codex generation, native OpenClaw dispatch and actual console
+approval/veto; OpenClaw tool selection was scripted and decisions developer-administered.
+The exact released archive separately passed unprivileged installation/startup,
+demos, instance/console lifecycle and plugin setup, with matching component evidence
+explicitly reused. This establishes the declared preview profile, not general model
+quality, complete OpenClaw containment or production enterprise readiness.
+See [architecture](docs/architecture.md), [current status](ROADMAP.md),
+[exact release qualification](docs/qualification/combined-preview-2026-10-20.json)
+and [validation evidence](docs/evidence.md).
 
 ## What the mechanisms establish
 

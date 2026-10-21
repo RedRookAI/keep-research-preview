@@ -2,7 +2,7 @@
 
 Source **0.0.19-preview.1** provides a project generation role using an existing signed-in Codex CLI. A [genuine installed follow-up](genuine-codex-walkthrough.md) now passes through Keep, native OpenClaw tools and the browser console. Earlier failed attempts and their uncertainty remain recorded. The [combined preview](combined-preview.md) packages this route; the historical **0.0.12-preview.1** download does not support this selector.
 
-Keep's intended division of responsibility is structured generation through Codex, with edits, tests, approval and proposals controlled by Keep. A source-derived generation-only CLI candidate has passed a credential-free tool-catalog check; stock CLI flags do not establish that boundary. The genuine account workflow is observed. The combined preview supplies the measured native engine; see the supported scope below.
+Keep's intended division of responsibility is structured generation through Codex, with edits, tests, approval and proposals controlled by Keep. The bundled source-derived generation-only CLI has passed a credential-free tool-catalog check; stock CLI flags do not establish that boundary. The genuine account workflow is observed. The combined preview supplies the measured native engine; see the supported scope below.
 
 Use an existing ChatGPT Codex login on the same machine. Keep checks `codex --version` and `codex login status`; it does not copy authentication files or change global configuration. Select a public repository you own or are authorized to process. Configure the repository/test variables in [repository settings](installed-solve.md#repository-settings), then explicitly set:
 
@@ -10,7 +10,7 @@ Use an existing ChatGPT Codex login on the same machine. Keep checks `codex --ve
 export KEEP_PROVIDER=local
 export KEEP_PROJECT_MODEL=codex
 export KEEP_CODEX_PROCESSING=owner-public-repository
-export KEEP_CODEX_EXECUTABLE=/absolute/path/to/installed/codex
+export KEEP_CODEX_EXECUTABLE=/absolute/path/to/keep-0.0.19-preview.1/engines/codex-generation.2/bin/codex
 export KEEP_CODEX_MODEL=your-supported-codex-model
 export KEEP_CODEX_MAX_INVOCATIONS=2
 export KEEP_CODEX_MAX_PROMPT_BYTES=65536
@@ -30,7 +30,7 @@ The matching 0.163.0 [tool-assembly source](https://github.com/openai/codex/blob
 
 ## Generation-only native engine
 
-The development candidate is derived from upstream Codex 0.163.0 with a narrow startup-policy change: an empty allowed-tools ceiling is applied before session/router construction and retained in thread initialization. The bundled variant is `0.163.0-keep-generation.2`, updating Rustls to 0.23.46 while preserving the generation policy. It compiled successfully under the owned resource limits. Its credential-free native consumer used the v4 common settings and observed empty outgoing tool catalogs, refusal of an unadvertised tool request and completed structured generation. The earlier `.1` executable remains preserved at its original identity. This is stronger evidence than requesting read-only mode or detecting a tool event after execution, but applies to that measured candidate and fixture.
+The bundled engine is derived from upstream Codex 0.163.0 with a narrow startup-policy change: an empty allowed-tools ceiling is applied before session/router construction and retained in thread initialization. The bundled variant is `0.163.0-keep-generation.2`, updating Rustls to 0.23.46 while preserving the generation policy. It compiled successfully under the owned resource limits. Its credential-free native consumer used the v4 common settings and observed empty outgoing tool catalogs, refusal of an unadvertised tool request and completed structured generation. The earlier `.1` executable remains preserved at its original identity. This is stronger evidence than requesting read-only mode or detecting a tool event after execution, but applies to that measured engine and profile.
 
 The measured executable SHA-256 is `fdd9a1a3e86fc2213e4c0bd9c9b278080f38d756a5256e3217092a30e48d98c1`. The combined archive includes it with source patches, attribution and the declared MPL source packages. Its exact installed qualification belongs to the matching release record. The linked genuine follow-up is observed at its declared scope. Do not substitute an arbitrary stock executable and assume equivalent enforcement. [Current dependency status](dependency-status.md).
 
@@ -46,11 +46,11 @@ Select the actual native executable with `KEEP_CODEX_EXECUTABLE` when preparing 
 
 Controlled source checks cover explicit generation approval and safe error diagnostics. They do not establish success of the installed live-account route or qualify a downloadable release. The first native failure's cause remains unresolved; diagnostic categories are hints, not proof of zero remote work or authority to retry.
 
-Retain the uncertain invocation. Do not automatically retry or use a new data directory to bypass the retained claim. Use the [qualified download](quickstart.md) for established preview capabilities. See [validation evidence](evidence.md), [architecture](architecture.md) and [release priorities](../ROADMAP.md) for the current scope.
+Retain the uncertain invocation. Do not automatically retry or use a new data directory to bypass the retained claim. Use the [combined download](combined-preview.md) for the bundled measured engine and established preview capabilities. See [validation evidence](evidence.md), [architecture](architecture.md) and [release priorities](../ROADMAP.md) for the current scope.
 
 ### Explicit owner follow-up after uncertainty
 
-The development source adds a local owner command for bounded follow-up work. It does not reconcile remote work or qualify the native generation route. An uncertain attempt remains uncertain and consumes its original invocation allowance.
+The current preview includes a local owner command for bounded follow-up work. It does not reconcile remote work or qualify the native generation route. An uncertain attempt remains uncertain and consumes its original invocation allowance.
 
 With `KEEP_DATA_DIR` pointing at the existing instance, run:
 

@@ -2,11 +2,11 @@
 
 ## Combined preview0.0.19
 
-The [combined archive](combined-preview.md) passed unprivileged extraction and direct startup, both disclosed demos, instance/console lifecycle and native OpenClaw plugin installation/configuration/load. It invoked neither npm nor a live account. [Exact artifacts, supported profile and evidence](qualification/combined-preview-2026-10-20.json). The525production modules match the retained genuine workflow except reviewed comments/diagnostic wording; source18's88focused checks and unchanged source12native bytes are explicitly reused. This is scoped integrated-preview qualification, not a new full-suite count or production certification.
+The [combined archive](combined-preview.md) passed unprivileged extraction and direct startup, both disclosed demos, instance/console lifecycle and native OpenClaw plugin installation/configuration/load. It invoked neither npm nor a live account. [Exact artifacts, supported profile and evidence](qualification/combined-preview-2026-10-20.json). The 525 production modules match the retained genuine workflow except reviewed comments/diagnostic wording; source18's 88 focused checks and unchanged source12 native bytes are explicitly reused. This is scoped integrated-preview qualification, not a new full-suite count or production certification.
 
 ## Current genuine result
 
-The [genuine Codex/OpenClaw follow-up](genuine-codex-walkthrough.md) now has an inspectable proposed patch, unchanged independent checker (three passing cases), actual console approval/veto, fresh-process status and source preservation. It is developer-administered evidence on a historical case, with scripted OpenClaw tool selection and real Codex generation. Final exact-archive qualification remains separate.
+The [genuine Codex/OpenClaw follow-up](genuine-codex-walkthrough.md) now has an inspectable proposed patch, unchanged independent checker (three passing cases), actual console approval/veto, fresh-process status and source preservation. It is developer-administered evidence on a historical case, with scripted OpenClaw tool selection and real Codex generation. The completed [exact-archive qualification](qualification/combined-preview-2026-10-20.json) is a separate record with matching runtime comparison; it did not make another live account request.
 
 Source **0.0.18-preview.1** passed emitting TypeScript compilation and **88 focused checks across six affected test files**, with zero failures or skips, on Node 22.23.3. These check the exported transport/profile, browser decisions, patch semantics and planner integration; they do not qualify a combined downloadable archive.
 
@@ -14,8 +14,9 @@ Results apply to the named source revision or archive, not automatically to the 
 
 | Profile | Result and scope |
 |---|---|
-| Downloadable **0.0.12-preview.1** | Qualified Linux x64 preview: 5,468 selected source tests, installed scripted repository workflow, recovery and named boundary controls. Exact artifact identities and receipt below. |
-| Development **0.0.17-preview.1** | Scoped diagnostic, trusted-helper and approval repairs, bounded owner follow-up administration, and retained recovery evidence. Two genuine native attempts remain uncertain; no corresponding qualified download. |
+| Current combined **0.0.19-preview.1** | Direct extraction/startup, both demos, instance/console lifecycle and plugin setup passed; genuine-case runtime comparison and reused component checks are explicit. [Receipt](qualification/combined-preview-2026-10-20.json). |
+| Historical downloadable **0.0.12-preview.1** | Qualified Linux x64 preview: 5,468 selected source tests, installed scripted repository workflow, recovery and named boundary controls. Exact artifact identities and receipt below. |
+| Historical source **0.0.17-preview.1** | Scoped diagnostic, trusted-helper and approval repairs, bounded owner follow-up administration, and retained recovery evidence. Two genuine native attempts remain uncertain; no corresponding qualified download. |
 | OpenClaw runtime | Packaged plugin passed the controlled installed OpenClaw 2026.10.5 / Node 24.22.0 workflow with scripted local providers. Actual native tools, separate human approval, tested proposal, fresh-process status and veto were observed. [Receipt and limits](qualification/openclaw-2026-10-20.json). |
 
 The useful repository demo uses two scripted local responses and simulated operator decisions. Its edits, tests and retained proposal are inspectable; this is workflow evidence, not a measurement of model quality. See [architecture](architecture.md), [Codex limits](codex-project.md) and [security boundaries](../SECURITY.md).
@@ -28,7 +29,7 @@ Focused emitting compilation and checks passed on the respective implementation 
 
 The actual public export passed emitting compilation and **48 checks across five affected test files**, with zero failures or skips. These source checks used Node 22.23.2; they do not establish patched-runtime admission or a new installed archive.
 
-Both uncertain genuine account invocations remain charged and unresolved. At that source17 checkpoint, no genuine repository success was inferred. The later genuine result above does not infer a final combined download, complete dependency clearance, outside audit or universal OpenClaw containment. [Dependency status](dependency-status.md) records the current release blockers. Historical compatibility and download receipts below keep their original versions and identities.
+Both uncertain genuine account invocations remain charged and unresolved. At that source17 checkpoint, no genuine repository success was inferred. The genuine result alone does not qualify a combined download; the final archive now has its own qualification above. Complete dependency clearance, outside audit and universal OpenClaw containment are not claimed. [Dependency status](dependency-status.md) records the admitted route and remaining conditions. Historical compatibility and download receipts below keep their original versions and identities.
 
 ## October 20 OpenClaw source checkpoint
 

@@ -1,6 +1,6 @@
 # Keep research preview
 
-**0.0.12-preview.1**, Linux x64, Node.js 22.23.2/npm. [Download the matching preview](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1), verify its checksum in [the external release record](../KEEP_RELEASE.md), and follow the [installation guide](quickstart.md). No Rust/C compiler is needed for installation; the repository walkthrough also requires Git.
+The current **0.0.19-preview.1** combined Linux x64 preview includes Keep, the generation-only Codex engine and restricted OpenClaw plugin. Verify its checksum in [the release record](../KEEP_RELEASE.md) and follow the [direct archive installation guide](combined-preview.md). The observed runtime is Node 22.23.3 for Keep and Node 24.22.0 for OpenClaw 2026.10.5; see the dated [dependency conditions](dependency-status.md). No npm installer or Rust/C compiler is needed for this route; the repository walkthrough also requires Git.
 
 ## First useful result
 
@@ -30,6 +30,6 @@ The [release record](../KEEP_RELEASE.md) and [evidence](evidence.md) bind actual
 
 The demonstration reports best-effort process isolation. Required-jail operations separately require measured Bubblewrap 0.13.0 and a qualified namespace environment; absent/mismatched launcher bytes must refuse. Installing Keep does not install a host launcher or change shared-host policy. Native binaries have [additional custody prerequisites](../SECURITY.md#optional-native-refusal-transport-installation-prerequisites); their presence does not qualify arbitrary workloads or production PROBER/D3 authority.
 
-Evidence remains same-agent on a synthetic Linux fixture. It does not establish real-model success rates, live organization identity/custody, offsite disaster survival, universal spend enforcement or exactly-once effects across arbitrary services. Personal and organization requirements remain coequal in the [completion map](completion-map.md); this preview is not complete-product readiness.
+The two account-free demos use synthetic Linux fixtures. The separate [genuine Codex result](genuine-codex-walkthrough.md) used real generation on one historical public issue; OpenClaw tool selection was scripted. All supplied qualification remains developer-administered. It does not establish real-model success rates, live organization identity/custody, offsite disaster survival, universal spend enforcement or exactly-once effects across arbitrary services. Personal and organization requirements remain coequal in the [completion map](completion-map.md); this preview is not complete-product readiness.
 
 Before upgrading existing state, stop its writers and retain a verified complete private backup. See [backup guidance](backup.md) and the matching release notes; do not mix old/new writers or interfere with other instances. Older 0.0.5 and affected 0.0.4 releases retain their original archives, tags and qualification records.

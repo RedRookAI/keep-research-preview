@@ -1,6 +1,6 @@
 # Restricted OpenClaw client admission
 
-Development work adds a personal client credential for Keep's required OpenClaw integration. The native OpenClaw plugin and its supported runtime package are separate integration work; this page describes the Keep side. This is not included in the qualified 0.0.12 download. Genuine installed Codex operation and complete native tool exclusion remain unqualified; see [Codex projects](codex-project.md).
+The **0.0.19-preview.1** combined preview includes the personal restricted client and native plugin for Keep's required OpenClaw integration. This page describes Keep's credential and authority boundaries; use the [plugin guide](../integrations/openclaw/README.md) for native configuration. A genuine installed Codex follow-up passed using the measured generation-only engine. That specific engine/profile evidence does not establish unrestricted OpenClaw containment; see [Codex projects](codex-project.md) and [exact release qualification](qualification/combined-preview-2026-10-20.json).
 
 ## Issue a client
 
@@ -56,4 +56,4 @@ keep openclaw-client revoke --profile=/absolute/private/client-directory/client.
 
 Revocation needs the local owner authority, not a working Codex login or model request. It retains the token file for deliberate disposal and leaves historical jobs, decisions and invocation claims intact. A fresh credential, key, session or data directory must not be used to bypass uncertain work. Inspect retained state and resolve that uncertainty first.
 
-The native client candidate is in [integrations/openclaw](../integrations/openclaw/README.md). Its private durable journal recovers the original submission after a lost response. The packaged SDK/catalog and isolated consumer passed the controlled OpenClaw 2026.10.5 / Node 24.22.0 workflow. That evidence uses scripted local generation; it does not qualify genuine Codex operation or the final combined download. [Observed scope](qualification/openclaw-2026-10-20.json).
+The native plugin is in [integrations/openclaw](../integrations/openclaw/README.md) and the combined download. Its private durable journal recovers the original submission after a lost response. The packaged SDK/catalog and isolated consumer passed the controlled OpenClaw 2026.10.5 / Node 24.22.0 workflow with scripted local providers. The later [genuine Codex case](genuine-codex-walkthrough.md) and [final archive qualification](qualification/combined-preview-2026-10-20.json) supply separate evidence at their stated scopes. The [original controlled receipt](qualification/openclaw-2026-10-20.json) remains unchanged.

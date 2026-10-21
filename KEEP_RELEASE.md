@@ -49,7 +49,7 @@ enterprise certification. See [dependency conditions](docs/dependency-status.md)
 
 Release: `keep-preview-2026-10-05.1` · Linux x64 · Node.js 22.23.2/npm/Git.
 
-[Download](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1) · [Checksum-first quickstart](docs/quickstart.md) · [Walkthrough](docs/portfolio-walkthrough.md) · [Qualification](docs/qualification/preview-2026-10-05.json).
+[Download](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1) · [Historical checksum-first quickstart](docs/quickstart.md#historical-0012-installation) · [Walkthrough](docs/portfolio-walkthrough.md) · [Qualification](docs/qualification/preview-2026-10-05.json).
 
 Run `keep demo project` to see an actual separate-workspace edit, passing repository and goal tests, and a reviewable diff. Two authored local responses and sample approval/veto decisions are clearly disclosed before work. The approval gate holds before dispatch; restart retains the proposal without replay; a wrong token refuses and veto leaves original source unchanged. No account or paid call is needed. Inspect the printed report and artifacts, then follow the configured-solve guide for your own repository.
 
@@ -71,9 +71,9 @@ This is same-agent evidence on one owned Linux host, with network disabled, exis
 
 Archives bind the qualified source above. The release tag adds external receipts and reconciled documentation; full source results do not become results for that later documentation commit. This companion is outside both archives to avoid circular checksums. Archived documentation records the source snapshot before publication; use this companion and the release-tag documentation for current download identities. Original releases/tags/assets are unchanged.
 
-## Current development source
+## Historical source checkpoint: 0.0.18-preview.1
 
-Source **0.0.18-preview.1** contains the recovered generation route, literal patch/application checks, browser form compatibility and native-plugin exclusion described in [current evidence](docs/evidence.md), with a genuine Codex/OpenClaw follow-up. It has no matching qualified download. Use the [current dependency guidance](docs/dependency-status.md); the original Node 22.23.2 qualification above is historical. Existing releases, tags and assets are unchanged.
+Source **0.0.18-preview.1** introduced the recovered generation route, literal patch/application checks, browser form compatibility and native-plugin exclusion, with a genuine Codex/OpenClaw follow-up. That checkpoint had no matching qualified download. The current **0.0.19-preview.1** combined release above carries those repairs and its own exact-archive qualification. Use the [current dependency guidance](docs/dependency-status.md); the original Node 22.23.2 qualification above remains historical. Existing releases, tags and assets are unchanged.
 
 ---
 

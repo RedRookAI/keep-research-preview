@@ -1,9 +1,9 @@
 # Contributing to Keep
 
-The development source is **0.0.14-preview.1**; the latest qualified Linux x64
-download is **0.0.12-preview.1**. The experimental Codex integration in source is
-not included in that download. Start with [installation](docs/quickstart.md) to try
-the preview, or [architecture](docs/architecture.md) to inspect the design.
+The source and current combined Linux x64 preview are **0.0.19-preview.1**.
+The download includes the generation-only Codex engine and restricted OpenClaw
+plugin. Start with [installation](docs/quickstart.md) to try the preview, or
+[architecture](docs/architecture.md) to inspect the design.
 Use [validation evidence](docs/evidence.md) and [exact release identities](KEEP_RELEASE.md)
 when assessing results. Historical receipts remain bound to their tested source.
 
@@ -63,7 +63,8 @@ node tools/run_installed_golden_journeys.mjs --tarball=/absolute/keep.tgz --sha2
 ~~~
 
 That runner's offline, script-disabled fixture setup does not establish ordinary
-installation; the introductory preview checks scripts-enabled installation separately.
+installation. Historical npm installation checks retain their original versions;
+the current combined preview uses separately checked direct extraction and startup.
 
 ## Optional host-specific tests
 

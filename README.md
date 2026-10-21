@@ -28,7 +28,7 @@ PASS  Restart retained the proposal without replay
 PASS  Wrong token refused; exact proposal vetoed; original source unchanged
 ```
 
-The demo uses **two scripted local responses and simulated approval/veto decisions**, with no model account or paid request. The workspace edits, tests and retained artifacts are real. For current runtime guidance, use Node.js 22.23.3 or later on Node 22, npm and Git; installation needs no Rust or C compiler. [Walkthrough and evidence](docs/portfolio-walkthrough.md).
+The demo uses **two scripted local responses and simulated approval/veto decisions**, with no model account or paid request. The workspace edits, tests and retained artifacts are real. Use Node.js 22.23.3 or later on Node 22 and Git; the direct archive route needs no npm installer, Rust or C compiler. See the dated [dependency guidance](docs/dependency-status.md). [Walkthrough and evidence](docs/portfolio-walkthrough.md).
 
 ## How it works
 
@@ -54,7 +54,7 @@ flowchart LR
 |---|---|
 | Download | **0.0.19-preview.1**, combined Linux x64 preview with the generation-only engine and OpenClaw plugin. [Release record](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-20.1) · [Run from the archive](docs/combined-preview.md). |
 | Development source | **0.0.19-preview.1**. Includes literal patch replacement, applicability checks before goal-test generation, browser-compatible console decisions and explicit native-plugin exclusion. A genuine installed Codex/OpenClaw follow-up now passes at its documented scope. The combined archive adds a direct startup command and bundled runtime dependencies. [Status and limits](docs/codex-project.md). |
-| OpenClaw | Development candidate's packaged plugin passed the controlled native OpenClaw workflow: restricted submission/status, separate human approval, tested proposal and fresh-process recovery. A genuine Codex follow-up also passed with actual console approval/veto. See the matching release record for exact-archive qualification. [Client setup and limits](integrations/openclaw/README.md). |
+| OpenClaw | The **0.0.19-preview.1** plugin is included in the combined archive. Native submission/status, separate human approval, tested proposal and fresh-process recovery were observed in the controlled workflow and genuine Codex follow-up. The final archive separately passed plugin install/configuration/load. [Client setup and limits](integrations/openclaw/README.md). |
 
 Keep is a research preview. The supplied demonstrations establish specific workflow and recovery behavior, with developer-administered evidence. They do not establish general model quality, production enterprise isolation or independently audited security. [Supported scope and roadmap](ROADMAP.md).
 
@@ -62,7 +62,7 @@ Keep is a research preview. The supplied demonstrations establish specific workf
 
 - [Install and run](docs/quickstart.md) and [operate a development instance](docs/local-instance.md)
 - [Configure repository work](docs/installed-solve.md) and [experimental Codex access](docs/codex-project.md)
-- [OpenClaw client candidate](integrations/openclaw/README.md) and [restricted client admission](docs/openclaw-client.md)
+- [OpenClaw plugin](integrations/openclaw/README.md) and [restricted client admission](docs/openclaw-client.md)
 - [Recovery experiment](docs/research-preview.md) and [backup compatibility](docs/backup.md)
 - [Memory](docs/semantic-memory.md), [skill registry](docs/skill-registry.md) and [usage accounting](docs/monetary-accounting.md)
 - [Build and contribute](WORKFLOW.md)

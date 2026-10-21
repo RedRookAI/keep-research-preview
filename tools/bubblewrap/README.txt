@@ -1,13 +1,17 @@
-Keep-specific Bubblewrap security update candidate
+Keep's measured Bubblewrap launcher
 
-The old pinned identity is affected by GHSA-pxhw-h44j-8pfx. The upstream fix starts
-at 0.12.0; this candidate uses upstream 0.13.0. This is a source and dependency
+The historical 0.0.4 pinned identity is affected by GHSA-pxhw-h44j-8pfx. The upstream fix starts
+at 0.12.0; the current preview uses measured upstream 0.13.0. This is a source and dependency
 update, not a host-wide package upgrade. No exploit reproduction is needed.
 
-The TypeScript launcher, native P2-D2 supervisor and qualification probe all use
-/opt/keep/bubblewrap/0.13.0/bwrap and require the SHA256 in identity.json. Missing
-bytes, mismatched bytes and the previous system binary must refuse admission.
-There is no PATH lookup or environment-variable override for this executable.
+The TypeScript launcher, native P2-D2 supervisor and qualification probe default to
+/opt/keep/bubblewrap/0.13.0/bwrap and require the SHA256 in identity.json. For the
+TypeScript project runner only, an operator may select an absolute protected path
+with KEEP_TEST_JAIL_EXECUTABLE when KEEP_TEST_NAMESPACE_JAIL=required. The fixed
+hash, root ownership, protected ancestry and non-setuid/nonwritable checks remain.
+That setting does not change the native P2-D2 supervisor or probe configuration.
+Missing bytes, mismatched bytes and the previous system binary must refuse
+admission. There is no PATH lookup or repository/model-selected replacement.
 
 Build only in an isolated container:
 
@@ -29,7 +33,7 @@ the source archive and license with any separately distributed binary. Bubblewra
 0.13.0 is LGPL-2.1-or-later. The npm package does not bundle this executable.
 
 Install only inside the intended isolated qualification/deployment environment,
-at the exact dedicated path. Every ancestor must be root-owned and protected
+at its selected dedicated path. Every ancestor must be root-owned and protected
 from group/other writes. The executable must be root-owned, mode 0755, with no
 setuid, setgid or file capabilities. Leave /usr/bin/bwrap and other services alone.
 Installation requires the operator's deployment authority; building/staging this

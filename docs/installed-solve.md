@@ -1,6 +1,6 @@
 # Configure a repository goal
 
-The qualified **0.0.12-preview.1** download includes `keep solve` through the project runtime with an API-compatible provider. The existing-account [Codex project role](codex-project.md) is experimental **0.0.16-preview.1 source only**; it is not in that download. Start with [the account-free walkthrough](quickstart.md) to inspect the workflow without configuring a provider.
+The **0.0.19-preview.1** combined download includes `keep solve`, the existing-account [Codex project role](codex-project.md) and its generation-only engine. The API-compatible provider route remains available with its own prerequisites. Start with [the account-free walkthrough](quickstart.md) to inspect the workflow without configuring a provider.
 
 ## Repository settings
 
@@ -16,12 +16,13 @@ Choose a repository you own or are authorized to process. Keep requires an exact
 | `KEEP_TEST_COMMAND` | Executable for the repository's own checks. |
 | `KEEP_TEST_ARGS_JSON` | Optional JSON array of arguments, such as `["test"]` for an npm test command; defaults to `[]`. |
 | `KEEP_TEST_NAMESPACE_JAIL` | Optional `required`, `best-effort` or `off` selection. Only `required` demands the measured launcher and qualified namespace setup. |
+| `KEEP_TEST_JAIL_EXECUTABLE` | Optional absolute protected path to the measured root-owned Bubblewrap helper; requires `KEEP_TEST_NAMESPACE_JAIL=required`. The default is `/opt/keep/bubblewrap/0.13.0/bwrap`; exact byte and trust checks apply at either path. |
 
 Use predefined repository checks that distinguish the requested fix from unrelated behavior. Best-effort/default execution does not establish the required jail's boundary. Review the [execution limits and prerequisites](../SECURITY.md#opt-in-required-project-boundary-experimental) before running repository code.
 
 ## Provider settings
 
-For existing Codex access, use the [source-only account setup](codex-project.md), then return to the commands below. That route uses your existing login without a separate API key. Its live installed workflow remains unqualified.
+For existing Codex access, use the [account setup and bundled engine](codex-project.md), then return to the commands below. This route uses your existing login without a separate API key. One [genuine installed case](genuine-codex-walkthrough.md) passed at its documented scope; it does not establish success on arbitrary repositories.
 
 For an already authorized API-compatible provider, the existing configuration is:
 
@@ -59,4 +60,4 @@ keep merge <run-id> veto --proposal=<sha256>
 
 A decision does not grant missing merge authority. Inspect a refused or held result; a successfully recorded decision does not prove that source changes landed. The original repository remains unchanged while a proposal awaits a decision. Existing owner-token checks and organization session/roster/custody restrictions apply; the remote gateway uses the same authenticated project endpoint.
 
-The [installed-solve receipt](qualification/installed-solve-2026-10-05.json) records an installed controlled-endpoint check of routing, approval, a useful fixture edit and review/restart behavior. The [download qualification](qualification/preview-2026-10-05.json) covers the later packaged preview. Neither establishes arbitrary real-model success, live organization onboarding or production isolation.
+The [current combined-preview qualification](qualification/combined-preview-2026-10-20.json) separates exact-archive observations from the matching genuine workflow and reused component checks. Historical [installed-solve](qualification/installed-solve-2026-10-05.json) and [0.0.12 download](qualification/preview-2026-10-05.json) receipts retain their original identities. None establishes arbitrary real-model success, live organization onboarding or production isolation.

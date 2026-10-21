@@ -51,10 +51,11 @@ Handled-error cleanup is not proof of recovery from every possible process crash
 
 ## Recovering the OpenClaw client candidate
 
-The 0.0.16 development candidate adds client state outside Keep's data directory.
-An installed synthetic journey has exercised protected recovery of that state,
-its pending proposal and invocation history. This is development evidence;
-qualification of a matching downloadable release remains separate. The capture API
+The OpenClaw client included in the current combined preview retains state outside
+Keep's data directory. An installed synthetic journey exercised protected recovery
+of that state, its pending proposal and invocation history. The final release
+[explicitly reuses matching component evidence](qualification/combined-preview-2026-10-20.json);
+it does not establish offsite reconstruction of the whole deployment. The capture API
 accepts one installed product root and one state root; it does not discover an
 OpenClaw profile, external repositories or recovery keys. A successful capture or
 `RESTORE_COMPLETE.json` therefore describes that capture's roots, not the whole

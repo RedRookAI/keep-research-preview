@@ -43,6 +43,18 @@ Native runtime notices are retained separately, including compiler-rt's referenc
 credits. Their README identifies pinned upstream origins. Byte/version checks reject
 missing or changed notices; those files do not inflate the Cargo/npm package count.
 
+## Combined preview's Codex engine
+
+The **0.0.19-preview.1** combined archive also includes the separately measured
+`0.163.0-keep-generation.2` engine. Its source-support archive, patches, build
+recipe and notices are under `engines/codex-generation.2/`; the [release record](../KEEP_RELEASE.md)
+binds their exact checksums. This support covers the conservative declared
+normal/build graph of 1,036 entries, including 65 recovered exact notice inputs,
+12 published declarations with canonical terms and original sources, and all 12
+MPL-only source packages. This is not a count of binary-linked packages or legal
+certification. These engine materials are separate from the first-party native
+and three-package npm inventory above, and from the normal notice check below.
+
 ## Source-builder commands
 
 ~~~sh
@@ -52,7 +64,7 @@ npm run build
 ~~~
 
 Dependency installation does not compile native code. Building requires the pinned
-toolchain and host build tools in the [preview guide](research-preview.md).
+toolchain and host build tools in the [contributor guide](../WORKFLOW.md).
 
 Ordinary npm pack checks notices and builds the installable package. That package
 contains packer-built native executables, not every source-build prerequisite.

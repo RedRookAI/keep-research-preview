@@ -5,7 +5,7 @@ Keep's repository workflow connects a goal, an exact source revision, a separate
 ```mermaid
 flowchart TD
     CLI[CLI or authenticated gateway] --> Runtime[Project runtime and approval state]
-    OpenClaw[Owner-directed OpenClaw] --> Plugin[Optional submission and status plugin]
+    OpenClaw[Owner-directed OpenClaw] --> Plugin[Restricted submission and status plugin]
     Plugin --> CLI
     Owner[Human owner] --> Console[Native project browser console]
     Console --> CLI
@@ -20,11 +20,11 @@ flowchart TD
     Runtime <--> State[Durable project and effect records]
 ```
 
-The downloadable walkthrough uses controlled local responses in place of a live provider. The experimental Codex source uses a signed-in native CLI for remote generation. Development source 0.0.17 retains the restricted OpenClaw client and native project console shown above. The packaged plugin passed its controlled installed SDK workflow; genuine Codex output and the final combined download remain unqualified. The 0.0.12 qualified download predates these additions.
+The **0.0.19-preview.1** combined download includes the generation-only Codex engine, restricted OpenClaw plugin and native project console shown above. Its account-free walkthrough uses controlled local responses. A separate [genuine repository case](genuine-codex-walkthrough.md) passed with actual Codex generation, native OpenClaw dispatch and browser approval/veto; OpenClaw tool selection was scripted. [Exact archive qualification](qualification/combined-preview-2026-10-20.json) separately records unprivileged startup, demos, instance lifecycle and plugin setup, with matching component evidence explicitly reused. The historical 0.0.12 download predates these additions.
 
 ## The main boundaries
 
-**Request and authority.** Gateway authentication and permission checks govern specific operations. The personal gateway's owner token carries owner authority and stays separate from the development OpenClaw client's narrow credential. Proposal decisions identify the exact result and remain subject to the actual landing authority. The console forwards to the same API under the authenticated human principal, with browser origin/CSRF checks; it does not give agent tools approval authority.
+**Request and authority.** Gateway authentication and permission checks govern specific operations. The personal gateway's owner token carries owner authority and stays separate from the OpenClaw client's narrow credential. Proposal decisions identify the exact result and remain subject to the actual landing authority. The console forwards to the same API under the authenticated human principal, with browser origin/CSRF checks; it does not give agent tools approval authority.
 
 **Source and generated work.** Repository materialization starts from an exact commit. Proposed edits and tests run in a separate workspace. Model output is input to validation, not proof that a change is correct. Passing an authored goal check does not replace predefined repository expectations.
 
@@ -42,11 +42,11 @@ Keep's journals and proposal artifacts support this reconstruction. The OpenClaw
 
 The host and evidence administrator remain trusted. Hashes can expose changed recorded bytes, but cannot prove that an administrator recorded every event or that an external service stopped. Developer-administered checks demonstrate specific behavior; independent custody and outside verification remain separate work.
 
-## OpenClaw development candidate
+## OpenClaw integration
 
-The optional native plugin targets OpenClaw 2026.10.5 and calls Keep's existing project runtime. The plugin runs inside the trusted OpenClaw process, separate from Keep; no second solver is introduced. The candidate's Node engine floor is 24.18.1 on the Node 24 line, or 26.5.1 and later, while Keep retains its documented Node 22 runtime. These are compatibility floors, not final security admission. Exact runtime selection and current security notices are covered in the [plugin guide](../integrations/openclaw/README.md).
+The optional native plugin targets OpenClaw 2026.10.5 and calls Keep's existing project runtime. The plugin runs inside the trusted OpenClaw process, separate from Keep; no second solver is introduced. The plugin's Node engine floor is 24.18.1 on the Node 24 line, or 26.5.1 and later, while Keep retains its documented Node 22 runtime. These are compatibility floors, not final security admission. Exact runtime selection and current security notices are covered in the [plugin guide](../integrations/openclaw/README.md).
 
-Keep's implemented client admission issues a separate expiring, revocable credential bound to the configured project runtime. Its authenticated routes submit a goal and inspect the original own job. Human generation approval remains in Keep. The handoff records the deciding human separately, preserves the original submitting agent and grant, and rechecks live authority/source before dispatch. Native OpenClaw loading and the controlled installed workflow have also been observed with scripted providers; genuine account-backed success remains unqualified. [Admission contract](openclaw-client.md).
+Keep's implemented client admission issues a separate expiring, revocable credential bound to the configured project runtime. Its authenticated routes submit a goal and inspect the original own job. Human generation approval remains in Keep. The handoff records the deciding human separately, preserves the original submitting agent and grant, and rechecks live authority/source before dispatch. Native OpenClaw loading and the controlled installed workflow were observed with scripted providers. The later genuine Codex case passed at its declared scope; it is not a general model-quality result or production enterprise qualification. [Admission contract](openclaw-client.md).
 
 The client records the canonical goal/key in a private SQLite journal before HTTP; the server uses its existing durable idempotency journal. A lost response recovers the same request/job. The outstanding conversation survives a session reset, so a fresh tool-call identifier cannot establish that earlier work did not happen. The journal contains private submitted text and must be retained with matching client/session state.
 

@@ -38,7 +38,7 @@ The console lists retained native projects and opens their current stage, pendin
 
 The console uses the same project APIs and authority checks as other clients, with Host, Origin and CSRF checks for browser actions. Organization deployments use their configured identity sessions; header-only custom principal resolvers do not fall back to owner browser access. The worker's dispatch remains paused until deliberately enabled through its existing controls. Signing in or opening a project never starts generation.
 
-The development candidate also adds **Request cancellation** beside queued
+The combined preview includes **Request cancellation** beside queued
 or running jobs for users with project solve permission. It targets that exact
 job, leaving other projects alone. The result shows the recorded request and
 observed job state; refresh to inspect subsequent activity. A cancellation request

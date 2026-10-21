@@ -1,24 +1,30 @@
 # Project status and roadmap
 
-Updated October 20, 2026. This page describes the product direction and the current supported scope. Future capabilities are not claims about the downloadable preview.
+Updated October 21, 2026. This page distinguishes the shipped portfolio preview from the remaining product commitments. Future capabilities are not claims about the downloadable preview.
 
 ## Available to inspect
 
-The qualified **0.0.12-preview.1** Linux x64 download includes an account-free repository walkthrough and a recovery experiment. The repository walkthrough exercises a separate working copy, passing checks, a reviewable diff, simulated approval/veto, restart and source preservation. Its responses are explicitly scripted.
+The shipped **0.0.19-preview.1** combined Linux x64 download includes Keep, its TypeScript dependency, the generation-only Codex engine, the restricted OpenClaw plugin and the native project console. [Download and run](docs/combined-preview.md) · [Exact artifacts and checks](KEEP_RELEASE.md).
 
-Configured repository work, memory, skill handling, usage admission and backup interfaces are documented in the source. Each has its own prerequisites and evidence limits. The [release record](KEEP_RELEASE.md) and [validation guide](docs/evidence.md) identify what was actually checked.
+The portfolio release milestone is complete at this supported scope:
 
-Development **0.0.17-preview.1** adds the native project console and a packaged
-OpenClaw client. Its controlled installed workflow passed submission, separate
-human approval, tested proposal, fresh-process status and veto with scripted local
-providers. Genuine Codex work and the final combined download remain release work.
+| Delivered capability | Observed result and limit |
+|---|---|
+| Genuine Codex repository work | One historical public issue produced a working patch and passed all three unchanged predefined checks. Native OpenClaw submitted and recovered the job; actual browser approval and exact veto preserved the original source. Codex generation was real; OpenClaw tool selection was scripted and decisions developer-administered. [Inspect the result](docs/genuine-codex-walkthrough.md). |
+| Restricted OpenClaw client | Submission/status use the same Keep runtime, a separate expiring/revocable credential and a durable client journal. The two tools cannot approve or land a proposal. [Setup](integrations/openclaw/README.md). |
+| Review and recovery | The console exposes pending steps, diffs, checks and exact decisions. Scoped installed checks cover refused authority, outage, cancellation without stopping another job, and synthetic protected recovery/upgrade. These are bounded observations, not universal containment or offsite recovery. [Evidence](docs/evidence.md). |
+| Combined installation | The exact archive passed unprivileged extraction, direct startup, both account-free demos, instance/console lifecycle and plugin install/configuration/load. Final runtime comparison explicitly reuses matching component evidence; no new full-suite or live-account release run is claimed. [Qualification](docs/qualification/combined-preview-2026-10-20.json). |
 
-## Next release priorities
+The account-free repository walkthrough uses two scripted responses and simulated decisions. It produces actual workspace edits, checks and review artifacts. The separate recovery experiment checks synthetic local effects. Configured memory, skills, usage admission and backup interfaces retain their own prerequisites and evidence limits.
 
-1. **A usable Codex-backed workflow.** Complete the existing-account integration and demonstrate one genuine repository task against predefined tests, retaining unsuccessful outcomes.
-2. **OpenClaw as a supported client.** Let OpenClaw submit repository goals and inspect their status through the same Keep runtime. Restrict its authority; keep human approval separate from agent submission.
-3. **Observable safety and recovery.** Check permitted work and refused actions, interruption without disrupting another owned job, and preservation of pending work and authority across upgrade/restore.
-4. **A coherent installation and release.** Align setup, dependency identities, security limits, packaged artifacts and user documentation around one tested version.
+## Remaining delivery priorities
+
+The completed portfolio milestone does not close the full enterprise platform. Further work should deliver one usable consumer at a time; this ordering is product direction, not an already activated implementation batch.
+
+1. **Make adoption easier.** Reduce manual setup for a new owner's supported Codex/OpenClaw repository workflow, including clear readiness failures and the required helper/runtime prerequisites. The shipped archive and existing walkthrough remain usable now.
+2. **Deliver live organization identity and isolation.** Implement an attributable organization credential lifecycle, scoped non-human identity and tenant boundaries while preserving personal operation. Injected tenant fixtures do not establish these capabilities in a live deployment.
+3. **Strengthen production execution and custody.** Complete the native authority, credential/signing separation and attestation requirements beyond the selected trusted-host namespace profile.
+4. **Complete retained product consumers and operations.** Connect the remaining privacy, memory, skills, integrations, observability and recovery requirements below, with evidence for the supported installed behavior. Broader evaluation and platform parity remain open.
 
 The direct Keep CLI and the account-free walkthrough remain part of that experience. OpenHands is relevant implementation prior art; it is not a selected runtime dependency or an additional required service.
 
