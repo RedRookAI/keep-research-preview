@@ -92,7 +92,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     if (argv.length !== 2) { process.stderr.write("Usage: keep demo recovery\n"); return 2; }
     return runRecoveryDemo(executingPackageRoot());
   }
-  const staticResult = runStaticCli(argv, (text) => process.stdout.write(`${text}\n`));
+  const staticResult = runStaticCli(argv, (text) => process.stdout.write(argv[0] === "proposal" && argv[1] === "patch" ? text : `${text}\n`));
   if (staticResult) return staticResult.exitCode;
   if (argv[0]?.toLowerCase() === "memory-retention" && argv[1]?.toLowerCase() === "configure") {
     try {
