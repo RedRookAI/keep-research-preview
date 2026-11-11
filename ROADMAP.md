@@ -4,11 +4,11 @@ Updated November 11, 2026. This page distinguishes the shipped portfolio preview
 
 ## Current development
 
-Source **0.0.21-preview.1** adds organization code/PKCE login, pinned key refresh, session-bound project dispatch and captured native patch application. Unsupported organization effect routes remain held pending their session checks. Earlier changes add saved Codex setup, require capability and safety evidence before self-improvement promotion, and align CI with the supported Node range. The [current maintenance record](docs/maintenance-2026-11-11.3.md) identifies checks and remaining limits. The exact **0.0.20-preview.1** combined archive passed scoped unprivileged demo, instance and export checks; real positive required-jail preparation and a new genuine owner trial remain open.
+Source **0.0.21-preview.1** adds organization code/PKCE login, pinned key refresh, session-bound project dispatch and captured native patch application. Unsupported organization effect routes remain held pending their session checks. Earlier changes add saved Codex setup, require capability and safety evidence before self-improvement promotion, and align CI with the supported Node range. The [current maintenance record](docs/maintenance-2026-11-11.3.md) identifies checks and remaining limits. The **0.0.21-preview.1** combined payload passed scoped unprivileged demo, instance, export and real required-jail offline preparation checks. A fresh genuine owner/account trial and the broader platform remain open.
 
 ## Available to inspect
 
-The shipped **0.0.20-preview.1** combined Linux x64 download includes Keep, its TypeScript dependency, the generation-only Codex engine, the restricted OpenClaw plugin and the native project console. [Download and run](docs/combined-preview.md) · [Exact artifacts and checks](KEEP_RELEASE.md).
+The shipped **0.0.21-preview.1** combined Linux x64 download includes Keep, its TypeScript dependency, the generation-only Codex engine, the restricted OpenClaw plugin and the native project console. [Download and run](docs/combined-preview.md) · [Exact artifacts and checks](KEEP_RELEASE.md).
 
 The portfolio release milestone is complete at this supported scope:
 

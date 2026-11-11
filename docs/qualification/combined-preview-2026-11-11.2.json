@@ -1,0 +1,389 @@
+{
+  "schema": "keep.combined-preview-qualification/v1",
+  "status": "PASS_SCOPED_INSTALLED_CHECKPOINT",
+  "version": "0.0.21-preview.1",
+  "checkedDate": "2026-11-11",
+  "source": {
+    "commit": "83a67b04fa03e6fd1a1564b6b93cc1c3f19deb24",
+    "tree": "56546bca409cb53a14f57e1db591c8dc0e43a9ff",
+    "nativeTree": "bbc14279d4d5ebb5f105371b79a0f36ea0e18576",
+    "buildToolBlob": "8356e8600ce60ee3aa690dcd69daf9f1509755c0",
+    "typescript": "5.9.3",
+    "emitted": true
+  },
+  "artifacts": [
+    {
+      "name": "keep-0.0.21-preview.1.tgz",
+      "bytes": 11499916,
+      "sha256": "2845794f4b64691a9cb3669c3dee1ca4f605334cfb350f2ef3b5c57213a86b73"
+    },
+    {
+      "name": "keep-combined-0.0.21-preview.1-linux-x64.tar.gz",
+      "bytes": 122478133,
+      "sha256": "7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca"
+    },
+    {
+      "name": "keep-source-0.0.21-preview.1.tar.gz",
+      "bytes": 19207527,
+      "sha256": "7fab467e627fbb262ff2cff2dfa613ab53790741aa649c46a09255b4b992eba2"
+    },
+    {
+      "name": "redrookai-openclaw-keep-0.0.21-preview.1.tgz",
+      "bytes": 12837,
+      "sha256": "0572b46761d6c4c228a88d6c4bcb911b8fa40f7816802d641094942d59a658b1"
+    }
+  ],
+  "installedRuntimeConsumer": {
+    "schema": "keep.installed-source-checkpoint/v1",
+    "status": "PASS",
+    "uid": 65534,
+    "version": "0.0.21-preview.1",
+    "archiveSha256": "1c4cd27068f675166a6434936dd66818da1bb123f6a62271e1b9029ad2d89215",
+    "nodeVersion": "v22.23.4",
+    "nodeSha256": "94efd062ed066c1a0b332e18249859c905e920eeada5df55d24c99b919629a90",
+    "directArchive": true,
+    "installPathContainsSpaces": true,
+    "emptyInitialHome": true,
+    "packageImport": true,
+    "scriptedProjectDemo": {
+      "modelCalls": 2,
+      "paidCalls": 0,
+      "approvalBeforeDispatch": true,
+      "restartWithoutReplay": true,
+      "sourceUnchanged": true,
+      "exactProposalVeto": true,
+      "export": {
+        "status": "PASS",
+        "schema": "keep.proposal-export/v1",
+        "proposalDigest": "6bfb53666f517a136db6e516a62fb4b033531d7e57f524e69056ef572b1e3176",
+        "baseRevision": "fcf092820ab973369aea5804adcef2a5e568e820",
+        "authenticatedHttp": true,
+        "wrongTokenRefused": true,
+        "wrongDigestRefused": true,
+        "installedCliExport": true,
+        "consoleFormLoginAttachment": true,
+        "offlineCleanSourceVerified": true,
+        "exactPatchBytes": true,
+        "changedSourceRefused": true,
+        "retainedSimulatedVetoAttribution": true,
+        "addedModelCalls": 0,
+        "assurance": "unsigned-retained-evidence"
+      }
+    },
+    "recoveryDemo": {
+      "checks": 24,
+      "modelCalls": 0
+    },
+    "instance": {
+      "savedSetup": true,
+      "preparedNoInstall": true,
+      "pausedStart": true,
+      "authenticatedConsole": true,
+      "status": true,
+      "ownedStop": true
+    },
+    "limits": "Unprivileged Linux fixture; scripted model responses and simulated decisions. Required-jail positive preparation, live account, native/full suite and broader platform remain separately qualified."
+  },
+  "offlinePreparationConsumer": {
+    "status": "PASS_EXACT_FINAL_ARCHIVE_REAL_OFFLINE_PREPARATION",
+    "uid": 65534,
+    "version": "0.0.21-preview.1",
+    "subject": {
+      "archive": "keep-combined-0.0.21-preview.1-linux-x64.tar.gz",
+      "sha256": "1c4cd27068f675166a6434936dd66818da1bb123f6a62271e1b9029ad2d89215",
+      "bytes": 122463667,
+      "source": "83a67b04fa03e6fd1a1564b6b93cc1c3f19deb24",
+      "identityBasis": "root measured exact final archive; basic actual consumer terminal PASS; this seam reuses that extraction readonly"
+    },
+    "moduleOverlays": false,
+    "prepareInvocations": 2,
+    "materializerSha256": "0a7777984808ae89c2b08cb05e7657b5b98990dd045e75004db9830bfba8b731",
+    "installedCodeSha256": "4b6781b1e2bb580960561a6a61943de63ab46c41817771fcbf8855566f83a2e9",
+    "helperSha256": "e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f",
+    "nodeVersion": "v22.23.4",
+    "nodeSha256": "94efd062ed066c1a0b332e18249859c905e920eeada5df55d24c99b919629a90",
+    "npmVersion": "10.9.9",
+    "npmCliSha256": "8e5f6f3429f8cdbe693cdc29904e9d5a7b127a494bd15c804bd54c7403bfcbe7",
+    "revision": "9688cf29120e4a96733bb467d9a8b873459fc7e6",
+    "trackedSourceSha256": {
+      "package.json": "7037d782be0e48c2546d1cfe97c677890c18554edc8aecf98130cefd58e75de7",
+      "package-lock.json": "8301aee383f5211ca27780433d7084ede49921568dfce92042daba6c42875e8c",
+      ".gitignore": "25622cb106bae6bb037e22d4be19f11b235acfc8e398501ddea31169f11fbd80",
+      "check.cjs": "aa40760b498c8f1dba606dd3b5037376aa513cbfdabe00736c9082070cd169f6"
+    },
+    "savedRecipe": true,
+    "requiredExplicitHelper": true,
+    "emptyCacheRefused": true,
+    "explicitSeededRetry": true,
+    "preparedDependency": {
+      "name": "typescript",
+      "version": "5.9.3",
+      "integrity": "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="
+    },
+    "lifecycleScriptsDisabled": true,
+    "usefulChecker": [
+      {
+        "name": "prepared TypeScript transpiles the configured input",
+        "passed": true
+      }
+    ],
+    "processIsolation": {
+      "version": 1,
+      "basis": "launcher-status",
+      "namespacePolicy": "required",
+      "requestedNamespaces": [
+        "mount-ns",
+        "pid-ns",
+        "ipc-ns",
+        "uts-ns",
+        "net-ns"
+      ],
+      "degraded": [],
+      "namespaceSetup": "launcher-confirmed",
+      "requestedRlimits": [
+        "cpuLimit",
+        "file-size",
+        "process-count",
+        "open-files"
+      ],
+      "rlimitSetup": "launcher-confirmed"
+    },
+    "sourceUnchanged": true,
+    "packageNetwork": "offline npm plus launcher-confirmed required network namespace; no external package requests",
+    "workerStarted": false,
+    "modelCalls": 0,
+    "limits": "Owned unprivileged private-mount fixture, actual extracted final archive with no overlays and selected owned helper. Two Node/npm entry files pinned; no whole-toolchain reproducibility or current installer security clearance claimed."
+  },
+  "finalAssemblyConsumer": {
+    "schema": "keep.final-assembly-check/v1",
+    "status": "PASS",
+    "uid": 65534,
+    "archiveSha256": "7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca",
+    "version": "0.0.21-preview.1",
+    "incrementalExtraction": true,
+    "addedPluginPath": "integrations/openclaw/redrookai-openclaw-keep-0.0.21-preview.1.tgz",
+    "embeddedPluginSha256": "0572b46761d6c4c228a88d6c4bcb911b8fa40f7816802d641094942d59a658b1",
+    "pluginMetadata": true,
+    "cliVersion": true,
+    "publicImport": true,
+    "priorRuntimeArchiveSha256": "1c4cd27068f675166a6434936dd66818da1bb123f6a62271e1b9029ad2d89215",
+    "limits": "Complete archive inventory proved all2615 prior payload entries unchanged; this installs and checks only the added embedded plugin. Prior demo/preparation observations retain their original archive subjects. No duplicate full extraction, demo/native/model call or OpenClaw installation."
+  },
+  "finalPayloadPreservation": {
+    "status": "PASS",
+    "priorArchiveSha256": "1c4cd27068f675166a6434936dd66818da1bb123f6a62271e1b9029ad2d89215",
+    "finalArchiveSha256": "7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca",
+    "finalBytes": 122478133,
+    "added": [
+      "keep-0.0.21-preview.1/integrations/openclaw/redrookai-openclaw-keep-0.0.21-preview.1.tgz"
+    ],
+    "removed": [],
+    "changedExistingPayloads": [],
+    "unchangedEntries": 2615,
+    "compared": "complete tar path/type/mode/uid/gid/size/content SHA256; timestamps excluded",
+    "newPluginSha256": "0572b46761d6c4c228a88d6c4bcb911b8fa40f7816802d641094942d59a658b1"
+  },
+  "hostedSource": {
+    "runId": 43114021908,
+    "jobId": 130837203571,
+    "subjectSha": "83a67b04fa03e6fd1a1564b6b93cc1c3f19deb24",
+    "status": "success",
+    "node": "22.23.4",
+    "files": 17,
+    "tests": 150,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "profile": "partial-unprivileged",
+    "fullSourceQualified": false,
+    "nativeQualified": false,
+    "installedArtifactQualified": false
+  },
+  "localSource": {
+    "integratedOrganization": 139,
+    "compositionCorrectionAffected": 81,
+    "preparationIntegration": 23,
+    "countsOverlap": true,
+    "nativePackageAssertion": 1
+  },
+  "nativeRelease": {
+    "toolchain": "1.97.1",
+    "inventoryEntries": 146,
+    "inventoryRoot": "1c11df26d63ec128bf938c07574079b70124b9814ac065f114fd2cd960d6ea9a",
+    "gateUnsafeSites": 57,
+    "offlineBuildWorkers": 1,
+    "releaseBuildSeconds": 21.8,
+    "artifacts": [
+      {
+        "name": "manifest.json",
+        "bytes": 572,
+        "sha256": "d1a4562a714c69666d038ef71d6338616b181f1feab03817c133099992036057",
+        "modeOctal": "0o444"
+      },
+      {
+        "name": "capture-manifest.json",
+        "bytes": 384,
+        "sha256": "d56627b64fd0e6a462457d1f60a715c51442703d58cc87a6b6a428224a59d092",
+        "modeOctal": "0o644"
+      },
+      {
+        "name": "keep-native-supervisor.sha256",
+        "bytes": 65,
+        "sha256": "220021d024fc1f1535bf135dad18639c9b6aede068137c88564abeda75488d76",
+        "modeOctal": "0o444"
+      },
+      {
+        "name": "keep-native-client",
+        "bytes": 2218720,
+        "sha256": "847021cc23ba3f83f332e97d731b5536c00cde08f15496e5048721a4a89e2f4a",
+        "modeOctal": "0o555"
+      },
+      {
+        "name": "keep-native-supervisor",
+        "bytes": 2419008,
+        "sha256": "6bec62732973f048aa6ba0fc955f0e1e8ad3b351e10908e18d581013fcb7e2dd",
+        "modeOctal": "0o555"
+      },
+      {
+        "name": "keep-native-patch-capture",
+        "bytes": 2464200,
+        "sha256": "d124a4b5b9198f84be5d45c0617cf1bcae3e7fe483d932952825cb7bfb6b2b8c",
+        "modeOctal": "0o755"
+      }
+    ],
+    "releaseSdkChecks": {
+      "tests": 2,
+      "pass": 2,
+      "fail": 0
+    },
+    "fullInstalledPublisher": {
+      "status": "PASS",
+      "uid": 65534,
+      "gid": 65534,
+      "nodeVersion": "v22.23.4",
+      "packageVersion": "0.0.21-preview.1",
+      "archiveSha256": "808f0ada4a737d95ad65da340b00a1b861dc0b66ed6c24fe52282bead747d160",
+      "captureSha256": "d124a4b5b9198f84be5d45c0617cf1bcae3e7fe483d932952825cb7bfb6b2b8c",
+      "evidenceDigest": "b124282218d1f6d4155920760d857a07daf81bc0e8927638d7d02651b8bb8dde",
+      "resultTreeDigest": "289daf1bae884868c1ea7d67ff9adac947a53af7bf22d023348543d309da7c3b",
+      "originalInputsRetained": true,
+      "sourceInputsUnchanged": true,
+      "candidateContentAndChecksumReadback": true,
+      "reviewStatus": "unverified",
+      "admission": false,
+      "launch": false,
+      "limits": "One synthetic positive publisher case through the actual full-package root export. Existing extraction mapping supplied by root; archive SHA checked, no duplicate extraction. No broad suite, max profile, live reviewer/build/host authority or production qualification."
+    },
+    "reuseClosure": {
+      "priorPublisherArchiveSha256": "808f0ada4a737d95ad65da340b00a1b861dc0b66ed6c24fe52282bead747d160",
+      "nextArchiveSha256": "1c4cd27068f675166a6434936dd66818da1bb123f6a62271e1b9029ad2d89215",
+      "comparisons": {
+        "dist/native": {
+          "comparison": {
+            "added": [],
+            "removed": [],
+            "changed": [],
+            "unchangedEntries": 8
+          },
+          "fileCount": 6
+        },
+        "dist/src": {
+          "comparison": {
+            "added": [],
+            "removed": [],
+            "changed": [
+              {
+                "path": "dist/src/git/repository_materializer.js",
+                "prior": {
+                  "kind": "file",
+                  "mode": "0644",
+                  "bytes": 6974,
+                  "sha256": "7e4076a9aa0669497f013f987b79f15bb9533bea0f40d7912b9d5fec8c299b8b"
+                },
+                "final": {
+                  "kind": "file",
+                  "mode": "0644",
+                  "bytes": 7150,
+                  "sha256": "0a7777984808ae89c2b08cb05e7657b5b98990dd045e75004db9830bfba8b731"
+                }
+              },
+              {
+                "path": "dist/src/git/repository_materializer.js.map",
+                "prior": {
+                  "kind": "file",
+                  "mode": "0644",
+                  "bytes": 6241,
+                  "sha256": "a371ad7e6a1acd33e7507677fc588d34bf7062cba7698e66844dedba6f4ccffd"
+                },
+                "final": {
+                  "kind": "file",
+                  "mode": "0644",
+                  "bytes": 6279,
+                  "sha256": "3a51c6cb7ca39ff5c101dc109a2c8390be726f039491d85cc85b8eaae849a0b0"
+                }
+              },
+              {
+                "path": "dist/src/solve/repository_prerequisites.js",
+                "prior": {
+                  "kind": "file",
+                  "mode": "0644",
+                  "bytes": 13291,
+                  "sha256": "e2d8738fb3e0dd35a5bb7d223873fdb1be45c86f338d3dc085e9f29ad25e8b85"
+                },
+                "final": {
+                  "kind": "file",
+                  "mode": "0644",
+                  "bytes": 13955,
+                  "sha256": "4b6781b1e2bb580960561a6a61943de63ab46c41817771fcbf8855566f83a2e9"
+                }
+              },
+              {
+                "path": "dist/src/solve/repository_prerequisites.js.map",
+                "prior": {
+                  "kind": "file",
+                  "mode": "0644",
+                  "bytes": 11538,
+                  "sha256": "e0b8c8ff395d7c3b1abcaf3b7b91c08f58869dde10874f0e96ffa4b505ab2af6"
+                },
+                "final": {
+                  "kind": "file",
+                  "mode": "0644",
+                  "bytes": 11945,
+                  "sha256": "759ce2e8aa4de3a862999cb6a3dc2d497960f3cf78b209c8b8f973be9fe63727"
+                }
+              }
+            ],
+            "unchangedEntries": 1681
+          },
+          "fileCount": 1590
+        }
+      },
+      "packageNameVersionExportsUnchanged": true,
+      "publisherObservationRelabelled": false
+    },
+    "publicationTrust": "Exclusive cooperating owned writers and trusted host administration; same-euid staging-name race can leave a visible unknown candidate. Candidate permissions are owner-reversible. No cryptographic attestation."
+  },
+  "carriedEngine": {
+    "version": "0.163.0-keep-generation.2",
+    "sha256": "fdd9a1a3e86fc2213e4c0bd9c9b278080f38d756a5256e3217092a30e48d98c1",
+    "sourceSupportSha256": "c319b4804408ec2ed9e90e9a6966f227a0905342ddebbf64538e1d68d079cd60",
+    "unchanged": true
+  },
+  "packaging": {
+    "npmLifecycleScripts": false,
+    "combinedNativeModesPreserved": true,
+    "npmCorePortableModesNormalized": true,
+    "freshOpenClawInstallLoad": false,
+    "embeddedPluginArchiveChecked": true,
+    "initialPublisherRefusal": "Bind-mounted temporary fixture crossed native no-xdev root contract. Fixture corrected; native policy unchanged.",
+    "priorErrors": "Hardlinked local clones and duplicate npm configuration repaired. Broad toolchain and checker-fixture errors retained separately."
+  },
+  "evidenceReuse": "Actual demo/preparation archive1c4cd270 is retained. Final archive adds only checked plugin; all2615 prior entries have identical path/type/mode/uid/gid/size/content. Incremental extraction, plugin metadata, CLI version and public import passed on final7b22762a. Native publisher archive808f0ada retained and reused after complete native/runtime closure comparison. No unchanged demo/native matrix rerun.",
+  "remaining": [
+    "Fresh genuine configured owner/account trial and real-model success-rate evidence",
+    "Live organization issuer/client/custody/current membership and full effect-path integration",
+    "Production native authority, independent review/custody and maximum application profile",
+    "Fresh full-source/native suite, new OpenClaw installation/load, broader platform and cross-platform acceptance"
+  ],
+  "assurance": "Developer-administered fixtures and byte-bound scoped observations; unsigned evidence, no independent certification."
+}

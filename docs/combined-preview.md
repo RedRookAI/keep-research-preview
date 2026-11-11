@@ -1,6 +1,6 @@
 # Run the combined preview
 
-This guide describes the combined **0.0.20-preview.1** Linux x64 archive.
+This guide describes the combined **0.0.21-preview.1** Linux x64 archive.
 Use the [release record](../KEEP_RELEASE.md) for its exact download identity,
 checksum and observed qualification. A source checkout is a separate artifact.
 The earlier qualified 0.0.12 download keeps its original identity.
@@ -23,8 +23,8 @@ below does not replace PATH or change the OpenClaw installation.
 After verifying the published SHA256, extract into a new directory you own:
 
 ```sh
-tar -xzf keep-combined-0.0.20-preview.1-linux-x64.tar.gz
-cd keep-0.0.20-preview.1
+tar -xzf keep-combined-0.0.21-preview.1-linux-x64.tar.gz
+cd keep-0.0.21-preview.1
 export KEEP_NODE_EXECUTABLE=/absolute/path/to/node22/bin/node
 export PATH="$(pwd)/bin:$PATH"
 ./bin/keep version
@@ -53,7 +53,7 @@ Use a dedicated profile in your existing supported OpenClaw2026.10.5 installatio
 Install the included local plugin archive with that runtime:
 
 ```sh
-openclaw --profile keep-portfolio plugins install ./integrations/openclaw/redrookai-openclaw-keep-0.0.20-preview.1.tgz --force --accept-capabilities --no-enable
+openclaw --profile keep-portfolio plugins install ./integrations/openclaw/redrookai-openclaw-keep-0.0.21-preview.1.tgz --force --accept-capabilities --no-enable
 ```
 
 Review the verified local package before consenting. The flags apply to that

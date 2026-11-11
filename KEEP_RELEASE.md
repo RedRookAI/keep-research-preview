@@ -1,3 +1,40 @@
+# Keep 0.0.21-preview.1 — offline preparation and governed execution
+
+The November 11 update adds organization code/PKCE login, pinned key refresh, session-bound project dispatch and captured native patch application. Real offline preparation now copies Git objects independently and uses separate private npm configuration files.
+
+Download:
+
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-11-11.2
+
+Frozen source: `83a67b04fa03e6fd1a1564b6b93cc1c3f19deb24`. TypeScript and the three native release executables were freshly built; the measured generation engine is carried unchanged.
+
+| Artifact | SHA256 | Bytes |
+|---|---|---|
+| `keep-0.0.21-preview.1.tgz` | `2845794f4b64691a9cb3669c3dee1ca4f605334cfb350f2ef3b5c57213a86b73` | 11499916 |
+| `keep-combined-0.0.21-preview.1-linux-x64.tar.gz` | `7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca` | 122478133 |
+| `keep-source-0.0.21-preview.1.tar.gz` | `7fab467e627fbb262ff2cff2dfa613ab53790741aa649c46a09255b4b992eba2` | 19207527 |
+| `redrookai-openclaw-keep-0.0.21-preview.1.tgz` | `0572b46761d6c4c228a88d6c4bcb911b8fa40f7816802d641094942d59a658b1` | 12837 |
+
+The unprivileged runtime consumer passed both account-free demos, saved instance/console lifecycle and authenticated exact-patch export. The project demo uses two scripted responses and simulated approval/veto. A fresh saved instance also observed an empty-cache hold, an explicit cache retry, TypeScript installation and a passing transpilation checker inside the required jail. Original source stayed unchanged; preparation made zero model calls.
+
+Final assembly includes the local plugin archive named by the install guide. Complete archive comparison proved all 2615 prior payload entries unchanged; only the checked plugin was added. Incremental extraction, plugin metadata, CLI version and public API import passed as uid65534. Earlier runtime/preparation observations retain their original archive subject and are reused for identical payload bytes. Core npm portable packing normalizes native-peer modes; the qualified direct combined route preserves the gated staging modes.
+
+The locked Rust toolchain and exact unsafe-site gate built three fresh static PIE executables. Scoped native/SDK checks passed. An unprivileged full-package publisher produced matching candidate, checksum, original-input and evidence readback. Its earlier archive identity is retained; all native files and publisher-relevant runtime files were verified unchanged in the final payload. Publication assumes cooperating owned writers and a trusted administrator. Uncertain outcomes remain for inspection; review status is unverified and grants no admission or launch authority.
+
+Hosted CI passed 150 tests on Node22.23.4 after locked installation, emitting compilation and notices. This is a partial source profile. Live organization identity/custody, broader effect-path integration, production-native authority, a fresh genuine owner trial and full-platform completion remain open.
+
+Exact scoped subjects and evidence reuse:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/combined-preview-2026-11-11.2.json
+
+Current checksum-first installation guide:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/quickstart.md
+
+Internal documentation reflects the frozen source snapshot. This external companion records final identities and current installation instructions. Historical assets, tags and receipts remain unchanged.
+
+## Historical 0.0.20-preview.1 record
+
 # Keep 0.0.20-preview.1 — saved setup and portable proposal evidence
 
 The November 11 Linux x64 checkpoint adds explicit saved Codex setup, repository-check readiness, portable retained-proposal export and evaluation admission safeguards. The exact combined archive passed the scoped unprivileged consumer below.

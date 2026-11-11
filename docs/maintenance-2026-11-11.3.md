@@ -1,6 +1,6 @@
 # November 11 source update — session authority and native patch application
 
-Development source remains **0.0.21-preview.1**. The currently published combined download is **0.0.20-preview.1**, with its original source and qualification. This record describes subsequent source work.
+Development source and the new combined download are **0.0.21-preview.1**. This record preserves the source checks and exact installed subjects from its development; the external release receipt records final assembly and evidence reuse.
 
 ## Organization key and session lifecycle
 
@@ -53,3 +53,13 @@ The next attempt reached npm but failed because both user and global configurati
 An unprivileged changed-source consumer then observed an actual empty-cache `ENOTCACHED` hold, an explicit seeded retry installing TypeScript 5.9.3, and a configured checker importing TypeScript and verifying transpilation output. The required namespace and resource-limit setup was launcher-confirmed without degradation, installation scripts stayed disabled, and the original source stayed clean and unchanged. Initial toolchain selection and checker-fixture errors were retained separately from product failures. This was a hybrid installed consumer before the final archive; its exact source/artifact subjects are preserved in the release qualification.
 
 After integration, emitting TypeScript compilation and **23/23** affected prerequisite, clone-isolation, workflow and CI checks passed. The two emitted repair modules exactly match the hybrid consumer's observed modules. The new clone regression joins partial hosted CI; the redundant new hardlink-refusal case was removed because the existing required-jail suite already exercises that policy. No unchanged native build or passing native test was repeated for these TypeScript repairs.
+
+## Published .21 payload evidence
+
+The final combined assembly has SHA-256 `7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca`. Its exact source is `83a67b04fa03e6fd1a1564b6b93cc1c3f19deb24`. Unprivileged runtime and real saved-instance preparation passed on the preceding assembly; the final assembly adds only the verified local plugin archive. All 2615 existing path/type/mode/ownership/size/content entries were unchanged. Incremental extraction and final CLI/import/plugin metadata checks passed. The receipt preserves the original runtime and native observation subjects and explicit byte-closure reuse.
+
+The frozen source also passed hosted CI: 150/150 selected tests, zero failures/skips/cancellations, Node22.23.4, locked install, emitting compilation and notices.
+
+https://github.com/RedRookAI/keep-research-preview/actions/runs/43114021908
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/combined-preview-2026-11-11.2.json

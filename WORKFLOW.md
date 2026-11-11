@@ -1,7 +1,7 @@
 # Contributing to Keep
 
 Development source is **0.0.21-preview.1**; the latest combined Linux x64 download
-is **0.0.20-preview.1**.
+is **0.0.21-preview.1**.
 The release record identifies its frozen source and scoped installed checks.
 The download includes the generation-only Codex engine and restricted OpenClaw
 plugin. Start with [installation](docs/quickstart.md) to try the preview, or

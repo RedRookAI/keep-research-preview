@@ -6,11 +6,11 @@ Keep brings project goals, memory, reusable skills and execution records into on
 
 The implementation spans software development, research, knowledge management and content workflows. The most developed installed workflow takes a repository goal through generation, workspace edits, executable checks and review.
 
-**Development source: 0.0.21-preview.1. Latest download: 0.0.20-preview.1, a Linux x64 development preview.** The repository contains runnable workflows, tested components and experimental integration points. Readiness varies by capability; the broader platform remains under development.
+**Development source: 0.0.21-preview.1. Latest download: 0.0.21-preview.1, a Linux x64 development preview.** The repository contains runnable workflows, tested components and experimental integration points. Readiness varies by capability; the broader platform remains under development.
 
-Development source adds organization code/PKCE login, pinned key refresh and session checks at supported project dispatch points. Unverified organization routes remain held. Native capture can also publish a separate patch candidate with retained inputs and application evidence. These additions have controlled source and SDK checks; live organization deployment, current membership and production-native authority remain open. The latest downloadable .20 archive retains its exact November 11 qualification.
+Development source adds organization code/PKCE login, pinned key refresh and session checks at supported project dispatch points. Unverified organization routes remain held. Native capture can also publish a separate patch candidate with retained inputs and application evidence. These additions have controlled source and SDK checks; live organization deployment, current membership and production-native authority remain open. The .21 download includes these additions and corrected offline preparation. Its exact scope is recorded in the release receipt.
 
-https://github.com/RedRookAI/keep-research-preview/blob/main/docs/maintenance-2026-11-11.2.md
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/maintenance-2026-11-11.3.md
 
 ## Scope and implementation status
 
@@ -73,7 +73,7 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/integrations/opencl
 
 ## Release status and remaining work
 
-The exact 0.0.20-preview.1 combined archive passed unprivileged extraction/startup, both account-free demos, instance/console lifecycle and authenticated proposal export with offline patch verification. It carries unchanged measured native/engine bytes and their dated evidence. Historical full-suite results remain attached to the revisions they tested.
+The 0.0.21-preview.1 combined payload passed unprivileged startup, both account-free demos, instance/console lifecycle, authenticated proposal export and real offline TypeScript preparation. It includes freshly built native executables and the unchanged measured generation engine. The receipt records each tested subject and reuse of identical payload bytes. Historical full-suite results remain attached to their tested revisions.
 
 Exact release identities and qualification:
 
