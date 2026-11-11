@@ -1,0 +1,272 @@
+{
+  "schema": "keep.independent-workspace-verification/v1",
+  "localDate": "2026-11-12",
+  "timeZone": "Europe/Berlin",
+  "release": "keep-preview-2026-11-11.2",
+  "archive": "keep-combined-0.0.21-preview.1-linux-x64.tar.gz",
+  "archiveSha256": "7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca",
+  "verdict": "Core release workflows and standard source build reproduced; required-jail preparation remains host-conditional and independently unverified.",
+  "x64Release": {
+    "runId": 43118531712,
+    "jobId": 130852714012,
+    "workflowCommit": "dc83b771313e6bf0cf5591b03cada3ac1c5a584a",
+    "os": "Ubuntu 24.04 x64",
+    "uid": 1001,
+    "sourceCheckout": false,
+    "developerCache": false,
+    "maintainerCredentials": false,
+    "initialHomeEmpty": true,
+    "receipts": [
+      {
+        "schema": "keep.installed-source-checkpoint/v1",
+        "status": "PASS",
+        "uid": 1001,
+        "version": "0.0.21-preview.1",
+        "archiveSha256": "7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca",
+        "nodeVersion": "v22.23.4",
+        "nodeSha256": "94efd062ed066c1a0b332e18249859c905e920eeada5df55d24c99b919629a90",
+        "directArchive": true,
+        "installPathContainsSpaces": true,
+        "emptyInitialHome": true,
+        "packageImport": true,
+        "scriptedProjectDemo": {
+          "modelCalls": 2,
+          "paidCalls": 0,
+          "approvalBeforeDispatch": true,
+          "restartWithoutReplay": true,
+          "sourceUnchanged": true,
+          "exactProposalVeto": true,
+          "export": {
+            "status": "PASS",
+            "schema": "keep.proposal-export/v1",
+            "proposalDigest": "6bfb53666f517a136db6e516a62fb4b033531d7e57f524e69056ef572b1e3176",
+            "baseRevision": "78376feb33dceca162f79bd4f46b99819d603e46",
+            "authenticatedHttp": true,
+            "wrongTokenRefused": true,
+            "wrongDigestRefused": true,
+            "installedCliExport": true,
+            "consoleFormLoginAttachment": true,
+            "offlineCleanSourceVerified": true,
+            "exactPatchBytes": true,
+            "changedSourceRefused": true,
+            "retainedSimulatedVetoAttribution": true,
+            "addedModelCalls": 0,
+            "assurance": "unsigned-retained-evidence"
+          }
+        },
+        "recoveryDemo": {
+          "checks": 24,
+          "modelCalls": 0
+        },
+        "instance": {
+          "savedSetup": true,
+          "preparedNoInstall": true,
+          "pausedStart": true,
+          "authenticatedConsole": true,
+          "status": true,
+          "ownedStop": true
+        },
+        "limits": "Unprivileged Linux fixture; scripted model responses and simulated decisions. Required-jail positive preparation, live account, native/full suite and broader platform remain separately qualified."
+      },
+      {
+        "schema": "keep.combined-installed-publisher-check/v1",
+        "status": "PASS",
+        "uid": 1001,
+        "gid": 1001,
+        "nodeVersion": "v22.23.4",
+        "packageVersion": "0.0.21-preview.1",
+        "archiveSha256": "7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca",
+        "archivePath": "/home/runner/keep-independent-andZKPYe/keep-combined-0.0.21-preview.1-linux-x64.tar.gz",
+        "packageRoot": "/home/runner/keep-independent-andZKPYe/fresh owner/keep-0.0.21-preview.1",
+        "rootExport": "/home/runner/keep-independent-andZKPYe/fresh owner/keep-0.0.21-preview.1/dist/src/index.js",
+        "captureSha256": "d124a4b5b9198f84be5d45c0617cf1bcae3e7fe483d932952825cb7bfb6b2b8c",
+        "captureMode": "0755",
+        "workingFixture": "/home/runner/keep-independent-andZKPYe/keep-combined-publisher-4BMc68",
+        "fixtureParent": "/home/runner/keep-independent-andZKPYe",
+        "candidate": "/home/runner/keep-independent-andZKPYe/keep-combined-publisher-4BMc68/output/full-package-1/candidate",
+        "evidenceDigest": "20d038c27290c0cf1e1326608ea8bbd0732317f70b0f21c7a120a29aae25e0f2",
+        "resultTreeDigest": "289daf1bae884868c1ea7d67ff9adac947a53af7bf22d023348543d309da7c3b",
+        "originalInputsRetained": true,
+        "sourceInputsUnchanged": true,
+        "candidateContentAndChecksumReadback": true,
+        "reviewStatus": "unverified",
+        "admission": false,
+        "launch": false,
+        "limits": "One synthetic positive publisher case through the actual full-package root export. Existing extraction mapping supplied by root; archive SHA checked, no duplicate extraction. No broad suite, max profile, live reviewer/build/host authority or production qualification."
+      }
+    ]
+  },
+  "sourceBuild": {
+    "runId": 43122194373,
+    "jobId": 130865173273,
+    "workflowCommit": "c4586472dd5403584478bedef19bb118a8337429",
+    "schema": "keep.independent-source-build/v1",
+    "status": "PASS",
+    "source": "f4fd9e35f7655c646998c0618fa37639e10a24a1",
+    "version": "0.0.22-preview.1",
+    "node": "v22.23.4",
+    "arch": "x64",
+    "standardBuildCommand": "npm run build",
+    "freshDependencies": true,
+    "freshLockedToolchain": true,
+    "publicImport": true,
+    "artifacts": [
+      {
+        "name": "keep-native-client",
+        "bytes": 2218720,
+        "sha256": "847021cc23ba3f83f332e97d731b5536c00cde08f15496e5048721a4a89e2f4a",
+        "mode": 365
+      },
+      {
+        "name": "keep-native-supervisor",
+        "bytes": 2419008,
+        "sha256": "6bec62732973f048aa6ba0fc955f0e1e8ad3b351e10908e18d581013fcb7e2dd",
+        "mode": 365
+      },
+      {
+        "name": "keep-native-patch-capture",
+        "bytes": 2464200,
+        "sha256": "d124a4b5b9198f84be5d45c0617cf1bcae3e7fe483d932952825cb7bfb6b2b8c",
+        "mode": 493
+      }
+    ],
+    "nativeBytesMatchPublished": true,
+    "compiler": "Rust 1.97.1",
+    "compilerDownloadedFresh": true,
+    "npmCacheFresh": true,
+    "credentialFreeBuildEnvironment": true,
+    "lockedNativeGate": "PASS",
+    "fullRuntimeSuiteQualified": false
+  },
+  "engine": {
+    "runId": 43119698024,
+    "jobId": 130856714198,
+    "schema": "keep.independent-engine-metadata/v1",
+    "status": "PASS",
+    "version": "codex-cli 0.163.0-keep-generation.2",
+    "freshHomeLoggedOut": true,
+    "modelCalls": 0,
+    "liveGenerationQualified": false
+  },
+  "spark": {
+    "host": "NVIDIA GB10 Spark",
+    "arch": "arm64",
+    "platform": "linux",
+    "uid": 1001,
+    "node": "v22.23.4",
+    "nativeCaptureRefusal": "UNSUPPORTED",
+    "bundledEngineElfMachine": 62,
+    "supportedScope": "portable account-free workflow only; bundled native/generation executables target x64",
+    "receipt": {
+      "schema": "keep.installed-source-checkpoint/v1",
+      "status": "PASS",
+      "uid": 1001,
+      "version": "0.0.21-preview.1",
+      "archiveSha256": "7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca",
+      "nodeVersion": "v22.23.4",
+      "nodeSha256": "7e48183361053f039294fbbc3ba586722fe756bf296d6cb8195356d10819cd16",
+      "directArchive": true,
+      "installPathContainsSpaces": true,
+      "emptyInitialHome": true,
+      "packageImport": true,
+      "scriptedProjectDemo": {
+        "modelCalls": 2,
+        "paidCalls": 0,
+        "approvalBeforeDispatch": true,
+        "restartWithoutReplay": true,
+        "sourceUnchanged": true,
+        "exactProposalVeto": true,
+        "export": {
+          "status": "PASS",
+          "schema": "keep.proposal-export/v1",
+          "proposalDigest": "6bfb53666f517a136db6e516a62fb4b033531d7e57f524e69056ef572b1e3176",
+          "baseRevision": "bc8a938a51ef70ea04c5d470fb1a74e48fd46498",
+          "authenticatedHttp": true,
+          "wrongTokenRefused": true,
+          "wrongDigestRefused": true,
+          "installedCliExport": true,
+          "consoleFormLoginAttachment": true,
+          "offlineCleanSourceVerified": true,
+          "exactPatchBytes": true,
+          "changedSourceRefused": true,
+          "retainedSimulatedVetoAttribution": true,
+          "addedModelCalls": 0,
+          "assurance": "unsigned-retained-evidence"
+        }
+      },
+      "recoveryDemo": {
+        "checks": 24,
+        "modelCalls": 0
+      },
+      "instance": {
+        "savedSetup": true,
+        "preparedNoInstall": true,
+        "pausedStart": true,
+        "authenticatedConsole": true,
+        "status": true,
+        "ownedStop": true
+      },
+      "limits": "Unprivileged Linux fixture; scripted model responses and simulated decisions. Required-jail positive preparation, live account, native/full suite and broader platform remain separately qualified."
+    },
+    "helperBuilt": false,
+    "systemNodeUnchanged": true,
+    "largeInputsRemoved": true,
+    "retainedRemoteEvidenceBytesApproximate": 24576
+  },
+  "requiredPreparation": {
+    "status": "NOT_INDEPENDENTLY_QUALIFIED_ON_RESTRICTED_RUNNER",
+    "helperSha256": "e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f",
+    "helperBuiltFromPublicSource": true,
+    "helperStaticAdmission": "PASS after selecting protected root",
+    "initialFixtureError": "Runner /opt mode0777 made helper ancestry untrusted; protected /var/lib corrected that setup condition.",
+    "sdkProbeRun": 43120379766,
+    "sdkProbeJob": 130859038863,
+    "sdkObservation": {
+      "namespaceSetup": "unverified",
+      "rlimitSetup": "unverified",
+      "degraded": [
+        "required-setup-unverified"
+      ],
+      "runnerError": "required-jail control pipe 3 failed"
+    },
+    "namespaceProbeRun": 43121418313,
+    "namespaceProbeJob": 130862573956,
+    "namespaceProbeCommit": "37fb17d47e00773b2cd93ae11b81dec0c98644b5",
+    "directHelperError": "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
+    "apparmorUserNamespaceRestriction": 1,
+    "hostPolicyChanged": false,
+    "installationAttemptedAfterPreflightRefusal": false,
+    "packageCacheSeeded": false,
+    "helperBuildRecipeReproduced": true
+  },
+  "preservedFailures": [
+    {
+      "run": 43119253067,
+      "classification": "fixture helper location violated protected-ancestry prerequisite"
+    },
+    {
+      "run": 43119698024,
+      "classification": "preparation refused before npm; missing log directory initially obscured classification"
+    },
+    {
+      "run": 43120379766,
+      "classification": "actual required-jail preflight refused before install"
+    },
+    {
+      "run": 43121418313,
+      "classification": "direct helper network-namespace setup denied by host"
+    },
+    {
+      "run": 43121908113,
+      "classification": "test bootstrap: rustup tried to self-update from an intentionally empty Cargo home before Keep build; corrected with documented --no-self-update"
+    }
+  ],
+  "excludedRun": {
+    "id": 43120943743,
+    "reason": "Dispatch used previous workflow revision and no relevant slice executed; green status excluded.",
+    "replacement": "Unconditional probe on immutable branch/commit37fb17d47e00773b2cd93ae11b81dec0c98644b5"
+  },
+  "footprint": "Large downloads and builds for this verification ran on Spark or disposable CI VMs. Hetzner received small scripts/receipts only. Spark retained24KiB after owned test cleanup.",
+  "limits": "Developer-administered environment reproduction of authored fixtures. This is not independent third-party review, a real-model quality test, live organization qualification, whole-product completion, or maximum/native production authority qualification.",
+  "rustupBootstrapReference": "https://rust-lang.github.io/rustup/basics.html"
+}

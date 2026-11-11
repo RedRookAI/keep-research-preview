@@ -2,6 +2,10 @@
 
 The current **0.0.21-preview.1** combined Linux x64 download includes Keep, bundled TypeScript, the generation-only Codex engine and the restricted OpenClaw plugin. Use Linux x64 with the Ubuntu 24.04 library baseline, Node 22.23.3 or later on the Node 22 line, and Git for the repository walkthrough. This installation path needs no npm installer or Rust/C compiler. Review the dated [dependency conditions](dependency-status.md).
 
+This download's account-free workflow was reproduced on a fresh x64 VM. Independent source-build evidence and the additional host prerequisite for required-jail preparation are recorded here:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/independent-preview-2026-11-12.md
+
 ## Download, verify and run
 
 Download `keep-combined-0.0.21-preview.1-linux-x64.tar.gz` from the [current release](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-11-11.2) into a new directory you own. Compare its expected checksum with the [release record](../KEEP_RELEASE.md); a checksum alone does not authenticate a publisher.

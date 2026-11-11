@@ -73,6 +73,10 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/integrations/opencl
 
 ## Release status and remaining work
 
+Fresh-workspace checks reproduced the .21 download and the standard .22 source build on separate Ubuntu x64 VMs. The rebuilt native binaries matched the published checksums. Spark ARM64 checks passed the portable workflow. Required-jail preparation still needs a qualified namespace-capable host; the clean runner denied its network setup.
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/independent-preview-2026-11-12.md
+
 The 0.0.21-preview.1 combined payload passed unprivileged startup, both account-free demos, instance/console lifecycle, authenticated proposal export and real offline TypeScript preparation. It includes freshly built native executables and the unchanged measured generation engine. The receipt records each tested subject and reuse of identical payload bytes. Historical full-suite results remain attached to their tested revisions.
 
 Exact release identities and qualification:
