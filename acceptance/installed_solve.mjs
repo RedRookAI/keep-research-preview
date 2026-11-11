@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -72,8 +73,83 @@ try {
   const restored = await observe(); assert.equal(calls.length, beforeRestart); assert.deepEqual(restored.proposal, result.proposal);
   const denied = await command(["solve", "do not dispatch"], { ...remote(), KEEP_GATEWAY_TOKEN: "d".repeat(64) }, 1); assert.match(denied, /401|403/u); assert.equal(calls.length, beforeRestart);
   const digest = result.proposal.rollback.patchSha256;
+  // Reuse this retained proposal: export and offline inspection must never regenerate it.
+  const sha256 = value => createHash("sha256").update(value).digest("hex");
+  const exportPath = "/project/export?" + new URLSearchParams({ runId, proposalDigest: digest });
+  const exportRequest = (path = exportPath, bearer = token) => fetch(origin + path, {
+    headers: { authorization: "Bearer " + bearer }, signal: AbortSignal.timeout(5000),
+  });
+  const exportResponse = await exportRequest(); assert.equal(exportResponse.status, 200);
+  assert.equal(exportResponse.headers.get("cache-control"), "no-store");
+  const exportText = await exportResponse.text(), exported = JSON.parse(exportText);
+  assert.equal(exported.schema, "keep.proposal-export/v1");
+  assert.equal(exported.assurance, "unsigned-retained-evidence");
+  assert.equal(exported.data.runId, runId); assert.equal(exported.data.projectId, result.projectId);
+  assert.equal(exported.data.proposal.baseRevision, revision);
+  assert.equal(exported.data.proposal.diff, result.proposal.diff);
+  assert.equal(exported.data.proposal.patchSha256, digest); assert.equal(sha256(exported.data.proposal.diff), digest);
+  assert.deepEqual(exported.data.proposal.checks, { testsPassed: true, vettingCleared: true,
+    passedTests: result.proposal.checks.passedTests, failedTests: [] });
+  assert.equal(exported.data.requester.kind, "human"); assert.equal(exported.data.requester.idSha256, sha256("owner"));
+  assert.equal(exported.data.exporterIdSha256, sha256("owner"));
+  for (const privateValue of [token, "controlled-fixture-only", root, source, workspaces, data]) assert.ok(!exportText.includes(privateValue), "portable export excludes fixture credentials and host paths");
+  assert.equal((await exportRequest(exportPath, "d".repeat(64))).status, 401);
+  const wrongDigest = digest === "0".repeat(64) ? "1".repeat(64) : "0".repeat(64);
+  assert.equal((await exportRequest("/project/export?" + new URLSearchParams({ runId, proposalDigest: wrongDigest }))).status, 409);
+  const cliExport = await command(["project", "export", runId, "--proposal=" + digest], remote());
+  assert.deepEqual(JSON.parse(cliExport), exported);
+  const savedExport = join(root, "proposal-export.json"); writeFileSync(savedExport, cliExport, { mode: 0o600 });
+
+  // Use the browser's normal form login and cookie; no credential in a URL.
+  const signIn = await fetch(origin + "/console/login", { method: "POST", redirect: "manual",
+    headers: { origin, "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ token }), signal: AbortSignal.timeout(5000) });
+  assert.equal(signIn.status, 303);
+  const setCookie = signIn.headers.get("set-cookie"); assert.ok(setCookie);
+  assert.match(setCookie, /HttpOnly/u); assert.match(setCookie, /SameSite=Strict/u);
+  const cookie = setCookie.split(";")[0];
+  const consolePage = await fetch(origin + "/console/project?" + new URLSearchParams({ projectId: result.projectId }), {
+    headers: { cookie }, signal: AbortSignal.timeout(5000),
+  });
+  assert.equal(consolePage.status, 200); const consoleText = await consolePage.text();
+  assert.ok(consoleText.includes("/console/export?runId=")); assert.ok(consoleText.includes(digest)); assert.ok(!consoleText.includes(token));
+  const attachment = await fetch(origin + "/console/export?" + new URLSearchParams({ runId, proposalDigest: digest }), {
+    headers: { cookie }, signal: AbortSignal.timeout(5000),
+  });
+  assert.equal(attachment.status, 200); assert.match(attachment.headers.get("content-disposition") ?? "", /attachment/u);
+  assert.match(attachment.headers.get("content-type") ?? "", /application\/json/u);
+  assert.equal(attachment.headers.get("cache-control"), "no-store");
+  assert.deepEqual(JSON.parse(await attachment.text()), exported);
+
+  // No provider/data configuration is supplied to these actual offline CLI commands.
+  assert.equal(git(["status", "--porcelain"]), "");
+  const indexBefore = readFileSync(join(source, ".git/index"));
+  const verified = await command(["proposal", "verify", savedExport, "--repository=" + source], base);
+  assert.match(verified, /recorded clean source and patch check match/u);
+  const patch = await command(["proposal", "patch", savedExport], base);
+  assert.deepEqual(Buffer.from(patch, "utf8"), Buffer.from(result.proposal.diff, "utf8"));
+  assert.equal(sha256(patch), digest); writeFileSync(join(root, "proposal.patch"), patch, { mode: 0o600 });
+  assert.deepEqual(readFileSync(join(source, ".git/index")), indexBefore, "offline verification preserves the index");
+  const originalBytes = readFileSync(join(source, "src/retry.mjs"));
+  try {
+    writeFileSync(join(source, "src/retry.mjs"), "export const retryLimit = 1;\n");
+    const refused = await command(["proposal", "verify", savedExport, "--repository=" + source], base, 2);
+    assert.match(refused, /repository must be clean/u);
+    assert.equal(readFileSync(join(source, "src/retry.mjs"), "utf8"), "export const retryLimit = 1;\n", "refused inspection leaves changed source untouched");
+  } finally { writeFileSync(join(source, "src/retry.mjs"), originalBytes); }
+  assert.equal(git(["rev-parse", "HEAD"]), revision); assert.equal(git(["status", "--porcelain"]), "");
+  assert.deepEqual((await observe()).proposal, restored.proposal); assert.equal(calls.length, beforeRestart);
   const decision = await command(["merge", runId, "veto", "--proposal=" + digest], remote());
+  const afterVetoResponse = await exportRequest(); assert.equal(afterVetoResponse.status, 200);
+  const afterVeto = await afterVetoResponse.json();
+  assert.ok(afterVeto.data.decisions.some(d => d.event === "project.human-proposal-decision" && d.decision === "veto"
+    && d.proposalDigest === digest && d.humanIdSha256 === sha256("owner") && d.status === "refused"));
+  assert.deepEqual(afterVeto.data.proposal, exported.data.proposal); assert.equal(calls.length, beforeRestart);
+  assert.deepEqual(errors, []); assert.equal(calls.length, 2);
   assert.equal(readFileSync(join(source, "src/retry.mjs"), "utf8"), "export const retryLimit = 0;\n");
-  const receipt = { status: "PASS", root, runId, diff: result.proposal.diff, version: JSON.parse(readFileSync(join(installed, "package.json"))).version, installed, configuredPosture: "autonomous", solvePosture: "approval-required", localInstalledStart: true, explicitApprovalBeforeDispatch: true, reviewableProposal: true, passedTests: result.proposal.checks.passedTests, artifactVettingPassed: true, processIsolationEvidence: result.project.artifacts.vet_artifact.isolation, solved: true, controlledModelCalls: calls.length, sourceUnchanged: true, restartNoReplay: true, wrongTokenRefused: true, explicitVetoOutput: decision, paidCalls: 0, modelResponses: "scripted-loopback", operatorDecisions: "simulated approval then exact-proposal veto", limits: "Controlled model responses; same-agent Linux fixture with best-effort process isolation, not real-model quality or production qualification." };
+  const proposalExport = { status: "PASS", schema: exported.schema, proposalDigest: digest, baseRevision: revision,
+    authenticatedHttp: true, wrongTokenRefused: true, wrongDigestRefused: true, installedCliExport: true,
+    consoleFormLoginAttachment: true, offlineCleanSourceVerified: true, exactPatchBytes: true, changedSourceRefused: true,
+    retainedSimulatedVetoAttribution: true, addedModelCalls: calls.length - beforeRestart, assurance: exported.assurance };
+  const receipt = { status: "PASS", root, runId, diff: result.proposal.diff, version: JSON.parse(readFileSync(join(installed, "package.json"))).version, installed, configuredPosture: "autonomous", solvePosture: "approval-required", localInstalledStart: true, explicitApprovalBeforeDispatch: true, reviewableProposal: true, passedTests: result.proposal.checks.passedTests, artifactVettingPassed: true, processIsolationEvidence: result.project.artifacts.vet_artifact.isolation, solved: true, controlledModelCalls: calls.length, sourceUnchanged: true, restartNoReplay: true, wrongTokenRefused: true, explicitVetoOutput: decision, proposalExport, paidCalls: 0, modelResponses: "scripted-loopback", operatorDecisions: "simulated approval then exact-proposal veto", limits: "Controlled model responses and simulated owner decisions; same-agent Linux fixture with best-effort process isolation, not real-model quality, a genuine owner/account run or production qualification." };
   writeFileSync(join(root, "result.json"), JSON.stringify(receipt, null, 2)); console.log(JSON.stringify(receipt));
 } finally { await stop(); model.closeAllConnections(); await new Promise(resolve => model.close(resolve)); }
