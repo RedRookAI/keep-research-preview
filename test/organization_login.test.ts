@@ -266,3 +266,17 @@ test("code-flow rotation requires origin/CSRF, changes opaque credentials and fo
       projectConsole: async (_req, _principal, _csrf, ref) => { bridged = ref; return { status: 200, headers: {}, body: "console" }; } });
   assert.equal(view.status, 200); assert.deepEqual(bridged, next.authority); assert.doesNotMatch(JSON.stringify(bridged), new RegExp(`${next.id}|${next.csrfToken}`));
 });
+
+
+test("code-flow browser effect routes are held before console or review handlers; permitted console remains available", async t => {
+  const f = fixture(t), logged = await f.callback(await f.start()), cookie = logged.headers["Set-Cookie"]!.split(";")[0]!, current = f.identity.sessions.get(cookie.split("=")[1]!, NOW)!;
+  let dispatches = 0;
+  const security = { token: "fixture", origin: ORIGIN, allowedHosts: [new URL(ORIGIN).host], principal: OWNER, identity: f.identity, now: NOW,
+    projectConsole: async () => { dispatches++; return { status: 200, headers: {}, body: "observed" }; } };
+  const request = (method: string, path: string) => handleReviewRequest(f.app, { method, path, query: {}, body: `csrf=${current.csrfToken}&action=approve`, headers: { host: new URL(ORIGIN).host, origin: ORIGIN, cookie } }, security);
+  for (const [method, path] of [["POST", "/console/merge"], ["POST", "/console/cancel"], ["POST", "/review/fixture/decide"], ["GET", "/console/future-effect"]]) {
+    const response = await request(method!, path!); assert.equal(response.status, 409, response.body); assert.match(response.body, /route is held/u);
+  }
+  assert.equal(dispatches, 0); assert.equal(f.app.spine.currentEvents().some(event => event.payload["event"] === "review.decided"), false);
+  assert.equal((await request("GET", "/console")).status, 200); assert.equal(dispatches, 1);
+});

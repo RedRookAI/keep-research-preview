@@ -76,7 +76,24 @@ Code-mode human project commands carry a separate, non-bearer reference bound to
 
 Queue dispatch, recovery, resume and the supported default native model/edit/test entry points recheck that session without extending idle expiry. Logout, local revocation, rotation, idle/absolute expiry or restart prevent later dispatch under the old reference. A fresh login cannot reauthorize an old command. A refusal records prevented new dispatch; an effect already sent to a remote provider can continue and requires its own outcome evidence. Source fixtures cover the default native command path, model retry/stream boundary and late independent test-process spawn. Code-mode human custom, generic and domain execution paths with missing effect checks are held. Stronger isolation configurations and the optional Windows boundary adapter also remain held for code-mode human commands until their final dispatch seam carries the session check. Keep preserves the configured isolation floor. Completing those platform paths remains required work. Personal mode and independent delegated-agent grants keep their existing authority semantics.
 
-The roster and delegation-parent mapping remain startup snapshots. Directory/membership refresh and an upstream user-disable or incident revocation channel remain open. Session expiry requires a new login; this implementation stores no OAuth refresh token. Actual issuer/client deployment, independent custody, persistent retirement and installed enterprise qualification remain open. The revocation evidence here covers the session-bound durable project path. Other request-scoped effect surfaces, including front-door messages, fleet invocation, telemetry export and human merge/revert, still need their own late-session integration.
+The roster and delegation-parent mapping remain startup snapshots. Directory/membership refresh and an upstream user-disable or incident revocation channel remain open. Session expiry requires a new login; this implementation stores no OAuth refresh token. Actual issuer/client deployment, independent custody, persistent retirement and installed enterprise qualification remain open. The revocation evidence here covers the session-bound durable project path. Other request-scoped effect surfaces remain held for code-mode human sessions until their late-session integration is complete.
+
+## Supported prototype routes
+
+Code-mode human sessions use an explicit route allowlist. These routes retain their existing tenant, permission and input checks. A supported command route still requires its original live session and the supported default native effect path.
+
+| Surface | Method | Supported routes |
+| --- | --- | --- |
+| JSON API observations | GET | `/projects`, `/project`, `/project/jobs`, `/project/export`, `/project/goal` |
+| JSON API session-bound commands | POST | `/project`, `/project/resume`, `/project/goal`, `/project/goal/advance`, `/project/goal/control` |
+| Browser project observations | GET | `/console`, `/console/project`, `/console/export`, `/console/style.css`, `/style.css` |
+| Browser session-bound command | POST | `/console/resume` |
+| Browser authentication | GET | `/login`, `/auth/oidc/start`, `/auth/oidc/callback` |
+| Browser credential controls | POST | `/auth/oidc/rotate`, `/logout` |
+
+`GET /health` remains an unauthenticated liveness response. Raw assertion acquisition remains disabled in code mode. Authenticated code-mode human requests outside the allowlist are held before route-specific handlers, including front-door messages/offers, fleet operations, telemetry export, human merge/revert, review decisions, delegation issuance/revocation, client signing, memory routes, worker control, cancellation and project lifecycle mutation. Unproved GET routes and newly added routes are held too. These handlers return HTTP409 with a route-held response; missing or revoked session authority returns403. Existing authentication/protocol refusals retain their own status codes.
+
+Personal mode, legacy assertion identity mode and independently delegated agent sessions retain their existing route and authorization checks. The code-mode human holds preserve the remaining work: add session checks at each actual dispatch or mutation boundary, prove allowed and refused effects, then admit each route explicitly. The allowlist does not establish revocation across every platform surface or terminate effects already dispatched.
 
 The protocol checks follow the OpenID Provider metadata validation and JWT issuer/subject/algorithm guidance. The TTL, cooldown, retirement policy and session command reference are this restricted profile's implementation choices.
 

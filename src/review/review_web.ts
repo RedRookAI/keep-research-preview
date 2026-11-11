@@ -244,6 +244,13 @@ function originOk(req: WebRequest, sec: WebSecurity): boolean {
 
 /** Shared routing for both modes, given the resolved acting principal + the CSRF token to enforce. */
 async function route(app: KeepApp, req: WebRequest, sec: WebSecurity, principal: Principal, csrf: string, loggedIn: boolean, sessionAuthority?: SessionAuthorityRef): Promise<WebResponse> {
+  if (principal.kind === "human" && sec.identity?.codeFlow) {
+    try { sec.identity.sessions.assertAuthority(sessionAuthority, principal, sec.now ?? Date.now()); }
+    catch { return textRes(403, "Organization session authority is unavailable."); }
+    const supported = req.method === "GET" && ["/console", "/console/project", "/console/export", "/console/style.css", "/style.css"].includes(req.path)
+      || req.method === "POST" && req.path === "/console/resume";
+    if (!supported) return textRes(409, "This route is held for organization browser sessions until its effect boundary supports session checks.");
+  }
   if (sec.projectConsole && (req.path === "/console" || req.path.startsWith("/console/"))) {
     if (req.method === "POST" && (!originOk(req, sec) || !safeEqual(parseForm(req.body)["csrf"], csrf))) return textRes(403, "Forbidden: invalid origin or CSRF token.");
     return sec.projectConsole(req, principal, csrf, sessionAuthority);

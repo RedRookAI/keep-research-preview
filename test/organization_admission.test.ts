@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { composeKeep } from "../src/compose.js";
+import { composeKeep, type KeepApp } from "../src/compose.js";
 import { handleGatewayRequest } from "../src/gateway/http_gateway.js";
 import { OidcCodeFlow, captureOidcLoginConfig } from "../src/identity/oidc_code_flow.js";
 import { PrincipalRegistry } from "../src/identity/identity_provider.js";
@@ -34,7 +34,7 @@ function fixture(t: TestContext, mode: "control" | "revoke-inflight" | "queued" 
       : { action: "plan", rationale: "repair sum", edits: [{ file: "calc.mjs", search: "return a - b", replace: "return a + b", intent: "sum" }] };
     return { text: JSON.stringify(result), model: "fixture", tokensIn: 1, tokensOut: 1 };
   } };
-  const app = composeKeep({ dataDir: join(root, "state"), identity, developmentProvider: model, sourceLanding: mode !== "custom",
+  const app = composeKeep({ dataDir: join(root, "state"), identity, delegationParentFor: (id, tenant) => registry.resolveReference(id, tenant), developmentProvider: model, sourceLanding: mode !== "custom",
     ...(mode === "strong-boundary" ? { projectTestRequiredTier: "microvm" as const } : {}),
     ...(mode === "custom" ? { solve: async () => { throw Error("unfenced solver must not execute"); } } : {
       repositoryMaterialization: { sourceDir: source, workspaceBase, repoRef: "project", commit: git(source, "rev-parse", "HEAD"), baseBranch: "main" },
@@ -71,7 +71,7 @@ test("queued command loses admission on rotation; fresh login cannot reauthorize
 test("custom code-mode human path refuses and a trusted resolver cannot manufacture a missing session reference", async t => {
   const f = fixture(t, "custom"); assert.equal((await f.submit()).status, 409); assert.equal(f.generations(), 0);
   const response = await handleGatewayRequest(f.app, { method: "POST", path: "/project", query: {}, headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ goal: "Fix arithmetic" }) }, { token, principalFor: () => principal });
-  assert.equal(response.status, 409); assert.equal(f.generations(), 0);
+  assert.equal(response.status, 403); assert.match(response.body, /session authority is unavailable/u); assert.equal(f.generations(), 0);
 });
 
 test("goal API retains original authority and revocation prevents advancing or creating a child", async t => {
@@ -88,4 +88,42 @@ test("goal API retains original authority and revocation prevents advancing or c
 
 test("unverified stronger boundary remains held before model dispatch and never downgrades configured isolation", async t => {
   const f = fixture(t, "strong-boundary"); const response = await f.submit(); assert.equal(response.status, 409, response.body); assert.equal(f.generations(), 0);
+});
+
+
+test("code-mode human route allowlist prevents unfenced sinks, including GET effect routes and future routes", async t => {
+  const f = fixture(t); let sinkEntries = 0;
+  const guarded = { ...f.app };
+  for (const name of ["frontDoorForSubject", "frontDoorMessage", "fleetLifecycle", "fleetTelemetry", "projectMerge", "clientSigning", "memory", "durableMemory"]) {
+    Object.defineProperty(guarded, name, { get: () => { sinkEntries++; throw Error("unverified sink entered"); } });
+  }
+  const held = [
+    ["POST", "/message"], ["POST", "/fleet/invoke"], ["POST", "/observability/export"], ["POST", "/project/merge"], ["POST", "/project/revert"],
+    ["POST", "/delegation/issue"], ["POST", "/client/sign"], ["POST", "/project/cancel"], ["POST", "/memory/durable"], ["POST", "/worker/resume"],
+    ["GET", "/memory"], ["GET", "/memory/durable"], ["GET", "/fleet/integrity"], ["GET", "/future-effect"], ["PUT", "/project"],
+  ];
+  for (const [method, path] of held) {
+    const response = await handleGatewayRequest(guarded, { method: method!, path: path!, query: { query: "synthetic" }, body: '{}', headers: { authorization: `Bearer ${token}`, "x-keep-session": f.session.id } }, { token, identity: f.identity });
+    assert.equal(response.status, 409, `${method} ${path}: ${response.body}`); assert.equal(JSON.parse(response.body).code, "organization-session-route-held");
+  }
+  assert.equal(sinkEntries, 0); assert.equal(f.generations(), 0);
+  const read = await handleGatewayRequest(f.app, { method: "GET", path: "/projects", query: {}, body: "", headers: { authorization: `Bearer ${token}`, "x-keep-session": f.session.id } }, { token, identity: f.identity });
+  assert.equal(read.status, 200); assert.ok(f.app.spine.currentEvents().some(event => event.payload["event"] === "session.route-held"));
+});
+
+test("route attenuation preserves personal, legacy identity and independently delegated agent dispatch", async t => {
+  const f = fixture(t); let calls = 0;
+  const active = { ...f.app, frontDoor: {}, frontDoorForSubject: () => ({}), frontDoorMessage: async () => { calls++; return { observed: true }; } } as unknown as KeepApp;
+  const request = (sid?: string) => ({ method: "POST", path: "/message", query: {}, body: '{"message":"synthetic"}', headers: { authorization: `Bearer ${token}`, ...(sid ? { "x-keep-session": sid } : {}) } });
+  const personal = { ...active, identity: undefined } as unknown as KeepApp;
+  assert.equal((await handleGatewayRequest(personal, request(), { token })).status, 200);
+  const legacyIdentity = { ...f.identity, codeFlow: undefined } as unknown as typeof f.identity;
+  const legacy = { ...active, identity: legacyIdentity } as KeepApp;
+  const oldSession = f.identity.sessions.create(principal, Date.now());
+  assert.equal((await handleGatewayRequest(legacy, request(oldSession.id), { token, identity: legacyIdentity })).status, 200);
+  const agent = await f.app.authorization.issue(principal, "independent-agent", ["review.view"], Date.now() + 60000);
+  f.identity.sessions.revoke(f.session.id);
+  const agentSession = f.identity.sessions.create(agent, Date.now());
+  assert.equal((await handleGatewayRequest(active, request(agentSession.id), { token, identity: f.identity })).status, 200);
+  assert.equal(calls, 3);
 });

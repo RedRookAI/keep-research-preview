@@ -87,6 +87,11 @@ export interface GatewaySecurity {
   readonly identity?: IdentityLayer;
 }
 
+// Explicit prototype scope. Adding a route requires checking its actual effects;
+// GET alone does not establish that a handler is observational.
+const ORGANIZATION_SESSION_READ_ROUTES = new Set(["/projects", "/project", "/project/jobs", "/project/export", "/project/goal"]);
+const ORGANIZATION_SESSION_COMMAND_ROUTES = new Set(["/project", "/project/resume", "/project/goal", "/project/goal/advance", "/project/goal/control"]);
+
 const PRINCIPAL_KINDS = new Set(["human", "agent", "service"]);
 const PRINCIPAL_ROLES = new Set(["owner", "maintainer", "reviewer", "operator", "viewer", "agent"]);
 const SAFE_TENANT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
@@ -266,6 +271,16 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     app.identity.sessions.assertAuthority(sessionAuthority, principal, Date.now());
   };
   if (boundTenant !== undefined && principal.tenant !== boundTenant) return refuseTenantBoundary(req.method === "GET" ? 404 : 403);
+  if (principal.kind === "human" && app.identity?.codeFlow) {
+    try { assertRequestAuthority(); } catch { return json(403, { error: "organization session authority is unavailable" }); }
+    const supported = req.method === "GET" ? ORGANIZATION_SESSION_READ_ROUTES.has(req.path)
+      : req.method === "POST" && ORGANIZATION_SESSION_COMMAND_ROUTES.has(req.path);
+    if (!supported) {
+      app.spine.stage({ type: "identity.action", actor: "gateway-admission", payload: {
+        event: "session.route-held", principalId: principal.id, disposition: "prevented-new-dispatch" } });
+      return json(409, { code: "organization-session-route-held", error: "This route is held for organization browser sessions until its effect boundary supports session checks." });
+    }
+  }
   const personalMode = sec.principalFor === undefined && sec.identity === undefined;
   const tenant = personalMode ? undefined : principal.tenant!;
   const skillRegistry = personalMode ? app.registryStore : app.tenantRegistry.forTenant(tenant);
