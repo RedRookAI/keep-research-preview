@@ -1,6 +1,6 @@
 {
   "name": "keep",
-  "version": "0.0.20-preview.1",
+  "version": "0.0.21-preview.1",
   "description": "Self-hosted platform for AI work, persistent knowledge, reusable skills and governed execution",
   "main": "dist/src/index.js",
   "scripts": {
@@ -137,7 +137,9 @@
     "docs/qualification/recovery-source-2026-10-20.json",
     "KEEP_RELEASE.md",
     "docs/maintenance-2026-11-11.md",
-    "docs/proposal-export.md"
+    "docs/proposal-export.md",
+    "docs/organization-login.md",
+    "docs/maintenance-2026-11-11.2.md"
   ],
   "exports": {
     ".": "./dist/src/index.js",

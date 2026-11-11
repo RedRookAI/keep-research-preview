@@ -6,7 +6,11 @@ Keep brings project goals, memory, reusable skills and execution records into on
 
 The implementation spans software development, research, knowledge management and content workflows. The most developed installed workflow takes a repository goal through generation, workspace edits, executable checks and review.
 
-**Source and latest download: 0.0.20-preview.1, a Linux x64 development preview.** The repository contains runnable workflows, tested components and experimental integration points. Readiness varies by capability; the broader platform remains under development.
+**Development source: 0.0.21-preview.1. Latest download: 0.0.20-preview.1, a Linux x64 development preview.** The repository contains runnable workflows, tested components and experimental integration points. Readiness varies by capability; the broader platform remains under development.
+
+Development source adds configured organization code/PKCE acquisition and canonical native capture descriptors. Organization checks use a controlled issuer fixture; key refresh, current membership/revocation and live deployment remain open. The latest downloadable .20 archive retains its exact November 11 qualification.
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/maintenance-2026-11-11.2.md
 
 ## Scope and implementation status
 
