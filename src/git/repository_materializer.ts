@@ -104,7 +104,9 @@ export async function materializeRepository(req: MaterializeRepositoryRequest, e
   }
 
   const hardening = gitChildHardening(process.platform, process.env);
-  await execFileAsync("git", [...hardening.configArgs, "clone", "--no-checkout", "--", sourceDir, projectDir], {
+  // Local clones must own their Git object bytes. Shared objects would both
+  // alias the original source and make required workspace isolation refuse.
+  await execFileAsync("git", [...hardening.configArgs, "clone", "--no-hardlinks", "--no-checkout", "--", sourceDir, projectDir], {
     env: hardening.env,
     maxBuffer: 32 * 1024 * 1024,
   });
