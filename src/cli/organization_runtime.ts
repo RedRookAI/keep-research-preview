@@ -6,6 +6,7 @@ import type { Principal, Role } from "../identity/rbac.js";
 import type { ResidencyPolicy } from "../governance/residency.js";
 import type { CapturedRuntimeContract } from "./runtime_config.js";
 import { OidcCodeFlow, type OrganizationLoginPorts } from "../identity/oidc_code_flow.js";
+import { OidcIssuerKeySource } from "../identity/oidc_key_source.js";
 
 const MAX = 1024 * 1024;
 const SAFE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
@@ -41,8 +42,9 @@ export function loadInstalledOrganizationRuntime(refs: NonNullable<CapturedRunti
   const egressAllowlist = hostList(residency["egressAllowlist"]);
   const provider = new OidcJwksProvider({ jwks: jwks as Jwks, issuer: refs.issuer, audience: refs.audience, ...(refs.login ? { leewaySec: refs.login.leewaySec } : {}) });
   const registry = new PrincipalRegistry(mappings), sessions = new SessionStore(refs.login ? { idleMs: refs.login.sessionIdleMs, absoluteMs: refs.login.sessionAbsoluteMs, maxSessions: refs.login.maxSessions } : {});
+  const keys = refs.login?.keys === undefined ? undefined : new OidcIssuerKeySource(refs.issuer, refs.login, refs.login.keys, transport.fetch, transport.now);
   const codeFlow = refs.login === undefined ? undefined : new OidcCodeFlow(refs.login, refs.issuer, refs.tenantId, sessions, { ...transport,
-    verify: (assertion, now, transaction) => provider.verifyCodeFlow(assertion, now, transaction), principal: identity => registry.resolve(identity) });
+    verify: (assertion, now, transaction, signal) => keys ? keys.verify(assertion, now, transaction, signal) : provider.verifyCodeFlow(assertion, now, transaction), principal: identity => registry.resolve(identity) });
   return Object.freeze({
     identity: Object.freeze({ provider, registry, sessions, ...(codeFlow ? { codeFlow } : {}) }),
     parentFor: (id: string, tenant?: string) => tenant === refs.tenantId && admittedParents.has(id) ? principals.get(id) : undefined,

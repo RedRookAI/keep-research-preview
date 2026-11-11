@@ -82,7 +82,7 @@ export interface ProjectTestArtifact {
 }
 
 export interface ProjectTester {
-  run(issue: Issue, state: ProjectState): Promise<ProjectTestArtifact>;
+  run(issue: Issue, state: ProjectState, execution?: ExecutionContext): Promise<ProjectTestArtifact>;
 }
 
 export interface ProjectTestConfig {
@@ -289,11 +289,11 @@ export function buildProjectTester(config: ProjectTestConfig): ProjectTester & {
     }));
   }
   return {
-    async run(issue, state): Promise<ProjectTestArtifact> {
+    async run(issue, state, execution): Promise<ProjectTestArtifact> {
       const implementation = implementationOf(issue, state);
       const binding = { issueId: issue.id, taskId: implementation.task.id,
         planStepId: implementation.task.planStepId, implementationSha256: projectImplementationDigest(implementation) };
-      const evidence = await execute(issue.repoRef, implementation.repositoryTreeAfterSha256, implementation.repositoryExecutionManifestSha256);
+      const evidence = await execute(issue.repoRef, implementation.repositoryTreeAfterSha256, implementation.repositoryExecutionManifestSha256, undefined, execution);
       return Object.freeze({ ...evidence, ...binding });
     },
     feedbackRunner(repoRef): TestRunner {

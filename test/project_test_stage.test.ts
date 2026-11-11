@@ -251,3 +251,17 @@ test("KEEP-11A-003 feedback preserves cancellation acquired during asynchronous 
   assert.match(result.runnerError ?? "", /cancelled/);
   assert.equal(existsSync(marker), false);
 });
+
+test("revocation during asynchronous verification setup prevents the actual process; allowed authority still executes", async () => {
+  const f = await fixture();
+  try {
+    let active = true, calls = 0;
+    const base = config(f, `require("node:fs").writeFileSync("effect-observed", "dispatched"); console.log("ok 1 - allowed"); console.log("1..1")`);
+    const held = buildProjectTester({ ...base, executionSnapshotFiles: async ref => { const files = await base.executionSnapshotFiles!(ref); active = false; return files; } });
+    const authority = () => { calls++; if (!active) throw Error("revoked"); };
+    const refused = await held.run(issue, f.state, { assertAuthority: authority });
+    assert.equal(refused.testsExecuted, false); assert.equal(existsSync(join(f.executionDir, "effect-observed")), false); assert.ok(calls > 0);
+    active = true; const allowed = await buildProjectTester(base).run(issue, f.state, { assertAuthority: authority });
+    assert.equal(allowed.testsExecuted, true); assert.equal(existsSync(join(f.executionDir, "effect-observed")), true);
+  } finally { rmSync(f.root, { recursive: true, force: true }); }
+});

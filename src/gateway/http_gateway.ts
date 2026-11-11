@@ -58,7 +58,7 @@ import { ProjectSubmissionUncertainError, type ProjectJobContext } from "../sess
 import { handleReviewRequest, type IdentityLayer } from "../review/review_web.js";
 import { handleProjectConsole } from "../review/project_console.js";
 import { assertRestrictedCurrent, assertRestrictedHuman, matchesRestrictedBearer, readRestrictedClientProfile, restrictedClientPrincipal, restrictedProjectStatus, type RestrictedClientProfile } from "./restricted_client.js";
-import { SessionCapacityError, type SessionReservation } from "../identity/session_store.js";
+import { SessionCapacityError, type SessionReservation, type SessionAuthorityRef } from "../identity/session_store.js";
 
 export interface GatewayRequest {
   readonly method: string;
@@ -81,6 +81,8 @@ export interface GatewaySecurity {
   readonly workerControl?: { readonly id: string; readonly state: () => "running" | "paused" | "stopping"; readonly requestStop: () => boolean; readonly setPaused?: (paused: boolean) => boolean };
   /** Map an authenticated request to a principal (org RBAC). Absent → OWNER (n=1, zero-friction). */
   readonly principalFor?: (req: GatewayRequest) => Principal | undefined;
+  /** Trusted browser bridge only; never decoded from request JSON. */
+  readonly sessionAuthority?: SessionAuthorityRef;
   /** Organization login/session boundary. Mutually exclusive with an injected principal resolver. */
   readonly identity?: IdentityLayer;
 }
@@ -248,12 +250,21 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
 
   // PRINCIPAL-AWARE: the token maps to a principal (n=1 → OWNER, zero-friction; org → the resolver's principal).
   let resolvedPrincipal: Principal | undefined;
-  try { resolvedPrincipal = sec.identity !== undefined
-    ? resolvedEnterprisePrincipal(sec.identity.sessions.get(req.headers["x-keep-session"], Date.now())?.principal)
-    : sec.principalFor === undefined ? undefined : resolvedEnterprisePrincipal(sec.principalFor(req)); }
+  let sessionAuthority = sec.sessionAuthority;
+  try {
+    const session = sec.identity?.sessions.get(req.headers["x-keep-session"], Date.now());
+    if (session) sessionAuthority = session.authority;
+    resolvedPrincipal = sec.identity !== undefined ? resolvedEnterprisePrincipal(session?.principal)
+      : sec.principalFor === undefined ? undefined : resolvedEnterprisePrincipal(sec.principalFor(req));
+  }
   catch { return json(403, { error: "forbidden", reason: "authenticated principal could not be resolved" }); }
   if ((sec.principalFor !== undefined || sec.identity !== undefined) && resolvedPrincipal === undefined) return json(403, { error: "forbidden", reason: "authenticated principal could not be resolved" });
   const principal: Principal = restrictedPrincipal ?? resolvedPrincipal ?? OWNER;
+  const commandAuthority = principal.kind === "human" && app.identity?.codeFlow && sessionAuthority ? { sessionAuthority } : {};
+  const assertRequestAuthority = () => {
+    if (principal.kind !== "human" || !app.identity?.codeFlow) return;
+    app.identity.sessions.assertAuthority(sessionAuthority, principal, Date.now());
+  };
   if (boundTenant !== undefined && principal.tenant !== boundTenant) return refuseTenantBoundary(req.method === "GET" ? 404 : 403);
   const personalMode = sec.principalFor === undefined && sec.identity === undefined;
   const tenant = personalMode ? undefined : principal.tenant!;
@@ -617,7 +628,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
         if (principal.kind !== "human" && principal.kind !== "agent") return json(403, { error: "goal requires a human or delegated agent" });
         const digest = (value: unknown): string => createHash("sha256").update(canonicalize(value)).digest("hex");
         const projectId = await app.projectRuntime.createGoalWork({ keyDigest: digest(["keep.goal-work.create/v1", principal.tenant ?? null, principal.kind, principal.id, b["idempotencyKey"]]), requestDigest: digest(b) }, b["definition"], {
-          kind: principal.kind, id: principal.id, ...(principal.tenant === undefined ? {} : { tenant: principal.tenant }), ...(grantId === undefined ? {} : { grantId }),
+          kind: principal.kind, id: principal.id, ...(principal.tenant === undefined ? {} : { tenant: principal.tenant }), ...(grantId === undefined ? {} : { grantId }), ...commandAuthority,
         }, b["active"]);
         // Activation is persistent. Normal workers continue through their existing heartbeat.
         return json(202, app.projectRuntime.goalWork(projectId));
@@ -703,7 +714,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
           const grantId = app.authorization.attribution(principal)?.grantId;
           if (binding !== undefined && principal.kind !== "human" && principal.kind !== "agent") throw new Error("durable project command requires a human or delegated agent");
           return { projectId: project.id, ...(binding === undefined ? {} : { command: { binding, goal,
-            principal: { kind: principal.kind as "human" | "agent", id: principal.id, ...(principal.tenant === undefined ? {} : { tenant: principal.tenant }), ...(grantId === undefined ? {} : { grantId }) },
+            principal: { kind: principal.kind as "human" | "agent", id: principal.id, ...(principal.tenant === undefined ? {} : { tenant: principal.tenant }), ...(grantId === undefined ? {} : { grantId }), ...commandAuthority },
             ...(posture === undefined ? {} : { posture }), ...(domainWorkflowKind === undefined ? {} : { domainWorkflowKind }),
             ...(memoryContext === undefined ? {} : { memoryContext }),
           } }), run: (context: ProjectJobContext) => app.autonomyLoop!.runManagedProject(project.id, goal, {
@@ -745,7 +756,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
         if (!binding) return json(501, { error: "durable task memory command execution is unavailable" });
         const grantId = app.authorization.attribution(principal)?.grantId;
         command = { binding, goal, ...(memoryContext === undefined ? {} : { memoryContext }),
-          principal: { id: principal.id, kind: principal.kind as "human" | "agent", ...(principal.tenant === undefined ? {} : { tenant: principal.tenant }), ...(grantId === undefined ? {} : { grantId }) },
+          principal: { id: principal.id, kind: principal.kind as "human" | "agent", ...(principal.tenant === undefined ? {} : { tenant: principal.tenant }), ...(grantId === undefined ? {} : { grantId }), ...commandAuthority },
           ...(domainWorkflowKind === undefined ? {} : { domainWorkflowKind }),
           ...(posture === undefined ? {} : { posture }) };
       }
@@ -798,6 +809,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     const denied = gate(app.autonomyLoop.resumePermission(runId, input)); if (denied) return denied;
     let delegatedDecision: Record<string, unknown> | undefined;
     const memoryForResume = () => {
+      assertRequestAuthority();
       const original = app.projectRuntime!.job(runId, new Set([project.id]));
       const prior = app.projectManager!.session(project.id).lastCheckpoint();
       if (original?.commandDigest === undefined) {
@@ -1151,7 +1163,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     if (capability === undefined) return json(404, { error: "fleet capability not found" });
     if (capability.fleet === undefined) return json(409, { error: "fleet capability lacks an admitted server-owned resource profile" });
     const admissionRequest: GatewayRequest = { ...req, path: "/fleet/admit", body: JSON.stringify({ ...b, capability: b["operation"] }) };
-    const boundSecurity: GatewaySecurity = personalMode ? { token: sec.token } : { token: sec.token, principalFor: () => principal };
+    const boundSecurity: GatewaySecurity = personalMode ? { token: sec.token } : { token: sec.token, principalFor: () => principal, ...(sessionAuthority ? { sessionAuthority } : {}) };
     const admissionResponse = await handleGatewayRequest(app, admissionRequest, boundSecurity);
     if (admissionResponse.status !== 200) return admissionResponse;
     const admitted = JSON.parse(admissionResponse.body) as { result: { proceed: boolean; reasons?: readonly string[]; handle?: FleetAdmissionHandle }; mediation: unknown };
@@ -1622,9 +1634,9 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
         else resp = await handleReviewRequest(app, greq, {
           token, origin: opts.identity?.codeFlow?.config.publicOrigin ?? `http://${host}:${port}`, allowedHosts: opts.identity?.codeFlow ? [new URL(opts.identity.codeFlow.config.publicOrigin).host] : [`${host}:${port}`, `localhost:${port}`], principal: OWNER,
           ...(opts.identity ? { identity: opts.identity } : {}),
-          projectConsole: (request, principal, csrf) => handleProjectConsole(request, csrf, (method, path, query = {}, body) => handleGatewayRequest(app, {
+          projectConsole: (request, principal, csrf, sessionAuthority) => handleProjectConsole(request, csrf, (method, path, query = {}, body) => handleGatewayRequest(app, {
             method, path, query, body: body === undefined ? "" : JSON.stringify(body), headers: { authorization: `Bearer ${token}` },
-          }, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(opts.identity ? { principalFor: () => principal } : {}) }), { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline"), cancel: can(app.authorization, principal, "change.solve") }),
+          }, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(opts.identity ? { principalFor: () => principal, ...(sessionAuthority ? { sessionAuthority } : {}) } : {}) }), { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline"), cancel: can(app.authorization, principal, "change.solve") }),
         });
       } else resp = await handleGatewayRequest(app, greq, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(workerControl ? { workerControl } : {}), ...(opts.principalFor ? { principalFor: opts.principalFor } : {}), ...(opts.identity ? { identity: opts.identity } : {}) });
       res.writeHead(resp.status, { ...resp.headers });

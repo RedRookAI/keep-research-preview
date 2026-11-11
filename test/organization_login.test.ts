@@ -249,3 +249,20 @@ test("gateway socket routes actual callback/public Host and rejects duplicate ca
   assert.equal(fresh.identity.sessions.get(sessionId, NOW), null, "restart has no retained session or token");
   assert.doesNotMatch(complete.body, /fixture-code-|synthetic-client-secret/u);
 });
+
+test("code-flow rotation requires origin/CSRF, changes opaque credentials and forwards only trusted session reference into console", async t => {
+  const f = fixture(t), logged = await f.callback(await f.start()), cookie = logged.headers["Set-Cookie"]!.split(";")[0]!, sid = cookie.split("=")[1]!;
+  const prior = f.identity.sessions.get(sid, NOW)!;
+  const rotate = (origin: string, csrf: string) => f.browser({ method: "POST", path: "/auth/oidc/rotate", headers: { host: new URL(ORIGIN).host, origin, cookie }, body: `csrf=${csrf}` });
+  assert.equal((await rotate("https://other.fixture.invalid", prior.csrfToken)).status, 403);
+  assert.equal((await rotate(ORIGIN, "wrong")).status, 403);
+  const response = await rotate(ORIGIN, prior.csrfToken); assert.equal(response.status, 303); assert.match(response.headers["Set-Cookie"]!, /HttpOnly; Secure; SameSite=Strict/u);
+  const nextCookie = response.headers["Set-Cookie"]!.split(";")[0]!, next = f.identity.sessions.get(nextCookie.split("=")[1]!, NOW)!;
+  assert.equal(f.identity.sessions.get(sid, NOW), null); assert.notEqual(next.csrfToken, prior.csrfToken); assert.equal(next.createdAt, prior.createdAt);
+  assert.throws(() => f.identity.sessions.assertAuthority(prior.authority, prior.principal, NOW)); f.identity.sessions.assertAuthority(next.authority, next.principal, NOW);
+  let bridged: unknown;
+  const view = await handleReviewRequest(f.app, { method: "GET", path: "/console", query: {}, body: "", headers: { host: new URL(ORIGIN).host, cookie: nextCookie } },
+    { token: "fixture", origin: ORIGIN, allowedHosts: [new URL(ORIGIN).host], principal: OWNER, identity: f.identity, now: NOW,
+      projectConsole: async (_req, _principal, _csrf, ref) => { bridged = ref; return { status: 200, headers: {}, body: "console" }; } });
+  assert.equal(view.status, 200); assert.deepEqual(bridged, next.authority); assert.doesNotMatch(JSON.stringify(bridged), new RegExp(`${next.id}|${next.csrfToken}`));
+});

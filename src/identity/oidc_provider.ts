@@ -32,6 +32,28 @@ export interface Jwk {
 export interface Jwks { readonly keys: readonly Jwk[]; }
 export interface VerifiedCodeFlowIdentity extends VerifiedIdentity { readonly validUntil: number; }
 
+/** Atomic remote replacement admission; callers keep the previous snapshot on any refusal. */
+export function captureCodeFlowJwks(value: unknown, maxKeys: number): Jwks {
+  if (!value || typeof value !== "object" || Array.isArray(value) || !Number.isSafeInteger(maxKeys) || maxKeys < 1 || maxKeys > 64) throw new Error("invalid organization key set");
+  const rows = (value as { keys?: unknown }).keys;
+  if (!Array.isArray(rows) || rows.length < 1 || rows.length > maxKeys) throw new Error("invalid organization key set");
+  const ids = new Set<string>(), materials = new Set<string>();
+  const keys = rows.map((row: unknown) => {
+    if (!row || typeof row !== "object" || Array.isArray(row)) throw new Error("invalid organization key set");
+    const k = row as Jwk;
+    if (typeof k.kid !== "string" || !k.kid || k.kid.length > 256 || ids.has(k.kid) || k.kty !== "RSA" || (k.alg !== undefined && k.alg !== "RS256") || (k.use !== undefined && k.use !== "sig")
+      || ["d", "p", "q", "dp", "dq", "qi", "oth", "k"].some(field => Object.hasOwn(k, field))
+      || (k.key_ops !== undefined && (!Array.isArray(k.key_ops) || k.key_ops.length !== 1 || k.key_ops[0] !== "verify"))) throw new Error("invalid organization key set");
+    for (const part of [k.n, k.e]) if (typeof part !== "string" || !/^[A-Za-z0-9_-]+$/u.test(part) || Buffer.from(part, "base64url").toString("base64url") !== part) throw new Error("invalid organization key set");
+    const publicKey = createPublicKey({ key: k as JsonWebKey, format: "jwk" }), normalized = publicKey.export({ format: "jwk" });
+    const material = `${normalized.n}.${normalized.e}`;
+    if ((publicKey.asymmetricKeyDetails?.modulusLength ?? 0) < 2048 || normalized.n !== k.n || normalized.e !== k.e || materials.has(material)) throw new Error("invalid organization key set");
+    ids.add(k.kid); materials.add(material);
+    return Object.freeze({ kty: "RSA", kid: k.kid, n: k.n!, e: k.e!, alg: "RS256", use: "sig" });
+  });
+  return Object.freeze({ keys: Object.freeze(keys) });
+}
+
 export interface OidcConfig {
   /** The provider's public keys (a JWKS). In prod, fetched from the IdP's jwks_uri. */
   readonly jwks: Jwks;

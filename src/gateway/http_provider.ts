@@ -171,7 +171,7 @@ export class HttpProvider implements ModelProvider {
   async generate(req: GenerateRequest): Promise<GenerateResult> {
     const maxTokens = req.maxTokens ?? this.opts.defaultMaxTokens ?? 1024;
     const wire = this.opts.dialect.buildGenerate(this.opts.model, req.prompt, maxTokens, false, { structuredOutput: req.hints?.["structuredOutput"] === true });
-    const json = await this.send(wire, req.signal, req.maxAttempts);
+    const json = await this.send(wire, req.signal, req.maxAttempts, req.assertAuthority);
     const parsed = this.opts.dialect.parseGenerate(json);
     this.lastUsage.value = parsed.usage;
     return { text: parsed.text, model: parsed.model, tokensIn: parsed.usage.freshInputTokens + parsed.usage.cachedInputTokens, tokensOut: parsed.usage.outputTokens, ...(parsed.usageComplete === undefined ? {} : { usageComplete: parsed.usageComplete }), ...(parsed.providerRoute === undefined ? {} : { providerRoute: parsed.providerRoute }) };
@@ -313,6 +313,7 @@ export class HttpProvider implements ModelProvider {
     let res: Response;
     try {
       if (req.signal?.aborted) throw new ProviderError("request cancelled", 0, true);
+      try { req.assertAuthority?.(); } catch { throw new ProviderError("request authority unavailable before dispatch", 0, true); }
       res = await this.fetchImpl(url, { method: "POST", redirect: "manual", headers, body: JSON.stringify(wire.body), signal });
       rejectRedirect(res);
     } catch (err) {
@@ -401,7 +402,7 @@ export class HttpProvider implements ModelProvider {
   }
 
   /** Send with retry. Honors Retry-After; else exponential backoff; never retries permanent (4xx≠429). */
-  private async send(wire: { path: string; body: Record<string, unknown> }, externalSignal?: AbortSignal, requestMaxAttempts?: number): Promise<unknown> {
+  private async send(wire: { path: string; body: Record<string, unknown> }, externalSignal?: AbortSignal, requestMaxAttempts?: number, assertAuthority?: () => void): Promise<unknown> {
     if (requestMaxAttempts !== undefined && (!Number.isSafeInteger(requestMaxAttempts) || requestMaxAttempts < 1)) throw new ProviderError("invalid request attempt ceiling", 0, true);
     const maxAttempts = Math.min(this.maxAttempts, requestMaxAttempts ?? this.maxAttempts);
     const url = this.opts.baseUrl.replace(/\/+$/, "") + wire.path;
@@ -415,6 +416,7 @@ export class HttpProvider implements ModelProvider {
     let lastErr: ProviderError | undefined;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       if (externalSignal?.aborted) throw new ProviderError("request cancelled", 0, true);
+      try { assertAuthority?.(); } catch { throw new ProviderError("request authority unavailable before dispatch", 0, true); }
       const ac = new AbortController();
       const signal = externalSignal === undefined ? ac.signal : AbortSignal.any([ac.signal, externalSignal]);
       const timer = setTimeout(() => ac.abort(), this.timeoutMs);

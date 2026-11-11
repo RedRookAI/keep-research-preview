@@ -333,7 +333,8 @@ export function buildAutonomyLoop(cfg: AutonomyLoopConfig): AutonomyLoop {
       if (!marker || typeof marker !== "object" || Array.isArray(marker)
         || Object.keys(marker).length !== 2 || (marker as { schemaVersion?: unknown }).schemaVersion !== 1
         || typeof (marker as { binding?: unknown }).binding !== "string"
-        || (marker as { binding?: unknown }).binding !== cfg.softwarePreparation?.binding || preparationExecutors === undefined) {
+        || (marker as { binding?: unknown }).binding !== cfg.softwarePreparation?.binding || preparationExecutors === undefined
+        || cfg.softwarePreparation?.authorize?.(state.runId, state.projectId, state.goal) === false) {
         return hold("The native preparation binding is missing, malformed or changed; no phase was dispatched.");
       }
       if (!Object.hasOwn(state.artifacts, "software_operation") && !["understand", "research", "rag", "plan", "vet_plan", "ticket", "implement"].includes(stage)) {

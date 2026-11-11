@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { DOMAIN_WORKFLOW_KINDS, type DomainWorkflowKind } from "../autonomy/project_state.js";
 import type { ProjectId } from "./project_id.js";
 import { parseTaskMemorySelection, type TaskMemorySelection } from "../memory/task_context.js";
+import { captureSessionAuthorityRef, type SessionAuthorityRef } from "../identity/session_store.js";
 
 export class NativeProjectCommandUnavailableError extends Error {
   constructor(readonly reason: "custody" | "authority") {
@@ -13,7 +14,7 @@ export class NativeProjectCommandUnavailableError extends Error {
 /** Data, never serialized code or a persisted role/credential. */
 export interface NativeProjectCommand {
   readonly binding: string;
-  readonly principal: { readonly kind: "human" | "agent"; readonly id: string; readonly tenant?: string; readonly grantId?: string };
+  readonly principal: { readonly kind: "human" | "agent"; readonly id: string; readonly tenant?: string; readonly grantId?: string; readonly sessionAuthority?: SessionAuthorityRef };
   readonly goal: string;
   /** Overall objective/constraints, distinct from the current task's requested action. */
   readonly goalContext?: string;
@@ -46,9 +47,13 @@ export function decodeProjectCommand(value: string, expectedDigest: string, jobI
     || (c.posture !== undefined && !["autonomous", "policy-calibrated", "approval-required"].includes(c.posture))
     || (c.domainWorkflowKind !== undefined && !DOMAIN_WORKFLOW_KINDS.includes(c.domainWorkflowKind))) throw new Error("invalid native project command");
   const p = c.principal;
-  if (!p || typeof p !== "object" || Object.keys(p).some(k => !["kind", "id", "tenant", "grantId"].includes(k))
+  if (!p || typeof p !== "object" || Object.keys(p).some(k => !["kind", "id", "tenant", "grantId", "sessionAuthority"].includes(k))
     || !["human", "agent"].includes(p.kind) || !text(p.id) || (p.tenant !== undefined && !text(p.tenant))
     || (p.kind === "agent" ? !text(p.grantId) : p.grantId !== undefined)) throw new Error("invalid project command principal reference");
+  if (p.sessionAuthority !== undefined) {
+    const authority = captureSessionAuthorityRef(p.sessionAuthority);
+    if (p.kind !== "human" || authority.tenantId !== p.tenant) throw new Error("invalid project session authority binding");
+  }
   if (c.memoryContext !== undefined) return { ...c, memoryContext: parseTaskMemorySelection(c.memoryContext) };
   return c;
 }

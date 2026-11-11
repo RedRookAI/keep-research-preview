@@ -25,7 +25,7 @@ import { buildNonEngineerView, type NonEngineerView } from "./non_engineer_view.
 import { can, type Principal } from "../identity/rbac.js";
 import { computeMonitor, type MonitorSnapshot, type TicketState } from "../monitor/solve_monitor.js";
 import type { IdentityProviderPort, PrincipalRegistry } from "../identity/identity_provider.js";
-import { SessionCapacityError, type SessionStore } from "../identity/session_store.js";
+import { SessionCapacityError, type SessionStore, type SessionAuthorityRef } from "../identity/session_store.js";
 import type { OidcCodeFlow } from "../identity/oidc_code_flow.js";
 
 export interface WebRequest {
@@ -42,7 +42,7 @@ export interface WebResponse {
 }
 export interface WebSecurity {
   /** Optional native-project surface, behind this handler's existing browser boundary. */
-  readonly projectConsole?: (req: WebRequest, principal: Principal, csrf: string) => Promise<WebResponse>;
+  readonly projectConsole?: (req: WebRequest, principal: Principal, csrf: string, sessionAuthority?: SessionAuthorityRef) => Promise<WebResponse>;
   /** The per-run secret required to use the UI (printed at startup). */
   readonly token: string;
   /** The exact same-origin the server serves on, e.g. "http://127.0.0.1:7777". */
@@ -165,7 +165,7 @@ async function handleMultiUser(app: KeepApp, req: WebRequest, sec: WebSecurity, 
     const transactionCookie = (value: string) => `__Host-keep_oidc=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${value ? Math.ceil(id.codeFlow!.config.transactionTtlMs / 1000) : 0}`;
     if (req.path === "/login" && req.method === "GET") {
       const current = id.sessions.get(cookies["keep_session"], now);
-      return htmlRes(200, page("Organization sign-in", current ? `<h1>Signed in</h1><a href="/console">Open console</a>${logoutForm(current.csrfToken)}` : '<h1>Organization sign-in</h1><a href="/auth/oidc/start">Sign in with your organization</a>'));
+      return htmlRes(200, page("Organization sign-in", current ? `<h1>Signed in</h1><a href="/console">Open console</a>${logoutForm(current.csrfToken)}<form method="post" action="/auth/oidc/rotate"><input type="hidden" name="csrf" value="${current.csrfToken}"><button type="submit">Rotate session credential</button></form>` : '<h1>Organization sign-in</h1><a href="/auth/oidc/start">Sign in with your organization</a>'));
     }
     if (req.path === "/login" && req.method === "POST") return textRes(405, "Use organization sign-in.");
     if (req.path === "/auth/oidc/start" && req.method === "GET") {
@@ -184,6 +184,14 @@ async function handleMultiUser(app: KeepApp, req: WebRequest, sec: WebSecurity, 
       } catch (error) {
         return textRes(error instanceof SessionCapacityError ? 503 : 401, "Organization sign-in could not be completed. Start a new sign-in.", { "Set-Cookie": transactionCookie(""), "Cache-Control": "no-store" });
       }
+    }
+    if (req.path === "/auth/oidc/rotate" && req.method === "POST") {
+      const current = id.sessions.get(cookies["keep_session"], now);
+      if (!current || !originOk(req, sec) || !safeEqual(parseForm(req.body)["csrf"], current.csrfToken)) return textRes(403, "Forbidden: invalid rotation origin or CSRF token.");
+      try {
+        const rotated = id.sessions.rotate(current.id, now);
+        return redirect("/login", { "Set-Cookie": `keep_session=${rotated.id}; Path=/; HttpOnly; Secure; SameSite=Strict`, "Cache-Control": "no-store" });
+      } catch { return textRes(401, "Session rotation unavailable. Sign in again."); }
     }
     if (req.path.startsWith("/auth/oidc/")) return textRes(405, "Unsupported organization sign-in request.");
   }
@@ -225,7 +233,7 @@ async function handleMultiUser(app: KeepApp, req: WebRequest, sec: WebSecurity, 
     if (req.path === "/style.css") return { status: 200, headers: { "Content-Type": "text/css; charset=utf-8", ...secHeaders }, body: STYLE };
     return req.method === "GET" ? redirect("/login") : textRes(401, "Unauthorized: please sign in.");
   }
-  return route(app, req, sec, session.principal, session.csrfToken, true);
+  return route(app, req, sec, session.principal, session.csrfToken, true, session.authority);
 }
 
 function originOk(req: WebRequest, sec: WebSecurity): boolean {
@@ -235,10 +243,10 @@ function originOk(req: WebRequest, sec: WebSecurity): boolean {
 }
 
 /** Shared routing for both modes, given the resolved acting principal + the CSRF token to enforce. */
-async function route(app: KeepApp, req: WebRequest, sec: WebSecurity, principal: Principal, csrf: string, loggedIn: boolean): Promise<WebResponse> {
+async function route(app: KeepApp, req: WebRequest, sec: WebSecurity, principal: Principal, csrf: string, loggedIn: boolean, sessionAuthority?: SessionAuthorityRef): Promise<WebResponse> {
   if (sec.projectConsole && (req.path === "/console" || req.path.startsWith("/console/"))) {
     if (req.method === "POST" && (!originOk(req, sec) || !safeEqual(parseForm(req.body)["csrf"], csrf))) return textRes(403, "Forbidden: invalid origin or CSRF token.");
-    return sec.projectConsole(req, principal, csrf);
+    return sec.projectConsole(req, principal, csrf, sessionAuthority);
   }
   if (req.method === "GET" && req.path === "/") return htmlRes(200, renderListPage(app, principal, loggedIn, csrf));
   if (req.method === "GET" && req.path === "/style.css") {

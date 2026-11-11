@@ -13,8 +13,19 @@
 
 import { randomBytes } from "node:crypto";
 import type { Principal } from "./rbac.js";
+export interface SessionAuthorityRef {
+  readonly bootId: string; readonly authorityId: string;
+  readonly issuer: string; readonly subject: string; readonly tenantId: string;
+}
+export function captureSessionAuthorityRef(value: unknown): SessionAuthorityRef {
+  if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).sort().join(",") !== "authorityId,bootId,issuer,subject,tenantId") throw new Error("invalid session authority reference");
+  const row = value as SessionAuthorityRef;
+  if (!/^[a-f0-9]{32}$/u.test(row.bootId) || !/^[a-f0-9]{64}$/u.test(row.authorityId) || [row.issuer, row.subject, row.tenantId].some(s => typeof s !== "string" || !s || s.length > 8192 || /[\u0000-\u001f\u007f]/u.test(s))) throw new Error("invalid session authority reference");
+  return Object.freeze({ bootId: row.bootId, authorityId: row.authorityId, issuer: row.issuer, subject: row.subject, tenantId: row.tenantId });
+}
 
 export interface Session {
+  readonly authority?: SessionAuthorityRef;
   readonly authentication?: { readonly issuer: string; readonly subject: string; readonly tenantId: string };
   readonly id: string;
   readonly principal: Principal;
@@ -45,6 +56,8 @@ export interface SessionReservation {
 
 export class SessionStore {
   private readonly sessions = new Map<string, Session>();
+  private readonly bootId = randomBytes(16).toString("hex");
+  private readonly authorities = new Map<string, Session>();
   private readonly idleMs: number;
   private readonly absoluteMs: number;
   private readonly maxSessions: number;
@@ -75,11 +88,13 @@ export class SessionStore {
     return Object.freeze({
       create: (principal: Principal, createdAt: number, authentication?: Session["authentication"]): Session => {
         if (!this.reservations.has(token)) throw new Error("Session reservation is no longer available");
-        const session: Session = { id: randomBytes(32).toString("hex"), principal, ...(authentication ? { authentication: Object.freeze({ ...authentication }) } : {}),
+        const authority = authentication === undefined ? undefined : captureSessionAuthorityRef({ bootId: this.bootId, authorityId: randomBytes(32).toString("hex"), ...authentication });
+        const session: Session = { id: randomBytes(32).toString("hex"), principal, ...(authentication ? { authentication: Object.freeze({ ...authentication }), authority: authority! } : {}),
           csrfToken: randomBytes(32).toString("hex"), createdAt, lastSeen: createdAt };
         // No await or external callback between releasing this slot and adding its session.
         this.reservations.delete(token);
         this.sessions.set(session.id, session);
+        if (authority) this.authorities.set(authority.authorityId, session);
         return session;
       },
       release: () => { this.reservations.delete(token); },
@@ -92,7 +107,7 @@ export class SessionStore {
     const s = this.sessions.get(id);
     if (!s) return null;
     if (this.isExpired(s, now)) {
-      this.sessions.delete(id); // expired — destroy server-side, don't just let the cookie linger
+      this.revoke(id); // expired — destroy server-side and its admission reference
       return null;
     }
     s.lastSeen = now; // sliding extension on activity
@@ -101,13 +116,34 @@ export class SessionStore {
 
   /** Destroy a session server-side (logout / admin revocation). Idempotent. */
   revoke(id: string): void {
+    const session = this.sessions.get(id);
+    if (session?.authority) this.authorities.delete(session.authority.authorityId);
     this.sessions.delete(id);
+  }
+
+  /** Non-bearer dispatch check; does not count as browser activity or extend idle expiry. */
+  assertAuthority(input: SessionAuthorityRef | undefined, principal: Principal, now: number): void {
+    if (!input || !Number.isFinite(now)) throw new Error("session authority unavailable");
+    const ref = captureSessionAuthorityRef(input), session = this.authorities.get(ref.authorityId);
+    if (ref.bootId !== this.bootId || !session || this.isExpired(session, now) || now < session.createdAt || session.principal.kind !== "human"
+      || principal.kind !== "human" || ref.tenantId !== principal.tenant || session.principal.id !== principal.id || session.principal.tenant !== principal.tenant || !session.authority
+      || JSON.stringify(session.authority) !== JSON.stringify(ref)) throw new Error("session authority unavailable");
+  }
+
+  /** Rotates credentials without replenishing the absolute authentication lifetime. */
+  rotate(id: string, now: number): Session {
+    const previous = this.get(id, now);
+    if (!previous?.authentication || !previous.authority) throw new Error("session rotation unavailable");
+    this.revoke(id);
+    const slot = this.reserve(now);
+    try { const rotated = slot.create(previous.principal, previous.createdAt, previous.authentication); rotated.lastSeen = now; return rotated; }
+    finally { slot.release(); }
   }
 
   /** Destroy every session for a principal (e.g., role changed or user removed — instant, real-time). */
   revokeAllFor(principalId: string): number {
     let n = 0;
-    for (const [id, s] of this.sessions) if (s.principal.id === principalId) { this.sessions.delete(id); n++; }
+    for (const [id, s] of this.sessions) if (s.principal.id === principalId) { this.revoke(id); n++; }
     return n;
   }
 
@@ -123,7 +159,7 @@ export class SessionStore {
 
   private purgeExpired(now: number): void {
     for (const [id, session] of this.sessions) {
-      if (this.isExpired(session, now)) this.sessions.delete(id);
+      if (this.isExpired(session, now)) this.revoke(id);
     }
   }
 }

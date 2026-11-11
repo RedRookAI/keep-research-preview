@@ -1,5 +1,6 @@
 /** Cancellation owns a stop request and a bounded wait, never a proof of termination. */
 export interface ExecutionContext {
+  readonly assertAuthority?: () => void;
   readonly signal?: AbortSignal;
   /** Absolute Unix milliseconds. Cleanup may extend beyond this deadline. */
   readonly deadline?: number;
@@ -12,6 +13,7 @@ export function executionStopReason(context?: ExecutionContext): string | undefi
   if (context?.terminationGraceMs !== undefined && (!Number.isFinite(context.terminationGraceMs) || context.terminationGraceMs < 0)) return "invalid termination observation interval";
   if (context?.signal?.aborted) return "execution cancelled";
   if (context?.deadline !== undefined && Date.now() >= context.deadline) return "execution deadline exhausted";
+  try { context?.assertAuthority?.(); } catch { return "execution authority unavailable"; }
   return undefined;
 }
 

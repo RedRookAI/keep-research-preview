@@ -2160,12 +2160,31 @@ export function composeKeep(config: KeepConfig): KeepApp {
     ? buildAutonomyLoop({ spine, ...(codexDescriptor ? { requireGenerationApproval: true as const } : {}), ...(softwareOperation === undefined ? {} : { softwareOperation }), ...(softwarePreparation === undefined ? {} : { softwarePreparation }), solve: observedSolve ?? (async () => { throw new Error("unreachable unconfigured software solver"); }), softwareStrategyAvailable: observedSolve !== undefined, vetoQueue, checkpoints: projectCheckpoints, engineeringStatusProjections, manager: projectManager, ...(outcomeAdaptation ? { runInProjectContext: <T>(projectId: ProjectId, subjectId: string, run: () => Promise<T>) => adaptationProjectContext.run({ projectId, subjectId }, run) } : {}), ...(config.projectPosture ? { posture: config.projectPosture } : {}), ...(config.projectPermissionPolicy ? { permissionPolicy: config.projectPermissionPolicy } : {}), ...(config.projectResearch ? { research: config.projectResearch } : {}), ...(config.projectIntentRouter ? { intentRouter: config.projectIntentRouter } : {}), ...(config.projectRetriever ? { projectRetriever: config.projectRetriever } : {}), ...(config.projectRetrievalLimit !== undefined ? { projectRetrievalLimit: config.projectRetrievalLimit } : {}), ...(solverWorkspace ? { projectWorkspace: solverWorkspace } : {}), ...(config.projectLocalizer ? { projectLocalizer: config.projectLocalizer } : {}), ...(config.projectLocalizationTopK !== undefined ? { projectLocalizationTopK: config.projectLocalizationTopK } : {}), ...(config.projectPlanner ? { projectPlanner: config.projectPlanner } : {}), ...(projectEditor ? { projectEditor, solveConsumesAdmittedEdit: true as const } : {}), ...(projectTester ? { projectTester } : {}), ...(composedDomainWorkflow ? { domainWorkflow: composedDomainWorkflow } : {}), ...(composedDomainWorkflows ? { domainWorkflows: composedDomainWorkflows } : {}), ...((config.repoRef ?? materialization?.repoRef) ? { repoRef: config.repoRef ?? materialization!.repoRef } : {}), nonPersistable: nonPersistableRegistry, tracer: observability.recorder, lessonsForGoal: (goal) => skillRetrieval.retrieve({ taskShape: goal }).map((r) => r.skill.id) })
     : undefined;
   const memoryCustody = new FileMemoryCustody(pathJoin(config.dataDir, "memory-custody"));
+  // Strong/Windows boundary adapters still need a final dispatch authority hook.
+  // Hold code-mode human work there; never relax its configured isolation floor.
+  const sessionCommandBoundarySupported = (config.projectTestRequiredTier === undefined || ["none", "process"].includes(config.projectTestRequiredTier))
+    && (config.projectTestIsolation === undefined || (process.platform !== "win32" && !config.projectTestIsolation.capabilities.kvmAvailable
+      && !config.projectTestIsolation.capabilities.gvisorAvailable && !config.projectTestIsolation.capabilities.containerRuntime));
   const restoreCommandPrincipal = (command: NativeProjectCommand, projectId: ProjectId): Principal => {
     const reference = command.principal;
     const principal = reference.kind === "agent" ? authorization.restorePrincipal(reference.grantId!)
       : config.identity !== undefined ? config.identity.registry.resolveReference(reference.id, reference.tenant)
       : config.tenantDeployment === undefined && reference.id === OWNER.id && reference.tenant === undefined ? OWNER
       : delegationParentFor(reference.id, reference.tenant);
+    if (reference.kind === "human" && config.identity?.codeFlow) {
+      try {
+        const ref = reference.sessionAuthority;
+        if (!principal || !ref || ref.issuer !== config.identity.codeFlow.issuer || ref.tenantId !== reference.tenant
+          || softwareOperation === undefined || !sessionCommandBoundarySupported || config.domainWorkflow !== undefined || command.domainWorkflowKind !== undefined) throw new Error("session authority unavailable");
+        config.identity.sessions.assertAuthority(ref, principal, Date.now());
+        const original = config.identity.registry.resolve({ subject: ref.subject });
+        if (!original || original.id !== reference.id || original.tenant !== reference.tenant) throw new Error("session subject unavailable");
+      } catch {
+        spine.stage({ type: "identity.action", actor: "command-admission", payload: { event: "session.admission-refused", projectId,
+          principalId: reference.id, disposition: "prevented-new-dispatch" } });
+        throw new NativeProjectCommandUnavailableError("authority");
+      }
+    }
     const project = projectManager.list().find(record => record.id === projectId);
     if (!principal || principal.id !== reference.id || principal.kind !== reference.kind || principal.tenant !== reference.tenant
       || !authorization.authorize(principal, "change.solve").allow || !project || project.tenant !== principal.tenant

@@ -6,8 +6,10 @@ import { strictOidcObject, type VerifiedCodeFlowIdentity } from "./oidc_provider
 import type { VerifiedIdentity } from "./identity_provider.js";
 import type { Principal } from "./rbac.js";
 import { SessionStore, type Session } from "./session_store.js";
+import { captureOidcKeyRefreshPolicy, type OidcKeyRefreshPolicy } from "./oidc_key_source.js";
 
 export interface OidcLoginConfig {
+  readonly keys?: OidcKeyRefreshPolicy;
   readonly clientId: string;
   readonly authorizationEndpoint: string;
   readonly tokenEndpoint: string;
@@ -28,7 +30,7 @@ export function captureOidcLoginConfig(value: unknown, audience: string): OidcLo
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid organization login configuration");
   const row = value as Record<string, unknown>;
   const fields = ["clientId", "authorizationEndpoint", "tokenEndpoint", "jwksUri", "publicOrigin", "redirectUri", "clientSecretFile", "transactionTtlMs", "maxTransactions", "requestTimeoutMs", "maxResponseBytes", "leewaySec", "sessionIdleMs", "sessionAbsoluteMs", "maxSessions"];
-  if (Object.keys(row).sort().join(",") !== fields.sort().join(",")) throw new Error("Organization login requires exactly its declared endpoint, credential-reference and operational fields");
+  if (fields.some(field => !Object.hasOwn(row, field)) || Object.keys(row).some(field => field !== "keys" && !fields.includes(field))) throw new Error("Organization login requires exactly its declared endpoint, credential-reference and operational fields");
   for (const name of ["clientId", "clientSecretFile"]) if (typeof row[name] !== "string" || !(row[name] as string) || (row[name] as string).length > 8192 || /[\u0000-\u001f\u007f]/u.test(row[name] as string)) throw new Error("Invalid organization login reference");
   if (row.clientId !== audience || !isAbsolute(row.clientSecretFile as string)) throw new Error("Organization login clientId must equal audience and its credential reference must be absolute");
   const urls: Record<string, URL> = {};
@@ -44,7 +46,7 @@ export function captureOidcLoginConfig(value: unknown, audience: string): OidcLo
     if (!Number.isSafeInteger(row[name]) || (row[name] as number) < 1) throw new Error("Organization login operational limits require positive safe integers");
   if (!Number.isSafeInteger(row.leewaySec) || (row.leewaySec as number) < 0 || (row.transactionTtlMs as number) > 2147483647 || (row.requestTimeoutMs as number) > 2147483647
     || (row.sessionIdleMs as number) > (row.sessionAbsoluteMs as number)) throw new Error("Invalid organization login time policy");
-  return Object.freeze({ ...row }) as unknown as OidcLoginConfig;
+  return Object.freeze({ ...row, ...(row.keys === undefined ? {} : { keys: captureOidcKeyRefreshPolicy(row.keys) }) }) as unknown as OidcLoginConfig;
 }
 
 interface LoginTransaction { readonly nonce: string; readonly verifier: string; readonly bindingHash: string; readonly issuedAt: number; readonly expiresAt: number; }

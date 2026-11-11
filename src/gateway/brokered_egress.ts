@@ -142,10 +142,10 @@ function resultFromOutput(v: CanonicalValue): GenerateResult {
     ...(typeof o.providerRoute === "string" ? { providerRoute: o.providerRoute } : {}) };
 }
 
-/** The net EXECUTOR (the OWNER) — the ONLY place the real transport is invoked. Bound to the inner provider ONCE at
- * construction; acts on the broker-validated ARGS, never a caller callback. Returns INERT canonical data. Pass this to
- * the broker's net FamilyBinding when constructing it in compose. */
-function makeNetExecutor(inner: ModelProvider, cancellations: ReadonlyMap<string, AbortSignal>, routing?: ExternalRoutingPolicy, embeddings?: Map<string, EmbeddingInvocation>) {
+/** The net executor acts on broker-validated inert args. Runtime authority callbacks
+ * remain in a private host map bound to that exact object's identity. */
+interface GenerationAuthority { readonly objectId: string; readonly assert: () => void; }
+function makeNetExecutor(inner: ModelProvider, cancellations: ReadonlyMap<string, AbortSignal>, routing?: ExternalRoutingPolicy, embeddings?: Map<string, EmbeddingInvocation>, authorities?: ReadonlyMap<string, GenerationAuthority>) {
   return async (_authz: unknown, args: CanonicalValue): Promise<CanonicalValue> => {
     const a = decodeCanonical(encodeCanonical(args)) as Record<string, unknown>; // read-once, inert
     if (a.kind === "embed-bounded") {
@@ -167,7 +167,10 @@ function makeNetExecutor(inner: ModelProvider, cancellations: ReadonlyMap<string
       if (!admitted || admitted.zeroDataRetention !== true || admitted.dataCollection !== "deny" || admitted.allowFallbacks !== false || !Array.isArray(admitted.providers) || admitted.providers.length !== routing.providers.length || admitted.providers.some((value, index) => value !== routing.providers[index])) throw new Error("external routing policy is absent or differs from the admitted broker object");
     }
     const signal = cancellationId === undefined ? undefined : cancellations.get(cancellationId);
-    const req: GenerateRequest = { prompt: String(a.prompt ?? ""), ...(a.maxTokens === undefined ? {} : { maxTokens: Number(a.maxTokens) }), ...(a.maxAttempts === undefined ? {} : { maxAttempts: Number(a.maxAttempts) }), ...(a.structuredOutput === true ? { hints: { structuredOutput: true } } : {}), ...(signal === undefined ? {} : { signal }) };
+    const authority = typeof a.authorityId === "string" ? authorities?.get(a.authorityId) : undefined;
+    if (a.authorityId !== undefined && (!authority || authority.objectId !== objectIdOf(args))) throw new EgressDeniedError("generation authority is absent or mismatched");
+    authority?.assert();
+    const req: GenerateRequest = { prompt: String(a.prompt ?? ""), ...(a.maxTokens === undefined ? {} : { maxTokens: Number(a.maxTokens) }), ...(a.maxAttempts === undefined ? {} : { maxAttempts: Number(a.maxAttempts) }), ...(a.structuredOutput === true ? { hints: { structuredOutput: true } } : {}), ...(signal === undefined ? {} : { signal }), ...(authority ? { assertAuthority: authority.assert } : {}) };
     const r = await inner.generate(req);
     if (routing !== undefined && (typeof r.providerRoute !== "string" || !routing.providers.includes(r.providerRoute))) throw new Error("external provider route was absent or outside the admitted allowlist");
     const usageComplete = r.usageComplete !== false && [r.tokensIn, r.tokensOut].every(n => Number.isSafeInteger(n) && n >= 0);
@@ -212,11 +215,12 @@ export function buildDefaultBrokeredEgress(inner: ModelProvider, audit: AuditSin
   if (netEffect === undefined) throw new Error("brokered egress: the egress policy declares no net effect");
   const permitKey: PermitKey = { issuer: "keep.egress", rootKey };
   const cancellations = new Map<string, AbortSignal>();
+  const authorities = new Map<string, GenerationAuthority>();
   const embeddings = new Map<string, EmbeddingInvocation>();
   const broker = new EffectBroker(
     manifest, bundle, trust, permitKey,
     new RedemptionLedger(), new MapIdempotencyStore(),
-    new Map([["net", { executor: makeNetExecutor(inner, cancellations, opts.externalRouting, embeddings), audience: NET_AUDIENCE, operations: new Map([["send", "send"]]) }]]),
+    new Map([["net", { executor: makeNetExecutor(inner, cancellations, opts.externalRouting, embeddings, authorities), audience: NET_AUDIENCE, operations: new Map([["send", "send"]]) }]]),
     audit, randomBytes(8).toString("hex"),
     // WIRE-BATCH A2: the pre-effect witness interlock (Incr 12a). Default-ON in compose — a remote model send is now
     // structurally unreachable unless a durable witnessed intent was sealed first. Undefined ⇒ legacy (unwitnessed).
@@ -239,7 +243,7 @@ export function buildDefaultBrokeredEgress(inner: ModelProvider, audit: AuditSin
     now, epoch, validityMs: opts.validityMs ?? 1_000n, requestId: () => `egress-${++n}`,
     effectAdmission: opts.effectAdmission ?? installedEffectAdmission, ...(opts.externalRouting === undefined ? {} : { externalRouting: opts.externalRouting }),
   };
-  return new BrokeredEgressProvider(inner, deps, cancellations, embeddings);
+  return new BrokeredEgressProvider(inner, deps, cancellations, embeddings, authorities);
 }
 
 class BrokeredEgressProvider implements ModelProvider {
@@ -253,12 +257,14 @@ class BrokeredEgressProvider implements ModelProvider {
   readonly #deps: BrokeredEgressDeps;
   readonly #cancellations: Map<string, AbortSignal>;
   readonly #embeddings: Map<string, EmbeddingInvocation>;
+  readonly #authorities: Map<string, GenerationAuthority>;
   readonly #innerIsLocal: boolean; // CAPTURED ONCE from the trusted-config provider — a later mutation cannot re-route a remote send.
-  constructor(inner: ModelProvider, deps: BrokeredEgressDeps, cancellations: Map<string, AbortSignal>, embeddings: Map<string, EmbeddingInvocation>) {
+  constructor(inner: ModelProvider, deps: BrokeredEgressDeps, cancellations: Map<string, AbortSignal>, embeddings: Map<string, EmbeddingInvocation>, authorities: Map<string, GenerationAuthority>) {
     this.#inner = inner;
     this.#deps = deps;
     this.#cancellations = cancellations;
     this.#embeddings = embeddings;
+    this.#authorities = authorities;
     if (deps.transportClass === "remote" && deps.ownerAuthority !== true && (deps.releaseAdmission === undefined || !verifyRestrictedReleaseAdmission(deps.releaseAdmission))) throw new EgressDeniedError("remote provider construction requires owner or current installed-release admission");
     this.#innerIsLocal = deps.transportClass === "local";
     this.name = `brokered-egress(${inner.name})`;
@@ -298,9 +304,14 @@ class BrokeredEgressProvider implements ModelProvider {
   async generate(req: GenerateRequest): Promise<GenerateResult> {
     if (this.#innerIsLocal) return this.#inner.generate(req); // on-box (trusted-config) provider: no net egress, no permit
     const cancellationId = req.signal === undefined ? undefined : this.#deps.requestId();
+    const assertAuthority = req.assertAuthority, authorityId = assertAuthority === undefined ? undefined : this.#deps.requestId();
     if (cancellationId !== undefined) this.#cancellations.set(cancellationId, req.signal!);
-    try { return resultFromOutput(await this.#authorizeAndDispatch(() => reqToArgs(req, cancellationId, this.#deps.externalRouting))); }
-    finally { if (cancellationId !== undefined) this.#cancellations.delete(cancellationId); }
+    try { return resultFromOutput(await this.#authorizeAndDispatch(() => {
+      const args = { ...(reqToArgs(req, cancellationId, this.#deps.externalRouting) as Record<string, CanonicalValue>), ...(authorityId === undefined ? {} : { authorityId }) };
+      if (authorityId !== undefined) this.#authorities.set(authorityId, { objectId: objectIdOf(args), assert: assertAuthority! });
+      return args;
+    })); }
+    finally { if (cancellationId !== undefined) this.#cancellations.delete(cancellationId); if (authorityId !== undefined) this.#authorities.delete(authorityId); }
   }
 
   async embed(texts: readonly string[]): Promise<Embedding[]> {

@@ -278,7 +278,7 @@ export function makeSolveStageExecutors(deps: SolveWiringDeps): StageExecutors {
       };
     },
 
-    vet_artifact: async (state: ProjectState): Promise<StageResult> => {
+    vet_artifact: async (state: ProjectState, control = {}): Promise<StageResult> => {
       const result = solveResultOf(state);
       if (!result) {
         return { output: {}, control: "fail", headline: "No solve result to vet" };
@@ -302,7 +302,7 @@ export function makeSolveStageExecutors(deps: SolveWiringDeps): StageExecutors {
         ...(result.validation?.testsPassed === true && result.validation.vettingCleared !== false ? [] : [result.validation?.detail ?? "configured verification did not pass"]),
       ];
       if (reasons.length === 0 && deps.projectTester !== undefined) {
-        const artifact = await deps.projectTester.run(issue!, state);
+        const artifact = await deps.projectTester.run(issue!, state, { ...(control.signal ? { signal: control.signal } : {}), ...(deps.assertAuthority ? { assertAuthority: () => deps.assertAuthority!(state) } : {}) });
         if (artifact.verdict === "passed") return { output: artifact, control: "advance", headline: `Independent isolated tests passed for ${artifact.taskId}` };
         if (artifact.verdict === "failed") return {
           output: artifact, control: "rework", reworkTo: "implement",

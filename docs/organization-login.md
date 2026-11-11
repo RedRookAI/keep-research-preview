@@ -46,14 +46,42 @@ Token exchange sends the code, exact callback and verifier to only the configure
 
 Code mode disables the raw assertion form at `POST /login` and raw assertion acquisition at `POST /auth/session`. Omitting the server identity layer cannot turn an already configured code-flow runtime into personal owner mode. The browser console uses the authenticated principal and existing tenant/permission checks. The session ID stays in an HttpOnly cookie; it is not a CLI credential or a query parameter.
 
-Visit `/login` while signed in to open the console or use **Log out**. Logout requires the same-origin request and the session's CSRF token, destroys the server session and clears its cookie. Restart loses all process-local sessions and pending login transactions; users sign in again. Client secrets, authorization codes, tokens, verifiers and session IDs are excluded from diagnostics and audit payloads. Protocol redirects necessarily carry the authorization request's state/nonce/challenge to the configured issuer; keep proxy/access logs private and avoid recording callback queries.
+Visit `/login` while signed in to open the console, rotate the session credential or use **Log out**. Rotation requires the same origin and CSRF token. It replaces the cookie, CSRF token and command authority reference while preserving the original absolute session expiry. Commands bound to the old credential remain held. Logout requires the same-origin request and the session's CSRF token, destroys the server session and clears its cookie. Restart loses all process-local sessions and pending login transactions; users sign in again. Client secrets, authorization codes, tokens, verifiers and session IDs are excluded from diagnostics and audit payloads. Protocol redirects necessarily carry the authorization request's state/nonce/challenge to the configured issuer; keep proxy/access logs private and avoid recording callback queries.
 
 ## Current verification and authority limits
 
 The strict code-flow verifier admits RS256 RSA public keys of at least 2048 bits, with one unambiguous `kid`, compatible signing metadata and no private key parameters. It uses the existing strict JSON parser: unique object keys, valid UTF-8 and **integer-only** NumericDates/JSON numeric claims. It requires transaction-bound nonce, `iat` freshness, expiry, optional `nbf`, exact issuer and a single trusted client audience; optional `azp` must match the client. Fractional/exponent numeric claims and unsupported JOSE critical headers refuse in this profile. Legacy assertion verification retains its existing semantics.
 
-JWKS are loaded from the already admitted protected local file. `jwksUri` records the selected endpoint for the later refresh implementation; this ticket does not fetch it or refresh keys. The verification and principal-resolution ports accept per-request context for that follow-up. There is no OAuth refresh-token storage, `offline_access` scope or automatic session renewal. Session expiry requires a new login.
+Without `login.keys`, verification uses the admitted protected local JWKS file. This deliberate static mode requires operator-managed key replacement and restart. It performs no metadata or JWKS requests.
 
-The roster and delegation-parent mapping remain snapshots loaded at startup. Session authentication metadata retains original issuer, subject and tenant, but current user-disable, role-change and upstream revocation are not live-refresh guarantees. Existing session revocation primitives and these identity bindings are inputs to the separate revocation work. Do not treat a local session or a file permission check as production-native custody, live enterprise qualification or immediate issuer-side revocation.
+For bounded remote refresh, add this complete optional object to `login`. Replace the metadata URL and review the explicit policy values for the deployment:
+
+```json
+"keys": {
+  "metadataUrl": "APPROVED_HTTPS_METADATA_ENDPOINT",
+  "ttlMs": 300000,
+  "cooldownMs": 30000,
+  "timeoutMs": 5000,
+  "maxResponseBytes": 65536,
+  "maxKeys": 16,
+  "maxRetiredKeys": 128
+}
+```
+
+The remote mode starts without an admitted network snapshot. It fetches only the pinned metadata URL and `jwksUri`. Metadata must match the exact issuer, authorization, token and JWKS endpoints and support code, RS256 and S256. Redirects refuse. Each refresh has one acquisition timeout and a byte bound for each document. Concurrent callers share one refresh; a cancelled caller leaves other callers' refresh intact. Unknown key IDs trigger refresh only outside the cooldown. Ordinary failed refresh retains an existing snapshot only until its original TTL. Expired keys cannot verify a new login.
+
+Replacement validates the full bounded public keyset before admission, including minimal RSA integer encodings and unique public material. Removing a key retires both its ID and public material for this process. Changing material under an existing ID or reintroducing retired material refuses the replacement. The retired-key capacity requires operator reconciliation when full. Retirement history is process-local and is lost on restart; persistent incident/retirement custody remains open. An expired snapshot or failed network acquisition never falls back to the static file in remote mode. Key rollover changes future login verification; existing opaque sessions retain their independent session lifetime.
+
+Code-mode human project commands carry a separate, non-bearer reference bound to the original session, issuer, subject and tenant. The API captures it from the authenticated session; the browser console forwards it through its trusted server bridge. Request JSON cannot supply it. The reference cannot authenticate an HTTP request and excludes the cookie, CSRF token and raw IdP tokens. Durable commands and goal children preserve their original reference.
+
+Queue dispatch, recovery, resume and the supported default native model/edit/test entry points recheck that session without extending idle expiry. Logout, local revocation, rotation, idle/absolute expiry or restart prevent later dispatch under the old reference. A fresh login cannot reauthorize an old command. A refusal records prevented new dispatch; an effect already sent to a remote provider can continue and requires its own outcome evidence. Source fixtures cover the default native command path, model retry/stream boundary and late independent test-process spawn. Code-mode human custom, generic and domain execution paths with missing effect checks are held. Stronger isolation configurations and the optional Windows boundary adapter also remain held for code-mode human commands until their final dispatch seam carries the session check. Keep preserves the configured isolation floor. Completing those platform paths remains required work. Personal mode and independent delegated-agent grants keep their existing authority semantics.
+
+The roster and delegation-parent mapping remain startup snapshots. Directory/membership refresh and an upstream user-disable or incident revocation channel remain open. Session expiry requires a new login; this implementation stores no OAuth refresh token. Actual issuer/client deployment, independent custody, persistent retirement and installed enterprise qualification remain open. The revocation evidence here covers the session-bound durable project path. Other request-scoped effect surfaces, including front-door messages, fleet invocation, telemetry export and human merge/revert, still need their own late-session integration.
+
+The protocol checks follow the OpenID Provider metadata validation and JWT issuer/subject/algorithm guidance. The TTL, cooldown, retirement policy and session command reference are this restricted profile's implementation choices.
+
+https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationValidation
+
+https://www.rfc-editor.org/rfc/rfc8725.html#name-validate-issuer-and-subject
 
 Before live qualification, supply the approved issuer metadata, registered client and exact callback/public origin, runtime secret reference and custody owner, tenant roster/policies, network/TLS authority, and bounded allowed/refused users. Qualify the exact installed artifact, real code exchange, tenant isolation, rotation/revocation contract and recovery behavior independently of these source fixtures.

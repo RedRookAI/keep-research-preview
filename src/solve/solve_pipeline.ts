@@ -479,7 +479,7 @@ export class SolvePipeline {
       run: async (repoRef, execution) => {
         const before = taskMemoryRefusal(undefined, context.assertAuthority);
         if (before) { await budget.hold(before, "authority"); throw new RecoveryHeldError(before); }
-        const result = await source.run(repoRef, execution);
+        const result = await source.run(repoRef, { ...execution, assertAuthority: () => { execution?.assertAuthority?.(); context.assertAuthority!(); } });
         const after = taskMemoryRefusal(undefined, context.assertAuthority);
         if (after) { await budget.hold(after, "authority"); throw new RecoveryHeldError(after); }
         return result;
