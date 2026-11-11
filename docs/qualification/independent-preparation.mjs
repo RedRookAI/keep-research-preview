@@ -61,6 +61,21 @@ try {
   const nodeVersion = command(node, ['--version']).trim();
   const version = /^v(\d+)\.(\d+)\.(\d+)$/u.exec(nodeVersion);
   assert.ok(version && Number(version[1]) === 22 && (Number(version[2]) > 23 || (Number(version[2]) === 23 && Number(version[3]) >= 3)), 'published Node >=22.23.3 <23 contract');
+  stage = 'required-jail-prerequisite-preflight';
+  const { SandboxedCommandRunner } = await import(pathToFileURL(join(installed, pkg.exports['.'])));
+  const probe = join(root, 'required-jail-probe'); mkdirSync(probe, { mode: 0o700 });
+  writeFileSync(join(probe, 'probe.cjs'), "const test=require('node:test'),assert=require('node:assert/strict');test('required jail can execute selected Node',()=>assert.equal(1+1,2));\n", { flag: 'wx' });
+  const preflight = await new SandboxedCommandRunner({ command: node, args: ['--test', '--test-reporter=tap', 'probe.cjs'], projectDir: probe,
+    namespaceJail: 'required', jailExecutable: helper, readOnlyPaths: [toolchain], allowNet: false,
+    envAllowlist: [], timeoutMs, cpuLimitSec, maxOutputBytes }).run('.');
+  save('required-jail-preflight.json', preflight);
+  const preflightReady = preflight.runnerError === undefined && preflight.results.length === 1 && preflight.results[0].passed
+    && preflight.processIsolation?.namespacePolicy === 'required' && preflight.processIsolation.namespaceSetup === 'launcher-confirmed'
+    && preflight.processIsolation.basis === 'launcher-status' && preflight.processIsolation.degraded.length === 0
+    && preflight.processIsolation.rlimitSetup === 'launcher-confirmed'
+    && ['mount-ns', 'pid-ns', 'ipc-ns', 'uts-ns', 'net-ns'].every(name => preflight.processIsolation.requestedNamespaces.includes(name));
+  assert.ok(preflightReady, 'REQUIRED_JAIL_PREREQUISITE_FAILED: harmless selected-Node TAP could not complete under required policy; inspect required-jail-preflight.json: '
+    + JSON.stringify({ runnerError: preflight.runnerError, failureKind: preflight.failureKind, processCompletion: preflight.processCompletion, processIsolation: preflight.processIsolation }));
   const packageJson = { name: 'keep-offline-readiness-fixture', version: '1.0.0', private: true, dependencies: { typescript: '5.9.3' },
     scripts: { install: 'node -e "require(\'fs\').writeFileSync(\'lifecycle-ran\',\'unexpected\')"' } };
   const dependency = { version: '5.9.3', resolved: tarball, integrity, license: 'Apache-2.0', bin: { tsc: 'bin/tsc', tsserver: 'bin/tsserver' }, engines: { node: '>=14.17' } };
@@ -98,8 +113,14 @@ test('prepared TypeScript transpiles the configured input',()=>{
   const workspace = join(instance, 'workspaces/project'), hold = join(workspace, '.git/keep-preparation-hold.json');
   const cache = join(workspace, '.keep-preparation-cache');
   assert.equal(existsSync(hold), true); assert.equal(existsSync(join(workspace, 'node_modules/typescript/package.json')), false);
-  const logs = readdirSync(join(cache, '_logs')).filter(name => name.endsWith('.log')).map(name => readFileSync(join(cache, '_logs', name), 'utf8'));
-  assert.ok(logs.some(text => /ENOTCACHED/u.test(text)), 'require actual npm missing-cache refusal, not helper/setup failure');
+  const logDirectory = join(cache, '_logs');
+  const logs = existsSync(logDirectory) ? readdirSync(logDirectory).filter(name => name.endsWith('.log')).map(name => readFileSync(join(logDirectory, name), 'utf8')) : [];
+  if (!logs.some(text => /ENOTCACHED/u.test(text))) {
+    save('unconfirmed-preparation-refusal.json', { classification: 'preparation-held-without-confirmed-npm-cache-miss',
+      npmLogDirectoryPresent: existsSync(logDirectory), npmLogFiles: logs.length, holdRetained: existsSync(hold), cliOutput: first,
+      prerequisitePreflightPassed: true, nextAction: 'Inspect retained CLI command and preflight outcomes; cache seeding not attempted.' });
+    throw new Error('UNCONFIRMED_PREPARATION_REFUSAL: prepare held without npm ENOTCACHED evidence; this is an unresolved setup/runner/preparation failure, not a confirmed cache miss. Inspect unconfirmed-preparation-refusal.json and required-jail-preflight.json.');
+  }
   save('empty-cache-refusal.json', { expected: true, actualNpmEnotcached: true, holdRetained: true });
   stage = 'public-registry-cache-seed';
   const seedConfig = join(root, 'seed-config'); mkdirSync(seedConfig, { mode: 0o700 });
@@ -114,7 +135,6 @@ test('prepared TypeScript transpiles the configured input',()=>{
   assert.equal(JSON.parse(readFileSync(join(workspace, 'node_modules/typescript/package.json'), 'utf8')).version, '5.9.3');
   assert.equal(existsSync(join(workspace, 'lifecycle-ran')), false);
   stage = 'public-sdk-required-checker';
-  const { SandboxedCommandRunner } = await import(pathToFileURL(join(installed, pkg.exports['.'])));
   const checker = await new SandboxedCommandRunner({ command: profile.KEEP_TEST_COMMAND, args: JSON.parse(profile.KEEP_TEST_ARGS_JSON), projectDir: workspace,
     namespaceJail: 'required', jailExecutable: profile.KEEP_TEST_JAIL_EXECUTABLE, readOnlyPaths: [toolchain], allowNet: false,
     envAllowlist: [], timeoutMs, cpuLimitSec, maxOutputBytes }).run('.');
@@ -135,6 +155,7 @@ test('prepared TypeScript transpiles the configured input',()=>{
     npmCliSha256: digestFile(npmCli), helperSha256: digestFile(helper), sdkEntrySha256: digestFile(join(installed, pkg.exports['.'])),
     sourceRevision: revision, trackedSourceSha256: before, sourceUnchanged: true, emptyCacheRefused: true, explicitRetry: true,
     cacheSeed: { publicTarball: tarball, integrity, method: 'selected npm cache add, after actual empty-cache hold; no maintainer cache' },
+    requiredJailPreflight: { results: preflight.results, processIsolation: preflight.processIsolation },
     installedDependency: 'typescript@5.9.3', lifecycleScriptsDisabled: true, usefulChecker: checker.results, processIsolation: checker.processIsolation,
     moduleOverlays: false, devCheckoutRequired: false, workerStarted: false, modelCalls: 0, observations };
   save('receipt.json', receipt); process.stdout.write(JSON.stringify(receipt) + '\n');

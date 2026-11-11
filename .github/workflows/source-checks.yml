@@ -7,7 +7,7 @@ on:
       phase:
         description: Verification slice
         type: choice
-        options: [baseline, preparation]
+        options: [baseline, preparation, engine]
         default: baseline
 
 permissions: {}
@@ -66,7 +66,7 @@ jobs:
           node_path=$(command -v node)
           env -i PATH="$PATH" HOME="$KEEP_VERIFY_ROOT/bootstrap-home" "$node_path" native-publisher-check-2026-11-11.mjs "$KEEP_VERIFY_ROOT/fresh owner/keep-0.0.21-preview.1" "$KEEP_VERIFY_ROOT/keep-combined-0.0.21-preview.1-linux-x64.tar.gz" 7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca "$KEEP_VERIFY_ROOT/native-publisher-fixture-2026-11-11.json" "$KEEP_VERIFY_ROOT"
       - name: Check bundled engine with an empty account home
-        if: inputs.phase == 'preparation'
+        if: inputs.phase == 'engine'
         shell: bash
         run: |
           set -euo pipefail
@@ -112,9 +112,13 @@ jobs:
           set -euo pipefail
           cd "$KEEP_VERIFY_ROOT"
           curl --fail --location --silent --show-error "https://raw.githubusercontent.com/RedRookAI/keep-research-preview/$GITHUB_SHA/docs/qualification/independent-preparation.mjs" --output independent-preparation.mjs
-          printf '%s\n' '8739889205baed99800404272d9835205a67a66d11e66dbbea6b270a2badee0f  independent-preparation.mjs' | sha256sum --check
+          printf '%s\n' '8015b6dbde3c72a4d3ab8c8ed12cfd07b5a36fc4dcecb33974e3ad7843240d69  independent-preparation.mjs' | sha256sum --check
           mkdir installed
           tar -xzf keep-combined-0.0.21-preview.1-linux-x64.tar.gz -C installed
+          stat -c '%a %u:%g %n' /home /home/runner "$KEEP_VERIFY_ROOT"
+          for policy in /proc/sys/kernel/apparmor_restrict_unprivileged_userns /proc/sys/kernel/unprivileged_userns_clone /proc/sys/user/max_user_namespaces; do
+            if test -r "$policy"; then printf '%s=' "$policy"; cat "$policy"; fi
+          done
           stat -c '%a %u:%g %n' /var/lib "/var/lib/keep-independent-$GITHUB_RUN_ID" "/var/lib/keep-independent-$GITHUB_RUN_ID/bwrap"
           node_path=$(command -v node)
           "$node_path" --input-type=module <<'JS'
