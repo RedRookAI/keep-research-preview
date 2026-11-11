@@ -1,6 +1,6 @@
 {
   "name": "keep",
-  "version": "0.0.21-preview.1",
+  "version": "0.0.22-preview.1",
   "description": "Self-hosted platform for AI work, persistent knowledge, reusable skills and governed execution",
   "main": "dist/src/index.js",
   "scripts": {
@@ -142,7 +142,8 @@
     "docs/maintenance-2026-11-11.2.md",
     "docs/native-patch-application.md",
     "docs/maintenance-2026-11-11.3.md",
-    "docs/qualification/installed-preview-2026-11-11.2.mjs"
+    "docs/qualification/installed-preview-2026-11-11.2.mjs",
+    "docs/maintenance-2026-11-11.4.md"
   ],
   "exports": {
     ".": "./dist/src/index.js",

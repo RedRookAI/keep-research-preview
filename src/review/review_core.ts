@@ -38,9 +38,9 @@ export function reviewScopeEvents(app: KeepApp, tenant?: string): readonly Stage
   return app.spine.currentEvents().filter(event => event.payload["tenant"] === tenant);
 }
 
-export function reviewEvents(app: KeepApp, tenant?: string): PendingEvent[] {
+function pendingEvents(events: readonly StagedEvent[]): PendingEvent[] {
   const out: PendingEvent[] = [];
-  for (const e of reviewScopeEvents(app, tenant)) {
+  for (const e of events) {
     const p = e.payload as Record<string, unknown>;
     const ev = p["event"];
     if (ev === "review.pending" || ev === "review.decided") {
@@ -48,6 +48,10 @@ export function reviewEvents(app: KeepApp, tenant?: string): PendingEvent[] {
     }
   }
   return out;
+}
+
+export function reviewEvents(app: KeepApp, tenant?: string): PendingEvent[] {
+  return pendingEvents(reviewScopeEvents(app, tenant));
 }
 
 export function isDecided(app: KeepApp, id: string, tenant?: string): boolean {
@@ -85,7 +89,9 @@ export function listPendingReviews(app: KeepApp, tenant?: string): PrManifest[] 
 
 export function auditTrail(app: KeepApp, id: string, tenantId?: string): string[] {
   const lines: string[] = [];
-  for (const e of reviewEvents(app, tenantId)) {
+  // The existing local owner audit is complete. Explicit tenant views select
+  // their scope before joining IDs and never include unlabelled records.
+  for (const e of pendingEvents(tenantId === undefined ? app.spine.currentEvents() : reviewScopeEvents(app, tenantId))) {
     if (e.reviewId !== id) continue;
     const when = e.ts ? new Date(e.ts).toISOString().replace("T", " ").slice(0, 19) : "";
     if (e.event === "review.pending") lines.push(`${when}  Keep proposed a change and requested your review.`);

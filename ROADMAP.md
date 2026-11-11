@@ -4,7 +4,7 @@ Updated November 11, 2026. This page distinguishes the shipped portfolio preview
 
 ## Current development
 
-Source **0.0.21-preview.1** adds organization code/PKCE login, pinned key refresh, session-bound project dispatch and captured native patch application. Unsupported organization effect routes remain held pending their session checks. Earlier changes add saved Codex setup, require capability and safety evidence before self-improvement promotion, and align CI with the supported Node range. The [current maintenance record](docs/maintenance-2026-11-11.3.md) identifies checks and remaining limits. The **0.0.21-preview.1** combined payload passed scoped unprivileged demo, instance, export and real required-jail offline preparation checks. A fresh genuine owner/account trial and the broader platform remain open.
+Source **0.0.22-preview.1** adds tenant-scoped review decisions and durable-memory control attribution. Download **0.0.21-preview.1** includes organization code/PKCE login, pinned key refresh, session-bound project dispatch and captured native patch application. Unsupported organization effect routes remain held pending their session checks. The current source record identifies remaining tenant and export work. The .21 combined payload passed scoped unprivileged demo, instance, export and real required-jail offline preparation checks. A fresh genuine owner/account trial and the broader platform remain open.
 
 ## Available to inspect
 
