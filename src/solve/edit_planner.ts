@@ -157,12 +157,13 @@ export async function planEdits(
         });
         try { assertCurrent(); } catch (error) { return memoryRefusal(error); }
         if (!resolved.ok) {
-          emit({ outcome: "proposal-refused", call, reason: "not-applicable" });
+          const failed = resolved.perEdit.find(edit => edit.status === "not-found" || edit.status === "ambiguous")!;
+          emit({ outcome: "proposal-refused", call, reason: "not-applicable", classification: "non-applicable", effect: "not-attempted",
+            perEdit: resolved.perEdit.map(edit => edit.status === "applied" ? { ...edit, status: "held", reason: "whole proposal refused before effects" } : edit) });
           const fingerprint = "invalid-plan:" + createHash("sha256").update(JSON.stringify(plan)).digest("hex");
-          if (seen.has(fingerprint)) return stop("repeated non-applicable project edit proposal");
-          if (call === maxCalls) return stop("non-applicable project edit proposal; planning model call budget exhausted");
+          if (seen.has(fingerprint)) return stop(`repeated non-applicable project edit proposal: ${failed.reason}`);
+          if (call === maxCalls) return stop(`non-applicable project edit proposal; planning model call budget exhausted: ${failed.reason}`);
           seen.add(fingerprint);
-          const failed = resolved.perEdit.find(edit => edit.status !== "applied")!;
           transcript += "\nUNTRUSTED PLAN VALIDATION\n" + JSON.stringify({ file: failed.file, status: failed.status, reason: failed.reason })
             + "\nCopy search text exactly from the admitted literal source below, preserving backslashes. Return a corrected whole plan; no file has changed.\n"
             + (byPath.get(failed.file)?.content ?? "").slice(0, 4096);

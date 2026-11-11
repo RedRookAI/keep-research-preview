@@ -117,6 +117,10 @@ test("actual retained repository proposal exports read-only and verifies only it
     assert.equal(git("status", "--porcelain"), ""); assert.equal(git("rev-parse", "HEAD"), base);
     assert.equal(runStaticCli(["proposal", "patch", path], s => out.push(s))?.exitCode, 0);
     assert.equal(out.pop(), bundle.data.proposal.diff);
+    const emitted = execFileSync(process.execPath, [join(process.cwd(), "dist/src/main.js"), "proposal", "patch", path], {
+      encoding: "utf8", timeout: 5000, env: { ...process.env, KEEP_PROVIDER: "unsupported-export-fixture" },
+    });
+    assert.equal(emitted, bundle.data.proposal.diff, "actual offline CLI preserves exact patch bytes before provider composition");
     writeFileSync(join(source, "untracked"), "changed");
     assert.equal(runProposalCommand(["verify", path, `--repository=${source}`], s => out.push(s)), 2);
     git("add", "-A"); git("commit", "-qm", "another revision");

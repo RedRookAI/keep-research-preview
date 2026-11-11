@@ -5,7 +5,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const tests = ["workflow", "release_licensing", "runtime_config", "oidc_provider", "identity_x1", "filesystem_lock", "instance_isolation", "chat_channel", "ci_checks", "self_improvement_loop", "instance_setup", "proposal_export"];
+const tests = ["workflow", "release_licensing", "runtime_config", "oidc_provider", "identity_x1", "filesystem_lock", "instance_isolation", "chat_channel", "ci_checks", "self_improvement_loop", "instance_setup", "proposal_export", "repository_prerequisites"];
 const profile = "partial-unprivileged";
 const deadline = performance.now() + 10 * 60_000;
 const env = { ...process.env };

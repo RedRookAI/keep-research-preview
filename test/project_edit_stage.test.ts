@@ -606,6 +606,7 @@ test("native planning stops repeated absent or ambiguous searches without a goal
     const result = await planEdits(issue, { suspects: [{ path: "src/value.ts", score: 1, isTest: false }], stages: ["bm25"] }, files, model,
       { parsePlan: parseProjectEditPlan, prepareGoalCheck: true, maxModelCalls: 4 });
     assert.equal(result.edits.length, 0); assert.match(result.rationale, /repeated non-applicable/); assert.equal(calls, 2);
+    assert.match(result.rationale, search === "missing" ? /search block not found/u : /must be unique/u);
     assert.equal(files[0]!.content, content);
   }
 });
