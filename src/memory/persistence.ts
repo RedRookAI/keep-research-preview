@@ -472,8 +472,12 @@ export class FileMemoryPartition {
         let operation = control.operations.find(value => value.id === operationId);
         if (operation && operation.command.requestDigest !== digest || snapshot.operations.some(value => value.id === operationId)) return { disposition: "rejected", operationId, reason: "operation-reused" };
         const reconciled = operation !== undefined;
-        const event = (name: string, disposition: string): MemoryAdmissionEvent => ({ id: `memory-admission:${randomUUID()}`,
-          payload: { event: name, ...admission, scope: structuredClone(this.options.scope), operationId, itemId: command.id, terminalDisposition: disposition,
+        const event = (name: string, disposition: string, sourceActor: MemoryControlActor = admission): MemoryAdmissionEvent => ({ id: `memory-admission:${randomUUID()}`,
+          payload: { event: name, ...sourceActor, scope: structuredClone(this.options.scope), ownerId: this.options.scope.ownerId,
+            ...(this.options.scope.tenantId === undefined ? {} : { tenant: this.options.scope.tenantId }),
+            ...(this.options.scope.projectId === undefined ? {} : { projectId: this.options.scope.projectId }),
+            ...(this.options.scope.agentId === undefined ? {} : { agentId: this.options.scope.agentId }),
+            operationId, itemId: command.id, terminalDisposition: disposition,
             ...(command.action === "hold" ? { holdId: command.holdId, active: command.active } : {}) } });
         let current = control;
         if (!operation) {
@@ -512,6 +516,18 @@ export class FileMemoryPartition {
           this.readPrivateBytes(this.controlPath, true); fsyncDir(NODE_IO, dirname(this.controlPath));
         }
         if (operation.kind === "erase") {
+          // Recovery completes the original admitted erasure. Its actor comes
+          // from the committed intent, never the caller resuming it.
+          let originalActor: MemoryControlActor | undefined;
+          if (operation.phase !== "key-revoked") {
+            const intents = operation.command.events.filter(row => row.payload["event"] === "memory.erasure.requested"
+              && row.payload["operationId"] === operationId && row.payload["itemId"] === operation!.itemId
+              && canonical(row.payload["scope"]) === canonical(this.options.scope));
+            if (intents.length !== 1) throw new Error("original memory erasure actor unavailable");
+            const captured = Object.fromEntries(["actorId", "actorKind", "role", "permission"].map(key => [key, intents[0]!.payload[key]]));
+            for (const value of Object.values(captured)) identifier(value);
+            originalActor = captured as unknown as MemoryControlActor;
+          }
           // Also re-establish absence durably on a retry after an ambiguous key-map rename.
           const persistence = new FileWrappedKeyPersistence({ ...this.options.keyAuthority, requireExistingMasterKey: true, allowStaleTakeover: false });
           const revoke = [...operation.targets!.map(target => target.key), ...(operation.receipts ?? []).flatMap(receipt => receipt.key === undefined ? [] : [receipt.key])];
@@ -522,7 +538,7 @@ export class FileMemoryPartition {
             const finished: ControlOperation = { ...operation, phase: "key-revoked", command: { ...operation.command,
               result: { id: command.id, ids: operation.targets!.map(target => target.id), local: "key-revoked",
                 metadataErasure: operation.receipts === undefined || operation.receipts.some(receipt => receipt.key === undefined) ? "legacy-fingerprints-and-provenance-pending" : "receipt-fingerprints-revoked-provenance-pending", outsideCopies: "pending", mediaSanitization: "unproven" },
-              events: [...operation.command.events, event("memory.erasure.key-revoked", "local-key-revoked-outside-copies-pending")] } };
+              events: [...operation.command.events, event("memory.erasure.key-revoked", "local-key-revoked-outside-copies-pending", originalActor!)] } };
             current = { ...current, operations: current.operations.map(value => value.id === operationId ? finished : value) };
             this.publishControl(keys, current, () => { published = true; });
           }
