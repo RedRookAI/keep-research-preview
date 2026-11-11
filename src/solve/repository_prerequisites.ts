@@ -1,6 +1,6 @@
 /** Read-only repository readiness and explicitly requested, offline workspace preparation. */
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, lstatSync, openSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from "node:fs";
 import { delimiter, isAbsolute, join, sep } from "node:path";
 import { SandboxedCommandRunner } from "./sandboxed_runner.js";
 import type { TestRunner } from "./validate.js";
@@ -32,6 +32,16 @@ const hash = (path: string) => createHash("sha256").update(readFileSync(path)).d
 const preparationHold = (workspace: string) => join(workspace, ".git", "keep-preparation-hold.json");
 const trackedState = async (git: GitAdapter) => [await git.head(), (await git.git(["diff", "--binary", "--no-ext-diff", "--no-textconv", "HEAD", "--"])).stdout];
 const stateDigest = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+const PENDING_INTEGRITY = "workspace preparation integrity is pending or unresolved";
+function recordPreparationIntent(workspace: string, beforeWorkspace: unknown, beforeSource: unknown): void {
+  const fd = openSync(preparationHold(workspace), "wx", 0o600);
+  try {
+    writeFileSync(fd, JSON.stringify({ trackedStateSha256: stateDigest(beforeWorkspace), sourceStateSha256: stateDigest(beforeSource) }));
+    fsyncSync(fd);
+  } finally { closeSync(fd); }
+  const directory = openSync(join(workspace, ".git"), "r");
+  try { fsyncSync(directory); } finally { closeSync(directory); }
+}
 export function validatePrerequisitePaths(paths: readonly string[]): void {
   if (paths.length > 128 || paths.some(path => typeof path !== "string" || path.length > 1024 || !path || path.includes("\0") || path.includes("\\") || isAbsolute(path)
     || path.split("/").some(part => !part || part === "." || part === ".." || part === ".git"))) throw new Error("prerequisites must be bounded repository-relative paths without traversal or .git");
@@ -60,8 +70,8 @@ export function inspectRepositoryReadiness(repository: string, workspace: string
   const root = workspace ?? repository;
   const missing: string[] = [];
   if (workspace && (!lstatSync(workspace).isDirectory() || lstatSync(workspace).isSymbolicLink())) throw new Error("Owned workspace must be a real directory; inspect its materialization before retrying.");
-  const preparationChangedInputs = workspace !== undefined && existsSync(preparationHold(workspace));
-  if (preparationChangedInputs) missing.push("tracked repository/checker bytes changed during preparation");
+  const preparationUnresolved = workspace !== undefined && existsSync(preparationHold(workspace));
+  if (preparationUnresolved) missing.push(PENDING_INTEGRITY);
   let packageManager: string | undefined, lockfile: string | undefined, hasDependencies = false;
   let dependencyPaths: string[] = [];
   try {
@@ -86,7 +96,7 @@ export function inspectRepositoryReadiness(repository: string, workspace: string
   const ready = missing.length === 0;
   let nextAction: string | undefined;
   if (!ready) {
-    if (preparationChangedInputs) nextAction = "Inspect the retained workspace, restore its exact tracked bytes from before preparation, then explicitly run keep instance prepare again to recheck the hold.";
+    if (preparationUnresolved) nextAction = "Inspect the retained preparation and its actual process state. Reconcile source and workspace tracked bytes with their pre-dispatch identities, then explicitly run keep instance prepare again to recheck the hold. Source is never restored automatically.";
     else if (missing.some(path => path.startsWith("checker executable"))) nextAction = "Select an available checker executable or supply that declared checker in the owned workspace, then recheck readiness.";
     else if (packageManager && !packageManager.startsWith("npm@") && packageManager !== "npm (inferred)") nextAction = `Package manager ${packageManager} has no supported automatic preparation recipe. Prepare the named owned workspace with your selected toolchain, then recheck and resume this held project.`;
     else if (hasDependencies && lockfile !== "package-lock.json" && lockfile !== "npm-shrinkwrap.json") nextAction = "npm preparation requires package-lock.json or npm-shrinkwrap.json committed in the selected revision. Supply that revision or prepare the owned workspace explicitly, then recheck.";
@@ -105,8 +115,9 @@ export async function prepareRepositoryWorkspace(repository: string, workspace: 
   if (existsSync(hold)) {
     const stat = lstatSync(hold);
     if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 4096) throw new Error("Preparation hold record is invalid; inspect the retained owned workspace.");
-    const prior = JSON.parse(readFileSync(hold, "utf8")) as { trackedStateSha256?: string };
-    if (prior.trackedStateSha256 !== stateDigest(await trackedState(new GitAdapter(workspace)))) throw new Error("Restore the exact tracked repository/checker bytes from before failed preparation, then explicitly run prepare again.");
+    const prior = JSON.parse(readFileSync(hold, "utf8")) as { trackedStateSha256?: string; sourceStateSha256?: string };
+    if (prior.trackedStateSha256 !== stateDigest(await trackedState(new GitAdapter(workspace))) || prior.sourceStateSha256 !== stateDigest(await trackedState(new GitAdapter(repository))))
+      throw new Error("Restore the exact tracked source and workspace repository/checker bytes from before preparation, then explicitly run prepare again. Source is never restored automatically.");
     unlinkSync(hold);
   }
   const report = inspectRepositoryReadiness(repository, workspace, command, setup);
@@ -120,12 +131,14 @@ export async function prepareRepositoryWorkspace(repository: string, workspace: 
   if (!inside(p.toolchainRoot, p.node) || !inside(p.toolchainRoot, p.npmCli) || hash(p.node) !== p.nodeSha256 || hash(p.npmCli) !== p.npmCliSha256) throw new Error("Selected preparation toolchain changed; inspect it and explicitly reconcile the instance setup before preparation.");
   const workspaceGit = new GitAdapter(workspace), sourceGit = new GitAdapter(repository);
   const beforeWorkspace = await trackedState(workspaceGit), beforeSource = await trackedState(sourceGit);
+  // This durable intent precedes factory construction and runner dispatch. Throws,
+  // uncertain completion and failed readback retain it until explicit reconciliation.
+  recordPreparationIntent(workspace, beforeWorkspace, beforeSource);
   const result = await runnerFor({ command: p.node, args: [p.npmCli, "ci", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", "--global=false", "--userconfig=/dev/null", "--globalconfig=/dev/null", `--prefix=${workspace}`, `--cache=${join(workspace, ".keep-preparation-cache")}`],
     projectDir: workspace, namespaceJail: "required", ...(command.jailExecutable ? { jailExecutable: command.jailExecutable } : {}),
     readOnlyPaths: [p.toolchainRoot], allowNet: false, envAllowlist: [], timeoutMs: command.timeoutMs, cpuLimitSec: command.cpuLimitSec, maxOutputBytes: command.maxOutputBytes,
   }).run(".");
   if (JSON.stringify(await trackedState(workspaceGit)) !== JSON.stringify(beforeWorkspace) || JSON.stringify(await trackedState(sourceGit)) !== JSON.stringify(beforeSource)) {
-    writeFileSync(hold, JSON.stringify({ trackedStateSha256: stateDigest(beforeWorkspace) }), { flag: "wx", mode: 0o600 });
     throw new Error("Preparation changed tracked repository/checker bytes. Preserve this workspace for inspection; no project generation or automatic retry is admitted.");
   }
   const observation = result.processIsolation;
@@ -133,6 +146,8 @@ export async function prepareRepositoryWorkspace(repository: string, workspace: 
     || observation.degraded.length > 0 || !result.results.length || result.results.some(row => !row.passed))
     throw new Error("Offline workspace preparation held. The required helper/setup, selected toolchain or offline dependencies are unavailable, or preparation failed. Inspect the selected helper and workspace cache; network access was not granted. No automatic retry or generation was started.");
   const after = inspectRepositoryReadiness(repository, workspace, command, setup);
-  if (!after.ready) throw new Error(describeRepositoryReadiness(after));
-  return after;
+  if (after.missing.some(path => path !== PENDING_INTEGRITY)) throw new Error(describeRepositoryReadiness(after));
+  unlinkSync(hold);
+  const { nextAction: _pendingAction, ...completed } = after;
+  return { ...completed, ready: true, missing: [] };
 }

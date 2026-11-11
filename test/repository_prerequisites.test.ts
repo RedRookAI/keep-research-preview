@@ -99,6 +99,33 @@ test("preparation that mutates the predefined checker is refused and preserved f
   assert.equal((await prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [] })).ready, true, "explicit restored-byte recheck clears hold without reinstalling");
 });
 
+test("throwing preparation retains pre-dispatch hold until both source and workspace bytes are reconciled", async t => {
+  const f = fixture(t); f.clone();
+  const checker = readFileSync(join(f.source, "calc.test.cjs"), "utf8"), source = readFileSync(join(f.source, "calc.js"), "utf8");
+  const hold = join(f.workspace, ".git/keep-preparation-hold.json");
+  await assert.rejects(prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [], preparation: f.preparation }, () => ({ run: async () => {
+    assert.equal(existsSync(hold), true, "intent is present before runner effects");
+    const pending = describeRepositoryReadiness(inspectRepositoryReadiness(f.source, f.workspace, f.command));
+    assert.match(pending, /integrity is pending or unresolved/u);
+    assert.doesNotMatch(pending, /bytes changed during preparation/u, "pending intent alone does not establish changed bytes");
+    writeFileSync(join(f.workspace, "calc.test.cjs"), "process.exit(0)");
+    writeFileSync(join(f.source, "calc.js"), "source changed by throwing component fixture");
+    f.supply(f.workspace);
+    throw new Error("component runner threw after effects");
+  } })), /runner threw after effects/u);
+  assert.equal(inspectRepositoryReadiness(f.source, f.workspace, f.command).ready, false);
+  assert.equal(existsSync(hold), true);
+  const prior = JSON.parse(readFileSync(hold, "utf8"));
+  assert.match(prior.trackedStateSha256, /^[a-f0-9]{64}$/u); assert.match(prior.sourceStateSha256, /^[a-f0-9]{64}$/u);
+  await assert.rejects(prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [] }), /exact tracked source and workspace/u);
+  writeFileSync(join(f.workspace, "calc.test.cjs"), checker);
+  await assert.rejects(prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [] }), /exact tracked source and workspace/u);
+  assert.match(readFileSync(join(f.source, "calc.js"), "utf8"), /source changed/u, "recheck never restores source automatically");
+  writeFileSync(join(f.source, "calc.js"), source);
+  assert.equal((await prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [] })).ready, true);
+  assert.equal(existsSync(hold), false);
+});
+
 test("runtime captures preparation and prerequisite selections without executing the selected toolchain", t => {
   const f = fixture(t);
   const base = { KEEP_PROVIDER: "local", KEEP_REPOSITORY: f.source, KEEP_WORKSPACE_BASE: f.workspaces, KEEP_REVISION: f.commit, KEEP_BASE_BRANCH: "main", KEEP_REPO_REF: "project", KEEP_TEST_COMMAND: process.execPath };
