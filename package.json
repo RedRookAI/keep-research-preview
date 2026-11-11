@@ -136,7 +136,8 @@
     "docs/qualification/provider-check-pricing-2026-10-05.json",
     "docs/qualification/recovery-source-2026-10-20.json",
     "KEEP_RELEASE.md",
-    "docs/maintenance-2026-11-11.md"
+    "docs/maintenance-2026-11-11.md",
+    "docs/proposal-export.md"
   ],
   "exports": {
     ".": "./dist/src/index.js",

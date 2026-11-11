@@ -78,7 +78,6 @@ const ORPHAN_EXPORTS = new Set<string>([
   "resolve/selector::DEFAULT_SELECTOR",      // default CandidateSelector impl offered for callers; selection is injected elsewhere today
   "review/heterogeneous::heterogeneousReview", // convenience wrapper; the enforced guardrails (assert/checkHeterogeneous) are the consumed primitives
   "escalation_policy::certaintyFromSignals", // documented tier helper (behavioral certainty) — part of the cascade API surface, wired when a tier reports certainty
-  "review/review_core::getManifest",         // public PR-manifest accessor on KeepApp for external callers/UI; not used by internal runtime paths
   "gateway/wire_dialect::WIRE_DIALECTS",     // the supported-dialect registry (data); dialect selection currently flows through typed helpers
   "eir/eir::obligationId",                   // completes the EIR node-id family (principalId/effectId/guardId/obligationId); the compiler (Incr 2) emits bundle-native rules, so the Obligation node's id is first consumed by a later increment that lowers to EIR Obligation nodes
   "logic/plan_gate::stateSimulationGated",   // plan-gate state-simulation predicate exported for the plan-gate API surface; currently unconsumed (its runtime caller is a future plan-gate wiring), genuinely dead-but-not-wrong

@@ -79,6 +79,10 @@ Completion work includes simpler setup, complete installed consumers across the 
 
 Current source adds saved Codex setup through `keep instance init`, with explicit engine/model/limits and actionable prerequisite failures. Self-improvement now requires executed capability and safety checks before promotion; missing, empty or unusable evaluations hold the candidate. Source CI uses the supported Node range and checks actual test execution. These changes are newer than the downloadable archive.
 
+Authenticated proposal export packages the retained diff, pinned source, check results, pseudonymous attribution and delivery observations for offline inspection. The source checker refuses a changed revision or dirty checkout.
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/proposal-export.md
+
 November 11 source changes and validation:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/maintenance-2026-11-11.md

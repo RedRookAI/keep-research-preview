@@ -31,6 +31,7 @@ import { GOAL_PHASES, GOAL_WORK_DOCUMENT, type GoalWorkPhase } from "../session/
 import { ALL_PERMISSIONS, can, OWNER, type Principal, type Permission } from "../identity/rbac.js";
 import { auditTrail } from "../review/review_core.js";
 import { exportTenantAudit } from "../audit/tenant_audit_export.js";
+import { createProposalExport } from "../audit/proposal_export.js";
 import { memoryUpdate, memoryForget, memoryList, memoryReview, memoryPurge, executeDurableMemoryMutation, deliverMemoryAdmissions, type DurableMemoryMutation, type MemoryFilter } from "../memory/memory_tools.js";
 import { MemoryStore } from "../memory/store.js";
 import type { MemoryPartitionScope } from "../memory/persistence.js";
@@ -857,6 +858,48 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     return json(200, { projectId: project.id, runId: run.state.runId, revision: run.state.revision, status: run.state.status, note: run.state.note ?? null, wait: run.state.wait ?? null, proposal: proposalDigest !== undefined, ...(proposalDigest ? { proposalDigest } : {}) });
   }
 
+  if (req.method === "GET" && req.path === "/project/export") {
+    // This projection must not stage/seal events or acquire execution authority.
+    if (principal.kind !== "human" || !can(app.authorization, principal, "audit.export")) return json(403, { error: "human audit export permission required" });
+    if (!app.projectManager) return json(501, { error: "project runtime is not composed" });
+    const runId = req.query["runId"], proposalDigest = req.query["proposalDigest"];
+    if (!runId || typeof proposalDigest !== "string" || !/^[a-f0-9]{64}$/u.test(proposalDigest)) return json(400, { error: "runId and exact proposalDigest required" });
+    const lookup = readProjectProjection(() => {
+      for (const record of app.projectManager!.list()) {
+        if (!visibleProject(record) || app.projectManager!.quarantine(record.id) !== undefined) continue;
+        const session = app.projectManager!.session(record.id);
+        if (session.boundRunId() !== runId) continue;
+        const project = session.inspect().checkpoint;
+        if (!project || project.runId !== runId) return json(404, { error: "project checkpoint not found" });
+        const implementation = project.artifacts["implement"] as { solve?: { proposalEvidence?: { rollback?: { patchSha256?: string } } } } | undefined;
+        const evidence = implementation?.solve?.proposalEvidence;
+        if (!evidence || evidence.rollback?.patchSha256 !== proposalDigest) return json(409, { error: "exact retained proposal digest does not match" });
+        let requester: NativeProjectCommand["principal"] | null = null;
+        try { requester = app.projectRuntime?.commandForJob(runId, record.id).principal ?? null; } catch { /* Preserve unknown historical custody. */ }
+        const events = app.spine.currentEvents();
+        const decisions = events.flatMap(event => {
+          const p = event.payload;
+          if (event.type !== "identity.action" || p["runId"] !== runId || typeof p["event"] !== "string") return [];
+          if (!(p["event"].startsWith("local_merge.") || p["event"] === "project.human-proposal-decision" || p["event"] === "openclaw.human-generation-decision")) return [];
+          if (typeof p["proposalDigest"] === "string" && p["proposalDigest"] !== proposalDigest) return [];
+          return [p];
+        });
+        const forbiddenValues = [sec.token, req.headers["x-keep-session"] ?? ""];
+        const collectPaths = (value: unknown): void => {
+          if (typeof value === "string" && /^(?:\/|[A-Za-z]:\\)/u.test(value)) forbiddenValues.push(value);
+          else if (Array.isArray(value)) value.forEach(collectPaths);
+          else if (value !== null && typeof value === "object") Object.values(value).forEach(collectPaths);
+        };
+        collectPaths(project.artifacts);
+        try { return json(200, createProposalExport({ projectId: record.id, runId, evidence, requester, exporterId: principal.id, decisions,
+          delivery: projectRepositoryOutcomes({ replay: () => events }, runId), forbiddenValues })); }
+        catch { return json(409, { error: "portable evidence is unavailable, inconsistent or contains private content; inspect the retained proposal locally" }); }
+      }
+      return json(404, { error: "project not found" });
+    });
+    return lookup.ok ? lookup.value : lookup.response;
+  }
+
   if (req.method === "GET" && req.path === "/project") {
     if (app.projectManager === undefined) return json(501, { error: "autonomy loop not composed" });
     const denied = gate("audit.view"); if (denied) return denied;
@@ -890,6 +933,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
   }
 
   if (req.method === "POST" && req.path === "/project/merge") {
+    if (principal.kind !== "human") return json(403, { error: "proposal decisions require an authenticated human" });
     if (app.projectMerge === undefined || app.projectManager === undefined) return json(501, { error: "local project merge not composed" });
     const b = parseBody(req.body); if (b === null) return json(400, { error: "invalid json" });
     const runId = typeof b["runId"] === "string" ? b["runId"].trim() : "";
@@ -902,7 +946,11 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     if (!record) return json(404, { error: "project not found" });
     if (record.lifecycle === "archived") return json(409, { error: "project is archived and read-only" });
     const denied = gate(decision === "approve" ? "review.approve" : "review.decline"); if (denied) return denied;
-    return json(200, await app.projectMerge.decide(runId, decision, proposalDigest));
+    const result = await app.projectMerge.decide(runId, decision, proposalDigest);
+    app.spine.stage({ type: "identity.action", actor: "gateway", payload: { event: "project.human-proposal-decision",
+      runId, proposalDigest, decision, humanPrincipalId: principal.id, status: result.status,
+      ...(principal.tenant === undefined ? {} : { tenant: principal.tenant }) } });
+    return json(200, result);
   }
 
   if (req.method === "POST" && req.path === "/project/revert") {

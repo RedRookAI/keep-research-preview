@@ -45,6 +45,11 @@ function isResponse(value: Row | GatewayResponse): value is GatewayResponse { re
 
 export async function handleProjectConsole(req: WebRequest, csrf: string, api: ConsoleApi, permissions: ConsolePermissions): Promise<WebResponse> {
   if (req.path === "/console/style.css" && req.method === "GET") return { status: 200, headers: { ...security, "Content-Type": "text/css; charset=utf-8" }, body: CONSOLE_STYLE };
+  if (req.path === "/console/export" && req.method === "GET") {
+    const response = await api("GET", "/project/export", { runId: req.query["runId"] ?? "", proposalDigest: req.query["proposalDigest"] ?? "" });
+    if (response.status !== 200) return failure(response);
+    return { status: 200, headers: { ...security, "Content-Type": "application/json; charset=utf-8", "Content-Disposition": 'attachment; filename="keep-proposal.json"' }, body: response.body };
+  }
   if (req.path === "/console/cancel" && req.method === "POST") {
     if (!permissions.cancel) return page("Forbidden", "<h1>You cannot cancel project jobs.</h1>", 403);
     const form = new URLSearchParams(req.body), projectId = form.get("projectId") ?? "", jobId = form.get("jobId") ?? "";
@@ -110,6 +115,7 @@ export async function handleProjectConsole(req: WebRequest, csrf: string, api: C
   let action = `<p>${esc(str(wait["reason"], "No approval is currently pending. Refresh to inspect current state."))}</p>`;
   if (wait["kind"] === "approval" && (permissions.approve || permissions.decline)) action += `<form method="post" action="/console/resume">${hidden("csrf", csrf)}${hidden("projectId", projectId)}${hidden("runId", runId)}${hidden("decisionId", wait["decisionId"])}${permissions.approve ? '<button name="action" value="approve">Approve this step</button>' : ""} ${permissions.decline ? '<button class="secondary" name="action" value="decline">Decline</button>' : ""}</form>`;
   const digest = row(proposal["rollback"])["patchSha256"];
+  if (typeof digest === "string" && /^[a-f0-9]{64}$/u.test(digest)) action += `<p><a class="button secondary" href="/console/export?runId=${encodeURIComponent(str(runId, ""))}&amp;proposalDigest=${digest}">Download proposal evidence</a></p>`;
   if (typeof digest === "string" && /^[a-f0-9]{64}$/u.test(digest) && (permissions.approve || permissions.decline)) action += `<p>Review the exact diff and checks below before deciding on this proposal.</p><form method="post" action="/console/merge">${hidden("csrf", csrf)}${hidden("projectId", projectId)}${hidden("runId", runId)}${hidden("proposalDigest", digest)}${permissions.approve ? '<button name="action" value="approve">Approve exact proposal</button>' : ""} ${permissions.decline ? '<button class="secondary" name="action" value="veto">Veto proposal</button>' : ""}<p class="muted mono">SHA256 ${esc(digest)}</p></form>`;
   const jobRows = rows(jobs["jobs"]);
   const activities: Row[] = [];

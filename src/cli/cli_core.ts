@@ -23,6 +23,7 @@ import type { KeepApp } from "../compose.js";
 import type { Issue } from "../solve/issue_model.js";
 import type { SolveToPrResult } from "../pipeline/keep_pipeline.js";
 import type { PrManifest } from "../git/pull_request.js";
+import { runProposalCommand } from "./proposal.js";
 import type { DecisionBrief } from "../pipeline/decision_brief.js";
 import type { ForecastVerdict } from "../pipeline/consequence_forecast.js";
 import { assembleDecisionPacket, renderPacket, type AssembleInputs } from "./decision_packet.js";
@@ -148,6 +149,8 @@ Commands:
   merge <id> <decision> Approve or veto a project's governed merge decision.
   revert <id>          Revert a project's accepted merge through the recovery controller.
   projects             List your projects (across sessions).
+  project export <run-id> --proposal=<sha256>  Export retained proposal evidence as JSON.
+  proposal show|patch|verify EXPORT.json      Inspect an export offline; verify accepts --repository=PATH.
   offer accept|decline Respond to a suggestion Keep offered on your last message.
   onboard              Set up Keep by answering a few short questions (no config files).
   memory init --retain Initialize explicit durable manual memory (default private user scope).
@@ -180,6 +183,7 @@ export function runStaticCli(argv: readonly string[], write: (text: string) => v
   const command = (argv[0] ?? "help").toLowerCase();
   if (command === "help" || command === "--help" || command === "-h") { write(USAGE); return { command: "help", exitCode: 0 }; }
   if (command === "version" || command === "--version" || command === "-v") { write(`keep ${version}`); return { command: "version", exitCode: 0 }; }
+  if (command === "proposal") return { command, exitCode: runProposalCommand(argv.slice(1), write) };
   return undefined;
 }
 
@@ -272,6 +276,14 @@ async function cmdMessage(rest: readonly string[], io: CliIO, deps: GatewayCliDe
 }
 
 async function cmdProject(rest: readonly string[], io: CliIO, deps: GatewayCliDeps): Promise<CliResult> {
+  if (rest[0] === "export") {
+    const proposalDigest = rest[2]?.startsWith("--proposal=") ? rest[2].slice("--proposal=".length) : "";
+    if (rest.length !== 3 || !rest[1] || !/^[a-f0-9]{64}$/u.test(proposalDigest)) {
+      io.write("Usage: keep project export <run-id> --proposal=<sha256>"); return { command: "project", exitCode: 2 };
+    }
+    const response = await gatewayCall(deps, "GET", "/project/export", undefined, { runId: rest[1], proposalDigest });
+    io.write(response.body); return { command: "project", exitCode: response.status === 200 ? 0 : 1 };
+  }
   if (rest[0] === "goal") {
     const action = rest[1], arg = (name: string): string | undefined => rest.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3);
     let response: GatewayResponse;

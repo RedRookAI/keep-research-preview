@@ -47,15 +47,17 @@ export function isDecided(app: KeepApp, id: string): boolean {
   return reviewEvents(app).some((e) => e.event === "review.decided" && e.reviewId === id);
 }
 
-export function getManifest(app: KeepApp, id: string): PrManifest | undefined {
-  for (const e of reviewEvents(app)) if (e.event === "review.pending" && e.reviewId === id && e.manifest) return e.manifest;
+export function getManifest(app: KeepApp, id: string, events: readonly PendingEvent[] = reviewEvents(app)): PrManifest | undefined {
+  for (const e of events) if (e.event === "review.pending" && e.reviewId === id && e.manifest) return e.manifest;
   return undefined;
 }
 
 export function getPacketInputs(app: KeepApp, id: string): AssembleInputs | undefined {
-  for (const e of reviewEvents(app)) {
-    if (e.event === "review.pending" && e.reviewId === id && e.manifest) {
-      return { manifest: e.manifest, ...(e.brief ? { brief: e.brief } : {}), ...(e.forecast ? { forecast: e.forecast } : {}) };
+  const events = reviewEvents(app), manifest = getManifest(app, id, events);
+  if (!manifest) return undefined;
+  for (const e of events) {
+    if (e.event === "review.pending" && e.reviewId === id && e.manifest === manifest) {
+      return { manifest, ...(e.brief ? { brief: e.brief } : {}), ...(e.forecast ? { forecast: e.forecast } : {}) };
     }
   }
   return undefined;
