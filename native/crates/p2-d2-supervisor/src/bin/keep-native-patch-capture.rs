@@ -33,6 +33,20 @@ fn run() -> Result<(), CaptureError> {
     if input.read(&mut [0u8; 1]).map_err(|_| CaptureError::Io)? != 0 {
         return Err(CaptureError::Malformed);
     }
+    let decoded = keep_native_protocol::decode_canonical(
+        &bytes,
+        keep_native_protocol::patch_capture::CAPTURE_FRAME_LIMITS,
+    )
+    .map_err(|_| CaptureError::Malformed)?;
+    if decoded.field("schema")
+        == Some(&keep_native_protocol::Value::Text(
+            "keep.patch-application-request".into(),
+        ))
+    {
+        let application = keep_native_p2_d2_supervisor::application::publish_application(&bytes)?;
+        let mut output = io::BufWriter::with_capacity(MAX_CAPTURE_FRAME_BYTES, io::stdout().lock());
+        return application.write_response(&mut output);
+    }
     let request = capture_input_request(&bytes)?;
     let captured = capture_patch_inputs(request)?;
     let mut output = io::BufWriter::with_capacity(MAX_CAPTURE_FRAME_BYTES, io::stdout().lock());

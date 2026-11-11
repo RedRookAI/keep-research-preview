@@ -3,9 +3,11 @@
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 
+pub mod audit_plan;
 mod gzip;
 pub mod p2_d2;
 pub mod p2_schema;
+pub mod patch_application;
 pub mod patch_capture;
 
 pub const PROTOCOL_NAME: &str = "keep.native-boundary";

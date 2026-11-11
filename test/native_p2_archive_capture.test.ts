@@ -3,13 +3,16 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { chmodSync, closeSync, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync, writeSync } from "node:fs";
+import { chmodSync, chownSync, closeSync, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync, writeSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { constants, gzipSync } from "node:zlib";
 import { encodeCanonical, decodeCanonical, type CanonicalValue } from "../src/eir/canonical.js";
 import { captureNativePatchOverlayV1 } from "../src/platform/native_p2_d2_overlay.js";
-import { captureNativePatchByteCarrierSetV1, captureNativePatchDescriptorV1 } from "../src/platform/native_p2_d2_carriers.js";
+import { captureNativePatchByteCarrierSetV1, captureNativePatchDescriptorV1, joinValidatedPatchApplicationInputs } from "../src/platform/native_p2_d2_carriers.js";
+import { deriveNativeResultTreeCandidateV1 } from "../src/platform/native_p2_d2_application.js";
+import { captureAuditPlanV1 } from "../src/platform/native_p2_d2_audit_plan.js";
+import { auditPlanFixture } from "./helpers/native_patch_application_fixture.js";
 
 // Test-only fixture oracle override for isolated builds. The operational SDK must
 // resolve only its fixed, verified installed executable, never this environment key.
@@ -296,7 +299,7 @@ type CaptureSdk = typeof import("../src/platform/native_patch_capture.js");
 // package-shaped fixture. This is receiver integration, NOT npm/tarball qualification.
 async function sdkFixture(root: string, executable: Buffer = readFileSync(captureBinary)) {
   const deployed = join(root, "sdk");
-  for (const relative of ["platform/native_patch_capture.js", "platform/native_p2_path.js", "platform/native_p2_d2_carriers.js", "platform/native_p2_d2_overlay.js", "eir/canonical.js", "policy/json.js"]) {
+  for (const relative of ["platform/native_patch_capture.js", "platform/native_p2_path.js", "platform/native_p2_d2_carriers.js", "platform/native_p2_d2_overlay.js", "platform/native_p2_d2_application.js", "platform/native_p2_d2_audit_plan.js", "eir/canonical.js", "policy/json.js"]) {
     const target = join(deployed, "src", relative); mkdirSync(dirname(target), { recursive: true });
     copyFileSync(fileURLToPath(new URL(`../src/${relative}`, import.meta.url)), target);
   }
@@ -552,7 +555,7 @@ test("capture SDK accepts only exact zero-output refusal codes, including an ear
   }
 });
 
-test("capture SDK survives actual offline npm pack/install without install scripts or mode repair", async () => {
+test("application installed SDK publishes as an unprivileged owner without install scripts or mode repair", async () => {
   const fixture = createCaptureFixture("directory");
   try {
     await sdkFixture(fixture.root);
@@ -591,6 +594,24 @@ test("capture SDK survives actual offline npm pack/install without install scrip
     assert.equal(result.descriptor.admission, false);
     assert.equal(result.sourceRowDigest, rowDigest(fixture.rows));
     assert.deepEqual(Buffer.from(result.files[0]!.bytes()), fixture.rows[0]!.bytes);
+    const app = applicationFixture();
+    try {
+      const requestPath = join(app.root, "application-request.cbor"); writeFileSync(requestPath, encodeCanonical(app.request));
+      chmodSync(fixture.root, 0o755); chmodSync(app.root, 0o755);
+      if (process.getuid?.() === 0) chownSync(app.outputRoot, 65534, 65534);
+      const sdkUrl = pathToFileURL(join(installed, "src/platform/native_patch_capture.js")).href;
+      const script = `const sdk=await import(process.argv[1]); const {decodeCanonical}=await import(new URL('../eir/canonical.js',process.argv[1])); const fs=await import('node:fs'); const result=await sdk.publishPackagedNativePatchApplicationV1(decodeCanonical(fs.readFileSync(process.argv[2])),JSON.parse(process.argv[3])); process.stdout.write(JSON.stringify({uid:process.getuid(),evidenceDigest:result.application.evidenceDigest,reviewStatus:result.application.reviewStatus,admission:result.application.admission}));`;
+      const child = spawnSync(process.execPath, ["--input-type=module", "-e", script, sdkUrl, requestPath, JSON.stringify(app.publication)], {
+        encoding: "utf8", env: {}, cwd: "/", timeout: 30_000, maxBuffer: 64*1024,
+        ...(process.getuid?.() === 0 ? { uid: 65534, gid: 65534 } : {}),
+      });
+      assert.ifError(child.error); assert.equal(child.status, 0, child.stderr); assert.equal(child.stderr, "");
+      const readback = JSON.parse(child.stdout) as { uid: number; evidenceDigest: string; reviewStatus: string; admission: boolean };
+      assert.notEqual(readback.uid, 0); assert.equal(readback.reviewStatus, "unverified"); assert.equal(readback.admission, false);
+      const candidate = join(app.outputRoot, "attempt-1", "candidate");
+      assert.equal(createHash("sha256").update("keep.p2-d2-patch-application/v1\0").update(readFileSync(join(candidate, "evidence.cbor"))).digest("hex"), readback.evidenceDigest);
+      assert.deepEqual(readFileSync(join(candidate, "inputs", "carriers.cbor")), app.carrier);
+    } finally { removeApplicationFixture(app); }
     // This proves the real packaging/mode seam only. The complete Keep package,
     // root export and paired C01-C11 installed journeys remain separate evidence.
   } finally { rmSync(fixture.root, { recursive: true }); }
@@ -678,10 +699,154 @@ test("capture build gate still refuses an extra unsafe site and an undeclared au
     const abi = join(root, "native/crates/linux-abi/src/lib.rs"), original = readFileSync(abi, "utf8");
     writeFileSync(abi, `${original}\n// SAFETY: deliberate inventory mutant, never compiled or executed.\nfn extra_site() { unsafe {} }\n`);
     const unsafeResult = run(); assert.ifError(unsafeResult.error); assert.notEqual(unsafeResult.status, 0);
-    assert.match(unsafeResult.stderr, /exact fifty-six documented/);
+    assert.match(unsafeResult.stderr, /exact fifty-seven documented/);
     writeFileSync(abi, original);
     writeFileSync(join(root, "native/crates/p2-d2-supervisor/src/bin/undeclared-capture-target.rs"), "#![forbid(unsafe_code)]\nfn main() {}\n");
     const targetResult = run(); assert.ifError(targetResult.error); assert.notEqual(targetResult.status, 0);
     assert.match(targetResult.stderr, /metadata targets are not exact/); assert.match(targetResult.stderr, /undeclared-capture-target/);
   } finally { rmSync(root, { recursive: true }); }
+});
+
+function applicationFixture(kind: "tar" | "tar-gzip" = "tar-gzip", many = false) {
+  const fixture = createCaptureFixture(kind);
+  const outputRoot = mkdtempSync(join(tmpdir(), "keep-application-output-"));
+  {
+    if (many) for (let i = 0; i < 256; i++) fixture.rows.push({ path: `files/file-${String(i).padStart(3, "0")}`, mode: 0o644, bytes: i === 255 ? Buffer.alloc(8 * 1024 * 1024, 0x61) : Buffer.from("immutable\n") });
+    fixture.rows.push({ path: "10", mode: 0o644, bytes: Buffer.from("ten") }, { path: "2", mode: 0o644, bytes: Buffer.from("two") });
+    fixture.rows.sort((a,b) => a.path < b.path ? -1 : 1);
+    const raw = tar(fixture.rows), archive = kind === "tar-gzip" ? gzipSync(raw) : raw;
+    writeFileSync(join(fixture.root, "source"), archive); fixture.request.sourceStreamDigest = sha(archive);
+  }
+  const audit = encodeCanonical(auditPlanFixture());
+  const review = encodeCanonical({ schema: "keep.p2-d2-review-inputs", version: 1n,
+    toolchain: sha(readFileSync(join(captureSourceRoot, "native/toolchain-inventory.json"))),
+    unsafeCode: null, license: null, advisory: null, reproducibility: null, provenance: null });
+  const value = decodeCanonical(fixture.overlay) as Record<string, CanonicalValue>;
+  value.auditPlanDigest = captureAuditPlanV1(audit).auditPlanDigest; value.baseArchiveDigest = fixture.request.sourceStreamDigest!;
+  const candidate = deriveNativeResultTreeCandidateV1(joinValidatedPatchApplicationInputs(captureNativePatchOverlayV1(encodeCanonical(value)), captureNativePatchByteCarrierSetV1(fixture.carrier)), {
+    packageId: "curve25519-dalek@5.0.0", baseArchiveDigest: String(fixture.request.sourceStreamDigest),
+    files: fixture.rows.map(row => ({ path: row.path, bytes: Uint8Array.from(row.bytes) })),
+  });
+  value.resultTreeDigest = candidate.resultTreeDigest;
+  fixture.overlay = Buffer.from(encodeCanonical(value)); writeFileSync(join(fixture.root, "overlay.cbor"), fixture.overlay);
+  fixture.request.overlayByteDigest = sha(fixture.overlay);
+  writeFileSync(join(fixture.root, "audit.cbor"), audit); writeFileSync(join(fixture.root, "review.cbor"), review);
+  return { ...fixture, audit, review, outputRoot, publication: {
+    auditPath: "audit.cbor", auditByteDigest: sha(audit), reviewPath: "review.cbor", reviewByteDigest: sha(review), outputRoot, attemptId: "attempt-1",
+  }};
+}
+function removeApplicationFixture(f: { root: string; outputRoot: string }): void {
+  const writable = (path: string): void => { chmodSync(path, 0o700); for (const entry of readdirSync(path, { withFileTypes: true })) if (entry.isDirectory()) writable(join(path, entry.name)); };
+  writable(f.outputRoot); rmSync(f.outputRoot, { recursive: true }); rmSync(f.root, { recursive: true });
+}
+
+test("application consumer publishes one immutable captured snapshot with TS/Rust evidence and retained inputs", async () => {
+  for (const kind of ["tar", "tar-gzip"] as const) {
+    const f = applicationFixture(kind);
+    try {
+      const before = readFileSync(join(f.root, "source")); const { sdk } = await sdkFixture(f.root);
+      const result = await sdk.publishPackagedNativePatchApplicationV1(f.request, f.publication);
+      const root = join(f.outputRoot, "attempt-1", "candidate");
+      assert.ok(Object.isFrozen(result.application)); assert.equal(result.application.reviewStatus, "unverified");
+      assert.equal(result.application.admission, false); assert.equal(result.application.launch, false);
+      assert.deepEqual(readFileSync(join(root, "evidence.cbor")), Buffer.from(result.application.canonicalBytes()));
+      assert.deepEqual(readFileSync(join(root, "result-tree.cbor")), Buffer.from(result.application.result.canonicalBytes()));
+      for (const [name, bytes] of [["source.archive", before], ["overlay.cbor", f.overlay], ["carriers.cbor", f.carrier], ["audit.cbor", f.audit], ["review.cbor", f.review]] as const)
+        assert.deepEqual(readFileSync(join(root, "inputs", name)), Buffer.from(bytes), name);
+      const checksumBytes = readFileSync(join(root, "tree", ".cargo-checksum.json"));
+      assert.deepEqual(checksumBytes, Buffer.from(result.application.cargoChecksumBytes()));
+      const checksum = JSON.parse(checksumBytes.toString()) as { files: Record<string,string>; package: null };
+      assert.equal(checksum.package, null);
+      for (const row of result.application.result.files) {
+        const path = join(root, "tree", row.path); assert.equal(sha(readFileSync(path)), checksum.files[row.path]);
+        assert.equal(statSync(path).mode & 0o777, 0o400);
+      }
+      assert.equal(statSync(root).mode & 0o777, 0o500);
+      assert.equal((decodeCanonical(readFileSync(join(f.outputRoot, "attempt-1", "published.cbor"))) as Record<string, CanonicalValue>).outcome, "published");
+      assert.deepEqual(readFileSync(join(f.root, "source")), before); assert.deepEqual(readFileSync(join(f.root, "overlay.cbor")), f.overlay);
+      const copy = result.application.reviewInputBytes(); copy.fill(0); assert.deepEqual(result.application.reviewInputBytes(), f.review);
+      await assert.rejects(sdk.publishPackagedNativePatchApplicationV1(f.request, f.publication));
+      assert.deepEqual(readFileSync(join(root, "evidence.cbor")), Buffer.from(result.application.canonicalBytes()), "replayed attempt cannot replace prior candidate");
+    } finally { removeApplicationFixture(f); }
+  }
+});
+
+test("application consumer refuses stale commitments and escaping inputs with retained failure attempts", async () => {
+  for (const scenario of ["archive", "overlay", "carrier", "audit", "result", "review", "checksum", "namespace", "link", "overlap"] as const) {
+    const f = applicationFixture();
+    try {
+      if (scenario === "archive") writeFileSync(join(f.root, "source"), Buffer.from("replaced archive"));
+      if (scenario === "overlay") writeFileSync(join(f.root, "overlay.cbor"), Buffer.from([0]));
+      if (scenario === "carrier") writeFileSync(join(f.root, "carrier.cbor"), Buffer.from([0]));
+      if (scenario === "audit") { const audit = auditPlanFixture(); audit.planId = "different.plan"; const bytes = encodeCanonical(audit); writeFileSync(join(f.root, "audit.cbor"), bytes); f.publication.auditByteDigest = sha(bytes); }
+      if (scenario === "result") {
+        const overlay = decodeCanonical(f.overlay) as Record<string, CanonicalValue>; overlay.resultTreeDigest = "5".repeat(64);
+        const bytes = encodeCanonical(overlay); writeFileSync(join(f.root, "overlay.cbor"), bytes); f.request.overlayByteDigest = sha(bytes);
+      }
+      if (scenario === "review") {
+        const review = decodeCanonical(f.review) as Record<string, CanonicalValue>; review.license = true;
+        const bytes = encodeCanonical(review); writeFileSync(join(f.root, "review.cbor"), bytes); f.publication.reviewByteDigest = sha(bytes);
+      }
+      if (scenario === "namespace") {
+        const overlay = decodeCanonical(f.overlay) as Record<string, CanonicalValue>, carrier = decodeCanonical(f.carrier) as Record<string, CanonicalValue>;
+        (overlay.operations as CanonicalValue[]).push({ operation: "add", path: "a/child", oldByteDigest: null, newByteDigest: sha(new Uint8Array([1])), newByteLength: 1n });
+        (carrier.entries as CanonicalValue[]).push({ operation: "add", path: "a/child", bytes: new Uint8Array([1]) });
+        const carriers = encodeCanonical(carrier);
+        const candidate = deriveNativeResultTreeCandidateV1(joinValidatedPatchApplicationInputs(captureNativePatchOverlayV1(encodeCanonical(overlay)), captureNativePatchByteCarrierSetV1(carriers)), {
+          packageId: "curve25519-dalek@5.0.0", baseArchiveDigest: String(f.request.sourceStreamDigest), files: f.rows.map(row => ({ path: row.path, bytes: Uint8Array.from(row.bytes) })),
+        });
+        overlay.resultTreeDigest = candidate.resultTreeDigest;
+        const bytes = encodeCanonical(overlay); writeFileSync(join(f.root, "overlay.cbor"), bytes); f.request.overlayByteDigest = sha(bytes);
+        writeFileSync(join(f.root, "carrier.cbor"), carriers); f.request.carrierByteDigest = sha(carriers);
+      }
+      if (scenario === "checksum") {
+        const archive = gzipSync(tar([...f.rows, { path: ".cargo-checksum.json", mode: 0o644, bytes: Buffer.from('{"files":{},"package":null}') }]));
+        writeFileSync(join(f.root, "source"), archive); f.request.sourceStreamDigest = sha(archive);
+        const overlay = decodeCanonical(f.overlay) as Record<string, CanonicalValue>; overlay.baseArchiveDigest = sha(archive);
+        const bytes = encodeCanonical(overlay); writeFileSync(join(f.root, "overlay.cbor"), bytes); f.request.overlayByteDigest = sha(bytes);
+      }
+      if (scenario === "link") { rmSync(join(f.root, "audit.cbor")); symlinkSync(join(f.root, "review.cbor"), join(f.root, "audit.cbor")); }
+      if (scenario === "overlap") f.publication.outputRoot = f.root;
+      const { sdk } = await sdkFixture(f.root);
+      await assert.rejects(sdk.publishPackagedNativePatchApplicationV1(f.request, f.publication));
+      const attempt = join(f.outputRoot, "attempt-1"); assert.equal(existsSync(join(attempt, "candidate")), false, scenario);
+      if (existsSync(attempt)) {
+        assert.equal((decodeCanonical(readFileSync(join(attempt, "attempt.cbor"))) as Record<string, CanonicalValue>).outcome, "attempted");
+        const outcome = decodeCanonical(readFileSync(join(attempt, "outcome.cbor"))) as Record<string, CanonicalValue>;
+        assert.equal(outcome.outcome, "failed");
+        assert.equal(outcome.requestDigest, createHash("sha256").update("keep.patch-application-request/v1\0").update(readFileSync(join(attempt, "request.cbor"))).digest("hex"));
+        if (["audit", "result", "review", "namespace"].includes(scenario))
+          assert.deepEqual(readFileSync(join(attempt, "staging", "inputs", "carriers.cbor")), readFileSync(join(f.root, "carrier.cbor")), "failed application retains the original captured carriers");
+      }
+    } finally { removeApplicationFixture(f); }
+  }
+});
+
+test("application consumer refuses concurrent replacement and preserves uncertain published outcomes", async () => {
+  for (const scenario of ["source-replacement", "staged-file-substitution", "staged-directory-substitution", "retained-carrier-substitution", "published-file-substitution", "publication-record-collision"] as const) {
+    const f = applicationFixture("tar-gzip", true);
+    try {
+      const { sdk } = await sdkFixture(f.root);
+      const promise = sdk.publishPackagedNativePatchApplicationV1(f.request, f.publication);
+      const checked = assert.rejects(promise, error => !!error && typeof error === "object" && "code" in error && ["RACE", "IO", "INTEGRITY"].includes(String(error.code)));
+      const deadline = performance.now() + 5000;
+      const tree = join(f.outputRoot, "attempt-1", scenario === "published-file-substitution" ? "candidate" : "staging", "tree");
+      while (!existsSync(tree) && performance.now() < deadline) await new Promise(resolve => setTimeout(resolve, 1));
+      assert.ok(existsSync(tree), "schedule mutation only after single-snapshot acquisition");
+      if (scenario === "source-replacement") { renameSync(join(f.root, "source"), join(f.root, "source-old")); copyFileSync(join(f.root, "source-old"), join(f.root, "source")); }
+      else if (scenario === "publication-record-collision") writeFileSync(join(f.outputRoot, "attempt-1", "published.cbor"), "injected ledger IO conflict", { flag: "wx" });
+      else if (scenario === "staged-directory-substitution") { renameSync(tree, `${tree}-old`); mkdirSync(tree, { mode: 0o700 }); }
+      else {
+        const path = scenario === "retained-carrier-substitution" ? join(f.outputRoot, "attempt-1", "staging", "inputs", "carriers.cbor") : join(tree, scenario === "published-file-substitution" ? "files/file-255" : "a");
+        while (!existsSync(path) && performance.now() < deadline) await new Promise(resolve => setTimeout(resolve, 1));
+        assert.ok(existsSync(path)); chmodSync(path, 0o600); writeFileSync(path, "substituted destination bytes");
+      }
+      await checked;
+      const attempt = join(f.outputRoot, "attempt-1");
+      const outcome = decodeCanonical(readFileSync(join(attempt, "outcome.cbor"))) as Record<string, CanonicalValue>;
+      const dispatched = scenario === "publication-record-collision" || scenario === "published-file-substitution";
+      assert.equal(outcome.outcome, dispatched ? "unknown" : "failed");
+      assert.equal(existsSync(join(attempt, "candidate")), dispatched);
+    } finally { removeApplicationFixture(f); }
+  }
 });

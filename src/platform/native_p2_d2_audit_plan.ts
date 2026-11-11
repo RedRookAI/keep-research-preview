@@ -1,7 +1,7 @@
 /** Pure, non-authorizing AuditPlanV1 capture. No I/O, signing, review, or status capability. */
 import { createHash } from "node:crypto";
 import { types } from "node:util";
-import { decodeCanonical, encodeCanonical, type CanonicalValue } from "../eir/canonical.js";
+import { decodeCanonicalSnapshot, type CanonicalValue } from "../eir/canonical.js";
 
 const DOMAIN = "keep.p2-d2-audit-plan/v1\0";
 const PLAN_SCHEMA = "keep.p2-d2-audit-plan";
@@ -79,11 +79,9 @@ function sortedUniqueDigests(value: CanonicalValue | undefined, path: string): s
 }
 
 export function captureAuditPlanV1(input: unknown): ValidatedAuditPlanV1 {
-  if (input === null || typeof input !== "object" || types.isProxy(input) || !(input instanceof Uint8Array) || input.byteLength === 0 || input.byteLength > 1024 * 1024)
+  if (input === null || typeof input !== "object" || types.isProxy(input) || !(input instanceof Uint8Array))
     throw new NativeP2D2AuditPlanError("input is not an owned bounded byte string");
-  const decoded = decodeCanonical(input);
-  const canonical = encodeCanonical(decoded);
-  if (!Buffer.from(canonical).equals(Buffer.from(input))) throw new NativeP2D2AuditPlanError("encoding is noncanonical");
+  const { value: decoded, bytes } = decodeCanonicalSnapshot(input, 1024 * 1024);
   const plan = record(decoded, "plan"); exact(plan, PLAN_KEYS, "plan");
   if (plan.schema !== PLAN_SCHEMA || plan.version !== 1n || plan.claimSchema !== CLAIM_SCHEMA)
     throw new NativeP2D2AuditPlanError("plan schema/version/claim schema disagreed");
@@ -136,7 +134,6 @@ export function captureAuditPlanV1(input: unknown): ValidatedAuditPlanV1 {
   });
   const separation = record(plan.separationPolicy!, "separationPolicy"); exact(separation, SEPARATION_KEYS, "separationPolicy");
   if (SEPARATION_KEYS.some((key) => separation[key] !== true)) throw new NativeP2D2AuditPlanError("a separation invariant is disabled");
-  const bytes = Uint8Array.from(input);
   const auditPlanDigest = createHash("sha256").update(DOMAIN, "ascii").update(bytes).digest("hex");
   return Object.freeze({ kind: "ValidatedAuditPlanV1", auditPlanDigest, canonicalBytes: () => Uint8Array.from(bytes) });
 }

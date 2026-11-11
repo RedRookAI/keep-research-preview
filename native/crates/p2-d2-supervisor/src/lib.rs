@@ -3,6 +3,8 @@
 //! Native patch input acquisition. Returned rows are inert data, not installation,
 //! signature, build or launch authority. Unsafe syscalls stay in the existing ABI.
 
+pub mod application;
+
 use keep_native_linux_abi::{CaptureIoFailure, PinnedDirectory};
 use keep_native_protocol::p2_d2::{
     MAX_CARRIER_SET_ENCODED_BYTES, ValidatedNativePatchDescriptorV1, ValidatedPatchByteCarrierSet,
@@ -43,10 +45,18 @@ pub struct CapturedPatchInputs {
     overlay: ValidatedPatchOverlayPlan,
     carrier: ValidatedPatchByteCarrierSet,
     descriptor: ValidatedNativePatchDescriptorV1,
+    archive_bytes: Option<Vec<u8>>,
 }
 
 pub fn capture_patch_inputs(
     request: ValidatedCaptureRequest,
+) -> Result<CapturedPatchInputs, CaptureError> {
+    capture_patch_inputs_with_archive(request, false)
+}
+
+fn capture_patch_inputs_with_archive(
+    request: ValidatedCaptureRequest,
+    retain_archive: bool,
 ) -> Result<CapturedPatchInputs, CaptureError> {
     let root = PinnedDirectory::open(Path::new(request.root())).map_err(capture_io)?;
     let overlay = {
@@ -72,7 +82,7 @@ pub fn capture_patch_inputs(
     }; // Release original carrier bytes before acquiring any source payload.
     let descriptor = bind_patch_descriptor(&overlay, &carrier, request.overlay_base_digest())
         .map_err(|_| CaptureError::Integrity)?;
-    let source = match request.source() {
+    let (source, archive_bytes) = match request.source() {
         CaptureSource::Archive {
             format,
             stream_digest,
@@ -80,8 +90,14 @@ pub fn capture_patch_inputs(
             let raw = root
                 .capture_regular_file(request.source_path(), MAX_INPUT_BYTES as u64)
                 .map_err(capture_io)?;
-            capture_archive(raw.bytes(), *format, stream_digest)?
-        } // Compressed input/FD drop here, before response emission.
+            let rows = capture_archive(raw.bytes(), *format, stream_digest)?;
+            let archive = if retain_archive {
+                Some(raw.into_bytes())
+            } else {
+                None
+            };
+            (rows, archive)
+        } // Ordinary capture drops raw input; application retains its owned archive bytes.
         CaptureSource::Directory {
             expected_row_digest,
             ..
@@ -93,7 +109,10 @@ pub fn capture_patch_inputs(
             for part in parts {
                 directory = directory.open_child_directory(part).map_err(capture_io)?;
             }
-            capture_source_directory(&directory, expected_row_digest)?
+            (
+                capture_source_directory(&directory, expected_row_digest)?,
+                None,
+            )
         }
     };
     let result = CapturedPatchInputs {
@@ -102,6 +121,7 @@ pub fn capture_patch_inputs(
         overlay,
         carrier,
         descriptor,
+        archive_bytes,
     };
     result.check_response_budget()?;
     Ok(result)
@@ -150,6 +170,14 @@ impl CapturedPatchInputs {
     /// Emits only the closed, non-authorizing capture protocol. Transport failure
     /// may leave partial bytes; the SDK must withhold all values until END/EOF/exit0.
     pub fn write_response(&self, output: &mut impl Write) -> Result<(), CaptureError> {
+        self.write_extended_response(output, &[])
+    }
+
+    pub fn write_extended_response(
+        &self,
+        output: &mut impl Write,
+        artifacts: &[(&str, &[u8])],
+    ) -> Result<(), CaptureError> {
         let request = &self.request;
         let mut header = vec![
             ("record".into(), text("header")),
@@ -197,6 +225,10 @@ impl CapturedPatchInputs {
                 ("sourceStreamDigest".into(), text(stream_digest))
             }
         });
+        for (role, bytes) in artifacts {
+            header.push((format!("{role}Bytes"), number(bytes.len())));
+            header.push((format!("{role}ByteDigest"), text(&byte_digest(bytes))));
+        }
         let mut writer = ResponseWriter::new(output);
         writer.frame(Value::Map(header))?;
         for (index, file) in self.source.files().iter().enumerate() {
@@ -227,6 +259,15 @@ impl CapturedPatchInputs {
                 ("role".into(), text(role)),
                 ("byteLength".into(), number(bytes.len())),
                 ("byteDigest".into(), text(digest)),
+            ]))?;
+            writer.chunks(bytes)?;
+        }
+        for (role, bytes) in artifacts {
+            writer.frame(Value::Map(vec![
+                ("record".into(), text("input")),
+                ("role".into(), text(role)),
+                ("byteLength".into(), number(bytes.len())),
+                ("byteDigest".into(), text(&byte_digest(bytes))),
             ]))?;
             writer.chunks(bytes)?;
         }

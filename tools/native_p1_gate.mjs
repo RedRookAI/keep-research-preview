@@ -216,10 +216,10 @@ if (files.some((path) => path.endsWith("build.rs")))
 for (const path of files.filter((entry) => entry.endsWith(".rs"))) {
   const source = read(path);
   if (path === join(nativeRoot, "crates/linux-abi/src/lib.rs")) {
-    if ((source.match(/\bunsafe\s*\{/g) ?? []).length !== 56 ||
-        (source.match(/\/\/ SAFETY:/g) ?? []).length !== 56 ||
+    if ((source.match(/\bunsafe\s*\{/g) ?? []).length !== 57 ||
+        (source.match(/\/\/ SAFETY:/g) ?? []).length !== 57 ||
         /unsafe\s+(?:fn|trait|impl)/.test(source))
-      fail("linux-abi unsafe boundary differs from its exact fifty-six documented syscall/FD ownership sites");
+      fail("linux-abi unsafe boundary differs from its exact fifty-seven documented syscall/FD ownership sites");
     continue;
   }
   if (!source.includes("#![forbid(unsafe_code)]"))
@@ -518,5 +518,5 @@ try {
   rmSync(cargoHome, { recursive: true, force: true });
 }
 console.log(
-  `[native-p1-gate] OK — pinned ${lock.toolchain} identities; exact protocol+transport+P2-D2 evidence+Linux ABI+production resolver+non-authorizing PROBER launch-candidate config/metadata/vendor graph; separately gated P2 candidate excluded; sanitized build env; unsafe code confined to fifty-six documented linux-abi ownership/syscall sites; all other Keep crates forbid unsafe/build scripts; dependency unsafe/build machinery remains explicitly non-admitted${verify ? "; tests+oracles+release transport binaries and candidate refusal probe built" : ""}`,
+  `[native-p1-gate] OK — pinned ${lock.toolchain} identities; exact protocol+transport+P2-D2 evidence+Linux ABI+production resolver+non-authorizing PROBER launch-candidate config/metadata/vendor graph; separately gated P2 candidate excluded; sanitized build env; unsafe code confined to fifty-seven documented linux-abi ownership/syscall sites; all other Keep crates forbid unsafe/build scripts; dependency unsafe/build machinery remains explicitly non-admitted${verify ? "; tests+oracles+release transport binaries and candidate refusal probe built" : ""}`,
 );

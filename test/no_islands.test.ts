@@ -119,10 +119,6 @@ const BUILT_AHEAD: string[] = [
   // consumption is mechanically prohibited until later P2 resolver,
   // B0/B3, and production-crypto gates receive their own GO. REMOVE when the verified resolver owns this capture.
   "native_authority_schema_v1",
-  // native_p2_d2_audit_plan is the provider-neutral validator for the preserved
-  // P2-D2-OFF-HOST-REVIEWER-CUSTODY seam. It cannot enter runtime authorization until
-  // the owner later provisions the off-host registry; tests prove its closed schema now.
-  "native_p2_d2_audit_plan",
   // native_production_resolution_observation independently recomputes the safe-Rust
   // resolver transcript in the mounted integration probe. Runtime composition is
   // intentionally forbidden until production crypto/B0/B3 admission makes the native

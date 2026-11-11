@@ -9,6 +9,7 @@ import { decodeCanonical, encodeCanonical, type CanonicalValue } from "../eir/ca
 import { parsePolicyJson } from "../policy/json.js";
 import { isCanonicalNativeP2RelativePath } from "./native_p2_path.js";
 import { captureNativePatchDescriptorV1, type ValidatedNativePatchDescriptorV1 } from "./native_p2_d2_carriers.js";
+import { captureNativePatchApplicationV1, type ValidatedNativePatchApplicationV1 } from "./native_p2_d2_application.js";
 
 const MIB = 1024 * 1024;
 const FRAME = 65_536;
@@ -52,6 +53,15 @@ export interface NativePatchCaptureOptionsV1 {
   readonly timeoutMs?: number;
   readonly signal?: AbortSignal;
 }
+export interface NativePatchPublicationV1 {
+  readonly auditPath: string;
+  readonly auditByteDigest: string;
+  readonly reviewPath: string;
+  readonly reviewByteDigest: string;
+  readonly outputRoot: string;
+  readonly attemptId: string;
+}
+interface ApplicationContext { digest: string; auditByteDigest: string; reviewByteDigest: string }
 export interface CapturedNativePatchFileV1 {
   readonly path: string;
   readonly mode: number;
@@ -75,6 +85,7 @@ export type CapturedNativePatchInputsV1 = CaptureIdentity & (
 ) & {
   readonly kind: "CapturedNativePatchInputsV1";
   readonly descriptor: ValidatedNativePatchDescriptorV1;
+  readonly application?: ValidatedNativePatchApplicationV1;
   readonly files: readonly CapturedNativePatchFileV1[];
   overlayBytes(): Uint8Array;
   carrierBytes(): Uint8Array;
@@ -206,8 +217,9 @@ class CaptureReceiver {
   private directories = 0;
   private overlay: Buffer | undefined;
   private carrier: Buffer | undefined;
+  private readonly artifacts = new Map<string, Buffer>();
   private endDigest: string | undefined;
-  constructor(private readonly request: NativePatchCaptureRequestV1, private readonly requestDigest: string) {}
+  constructor(private readonly request: NativePatchCaptureRequestV1, private readonly requestDigest: string, private readonly application?: ApplicationContext) {}
 
   accept(chunk: Buffer): void {
     this.received += chunk.length;
@@ -277,7 +289,7 @@ class CaptureReceiver {
   private record(row: Record<string, unknown>): void {
     if (this.header === undefined) {
       const specific = this.request.sourceKind === "directory" ? "declaredBaseArchiveDigest" : "sourceStreamDigest";
-      exact(row, [...HEADER_COMMON, specific]);
+      exact(row, [...HEADER_COMMON, specific, ...(this.application === undefined ? [] : ["auditBytes", "auditByteDigest", "reviewBytes", "reviewByteDigest", "evidenceBytes", "evidenceByteDigest"])]);
       if (row.record !== "header" || row.schema !== "keep.patch-input-result" || row.version !== 1n || row.sourceKind !== this.request.sourceKind)
         fail("MALFORMED", "response header identity");
       const base = this.request.sourceKind === "directory" ? this.request.declaredBaseArchiveDigest : this.request.sourceStreamDigest;
@@ -287,6 +299,13 @@ class CaptureReceiver {
       if (this.request.sourceKind === "directory" && row.sourceRowDigest !== this.request.expectedSourceRowDigest) fail("INTEGRITY", "declared source rows");
       const count = uint(row.sourceCount, 4096);
       uint(row.sourceBytes, 128 * MIB); uint(row.overlayBytes, MIB, 1); uint(row.carrierBytes, 130 * MIB, 1);
+      if (this.application !== undefined) {
+        for (const [role, maximum] of [["audit", MIB], ["review", FRAME], ["evidence", FRAME]] as const) {
+          uint(row[`${role}Bytes`], maximum, 1); digest(row[`${role}ByteDigest`]);
+        }
+        if (row.auditByteDigest !== this.application.auditByteDigest || row.reviewByteDigest !== this.application.reviewByteDigest)
+          fail("INTEGRITY", "application input identity mismatch");
+      }
       this.header = row;
       this.hashRowPart(Buffer.from([0xa4])); // canonical 4-field map
       this.hashRowPart(encodeCanonical("files"));
@@ -338,6 +357,14 @@ class CaptureReceiver {
       });
       return;
     }
+    if (this.application !== undefined && this.artifacts.size < 3) {
+      const role = ["audit", "review", "evidence"][this.artifacts.size]!;
+      exact(row, ["record", "role", "byteLength", "byteDigest"]);
+      if (row.record !== "input" || row.role !== role || row.byteLength !== this.header[`${role}Bytes`] || row.byteDigest !== this.header[`${role}ByteDigest`])
+        fail("INTEGRITY", "application artifact metadata");
+      this.begin(Number(row.byteLength), digest(row.byteDigest), bytes => this.artifacts.set(role, bytes));
+      return;
+    }
     exact(row, ["record", "responseDigest"]);
     if (row.record !== "end") fail("MALFORMED", "END required");
     const expected = digest(row.responseDigest);
@@ -346,7 +373,7 @@ class CaptureReceiver {
     if (this.sourceBytes !== Number(this.header.sourceBytes) || this.rowsHash.digest("hex") !== this.header.sourceRowDigest) fail("INTEGRITY", "source rows commitment");
     this.endDigest = expected;
   }
-  discard(): void { this.files = []; this.body = undefined; this.overlay = undefined; this.carrier = undefined; this.namespace.clear(); }
+  discard(): void { this.files = []; this.body = undefined; this.overlay = undefined; this.carrier = undefined; this.namespace.clear(); this.artifacts.clear(); }
   finish(): CapturedNativePatchInputsV1 {
     if (this.used !== 0 || this.endDigest === undefined || this.header === undefined || this.overlay === undefined || this.carrier === undefined || this.body !== undefined)
       fail("MALFORMED", "incomplete response");
@@ -363,9 +390,21 @@ class CaptureReceiver {
         descriptor.overlayByteDigest !== this.request.overlayByteDigest ||
         descriptor.carrierByteDigest !== this.request.carrierByteDigest)
       fail("INTEGRITY", "overlay/carrier descriptor identity mismatch");
+    let application: ValidatedNativePatchApplicationV1 | undefined;
+    if (this.application !== undefined) {
+      const audit = this.artifacts.get("audit"), review = this.artifacts.get("review"), evidence = this.artifacts.get("evidence");
+      if (audit === undefined || review === undefined || evidence === undefined) fail("MALFORMED", "application artifacts incomplete");
+      try {
+        application = captureNativePatchApplicationV1({ packageId: "curve25519-dalek@5.0.0", baseArchiveDigest: descriptor.baseArchiveDigest,
+          files: this.files.map(file => ({ path: file.path, bytes: file.bytes() })) }, overlay, carrier, audit, review,
+          this.application.digest, digest(this.header.sourceRowDigest));
+      } catch { fail("INTEGRITY", "application snapshot validation refused"); }
+      if (!Buffer.from(application.canonicalBytes()).equals(evidence)) fail("INTEGRITY", "native application evidence differs from snapshot");
+    }
     const result = Object.freeze({
       kind: "CapturedNativePatchInputsV1" as const,
       descriptor,
+      ...(application === undefined ? {} : { application }),
       ...(this.request.sourceKind === "directory"
         ? { sourceKind: "directory" as const, declaredBaseArchiveDigest: this.request.declaredBaseArchiveDigest }
         : { sourceKind: this.request.sourceKind, sourceStreamDigest: this.request.sourceStreamDigest }),
@@ -385,6 +424,17 @@ const abortedGetter = Object.getOwnPropertyDescriptor(AbortSignal.prototype, "ab
 
 /** Fixed verified-handle execution. No caller executable, environment override, retries or partial output. */
 export async function capturePackagedNativePatchInputsV1(input: unknown, options: NativePatchCaptureOptionsV1 = {}): Promise<CapturedNativePatchInputsV1> {
+  return exchangePackagedNativePatchInputsV1(input, options);
+}
+
+/** Explicit filesystem publication into the separate operator-owned output root. */
+export async function publishPackagedNativePatchApplicationV1(input: unknown, publication: NativePatchPublicationV1, options: NativePatchCaptureOptionsV1 = {}): Promise<CapturedNativePatchInputsV1 & { readonly application: ValidatedNativePatchApplicationV1 }> {
+  const result = await exchangePackagedNativePatchInputsV1(input, options, publication);
+  if (result.application === undefined) fail("INTEGRITY", "application response missing");
+  return result as CapturedNativePatchInputsV1 & { readonly application: ValidatedNativePatchApplicationV1 };
+}
+
+async function exchangePackagedNativePatchInputsV1(input: unknown, options: NativePatchCaptureOptionsV1, publication?: NativePatchPublicationV1): Promise<CapturedNativePatchInputsV1> {
   const started = performance.now();
   const request = requestSnapshot(input);
   const opts = object(options);
@@ -398,10 +448,23 @@ export async function capturePackagedNativePatchInputsV1(input: unknown, options
     try { if (abortedGetter.call(signal)) fail("CANCELLED", "capture aborted before execution"); }
     catch (error) { if (error instanceof NativePatchCaptureError) throw error; fail("MALFORMED", "invalid AbortSignal"); }
   }
-  const payload = encodeCanonical(request as unknown as CanonicalValue);
+  const capturePayload = encodeCanonical(request as unknown as CanonicalValue);
+  let payload = capturePayload, application: ApplicationContext | undefined;
+  if (publication !== undefined) {
+    const pub = object(publication);
+    exact(pub, ["auditPath", "auditByteDigest", "reviewPath", "reviewByteDigest", "outputRoot", "attemptId"]);
+    relative(pub.auditPath); relative(pub.reviewPath); digest(pub.auditByteDigest); digest(pub.reviewByteDigest);
+    const attemptId = relative(pub.attemptId);
+    if (request.sourceKind === "directory") fail("UNSUPPORTED", "application requires an authenticated archive stream");
+    if (attemptId.includes("/") || attemptId.length > 128 || typeof pub.outputRoot !== "string" || !pub.outputRoot.startsWith("/") || !isCanonicalNativeP2RelativePath(pub.outputRoot.slice(1)))
+      fail("PATH", "application publication path");
+    payload = encodeCanonical({ schema: "keep.patch-application-request", version: 1n, captureRequest: Uint8Array.from(capturePayload), ...pub } as CanonicalValue);
+    application = { digest: createHash("sha256").update("keep.patch-application-request/v1\0", "ascii").update(payload).digest("hex"),
+      auditByteDigest: String(pub.auditByteDigest), reviewByteDigest: String(pub.reviewByteDigest) };
+  }
   if (payload.length > FRAME) fail("LIMIT", "request frame bound");
   const frame = Buffer.alloc(payload.length + 4); frame.writeUInt32BE(payload.length); frame.set(payload, 4);
-  const requestDigest = createHash("sha256").update("keep.patch-input-request/v1\0", "ascii").update(payload).digest("hex");
+  const requestDigest = createHash("sha256").update("keep.patch-input-request/v1\0", "ascii").update(capturePayload).digest("hex");
   let child;
   try {
     const fd = verifiedExecutable();
@@ -410,7 +473,7 @@ export async function capturePackagedNativePatchInputsV1(input: unknown, options
       child = spawn("/proc/self/fd/3", [], { cwd: "/", env: {}, shell: false, windowsHide: true, stdio: ["pipe", "pipe", "pipe", fd] });
     } finally { closeSync(fd); }
   } catch (error) { throw wrapped(error); }
-  const receiver = new CaptureReceiver(request, requestDigest);
+  const receiver = new CaptureReceiver(request, requestDigest, application);
   return await new Promise<CapturedNativePatchInputsV1>((resolve, reject) => {
     let failure: NativePatchCaptureError | undefined;
     let stdinFailed = false, stdoutEnded = false, stderrEnded = false;

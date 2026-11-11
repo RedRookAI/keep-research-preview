@@ -1,9 +1,11 @@
 /** Pure P2-D2 carrier + overlay application into immutable ResultTreeV1 evidence. */
 import { createHash } from "node:crypto";
 import { types } from "node:util";
-import { encodeCanonical, type CanonicalValue } from "../eir/canonical.js";
+import { decodeCanonicalSnapshot, encodeCanonical, type CanonicalValue } from "../eir/canonical.js";
 import { P2_D2_OVERLAY_LIMITS, type NativePatchOperationV1 } from "./native_p2_d2_overlay.js";
-import { type ValidatedPatchApplicationInputs } from "./native_p2_d2_carriers.js";
+import { captureNativePatchDescriptorV1, captureNativePatchByteCarrierSetV1, joinValidatedPatchApplicationInputs, type ValidatedPatchApplicationInputs } from "./native_p2_d2_carriers.js";
+import { captureNativePatchOverlayV1 } from "./native_p2_d2_overlay.js";
+import { captureAuditPlanV1 } from "./native_p2_d2_audit_plan.js";
 import { isCanonicalNativeP2RelativePath } from "./native_p2_path.js";
 
 const RESULT_SCHEMA = "keep.p2-d2-result-tree";
@@ -172,5 +174,76 @@ export function validateNativeResultTreeApplicationV1(
     build: false as const,
     admission: false as const,
     launch: false as const,
+  });
+}
+
+/** Review references are retained inputs; outcomes remain unverified. */
+export function captureNativeReviewInputsV1(input: unknown): { bytes: Uint8Array; digest: string } {
+  const { value, bytes } = decodeCanonicalSnapshot(input, 65_536);
+  const keys = ["schema", "version", "toolchain", "unsafeCode", "license", "advisory", "reproducibility", "provenance"];
+  if (value === null || typeof value !== "object" || Array.isArray(value) || value instanceof Uint8Array)
+    throw new NativeP2D2ApplicationError("review inputs are not a record");
+  const row = value as Record<string, CanonicalValue>;
+  if (Object.keys(row).length !== keys.length || keys.some(key => !Object.hasOwn(row, key)) ||
+      row.schema !== "keep.p2-d2-review-inputs" || row.version !== 1n ||
+      keys.slice(2).some(key => row[key] !== null && (typeof row[key] !== "string" || !validDigest(row[key] as string))))
+    throw new NativeP2D2ApplicationError("review input identities are malformed");
+  return { bytes, digest: sha(bytes) };
+}
+
+export interface ValidatedNativePatchApplicationV1 {
+  readonly kind: "ValidatedNativePatchApplicationV1";
+  readonly evidenceDigest: string;
+  readonly result: ValidatedNativeResultTreePlan;
+  readonly auditPlanDigest: string;
+  readonly reviewInputsDigest: string;
+  readonly cargoChecksumArtifactDigest: string;
+  readonly reviewStatus: "unverified";
+  readonly admission: false;
+  readonly launch: false;
+  canonicalBytes(): Uint8Array;
+  cargoChecksumBytes(): Uint8Array;
+  auditPlanBytes(): Uint8Array;
+  reviewInputBytes(): Uint8Array;
+}
+
+/** Apply one already captured snapshot, retaining its source and review identities. */
+export function captureNativePatchApplicationV1(
+  archive: CapturedNativeArchiveV1,
+  overlayBytes: Uint8Array,
+  carrierBytes: Uint8Array,
+  auditBytes: Uint8Array,
+  reviewBytes: Uint8Array,
+  requestDigest: string,
+  sourceRowDigest: string,
+): ValidatedNativePatchApplicationV1 {
+  if (!validDigest(requestDigest) || !validDigest(sourceRowDigest)) throw new NativeP2D2ApplicationError("snapshot identity malformed");
+  const overlay = captureNativePatchOverlayV1(overlayBytes), carriers = captureNativePatchByteCarrierSetV1(carrierBytes);
+  const descriptor = captureNativePatchDescriptorV1(overlayBytes, carrierBytes, archive.baseArchiveDigest);
+  const audit = captureAuditPlanV1(auditBytes), review = captureNativeReviewInputsV1(reviewBytes);
+  if (audit.auditPlanDigest !== overlay.overlay.auditPlanDigest) throw new NativeP2D2ApplicationError("audit plan commitment differs");
+  const result = validateNativeResultTreeApplicationV1(joinValidatedPatchApplicationInputs(overlay, carriers), archive);
+  const paths = new Set(result.files.map(row => row.path.toLowerCase()));
+  for (const row of result.files) {
+    const path = row.path.toLowerCase();
+    if (path === ".cargo-checksum.json" || path.startsWith(".cargo-checksum.json/") ||
+        path.split("/").slice(0, -1).some((_, index, parts) => paths.has(parts.slice(0, index + 1).join("/"))))
+      throw new NativeP2D2ApplicationError("result namespace conflicts with a file or generated checksum");
+  }
+  const checksum = Buffer.from(`{"files":{${result.files.map(row => `${JSON.stringify(row.path)}:${JSON.stringify(row.byteDigest)}`).join(",")}},"package":null}\n`, "utf8");
+  const cargoChecksumArtifactDigest = createHash("sha256").update("keep.p2-d2-cargo-checksum-artifact/v1\0", "ascii").update(checksum).digest("hex");
+  const canonical = encodeCanonical({
+    schema: "keep.p2-d2-patch-application", version: 1n, packageId: PACKAGE_ID,
+    requestDigest, sourceRowDigest, baseArchiveDigest: archive.baseArchiveDigest,
+    patchDescriptorDigest: descriptor.descriptorDigest, resultTreeDigest: result.resultTreeDigest,
+    auditPlanDigest: audit.auditPlanDigest, reviewInputsDigest: review.digest,
+    cargoChecksumArtifactDigest, reviewStatus: "unverified", admission: false, launch: false,
+  });
+  return Object.freeze({
+    kind: "ValidatedNativePatchApplicationV1", result, auditPlanDigest: audit.auditPlanDigest,
+    reviewInputsDigest: review.digest, cargoChecksumArtifactDigest, reviewStatus: "unverified", admission: false, launch: false,
+    evidenceDigest: createHash("sha256").update("keep.p2-d2-patch-application/v1\0", "ascii").update(canonical).digest("hex"),
+    canonicalBytes: () => Uint8Array.from(canonical), cargoChecksumBytes: () => Uint8Array.from(checksum),
+    auditPlanBytes: () => audit.canonicalBytes(), reviewInputBytes: () => Uint8Array.from(review.bytes),
   });
 }

@@ -302,6 +302,26 @@ pub struct PinnedDirectory {
     identity: FileIdentity,
 }
 
+/// Publication evidence: `dispatched` distinguishes pre-dispatch refusals from
+/// results requiring reconciliation after the atomic rename was attempted.
+#[derive(Debug)]
+pub struct OwnedDirectoryPublishError {
+    pub dispatched: bool,
+    pub source: io::Error,
+}
+
+impl std::fmt::Display for OwnedDirectoryPublishError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "owned directory publication: {}", self.source)
+    }
+}
+
+impl std::error::Error for OwnedDirectoryPublishError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.source)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DirectoryEntryIdentity {
     pub name: String,
@@ -921,6 +941,134 @@ impl PinnedDirectory {
         Self::open_with_policy(root, false, false)
     }
 
+    /// Pin one canonical, link-free workspace owned exclusively by this euid.
+    pub fn open_owned_workspace(root: &Path) -> io::Result<Self> {
+        let result = Self::open(root)?;
+        result.owned_directory_metadata(Some(0o700))?;
+        Ok(result)
+    }
+
+    fn owned_directory_metadata(&self, required_mode: Option<u32>) -> io::Result<Metadata> {
+        let metadata = self.directory.metadata()?;
+        let mode = metadata.mode() & 0o7777;
+        let uid = current_effective_uid();
+        if !metadata.is_dir()
+            || metadata.dev() != self.identity.device
+            || metadata.ino() != self.identity.inode
+            || metadata.uid() != uid
+            || self.identity.uid != uid
+            || metadata.nlink() == 0
+            || !matches!(mode, 0o700 | 0o500)
+            || required_mode.is_some_and(|required| required != mode)
+        {
+            return Err(invalid("owned directory identity, owner, or mode changed"));
+        }
+        Ok(metadata)
+    }
+
+    pub fn create_owned_directory(&self, name: &str) -> io::Result<Self> {
+        self.owned_directory_metadata(Some(0o700))?;
+        self.create_directory_for_owner(name, current_effective_uid(), None)
+    }
+
+    /// Compare the live pathname to its held directory, excluding mutable
+    /// directory timestamps and link counts that legitimately change as populated.
+    pub fn verify_child(&self, name: &str, child: &Self) -> io::Result<()> {
+        self.owned_directory_metadata(None)?;
+        let held = child.owned_directory_metadata(None)?;
+        if name.contains('/') || !canonical_relative(name) {
+            return Err(invalid("owned child name is not one closed component"));
+        }
+        let observed = open_directory_at(&self.directory, name, RESOLUTION_FLAGS)?;
+        let observed = observed.metadata()?;
+        if !observed.is_dir()
+            || observed.dev() != held.dev()
+            || observed.ino() != held.ino()
+            || observed.uid() != held.uid()
+            || observed.mode() & 0o7777 != held.mode() & 0o7777
+        {
+            return Err(invalid(
+                "owned child pathname no longer names the held directory",
+            ));
+        }
+        Ok(())
+    }
+
+    pub fn sync_directory(&self) -> io::Result<()> {
+        self.owned_directory_metadata(None)?;
+        self.directory.sync_all()
+    }
+
+    pub fn seal_owned_directory(&self) -> io::Result<()> {
+        self.owned_directory_metadata(Some(0o700))?;
+        self.directory
+            .set_permissions(std::fs::Permissions::from_mode(0o500))?;
+        self.directory.sync_all()?;
+        self.owned_directory_metadata(Some(0o500))?;
+        Ok(())
+    }
+
+    /// Atomically publish a sealed child within this same pinned parent. A
+    /// post-dispatch error is evidence to reconcile, never permission to retry.
+    pub fn publish_owned_directory(
+        &self,
+        stage_name: &str,
+        stage: &Self,
+        target_name: &str,
+    ) -> Result<(), OwnedDirectoryPublishError> {
+        let precheck = || -> io::Result<_> {
+            self.owned_directory_metadata(Some(0o700))?;
+            stage.owned_directory_metadata(Some(0o500))?;
+            if target_name.contains('/')
+                || !canonical_relative(target_name)
+                || stage_name == target_name
+            {
+                return Err(invalid(
+                    "publication target is not a distinct closed component",
+                ));
+            }
+            self.verify_child(stage_name, stage)?;
+            let stage_name = std::ffi::CString::new(stage_name)
+                .map_err(|_| invalid("publication stage contains NUL"))?;
+            let target_name = std::ffi::CString::new(target_name)
+                .map_err(|_| invalid("publication target contains NUL"))?;
+            Ok((stage_name, target_name))
+        };
+        let (stage_c, target_c) = precheck().map_err(|source| OwnedDirectoryPublishError {
+            dispatched: false,
+            source,
+        })?;
+        // SAFETY: the pinned parent FD and both validated single-component C names
+        // remain live; RENAME_NOREPLACE performs one same-parent rename without
+        // following the target or replacing an existing pathname. No FD is transferred.
+        let result = unsafe {
+            libc::syscall(
+                libc::SYS_renameat2,
+                self.directory.as_raw_fd(),
+                stage_c.as_ptr(),
+                self.directory.as_raw_fd(),
+                target_c.as_ptr(),
+                libc::RENAME_NOREPLACE,
+            )
+        };
+        if result != 0 {
+            let source = io::Error::last_os_error();
+            // The kernel explicitly reports collision without replacing either
+            // name. Other syscall failures retain dispatched uncertainty.
+            let collision = matches!(source.raw_os_error(), Some(libc::EEXIST | libc::ENOTEMPTY));
+            return Err(OwnedDirectoryPublishError {
+                dispatched: !collision,
+                source,
+            });
+        }
+        self.verify_child(target_name, stage)
+            .and_then(|()| self.sync_directory())
+            .map_err(|source| OwnedDirectoryPublishError {
+                dispatched: true,
+                source,
+            })
+    }
+
     pub fn open_mount_root(root: &Path) -> io::Result<Self> {
         Self::open_with_policy(root, true, false)
     }
@@ -1049,6 +1197,15 @@ impl PinnedDirectory {
     }
 
     pub fn create_private_directory(&self, name: &str) -> io::Result<Self> {
+        self.create_directory_for_owner(name, 0, Some(0))
+    }
+
+    fn create_directory_for_owner(
+        &self,
+        name: &str,
+        uid: u32,
+        gid: Option<u32>,
+    ) -> io::Result<Self> {
         if name.contains('/') || !canonical_relative(name) {
             return Err(invalid(
                 "private directory name is not one closed component",
@@ -1069,9 +1226,9 @@ impl PinnedDirectory {
         )?;
         let metadata = directory.metadata()?;
         if !metadata.is_dir()
-            || metadata.uid() != 0
-            || metadata.gid() != 0
-            || metadata.mode() & 0o777 != 0o700
+            || metadata.uid() != uid
+            || gid.is_some_and(|gid| metadata.gid() != gid)
+            || metadata.mode() & 0o7777 != 0o700
         {
             return Err(invalid("private directory identity or mode changed"));
         }
@@ -1189,6 +1346,36 @@ impl PinnedDirectory {
         maximum_bytes: u64,
         final_mode: u32,
     ) -> io::Result<CapturedRegularFile> {
+        self.stage_file_for_owner(name, bytes, maximum_bytes, final_mode, 0, Some(0))
+    }
+
+    pub fn stage_owned_file(
+        &self,
+        name: &str,
+        bytes: &[u8],
+        maximum_bytes: u64,
+        final_mode: u32,
+    ) -> io::Result<CapturedRegularFile> {
+        self.owned_directory_metadata(Some(0o700))?;
+        self.stage_file_for_owner(
+            name,
+            bytes,
+            maximum_bytes,
+            final_mode,
+            current_effective_uid(),
+            None,
+        )
+    }
+
+    fn stage_file_for_owner(
+        &self,
+        name: &str,
+        bytes: &[u8],
+        maximum_bytes: u64,
+        final_mode: u32,
+        uid: u32,
+        gid: Option<u32>,
+    ) -> io::Result<CapturedRegularFile> {
         if name.contains('/')
             || !canonical_relative(name)
             || bytes.len() as u64 > maximum_bytes
@@ -1227,6 +1414,7 @@ impl PinnedDirectory {
         file.flush()?;
         file.sync_all()?;
         file.set_permissions(std::fs::Permissions::from_mode(final_mode))?;
+        file.sync_all()?;
         file.seek(SeekFrom::Start(0))?;
         let mut recaptured = Vec::with_capacity(bytes.len());
         (&file)
@@ -1236,9 +1424,9 @@ impl PinnedDirectory {
         if recaptured != bytes
             || !metadata.is_file()
             || metadata.nlink() != 1
-            || metadata.uid() != 0
-            || metadata.gid() != 0
-            || metadata.mode() & 0o777 != final_mode
+            || metadata.uid() != uid
+            || gid.is_some_and(|gid| metadata.gid() != gid)
+            || metadata.mode() & 0o7777 != final_mode
             || metadata.size() != bytes.len() as u64
         {
             return Err(invalid("private staged file recapture or identity differs"));
@@ -1522,6 +1710,11 @@ fn pin_entry_at(root: &File, relative: &str) -> io::Result<File> {
     Ok(File::from(unsafe { OwnedFd::from_raw_fd(raw as i32) }))
 }
 
+fn current_effective_uid() -> u32 {
+    // SAFETY: geteuid has no arguments or borrowed memory and cannot fail.
+    unsafe { libc::geteuid() }
+}
+
 /// Upgrades only our held inode through our own verified procfs FD directory.
 /// The source pathname is deliberately unavailable here. resolve=0 is confined
 /// to this internally generated magic-link lookup, never a source-root fallback.
@@ -1543,8 +1736,7 @@ fn upgrade_regular_inode(pinned: File, identity: FileIdentity) -> io::Result<Pin
     )
     .map_err(|_| capture_error(CaptureIoFailure::Unsupported))?;
     let metadata = fd_directory.metadata()?;
-    // SAFETY: geteuid has no arguments or borrowed memory and cannot fail.
-    let uid = unsafe { libc::geteuid() };
+    let uid = current_effective_uid();
     if metadata.dev() != proc.identity.device || metadata.uid() != uid || !metadata.is_dir() {
         return Err(capture_error(CaptureIoFailure::Unsupported));
     }
@@ -2106,6 +2298,175 @@ mod tests {
         }
         std::fs::remove_dir_all(root).unwrap();
         assert_eq!(staged.bytes(), b"captured vmm bytes");
+    }
+
+    #[test]
+    fn owned_directory_publication_preserves_pinned_content_and_sealed_modes() {
+        let root = scratch();
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let workspace = PinnedDirectory::open_owned_workspace(&root).unwrap();
+        let stage = workspace.create_owned_directory("stage").unwrap();
+        let child = stage.create_owned_directory("src").unwrap();
+        let file = child
+            .stage_owned_file("lib.rs", b"exact candidate bytes", 64, 0o400)
+            .unwrap();
+        assert_eq!(file.bytes(), b"exact candidate bytes");
+        assert_eq!(file.identity().uid, workspace.identity().uid);
+        assert_eq!(file.identity().mode & 0o7777, 0o400);
+        assert!(
+            child
+                .stage_owned_file("lib.rs", b"replacement", 64, 0o400)
+                .is_err()
+        );
+        // Children and files changed timestamps/link counts since the parents were
+        // pinned; those natural changes must not invalidate inode-bound checks.
+        stage.verify_child("src", &child).unwrap();
+        workspace.verify_child("stage", &stage).unwrap();
+        child.seal_owned_directory().unwrap();
+        stage.seal_owned_directory().unwrap();
+        assert!(stage.create_owned_directory("after-seal").is_err());
+        workspace
+            .publish_owned_directory("stage", &stage, "candidate")
+            .unwrap();
+        workspace.verify_child("candidate", &stage).unwrap();
+        assert!(!root.join("stage").exists());
+        assert_eq!(
+            std::fs::read(root.join("candidate/src/lib.rs")).unwrap(),
+            b"exact candidate bytes"
+        );
+        assert_eq!(
+            std::fs::metadata(root.join("candidate")).unwrap().mode() & 0o7777,
+            0o500
+        );
+        assert_eq!(
+            std::fs::metadata(root.join("candidate/src"))
+                .unwrap()
+                .mode()
+                & 0o7777,
+            0o500
+        );
+        // Restore only this test's owned directories for unprivileged cleanup.
+        std::fs::set_permissions(
+            root.join("candidate/src"),
+            std::fs::Permissions::from_mode(0o700),
+        )
+        .unwrap();
+        std::fs::set_permissions(
+            root.join("candidate"),
+            std::fs::Permissions::from_mode(0o700),
+        )
+        .unwrap();
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn owned_directory_publication_collision_preserves_both_names_and_target_bytes() {
+        let root = scratch();
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let workspace = PinnedDirectory::open_owned_workspace(&root).unwrap();
+        let stage = workspace.create_owned_directory("stage").unwrap();
+        stage
+            .stage_owned_file("new", b"candidate", 64, 0o400)
+            .unwrap();
+        stage.seal_owned_directory().unwrap();
+        let target = workspace.create_owned_directory("target").unwrap();
+        target
+            .stage_owned_file("original", b"preserve target", 64, 0o400)
+            .unwrap();
+        let error = workspace
+            .publish_owned_directory("stage", &stage, "target")
+            .unwrap_err();
+        assert!(!error.dispatched);
+        assert!(matches!(
+            error.source.raw_os_error(),
+            Some(libc::EEXIST | libc::ENOTEMPTY)
+        ));
+        workspace.verify_child("stage", &stage).unwrap();
+        workspace.verify_child("target", &target).unwrap();
+        assert_eq!(
+            std::fs::read(root.join("target/original")).unwrap(),
+            b"preserve target"
+        );
+        assert_eq!(std::fs::read(root.join("stage/new")).unwrap(), b"candidate");
+        // Existing links are collisions too; publication must not follow them.
+        symlink("target", root.join("target-link")).unwrap();
+        let error = workspace
+            .publish_owned_directory("stage", &stage, "target-link")
+            .unwrap_err();
+        assert!(!error.dispatched);
+        assert!(
+            std::fs::symlink_metadata(root.join("target-link"))
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        assert_eq!(
+            std::fs::read(root.join("target/original")).unwrap(),
+            b"preserve target"
+        );
+        std::fs::set_permissions(root.join("stage"), std::fs::Permissions::from_mode(0o700))
+            .unwrap();
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn owned_directory_operations_refuse_aliases_replaced_children_and_permissive_roots() {
+        let root = scratch();
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(PinnedDirectory::open_owned_workspace(&root).is_err());
+        std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let workspace = PinnedDirectory::open_owned_workspace(&root).unwrap();
+        let stage = workspace.create_owned_directory("stage").unwrap();
+        stage
+            .stage_owned_file("original", b"pinned", 64, 0o400)
+            .unwrap();
+        stage.seal_owned_directory().unwrap();
+        std::fs::rename(root.join("stage"), root.join("held-elsewhere")).unwrap();
+        let substitute = workspace.create_owned_directory("stage").unwrap();
+        substitute
+            .stage_owned_file("substituted", b"refuse", 64, 0o400)
+            .unwrap();
+        assert!(workspace.verify_child("stage", &stage).is_err());
+        let error = workspace
+            .publish_owned_directory("stage", &stage, "candidate")
+            .unwrap_err();
+        assert!(!error.dispatched);
+        assert!(!root.join("candidate").exists());
+        assert_eq!(
+            std::fs::read(root.join("held-elsewhere/original")).unwrap(),
+            b"pinned"
+        );
+        assert_eq!(
+            std::fs::read(root.join("stage/substituted")).unwrap(),
+            b"refuse"
+        );
+        symlink("held-elsewhere", root.join("alias")).unwrap();
+        assert!(workspace.verify_child("alias", &stage).is_err());
+        assert!(PinnedDirectory::open_owned_workspace(&root.join("alias")).is_err());
+        for name in ["", ".", "../escape", "nested/child", "/absolute"] {
+            assert!(workspace.create_owned_directory(name).is_err());
+            assert!(
+                workspace
+                    .stage_owned_file(name, b"bytes", 64, 0o400)
+                    .is_err()
+            );
+        }
+        assert!(
+            workspace
+                .stage_owned_file("oversized", b"bytes", 4, 0o400)
+                .is_err()
+        );
+        assert!(
+            workspace
+                .stage_owned_file("executable-mode", b"bytes", 64, 0o755)
+                .is_err()
+        );
+        std::fs::set_permissions(
+            root.join("held-elsewhere"),
+            std::fs::Permissions::from_mode(0o700),
+        )
+        .unwrap();
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
