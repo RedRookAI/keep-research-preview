@@ -20,7 +20,7 @@ Run these commands from a source checkout, not inside an installed package.
 | --- | --- | --- |
 | npm ci | Install locked dependencies; no native compile hook | Node/npm and registry access or a populated cache |
 | npm run test:fast | TypeScript typecheck only | Installed locked dependencies |
-| node tools/run_ci_checks.mjs | Offline locked install, typecheck, notices and eight focused test files; a partial profile | Populated npm cache, Node and the isolated test environment |
+| node tools/run_ci_checks.mjs | Locked script-disabled install, TypeScript compilation, notices and nine focused test files; a partial profile | Supported Node from package.json, registry access or a populated cache, complete vendor trees and Linux GNU timeout |
 | npm run test:notices | Check the retained attribution bundle | Complete vendor trees and installed locked dependencies |
 | npm run test:portable | Compile and run the selected portable test profile | Node, Git and the qualified Linux test environment described below |
 | npm run build | Compile TypeScript and verify/build native outputs | Pinned Linux x64 Rust toolchain and host C build tools |
@@ -32,6 +32,13 @@ The [preview guide](docs/research-preview.md) describes installation; the
 [evidence record](docs/evidence.md#known-test-status) identifies results and failures.
 A passing introductory demonstration is not a
 passing full test suite.
+
+The public Source checks workflow runs the same partial CI command on pushes to
+main and pull requests. It selects Node from package.json's supported range,
+uses read-only repository permissions and runs focused tests with one worker.
+The command may use the npm registry during its locked installation. It does not
+build native binaries or qualify an installed release. Its final result requires
+actual executed tests with zero failures, skips or cancellations.
 
 After compilation, a focused test can be run directly:
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const tests = ["workflow", "release_licensing", "runtime_config", "oidc_provider", "identity_x1", "filesystem_lock", "instance_isolation", "chat_channel"];
+const tests = ["workflow", "release_licensing", "runtime_config", "oidc_provider", "identity_x1", "filesystem_lock", "instance_isolation", "chat_channel", "ci_checks"];
 const profile = "partial-unprivileged";
 const deadline = performance.now() + 10 * 60_000;
 const env = { ...process.env };
@@ -31,8 +31,21 @@ function run(phase, command, args) {
 
 try {
   if (process.argv.length !== 2) throw new Error("CI runner accepts no arguments");
-  if (process.version !== "v22.23.2") throw new Error(`CI requires Node v22.23.2; observed ${process.version}`);
+  const requiredNode = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8")).engines?.node;
+  // Keep the supported range in package.json. Refuse new range syntax until this
+  // small source-only runner has an explicit implementation for it.
+  const range = typeof requiredNode === "string" ? /^>=(\d+)\.(\d+)\.(\d+) <(\d+)$/u.exec(requiredNode) : null;
+  const observed = /^v(\d+)\.(\d+)\.(\d+)$/u.exec(process.version);
+  if (!range || !observed) throw new Error("CI requires a stable Node version and package engines.node in the form >=MAJOR.MINOR.PATCH <MAJOR");
+  const [minimumMajor, minimumMinor, minimumPatch, upperMajor] = range.slice(1).map(Number);
+  const [major, minor, patch] = observed.slice(1).map(Number);
+  if (![minimumMajor, minimumMinor, minimumPatch, upperMajor, major, minor, patch].every(Number.isSafeInteger) || upperMajor <= minimumMajor)
+    throw new Error("CI package Node range is invalid");
+  const meetsMinimum = major > minimumMajor || (major === minimumMajor &&
+    (minor > minimumMinor || (minor === minimumMinor && patch >= minimumPatch)));
+  if (!meetsMinimum || major >= upperMajor) throw new Error(`CI requires Node ${requiredNode}; observed ${process.version}`);
   if (process.platform !== "linux" || !existsSync("/usr/bin/timeout")) throw new Error("CI requires Linux GNU timeout");
+  console.log(JSON.stringify({ profile, node: process.version, requiredNode }));
   console.log("PARTIAL unprivileged CI checks; not full-source/native/installed-artifact qualification.");
   run("locked-install", "npm", ["ci", "--ignore-scripts", "--no-audit", "--no-fund"]);
   run("typecheck", process.execPath, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
