@@ -930,5 +930,5 @@ function cmdCalibration(rest: readonly string[], io: CliIO, deps: CliDeps): CliR
 function recordPending(app: KeepApp, manifest: PrManifest, ts: number, brief?: DecisionBrief, forecast?: ForecastVerdict): void {
   // Delegates to the shared intake so the CLI solve path + the closed loop (W3) behave identically (review.pending
   // + correlation id + W2 notification — only the dangerous few interrupt).
-  recordReviewPending({ spine: app.spine, notifications: app.notifications }, manifest, ts, { ...(brief ? { brief } : {}), ...(forecast ? { forecast } : {}), correlationId: manifest.id });
+  recordReviewPending({ spine: app.spine, notifications: app.notifications, ...(app.tenantDeployment === undefined ? {} : { tenant: app.tenantDeployment.rootAdmission.tenantId }) }, manifest, ts, { ...(brief ? { brief } : {}), ...(forecast ? { forecast } : {}), correlationId: manifest.id });
 }

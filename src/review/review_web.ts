@@ -20,7 +20,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { KeepApp } from "../compose.js";
 import { assembleDecisionPacket } from "../cli/decision_packet.js";
-import { listPendingReviews, needsDecision, getPacketInputs, applyReviewDecision, isDecided } from "./review_core.js";
+import { listPendingReviews, needsDecision, getPacketInputs, applyReviewDecision, isDecided, reviewScopeEvents } from "./review_core.js";
 import { buildNonEngineerView, type NonEngineerView } from "./non_engineer_view.js";
 import { can, type Principal } from "../identity/rbac.js";
 import { computeMonitor, type MonitorSnapshot, type TicketState } from "../monitor/solve_monitor.js";
@@ -255,16 +255,22 @@ async function route(app: KeepApp, req: WebRequest, sec: WebSecurity, principal:
     if (req.method === "POST" && (!originOk(req, sec) || !safeEqual(parseForm(req.body)["csrf"], csrf))) return textRes(403, "Forbidden: invalid origin or CSRF token.");
     return sec.projectConsole(req, principal, csrf, sessionAuthority);
   }
-  if (req.method === "GET" && req.path === "/") return htmlRes(200, renderListPage(app, principal, loggedIn, csrf));
+  if (req.method === "GET" && req.path === "/") {
+    if (!can(app.authorization, principal, "review.view")) return textRes(403, "Forbidden: you do not have view access.");
+    return htmlRes(200, renderListPage(app, principal, loggedIn, csrf));
+  }
   if (req.method === "GET" && req.path === "/style.css") {
     return { status: 200, headers: { "Content-Type": "text/css; charset=utf-8", ...secHeaders }, body: STYLE };
   }
   if (req.method === "GET" && req.path === "/monitor") {
     if (!can(app.authorization, principal, "review.view")) return textRes(403, "Forbidden: you do not have view access.");
-    return htmlRes(200, renderMonitorPage(app, loggedIn, csrf));
+    return htmlRes(200, renderMonitorPage(app, principal, loggedIn, csrf));
   }
   const detail = /^\/review\/([^/]+)$/.exec(req.path);
-  if (req.method === "GET" && detail) return renderDetailPage(app, decodeURIComponent(detail[1]!), csrf, can(app.authorization, principal, "review.approve"), loggedIn);
+  if (req.method === "GET" && detail) {
+    if (!can(app.authorization, principal, "review.view")) return textRes(403, "Forbidden: you do not have view access.");
+    return renderDetailPage(app, decodeURIComponent(detail[1]!), csrf, principal.kind === "human" && can(app.authorization, principal, "review.approve"), loggedIn, principal.tenant);
+  }
 
   const decide = /^\/review\/([^/]+)\/decide$/.exec(req.path);
   if (decide && req.method === "POST") {
@@ -275,6 +281,7 @@ async function route(app: KeepApp, req: WebRequest, sec: WebSecurity, principal:
     const action = form["action"];
     if (action !== "approve" && action !== "decline") return textRes(400, "Bad request: action must be approve or decline.");
     const outcome = applyReviewDecision(app, id, action === "approve", Date.now(), principal); // shared path + RBAC
+    if (outcome.reason === "not-found") return textRes(404, "Review not found.");
     if (outcome.reason === "forbidden") return textRes(403, "Forbidden: your role does not permit deciding on changes.");
     return redirect("/");
   }
@@ -313,11 +320,11 @@ function renderLoginPage(error?: string): string {
   return page("Sign in — Keep", inner);
 }
 
-function renderMonitorPage(app: KeepApp, loggedIn: boolean, csrf?: string): string {
-  const snap: MonitorSnapshot = computeMonitor(app.spine.currentEvents(), Date.now());
+function renderMonitorPage(app: KeepApp, principal: Principal, loggedIn: boolean, csrf?: string): string {
+  const snap: MonitorSnapshot = computeMonitor(reviewScopeEvents(app, principal.tenant), Date.now());
   const mins = (ms: number) => `${Math.round(ms / 60000)}m`;
   const phaseLabel: Record<string, string> = { "solving": "solving", "awaiting-review": "needs decision", "deferred-to-human": "deferred to a human", "decided": "decided", "completed": "done", "dead-lettered": "dead-lettered", "rejected": "rejected" };
-  let inner = sessionHeader({ id: "", kind: "human", role: "viewer" } as Principal, loggedIn, csrf);
+  let inner = sessionHeader(principal, loggedIn, csrf);
   inner += `<p class="back"><a href="/">← Changes to review</a></p><h1>Work in flight</h1>`;
   if (snap.tickets.length === 0) return page("Keep — monitor", inner + `<p class="empty">Nothing in flight.</p>`);
   inner += `<p class="muted">In flight ${snap.inFlight} · needs attention ${snap.needsAttention.length} · stuck ${snap.counts.stuck}${snap.totalCostUsd > 0 ? ` · $${snap.totalCostUsd.toFixed(2)}` : ""}</p>`;
@@ -334,7 +341,7 @@ function renderMonitorPage(app: KeepApp, loggedIn: boolean, csrf?: string): stri
 }
 
 function renderListPage(app: KeepApp, principal: Principal, loggedIn: boolean, csrf?: string): string {
-  const all = listPendingReviews(app);
+  const all = listPendingReviews(app, principal.tenant);
   const needs = all.filter(needsDecision);
   const auto = all.filter((m) => !needsDecision(m));
   let inner = sessionHeader(principal, loggedIn, csrf) + `<h1>Keep — changes to review</h1><p class="back"><a href="/monitor">See all work in flight →</a></p>`;
@@ -355,11 +362,11 @@ function renderListPage(app: KeepApp, principal: Principal, loggedIn: boolean, c
   return page("Keep — review", inner);
 }
 
-function renderDetailPage(app: KeepApp, id: string, csrf: string, mayDecide: boolean, loggedIn: boolean): WebResponse {
-  const inputs = getPacketInputs(app, id);
+function renderDetailPage(app: KeepApp, id: string, csrf: string, mayDecide: boolean, loggedIn: boolean, tenant?: string): WebResponse {
+  const inputs = getPacketInputs(app, id, tenant);
   if (!inputs) return htmlRes(404, page("Not found", `<h1>Not found</h1><p>No review with that id is pending. <a href="/">Back</a></p>`));
   const view = buildNonEngineerView(assembleDecisionPacket(inputs));
-  const decided = isDecided(app, id);
+  const decided = isDecided(app, id, tenant);
   return htmlRes(200, page("Keep — review", renderView(id, view, decided, csrf, mayDecide, loggedIn)));
 }
 

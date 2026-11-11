@@ -27,6 +27,8 @@ export type SolveFn = (issue: Issue, context?: SolveExecutionContext) => Promise
 export interface ReviewIntakeDeps {
   readonly spine: Spine;
   readonly notifications: NotificationRouter;
+  /** Trusted runtime scope; never inferred from manifest content or issue hints. */
+  readonly tenant?: string;
 }
 
 export interface ReviewIntakeExtras {
@@ -39,12 +41,15 @@ export interface ReviewIntakeExtras {
 /** Shared intake: stage review.pending (+ correlation id) and route the W2 notification (only the dangerous few
  *  interrupt). Used by BOTH the CLI solve command and the closed loop, so the two paths behave identically. */
 export function recordReviewPending(deps: ReviewIntakeDeps, manifest: PrManifest, now: number, extras: ReviewIntakeExtras = {}): void {
+  const tenant = deps.tenant;
+  if (tenant !== undefined && (typeof tenant !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(tenant) || tenant === "keep.n1.default")) throw new Error("review intake requires a valid non-reserved tenant");
   deps.spine.stage({
     type: "identity.action",
     actor: "review-intake",
     payload: {
       event: "review.pending",
       reviewId: manifest.id,
+      ...(tenant === undefined ? {} : { tenant }),
       manifest,
       ...(extras.brief ? { brief: extras.brief } : {}),
       ...(extras.forecast ? { forecast: extras.forecast } : {}),

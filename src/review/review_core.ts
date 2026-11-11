@@ -14,6 +14,7 @@ import type { DecisionBrief } from "../pipeline/decision_brief.js";
 import type { ForecastVerdict } from "../pipeline/consequence_forecast.js";
 import { assembleDecisionPacket, type AssembleInputs } from "../cli/decision_packet.js";
 import type { Principal } from "../identity/rbac.js";
+import type { StagedEvent } from "../spine/event.js";
 
 export interface PendingEvent {
   event: string;
@@ -31,9 +32,15 @@ export function needsDecision(m: PrManifest): boolean {
   return (m.oversight?.disposition ?? "human-approval-required") !== "auto-approved";
 }
 
-export function reviewEvents(app: KeepApp): PendingEvent[] {
+/** Select authority before joining review/correlation IDs. Omitted tenant selects
+ * personal, unlabelled records; it never adopts an organization's identity. */
+export function reviewScopeEvents(app: KeepApp, tenant?: string): readonly StagedEvent[] {
+  return app.spine.currentEvents().filter(event => event.payload["tenant"] === tenant);
+}
+
+export function reviewEvents(app: KeepApp, tenant?: string): PendingEvent[] {
   const out: PendingEvent[] = [];
-  for (const e of app.spine.currentEvents()) {
+  for (const e of reviewScopeEvents(app, tenant)) {
     const p = e.payload as Record<string, unknown>;
     const ev = p["event"];
     if (ev === "review.pending" || ev === "review.decided") {
@@ -43,17 +50,17 @@ export function reviewEvents(app: KeepApp): PendingEvent[] {
   return out;
 }
 
-export function isDecided(app: KeepApp, id: string): boolean {
-  return reviewEvents(app).some((e) => e.event === "review.decided" && e.reviewId === id);
+export function isDecided(app: KeepApp, id: string, tenant?: string): boolean {
+  return reviewEvents(app, tenant).some((e) => e.event === "review.decided" && e.reviewId === id);
 }
 
-export function getManifest(app: KeepApp, id: string, events: readonly PendingEvent[] = reviewEvents(app)): PrManifest | undefined {
-  for (const e of events) if (e.event === "review.pending" && e.reviewId === id && e.manifest) return e.manifest;
+export function getManifest(app: KeepApp, id: string, events?: readonly PendingEvent[], tenant?: string): PrManifest | undefined {
+  for (const e of events ?? reviewEvents(app, tenant)) if (e.tenant === tenant && e.event === "review.pending" && e.reviewId === id && e.manifest?.id === id) return e.manifest;
   return undefined;
 }
 
-export function getPacketInputs(app: KeepApp, id: string): AssembleInputs | undefined {
-  const events = reviewEvents(app), manifest = getManifest(app, id, events);
+export function getPacketInputs(app: KeepApp, id: string, tenant?: string): AssembleInputs | undefined {
+  const events = reviewEvents(app, tenant), manifest = getManifest(app, id, events, tenant);
   if (!manifest) return undefined;
   for (const e of events) {
     if (e.event === "review.pending" && e.reviewId === id && e.manifest === manifest) {
@@ -63,12 +70,13 @@ export function getPacketInputs(app: KeepApp, id: string): AssembleInputs | unde
   return undefined;
 }
 
-export function listPendingReviews(app: KeepApp): PrManifest[] {
-  const decided = new Set(reviewEvents(app).filter((e) => e.event === "review.decided").map((e) => e.reviewId));
+export function listPendingReviews(app: KeepApp, tenant?: string): PrManifest[] {
+  const events = reviewEvents(app, tenant);
+  const decided = new Set(events.filter((e) => e.event === "review.decided").map((e) => e.reviewId));
   const seen = new Set<string>();
   const out: PrManifest[] = [];
-  for (const e of reviewEvents(app)) {
-    if (e.event === "review.pending" && e.manifest && !decided.has(e.reviewId) && !seen.has(e.reviewId)) {
+  for (const e of events) {
+    if (e.event === "review.pending" && e.manifest?.id === e.reviewId && !decided.has(e.reviewId) && !seen.has(e.reviewId)) {
       seen.add(e.reviewId); out.push(e.manifest);
     }
   }
@@ -77,11 +85,8 @@ export function listPendingReviews(app: KeepApp): PrManifest[] {
 
 export function auditTrail(app: KeepApp, id: string, tenantId?: string): string[] {
   const lines: string[] = [];
-  for (const e of reviewEvents(app)) {
+  for (const e of reviewEvents(app, tenantId)) {
     if (e.reviewId !== id) continue;
-    // P-7: tenant-scoped audit view — a tenant sees its OWN + global (un-attributed) events, NEVER another tenant's.
-    // The append-only spine is unchanged; this is a scoped READ. n=1 (no tenantId) sees the full trail.
-    if (tenantId !== undefined && e.tenant !== undefined && e.tenant !== tenantId) continue;
     const when = e.ts ? new Date(e.ts).toISOString().replace("T", " ").slice(0, 19) : "";
     if (e.event === "review.pending") lines.push(`${when}  Keep proposed a change and requested your review.`);
     else if (e.event === "review.decided") lines.push(`${when}  You ${e.decision} the change.`);
@@ -102,24 +107,25 @@ export interface DecisionOutcome {
  * on the same id is refused. The human merge remains a separate manual action; this never merges.
  *
  * X0: if an `actor` is supplied, the decision is authorized first (deny → audited `authz.denied`, no state change).
- * With no actor (the local CLI / N=1 default) the owner acts — shell access to the host is ownership. The deciding
- * principal is recorded on `review.decided` for accountability.
+ * With no actor the local N=1 owner acts only on unlabelled personal reviews. Organization reviews
+ * require their original tenant through an authenticated human actor. The deciding principal is recorded on `review.decided` for accountability.
  */
 export function applyReviewDecision(app: KeepApp, id: string, approved: boolean, ts: number, actor?: Principal): DecisionOutcome {
-  const inputs = getPacketInputs(app, id);
+  const tenant = actor?.tenant;
+  const inputs = getPacketInputs(app, id, tenant);
   if (!inputs) return { ok: false, reason: "not-found" };
   if (actor) {
     const action = approved ? "review.approve" : "review.decline";
-    const decision = app.authorization.authorize(actor, action);
+    const decision = actor.kind === "human" ? app.authorization.authorize(actor, action) : { allow: false, reason: "review decisions require a human principal" };
     if (!decision.allow) {
-      app.spine.stage({ type: "identity.action", actor: "rbac", payload: { event: "authz.denied", who: actor.id, role: actor.role, action, reviewId: id, reason: decision.reason, ts } });
+      app.spine.stage({ type: "identity.action", actor: "rbac", payload: { event: "authz.denied", who: actor.id, role: actor.role, action, reviewId: id, reason: decision.reason, ts, ...(tenant === undefined ? {} : { tenant }) } });
       return { ok: false, reason: "forbidden" };
     }
   }
-  if (isDecided(app, id)) return { ok: false, reason: "already-decided" };
+  if (isDecided(app, id, tenant)) return { ok: false, reason: "already-decided" };
   const packet = assembleDecisionPacket(inputs);
   const band = inputs.manifest.oversight?.band ?? "medium";
-  app.spine.stage({ type: "identity.action", actor: "review", payload: { event: "review.decided", reviewId: id, decision: approved ? "approved" : "declined", by: actor?.id ?? "owner", ts } });
+  app.spine.stage({ type: "identity.action", actor: "review", payload: { event: "review.decided", reviewId: id, decision: approved ? "approved" : "declined", by: actor?.id ?? "owner", ts, ...(tenant === undefined ? {} : { tenant }) } });
   app.calibrationWire.recordDecision(band, packet.reversible, approved);
   return { ok: true, band, reversible: packet.reversible };
 }

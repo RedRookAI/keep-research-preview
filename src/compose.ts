@@ -1854,7 +1854,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
     return result;
   };
   // One actual configured solve path now feeds governance, outcome learning, review intake, and project autonomy.
-  if (observedSolve) triggerIngress.setHandler(makeClosedLoopHandler({ spine, notifications }, observedSolve));
+  if (observedSolve) triggerIngress.setHandler(makeClosedLoopHandler({ spine, notifications, ...(tenantDeployment === undefined ? {} : { tenant: tenantDeployment.rootAdmission.tenantId }) }, observedSolve));
   // ONE veto queue, shared by the autonomy loop (which enqueues a vetoed external goal) and the gateway (which
   // exposes the digest + approve/veto). `run` fires ONLY on explicit approve — it records the authorization to the
   // spine (auditable); re-executing an approved external goal is a follow-on increment.
