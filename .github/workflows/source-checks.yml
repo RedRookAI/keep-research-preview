@@ -7,7 +7,7 @@ on:
       phase:
         description: Verification slice
         type: choice
-        options: [baseline, preparation, engine]
+        options: [baseline, preparation, engine, namespace-diagnostic]
         default: baseline
 
 permissions: {}
@@ -34,6 +34,7 @@ jobs:
           echo "KEEP_VERIFY_ROOT=$KEEP_VERIFY_ROOT" >> "$GITHUB_ENV"
           printf 'No source checkout, dependency cache, maintainer home or credentials supplied.\n'
       - name: Download pinned public release inputs
+        if: inputs.phase != 'namespace-diagnostic'
         shell: bash
         run: |
           set -euo pipefail
@@ -88,7 +89,7 @@ jobs:
           console.log(JSON.stringify({schema:'keep.independent-engine-metadata/v1',status:'PASS',version:version.stdout.trim(),freshHomeLoggedOut:true,modelCalls:0}));
           JS
       - name: Build declared namespace prerequisite from public source
-        if: inputs.phase == 'preparation'
+        if: inputs.phase == 'preparation' || inputs.phase == 'namespace-diagnostic'
         shell: bash
         run: |
           set -euo pipefail
@@ -130,3 +131,17 @@ jobs:
           JS
           node_root=$("$node_path" -p 'require("node:path").dirname(require("node:path").dirname(process.execPath))')
           env -i PATH="$PATH" HOME="$KEEP_VERIFY_ROOT/bootstrap-home" "$node_path" independent-preparation.mjs "$KEEP_VERIFY_ROOT/installed/keep-0.0.21-preview.1" "$node_root" "/var/lib/keep-independent-$GITHUB_RUN_ID/bwrap" "$KEEP_VERIFY_ROOT/preparation"
+      - name: Inspect namespace availability without changing host policy
+        if: inputs.phase == 'namespace-diagnostic'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$KEEP_VERIFY_ROOT"
+          cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns
+          set +e
+          env -i PATH=/usr/bin:/bin "/var/lib/keep-independent-$GITHUB_RUN_ID/bwrap" --unshare-user --unshare-pid --unshare-ipc --unshare-uts --unshare-net --cap-drop ALL --new-session --die-with-parent --ro-bind / / --proc /proc --dev /dev -- /usr/bin/true > namespace-probe.log 2>&1
+          probe_status=$?
+          set -e
+          cat namespace-probe.log
+          printf 'Readonly helper namespace probe exit=%s; no host policy modified\n' "$probe_status"
+          exit "$probe_status"
