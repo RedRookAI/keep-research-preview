@@ -26,6 +26,7 @@ import { can, type Principal } from "../identity/rbac.js";
 import { computeMonitor, type MonitorSnapshot, type TicketState } from "../monitor/solve_monitor.js";
 import type { IdentityProviderPort, PrincipalRegistry } from "../identity/identity_provider.js";
 import { SessionCapacityError, type SessionStore } from "../identity/session_store.js";
+import type { OidcCodeFlow } from "../identity/oidc_code_flow.js";
 
 export interface WebRequest {
   readonly method: string;
@@ -57,6 +58,7 @@ export interface WebSecurity {
 }
 
 export interface IdentityLayer {
+  readonly codeFlow?: OidcCodeFlow;
   readonly provider: IdentityProviderPort;
   readonly registry: PrincipalRegistry;
   readonly sessions: SessionStore;
@@ -70,12 +72,19 @@ function safeEqual(a: string | undefined, b: string): boolean {
   if (ab.length !== bb.length) return false;
   return timingSafeEqual(ab, bb);
 }
-function parseCookies(header: string | undefined): Record<string, string> {
-  const out: Record<string, string> = {};
+function parseCookies(header: string | undefined, names?: ReadonlySet<string>): Record<string, string> {
+  const out: Record<string, string> = Object.create(null) as Record<string, string>;
+  const seen = new Set<string>();
   if (!header) return out;
   for (const part of header.split(";")) {
     const i = part.indexOf("=");
-    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+    if (i <= 0) continue;
+    const name = part.slice(0, i).trim();
+    if (names && !names.has(name)) continue;
+    if (names && seen.has(name)) { out[name] = ""; continue; }
+    seen.add(name);
+    try { out[name] = decodeURIComponent(part.slice(i + 1).trim()); }
+    catch { out[name] = ""; } // malformed selected bindings cannot authenticate
   }
   return out;
 }
@@ -100,8 +109,8 @@ const secHeaders = { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DE
 function htmlRes(status: number, body: string, extra: Record<string, string> = {}): WebResponse {
   return { status, headers: { "Content-Type": "text/html; charset=utf-8", ...secHeaders, ...extra }, body };
 }
-function textRes(status: number, body: string): WebResponse {
-  return { status, headers: { "Content-Type": "text/plain; charset=utf-8", ...secHeaders }, body };
+function textRes(status: number, body: string, extra: Record<string, string> = {}): WebResponse {
+  return { status, headers: { "Content-Type": "text/plain; charset=utf-8", ...secHeaders, ...extra }, body };
 }
 function redirect(to: string, extra: Record<string, string> = {}): WebResponse {
   return { status: 303, headers: { Location: to, ...secHeaders, ...extra }, body: "" };
@@ -112,6 +121,7 @@ function redirect(to: string, extra: Record<string, string> = {}): WebResponse {
 export async function handleReviewRequest(app: KeepApp, req: WebRequest, sec: WebSecurity): Promise<WebResponse> {
   // 1) DNS-rebinding guard — reject any Host we did not bind (CVE-2025-66414 defense).
   if (!sec.allowedHosts.includes(req.headers["host"] ?? "")) return textRes(403, "Forbidden: unexpected Host header.");
+  if (app.identity?.codeFlow && sec.identity?.codeFlow !== app.identity.codeFlow) return textRes(403, "Configured organization identity is required.");
   return sec.identity ? handleMultiUser(app, req, sec, sec.now ?? Date.now()) : handleSingleOwner(app, req, sec);
 }
 
@@ -149,6 +159,35 @@ async function handleMultiUser(app: KeepApp, req: WebRequest, sec: WebSecurity, 
   const id = sec.identity!;
   const secureFlag = sec.origin.startsWith("https://") ? "; Secure" : "";
 
+  if (id.codeFlow) {
+    if (sec.origin !== id.codeFlow.config.publicOrigin) return textRes(403, "Organization browser origin is not configured.");
+    const cookies = parseCookies(req.headers["cookie"], new Set(["keep_session", "__Host-keep_oidc"]));
+    const transactionCookie = (value: string) => `__Host-keep_oidc=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${value ? Math.ceil(id.codeFlow!.config.transactionTtlMs / 1000) : 0}`;
+    if (req.path === "/login" && req.method === "GET") {
+      const current = id.sessions.get(cookies["keep_session"], now);
+      return htmlRes(200, page("Organization sign-in", current ? `<h1>Signed in</h1><a href="/console">Open console</a>${logoutForm(current.csrfToken)}` : '<h1>Organization sign-in</h1><a href="/auth/oidc/start">Sign in with your organization</a>'));
+    }
+    if (req.path === "/login" && req.method === "POST") return textRes(405, "Use organization sign-in.");
+    if (req.path === "/auth/oidc/start" && req.method === "GET") {
+      try { const started = id.codeFlow.start(); return redirect(started.authorizationUrl, { "Set-Cookie": transactionCookie(started.browserBinding), "Cache-Control": "no-store" }); }
+      catch { return textRes(503, "Organization sign-in is unavailable. Start a new sign-in later."); }
+    }
+    if (req.path === "/auth/oidc/callback" && req.method === "GET") {
+      try {
+        if (req.query["iss"] !== undefined && req.query["iss"] !== id.codeFlow.issuer) throw new Error();
+        const keys = Object.keys(req.query).filter(key => key !== "iss").sort().join(",");
+        if (keys === "error,state") { id.codeFlow.cancel(req.query["state"]!, cookies["__Host-keep_oidc"] ?? ""); throw new Error(); }
+        if (keys !== "code,state") throw new Error();
+        const session = await id.codeFlow.complete(req.query["state"]!, cookies["__Host-keep_oidc"] ?? "", req.query["code"]!);
+        // Cookie values stay in HttpOnly headers, never HTML, query strings or diagnostics.
+        return redirect("/console", { "Set-Cookie": `keep_session=${session.id}; Path=/; HttpOnly; Secure; SameSite=Strict`, "Cache-Control": "no-store" });
+      } catch (error) {
+        return textRes(error instanceof SessionCapacityError ? 503 : 401, "Organization sign-in could not be completed. Start a new sign-in.", { "Set-Cookie": transactionCookie(""), "Cache-Control": "no-store" });
+      }
+    }
+    if (req.path.startsWith("/auth/oidc/")) return textRes(405, "Unsupported organization sign-in request.");
+  }
+
   if (req.path === "/login" && req.method === "GET") return htmlRes(200, renderLoginPage());
   if (req.path === "/login" && req.method === "POST") {
     if (!originOk(req, sec)) return textRes(403, "Forbidden: cross-origin request refused.");
@@ -170,9 +209,13 @@ async function handleMultiUser(app: KeepApp, req: WebRequest, sec: WebSecurity, 
     }
   }
 
-  const cookies = parseCookies(req.headers["cookie"]);
+  const cookies = parseCookies(req.headers["cookie"], id.codeFlow ? new Set(["keep_session", "__Host-keep_oidc"]) : undefined);
   if (req.path === "/logout" && req.method === "POST") {
     const sid = cookies["keep_session"];
+    if (id.codeFlow) {
+      const session = id.sessions.get(sid, now);
+      if (!session || !originOk(req, sec) || !safeEqual(parseForm(req.body)["csrf"], session.csrfToken)) return textRes(403, "Forbidden: invalid logout origin or CSRF token.");
+    }
     if (sid) id.sessions.revoke(sid); // destroy server-side, not just the cookie
     return redirect("/login", { "Set-Cookie": `keep_session=; Path=/; HttpOnly; SameSite=Strict${secureFlag}; Max-Age=0` });
   }
@@ -197,13 +240,13 @@ async function route(app: KeepApp, req: WebRequest, sec: WebSecurity, principal:
     if (req.method === "POST" && (!originOk(req, sec) || !safeEqual(parseForm(req.body)["csrf"], csrf))) return textRes(403, "Forbidden: invalid origin or CSRF token.");
     return sec.projectConsole(req, principal, csrf);
   }
-  if (req.method === "GET" && req.path === "/") return htmlRes(200, renderListPage(app, principal, loggedIn));
+  if (req.method === "GET" && req.path === "/") return htmlRes(200, renderListPage(app, principal, loggedIn, csrf));
   if (req.method === "GET" && req.path === "/style.css") {
     return { status: 200, headers: { "Content-Type": "text/css; charset=utf-8", ...secHeaders }, body: STYLE };
   }
   if (req.method === "GET" && req.path === "/monitor") {
     if (!can(app.authorization, principal, "review.view")) return textRes(403, "Forbidden: you do not have view access.");
-    return htmlRes(200, renderMonitorPage(app, loggedIn));
+    return htmlRes(200, renderMonitorPage(app, loggedIn, csrf));
   }
   const detail = /^\/review\/([^/]+)$/.exec(req.path);
   if (req.method === "GET" && detail) return renderDetailPage(app, decodeURIComponent(detail[1]!), csrf, can(app.authorization, principal, "review.approve"), loggedIn);
@@ -232,13 +275,13 @@ function page(title: string, inner: string): string {
 }
 
 /** A small "signed in as … · Log out" header, shown only in multi-user mode. */
-function sessionHeader(principal: Principal, loggedIn: boolean): string {
+function sessionHeader(principal: Principal, loggedIn: boolean, csrf?: string): string {
   if (!loggedIn) return "";
   const who = esc(principal.displayName ?? principal.id);
-  return `<div class="whoami">Signed in as <strong>${who}</strong> <span class="muted">(${esc(principal.role)})</span> ${logoutForm()}</div>`;
+  return `<div class="whoami">Signed in as <strong>${who}</strong> <span class="muted">(${esc(principal.role)})</span> ${logoutForm(csrf)}</div>`;
 }
-function logoutForm(): string {
-  return `<form method="POST" action="/logout" class="logout"><button type="submit">Log out</button></form>`;
+function logoutForm(csrf?: string): string {
+  return `<form method="POST" action="/logout" class="logout">${csrf ? `<input type="hidden" name="csrf" value="${esc(csrf)}">` : ""}<button type="submit">Log out</button></form>`;
 }
 
 /** The sign-in page (multi-user mode). The real IdP redirect/callback plugs in behind the provider port; this
@@ -255,11 +298,11 @@ function renderLoginPage(error?: string): string {
   return page("Sign in — Keep", inner);
 }
 
-function renderMonitorPage(app: KeepApp, loggedIn: boolean): string {
+function renderMonitorPage(app: KeepApp, loggedIn: boolean, csrf?: string): string {
   const snap: MonitorSnapshot = computeMonitor(app.spine.currentEvents(), Date.now());
   const mins = (ms: number) => `${Math.round(ms / 60000)}m`;
   const phaseLabel: Record<string, string> = { "solving": "solving", "awaiting-review": "needs decision", "deferred-to-human": "deferred to a human", "decided": "decided", "completed": "done", "dead-lettered": "dead-lettered", "rejected": "rejected" };
-  let inner = sessionHeader({ id: "", kind: "human", role: "viewer" } as Principal, loggedIn);
+  let inner = sessionHeader({ id: "", kind: "human", role: "viewer" } as Principal, loggedIn, csrf);
   inner += `<p class="back"><a href="/">← Changes to review</a></p><h1>Work in flight</h1>`;
   if (snap.tickets.length === 0) return page("Keep — monitor", inner + `<p class="empty">Nothing in flight.</p>`);
   inner += `<p class="muted">In flight ${snap.inFlight} · needs attention ${snap.needsAttention.length} · stuck ${snap.counts.stuck}${snap.totalCostUsd > 0 ? ` · $${snap.totalCostUsd.toFixed(2)}` : ""}</p>`;
@@ -275,11 +318,11 @@ function renderMonitorPage(app: KeepApp, loggedIn: boolean): string {
   return page("Keep — monitor", inner);
 }
 
-function renderListPage(app: KeepApp, principal: Principal, loggedIn: boolean): string {
+function renderListPage(app: KeepApp, principal: Principal, loggedIn: boolean, csrf?: string): string {
   const all = listPendingReviews(app);
   const needs = all.filter(needsDecision);
   const auto = all.filter((m) => !needsDecision(m));
-  let inner = sessionHeader(principal, loggedIn) + `<h1>Keep — changes to review</h1><p class="back"><a href="/monitor">See all work in flight →</a></p>`;
+  let inner = sessionHeader(principal, loggedIn, csrf) + `<h1>Keep — changes to review</h1><p class="back"><a href="/monitor">See all work in flight →</a></p>`;
   if (all.length === 0) {
     inner += `<p class="empty">Nothing is waiting for you right now.</p>`;
     return page("Keep — review", inner);
@@ -307,7 +350,7 @@ function renderDetailPage(app: KeepApp, id: string, csrf: string, mayDecide: boo
 
 function renderView(id: string, v: NonEngineerView, decided: boolean, csrf: string, mayDecide: boolean, loggedIn: boolean): string {
   const L: string[] = [];
-  if (loggedIn) L.push(logoutForm());
+  if (loggedIn) L.push(logoutForm(csrf));
   L.push(`<p class="back"><a href="/">← All changes</a></p>`);
   // Disposition FIRST, never hidden.
   const cls = v.disposition === "blocked" ? "stopped" : v.disposition === "auto-approved" ? "auto" : "decide";

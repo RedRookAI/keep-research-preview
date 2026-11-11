@@ -17,6 +17,7 @@
 
 import { createPublicKey, createVerify, timingSafeEqual, type JsonWebKey } from "node:crypto";
 import type { IdentityProviderPort, VerifiedIdentity } from "./identity_provider.js";
+import { parsePolicyJson, type JsonValue } from "../policy/json.js";
 
 /** A JSON Web Key (RSA public key material as published in a JWKS). */
 export interface Jwk {
@@ -29,6 +30,7 @@ export interface Jwk {
   readonly [k: string]: unknown;
 }
 export interface Jwks { readonly keys: readonly Jwk[]; }
+export interface VerifiedCodeFlowIdentity extends VerifiedIdentity { readonly validUntil: number; }
 
 export interface OidcConfig {
   /** The provider's public keys (a JWKS). In prod, fetched from the IdP's jwks_uri. */
@@ -56,6 +58,35 @@ export class OidcJwksProvider implements IdentityProviderPort {
     if (!Number.isFinite(this.leewaySec) || this.leewaySec < 0) {
       throw new Error("OIDC leewaySec must be finite and nonnegative");
     }
+  }
+
+  /** Restricted code-flow profile: integer NumericDates, unique JSON keys and per-transaction nonce. */
+  async verifyCodeFlow(assertion: string, now: number, transaction: { readonly nonce: string; readonly issuedAt: number; readonly expiresAt: number }): Promise<VerifiedCodeFlowIdentity | null> {
+    try {
+      if (!Number.isFinite(now) || !Number.isFinite(transaction.issuedAt) || !Number.isFinite(transaction.expiresAt) || now < transaction.issuedAt || now >= transaction.expiresAt
+        || !transaction.nonce || typeof assertion !== "string" || assertion.length > 16384) return null;
+      const parts = assertion.split(".");
+      if (parts.length !== 3 || parts.some(part => !/^[A-Za-z0-9_-]+$/u.test(part) || Buffer.from(part, "base64url").toString("base64url") !== part)) return null;
+      const header = strictOidcObject(Buffer.from(parts[0]!, "base64url")), claims = strictOidcObject(Buffer.from(parts[1]!, "base64url"));
+      if (header.alg !== "RS256" || typeof header.kid !== "string" || !header.kid || header.kid.length > 256 || header.crit !== undefined || header.b64 !== undefined || header.jku !== undefined || header.jwk !== undefined || header.x5u !== undefined) return null;
+      const keys = this.cfg.jwks.keys;
+      if (!Array.isArray(keys) || keys.length < 1 || keys.length > 64 || keys.some(key => typeof key.kid !== "string" || !key.kid)
+        || new Set(keys.map(key => key.kid)).size !== keys.length) return null;
+      const key = keys.find(row => row.kid === header.kid);
+      if (!key || key.kty !== "RSA" || (key.alg !== undefined && key.alg !== "RS256") || (key.use !== undefined && key.use !== "sig")
+        || ["d", "p", "q", "dp", "dq", "qi", "oth", "k"].some(field => Object.hasOwn(key, field))
+        || (key.key_ops !== undefined && (!Array.isArray(key.key_ops) || key.key_ops.length !== 1 || key.key_ops[0] !== "verify"))) return null;
+      const imported = createPublicKey({ key: key as JsonWebKey, format: "jwk" });
+      if ((imported.asymmetricKeyDetails?.modulusLength ?? 0) < 2048 || !createVerify("RSA-SHA256").update(`${parts[0]}.${parts[1]}`).end().verify(imported, Buffer.from(parts[2]!, "base64url"))) return null;
+      const date = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+      if (claims.iss !== this.cfg.issuer || !(claims.aud === this.cfg.audience || (Array.isArray(claims.aud) && claims.aud.length === 1 && claims.aud[0] === this.cfg.audience))
+        || (claims.azp !== undefined && claims.azp !== this.cfg.audience) || !date(claims.iat) || !date(claims.exp) || claims.exp <= claims.iat
+        || claims.iat * 1000 > now + this.leewaySec * 1000 || claims.iat * 1000 < transaction.issuedAt - this.leewaySec * 1000
+        || now >= (claims.exp + this.leewaySec) * 1000 || (claims.nbf !== undefined && (!date(claims.nbf) || now < (claims.nbf - this.leewaySec) * 1000))
+        || typeof claims.nonce !== "string" || !constantTimeEqual(claims.nonce, transaction.nonce)
+        || typeof claims.sub !== "string" || !claims.sub || claims.sub.length > 255 || /[^\x21-\x7e]/u.test(claims.sub)) return null;
+      return { subject: claims.sub, validUntil: (claims.exp + this.leewaySec) * 1000 };
+    } catch { return null; }
   }
 
   async verify(assertion: string, now: number): Promise<VerifiedIdentity | null> {
@@ -108,6 +139,20 @@ export class OidcJwksProvider implements IdentityProviderPort {
       ...(typeof payload["name"] === "string" ? { displayName: payload["name"] as string } : {}),
     };
   }
+}
+
+/** Existing strict parser supplies duplicate-key/Unicode/depth refusal; this profile admits integers only. */
+export function strictOidcObject(input: Uint8Array): Record<string, unknown> {
+  if (input[0] === 0xef && input[1] === 0xbb && input[2] === 0xbf) throw new Error("invalid OIDC JSON");
+  const convert = (value: JsonValue): unknown => {
+    if (typeof value === "bigint") { const n = Number(value); if (!Number.isSafeInteger(n)) throw new Error("invalid OIDC JSON"); return n; }
+    if (Array.isArray(value)) return value.map(convert);
+    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, convert(item)]));
+    return value;
+  };
+  const value = convert(parsePolicyJson(input));
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("invalid OIDC JSON");
+  return value as Record<string, unknown>;
 }
 
 function decodeJson(b64url: string): Record<string, unknown> | null {

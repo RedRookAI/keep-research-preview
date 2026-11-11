@@ -15,6 +15,7 @@ import { randomBytes } from "node:crypto";
 import type { Principal } from "./rbac.js";
 
 export interface Session {
+  readonly authentication?: { readonly issuer: string; readonly subject: string; readonly tenantId: string };
   readonly id: string;
   readonly principal: Principal;
   readonly csrfToken: string;
@@ -38,7 +39,7 @@ export class SessionCapacityError extends Error {
 
 /** A counted, one-shot slot. Release unused slots in finally around asynchronous authority effects. */
 export interface SessionReservation {
-  create(principal: Principal, now: number): Session;
+  create(principal: Principal, now: number, authentication?: Session["authentication"]): Session;
   release(): void;
 }
 
@@ -72,9 +73,9 @@ export class SessionStore {
     const token = Symbol("session slot");
     this.reservations.add(token);
     return Object.freeze({
-      create: (principal: Principal, createdAt: number): Session => {
+      create: (principal: Principal, createdAt: number, authentication?: Session["authentication"]): Session => {
         if (!this.reservations.has(token)) throw new Error("Session reservation is no longer available");
-        const session: Session = { id: randomBytes(32).toString("hex"), principal,
+        const session: Session = { id: randomBytes(32).toString("hex"), principal, ...(authentication ? { authentication: Object.freeze({ ...authentication }) } : {}),
           csrfToken: randomBytes(32).toString("hex"), createdAt, lastSeen: createdAt };
         // No await or external callback between releasing this slot and adding its session.
         this.reservations.delete(token);

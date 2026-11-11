@@ -192,6 +192,7 @@ function readProjectProjection<T>(read: () => T): { ok: true; value: T } | { ok:
 export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, sec: GatewaySecurity): Promise<GatewayResponse> {
   // Liveness is unauthenticated (a client checks the gateway is up before sending the token).
   if (req.method === "GET" && req.path === "/health") return json(200, { ok: true });
+  if (app.identity?.codeFlow && sec.principalFor === undefined && sec.identity?.codeFlow !== app.identity.codeFlow) return json(403, { error: "configured organization identity is required" });
 
   // TOKEN-AUTHED: everything else requires the token. No unauthenticated caller drives a run.
   let restricted: RestrictedClientProfile | undefined;
@@ -228,6 +229,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
   // role in another tenant cannot use it, and missing identity must not select OWNER.
   if (boundTenant !== undefined && sec.identity === undefined && sec.principalFor === undefined) return refuseTenantBoundary(403);
   if (sec.identity !== undefined && req.method === "POST" && req.path === "/auth/session") {
+    if (sec.identity.codeFlow) return json(405, { error: "use organization browser sign-in" });
     const body = parseBody(req.body); const assertion = body?.["assertion"];
     if (typeof assertion !== "string" || assertion.length < 1 || assertion.length > 16_384) return json(400, { error: "identity assertion is invalid" });
     const verified = await sec.identity.provider.verify(assertion, Date.now());
@@ -1564,6 +1566,10 @@ export interface GatewayServerHandle {
 
 /** Thin socket adapter around the pure handler. Owns only binding, body, and the per-instance token. */
 export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}): Promise<GatewayServerHandle> {
+  if (app.identity?.codeFlow) {
+    if ((opts.identity && opts.identity !== app.identity) || opts.principalFor) throw new Error("Configured organization code flow cannot be replaced by another server identity mode");
+    opts = { ...opts, identity: app.identity };
+  }
   if (opts.restrictedClientProfile) {
     if (opts.identity || opts.principalFor || app.identity || app.tenantDeployment) throw new Error("restricted personal client cannot replace organization admission");
     readRestrictedClientProfile(opts.restrictedClientProfile);
@@ -1599,19 +1605,22 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
       const addr = server.address();
       const port = typeof addr === "object" && addr ? addr.port : 0;
       const url = new URL(req.url ?? "/", `http://${host}:${port}`);
+      if (opts.identity?.codeFlow && url.pathname === "/auth/oidc/callback" && new Set(url.searchParams.keys()).size !== [...url.searchParams].length) {
+        res.writeHead(400, { "content-type": "text/plain", "cache-control": "no-store" }); res.end("Invalid organization callback."); return;
+      }
       const query: Record<string, string> = {};
       for (const [k, v] of url.searchParams) query[k] = v;
       const headers: Record<string, string> = {};
       for (const [k, v] of Object.entries(req.headers)) if (typeof v === "string") headers[k.toLowerCase()] = v;
       const greq: GatewayRequest = { method: req.method ?? "GET", path: url.pathname, query, headers, body };
-      const browserRoute = url.pathname === "/console" || url.pathname.startsWith("/console/") || (opts.identity !== undefined && ["/login", "/logout", "/style.css"].includes(url.pathname));
+      const browserRoute = url.pathname === "/console" || url.pathname.startsWith("/console/") || (opts.identity !== undefined && (["/login", "/logout", "/style.css"].includes(url.pathname) || url.pathname.startsWith("/auth/oidc/")));
       let resp;
       if (greq.method === "GET" && url.pathname === "/" && !headers["authorization"] && !query["token"]) {
         resp = { status: 303, headers: { location: "/console", "cache-control": "no-store" }, body: "" };
       } else if (browserRoute) {
         if (opts.principalFor) resp = json(403, { error: "browser sign-in requires a configured identity session" });
         else resp = await handleReviewRequest(app, greq, {
-          token, origin: `http://${host}:${port}`, allowedHosts: [`${host}:${port}`, `localhost:${port}`], principal: OWNER,
+          token, origin: opts.identity?.codeFlow?.config.publicOrigin ?? `http://${host}:${port}`, allowedHosts: opts.identity?.codeFlow ? [new URL(opts.identity.codeFlow.config.publicOrigin).host] : [`${host}:${port}`, `localhost:${port}`], principal: OWNER,
           ...(opts.identity ? { identity: opts.identity } : {}),
           projectConsole: (request, principal, csrf) => handleProjectConsole(request, csrf, (method, path, query = {}, body) => handleGatewayRequest(app, {
             method, path, query, body: body === undefined ? "" : JSON.stringify(body), headers: { authorization: `Bearer ${token}` },

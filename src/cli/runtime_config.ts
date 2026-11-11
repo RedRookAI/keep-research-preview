@@ -21,6 +21,7 @@ import { encoderCredentialReference, loadEncoderProfile, type EncoderProfile } f
 
 import { PROVIDER_CHECK_PRICE_HOST, validPriceMaxAge } from "../reference/provider_check_pricing.js";
 import { captureWorkspacePreparation, validatePrerequisitePaths, type RepositoryCheckSetup } from "../solve/repository_prerequisites.js";
+import { captureOidcLoginConfig, type OidcLoginConfig } from "../identity/oidc_code_flow.js";
 
 export type ProviderMode = "local" | "openai-compatible" | "anthropic-compatible";
 export type ProviderLocation = "offline" | "local" | "external";
@@ -74,6 +75,7 @@ export interface CapturedRuntimeContract {
   readonly installedProject?: CapturedInstalledProjectConfig;
   readonly releaseAdmission?: { readonly bundlePath: string; readonly trustRootPath: string };
   readonly organization?: {
+    readonly login?: OidcLoginConfig;
     readonly tenantId: string;
     readonly issuer: string;
     readonly audience: string;
@@ -199,6 +201,7 @@ export function captureRuntimeContract(
     }
     else if (env["KEEP_RELEASE_BUNDLE"] !== undefined || env["KEEP_RELEASE_TRUST_ROOT"] !== undefined) throw new RuntimeConfigError("KEEP_RELEASE_BUNDLE", "is organization-only; owner authority is explicit configuration admission, not release signing");
   }
+  if (env["KEEP_IDENTITY_LOGIN_JSON"] !== undefined && organization === undefined) throw new RuntimeConfigError("KEEP_IDENTITY_LOGIN_JSON", "requires explicit organization authority; personal mode cannot select organization login");
   const providerCheckPricing = capturePricePolicy(env);
   if (providerCheckPricing && provider.authority === "owner" && residency) residency = { ...residency, egressAllowlist: [...new Set([...residency.egressAllowlist, PROVIDER_CHECK_PRICE_HOST])] };
   const encoderPath = env["KEEP_ENCODER_PROFILE"];
@@ -356,9 +359,15 @@ function captureOrganizationReferences(env: Readonly<Record<string, string | und
   const issuer = bounded(required(env, "KEEP_IDENTITY_ISSUER"), "KEEP_IDENTITY_ISSUER");
   let parsed: URL; try { parsed = new URL(issuer); } catch { throw new RuntimeConfigError("KEEP_IDENTITY_ISSUER", "must be an absolute HTTPS URL"); }
   if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.search || parsed.hash) throw new RuntimeConfigError("KEEP_IDENTITY_ISSUER", "must be a credential-free HTTPS origin/path");
+  let login: OidcLoginConfig | undefined;
+  if (env["KEEP_IDENTITY_LOGIN_JSON"] !== undefined) {
+    try { login = captureOidcLoginConfig(JSON.parse(env["KEEP_IDENTITY_LOGIN_JSON"]!), required(env, "KEEP_IDENTITY_AUDIENCE")); }
+    catch { throw new RuntimeConfigError("KEEP_IDENTITY_LOGIN_JSON", "requires the complete HTTPS code-flow profile, protected-secret reference and explicit operational limits"); }
+  }
   return {
+    ...(login ? { login } : {}),
     tenantId: bounded(required(env, "KEEP_TENANT_ID"), "KEEP_TENANT_ID"),
-    issuer: parsed.toString().replace(/\/+$/u, ""),
+    issuer: login ? issuer : parsed.toString().replace(/\/+$/u, ""),
     audience: bounded(required(env, "KEEP_IDENTITY_AUDIENCE"), "KEEP_IDENTITY_AUDIENCE"),
     jwksPath: absolutePath(required(env, "KEEP_IDENTITY_JWKS"), "KEEP_IDENTITY_JWKS", cwd),
     principalRosterPath: absolutePath(required(env, "KEEP_PRINCIPAL_ROSTER"), "KEEP_PRINCIPAL_ROSTER", cwd),

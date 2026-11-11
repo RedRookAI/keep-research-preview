@@ -2,6 +2,7 @@ import { closeSync, mkdirSync, openSync, readFileSync, renameSync, statSync, unl
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import type { ProviderAuthority, ProviderLocation } from "./runtime_config.js";
+import { captureOidcLoginConfig, type OidcLoginConfig } from "../identity/oidc_code_flow.js";
 
 export const PROVIDER_PROFILE_SCHEMA = "keep.provider-profile/v1";
 const MAX_PROFILE_BYTES = 64 * 1024;
@@ -9,6 +10,7 @@ const PROVIDER_FIELDS = ["KEEP_PROVIDER", "KEEP_PROVIDER_LOCATION", "KEEP_PROVID
 
 type CredentialProfile = { readonly kind: "environment" } | { readonly kind: "file"; readonly path: string } | { readonly kind: "stdin" } | null;
 interface OrganizationProfile {
+  readonly login?: OidcLoginConfig;
   readonly tenantId: string;
   readonly issuer: string;
   readonly audience: string;
@@ -96,6 +98,7 @@ export function profileEnvironment(profile: ProviderProfile): Readonly<Record<st
   if (profile.routing) env["KEEP_PROVIDER_ROUTE_ALLOWLIST"] = profile.routing.providers.join(",");
   if (profile.release) { env["KEEP_RELEASE_BUNDLE"] = profile.release.bundlePath; env["KEEP_RELEASE_TRUST_ROOT"] = profile.release.trustRootPath; }
   if (profile.organization) {
+    if (profile.organization.login) env["KEEP_IDENTITY_LOGIN_JSON"] = JSON.stringify(profile.organization.login);
     env["KEEP_TENANT_ID"] = profile.organization.tenantId;
     env["KEEP_IDENTITY_ISSUER"] = profile.organization.issuer;
     env["KEEP_IDENTITY_AUDIENCE"] = profile.organization.audience;
@@ -159,6 +162,7 @@ export function profileFromArgs(args: readonly string[], cwd: string): { readonl
   const credentialKind = fields.get("credential") ?? (authority === "owner" && fields.get("location") === "local" ? "none" : "environment");
   const credential: CredentialProfile = credentialKind === "none" ? null : credentialKind === "environment" ? { kind: "environment" } : credentialKind === "stdin" ? { kind: "stdin" } : credentialKind === "file" ? { kind: "file", path: get("credential-file") } : (() => { throw new Error("--credential must be none, environment, file, or stdin"); })();
   const organization = authority === "organization" ? {
+    ...(fields.has("identity-login") ? { login: JSON.parse(get("identity-login")) as unknown } : {}),
     tenantId: get("tenant"), issuer: get("issuer"), audience: get("audience"), jwksPath: get("jwks"), principalRosterPath: get("principal-roster"), delegationPolicyPath: get("delegation-policy"), residencyPolicyPath: get("residency-policy"), scannerEnginePath: get("scanner-engine"), auditScope: get("audit-scope"),
   } : undefined;
   const release = authority === "organization" ? { bundlePath: get("release-bundle"), trustRootPath: get("release-trust-root") } : undefined;
@@ -170,7 +174,7 @@ export function profileFromArgs(args: readonly string[], cwd: string): { readonl
 function text(value: unknown, field: string): string { if (typeof value !== "string" || value.length === 0 || value.length > 8_192 || value.includes("\0") || value.trim() !== value) throw new Error(`provider profile ${field} is malformed`); return value; }
 function one<const T extends readonly string[]>(value: unknown, values: T, field: string): T[number] { if (typeof value !== "string" || !values.includes(value)) throw new Error(`provider profile ${field} must be ${values.join(" or ")}`); return value as T[number]; }
 function credentialProfile(value: unknown): CredentialProfile { if (value === null) return null; if (value === undefined || typeof value !== "object" || Array.isArray(value)) throw new Error("provider profile credential is invalid"); const raw = value as Record<string, unknown>; const kind = one(raw["kind"], ["environment", "file", "stdin"] as const, "credential.kind"); if (kind === "file") return { kind, path: absolute(text(raw["path"], "credential.path"), "credential.path") }; if (Object.keys(raw).some((key) => key !== "kind")) throw new Error("provider profile credential contains unknown fields"); return { kind }; }
-function organizationProfile(value: unknown): OrganizationProfile { const raw = object(value, "organization"); return { tenantId: text(raw["tenantId"], "organization.tenantId"), issuer: text(raw["issuer"], "organization.issuer"), audience: text(raw["audience"], "organization.audience"), jwksPath: absolute(text(raw["jwksPath"], "organization.jwksPath"), "organization.jwksPath"), principalRosterPath: absolute(text(raw["principalRosterPath"], "organization.principalRosterPath"), "organization.principalRosterPath"), delegationPolicyPath: absolute(text(raw["delegationPolicyPath"], "organization.delegationPolicyPath"), "organization.delegationPolicyPath"), residencyPolicyPath: absolute(text(raw["residencyPolicyPath"], "organization.residencyPolicyPath"), "organization.residencyPolicyPath"), scannerEnginePath: absolute(text(raw["scannerEnginePath"], "organization.scannerEnginePath"), "organization.scannerEnginePath"), auditScope: text(raw["auditScope"], "organization.auditScope") }; }
+function organizationProfile(value: unknown): OrganizationProfile { const raw = object(value, "organization"); return { ...(raw["login"] === undefined ? {} : { login: captureOidcLoginConfig(raw["login"], text(raw["audience"], "organization.audience")) }), tenantId: text(raw["tenantId"], "organization.tenantId"), issuer: text(raw["issuer"], "organization.issuer"), audience: text(raw["audience"], "organization.audience"), jwksPath: absolute(text(raw["jwksPath"], "organization.jwksPath"), "organization.jwksPath"), principalRosterPath: absolute(text(raw["principalRosterPath"], "organization.principalRosterPath"), "organization.principalRosterPath"), delegationPolicyPath: absolute(text(raw["delegationPolicyPath"], "organization.delegationPolicyPath"), "organization.delegationPolicyPath"), residencyPolicyPath: absolute(text(raw["residencyPolicyPath"], "organization.residencyPolicyPath"), "organization.residencyPolicyPath"), scannerEnginePath: absolute(text(raw["scannerEnginePath"], "organization.scannerEnginePath"), "organization.scannerEnginePath"), auditScope: text(raw["auditScope"], "organization.auditScope") }; }
 function releaseProfile(value: unknown) { const raw = object(value, "release"); return { bundlePath: absolute(text(raw["bundlePath"], "release.bundlePath"), "release.bundlePath"), trustRootPath: absolute(text(raw["trustRootPath"], "release.trustRootPath"), "release.trustRootPath") }; }
 function routingProfile(value: unknown) { const raw = object(value, "routing"); if (Object.keys(raw).join(",") !== "providers" || !Array.isArray(raw["providers"]) || raw["providers"].length < 1 || raw["providers"].length > 32) throw new Error("provider profile routing requires one bounded providers list"); return { providers: raw["providers"].map((item) => text(item, "routing.providers")) }; }
 function object(value: unknown, field: string): Record<string, unknown> { if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error(`provider profile ${field} must be an object`); return value as Record<string, unknown>; }

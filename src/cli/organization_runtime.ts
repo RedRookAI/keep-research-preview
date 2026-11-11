@@ -5,18 +5,19 @@ import { SessionStore } from "../identity/session_store.js";
 import type { Principal, Role } from "../identity/rbac.js";
 import type { ResidencyPolicy } from "../governance/residency.js";
 import type { CapturedRuntimeContract } from "./runtime_config.js";
+import { OidcCodeFlow, type OrganizationLoginPorts } from "../identity/oidc_code_flow.js";
 
 const MAX = 1024 * 1024;
 const SAFE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 const ROLES = new Set<Role>(["owner", "maintainer", "reviewer", "operator", "viewer"]);
 
 export interface InstalledOrganizationRuntime {
-  readonly identity: { readonly provider: OidcJwksProvider; readonly registry: PrincipalRegistry; readonly sessions: SessionStore };
+  readonly identity: { readonly provider: OidcJwksProvider; readonly registry: PrincipalRegistry; readonly sessions: SessionStore; readonly codeFlow?: OidcCodeFlow };
   readonly parentFor: (id: string, tenant?: string) => Principal | undefined;
   readonly residency: ResidencyPolicy;
 }
 
-export function loadInstalledOrganizationRuntime(refs: NonNullable<CapturedRuntimeContract["organization"]>): InstalledOrganizationRuntime {
+export function loadInstalledOrganizationRuntime(refs: NonNullable<CapturedRuntimeContract["organization"]>, transport: Pick<OrganizationLoginPorts, "fetch" | "now"> = {}): InstalledOrganizationRuntime {
   if (!SAFE.test(refs.tenantId)) throw new Error("organization tenant id is invalid");
   if (refs.auditScope !== "tenant") throw new Error("installed organization audit scope must be tenant");
   const jwks = protectedJson(refs.jwksPath, "organization JWKS") as { keys?: unknown };
@@ -25,6 +26,7 @@ export function loadInstalledOrganizationRuntime(refs: NonNullable<CapturedRunti
   exact(roster, ["schema", "tenantId", "principals"], "organization principal roster");
   if (roster["schema"] !== "keep.principal-roster/v1" || roster["tenantId"] !== refs.tenantId || !Array.isArray(roster["principals"]) || roster["principals"].length < 1 || roster["principals"].length > 10_000) throw new Error("organization principal roster binding is invalid");
   const mappings = roster["principals"].map((value, index) => principal(value, refs.tenantId, index));
+  if (refs.login && (new Set(mappings.map(row => row.id)).size !== mappings.length || new Set(mappings.map(row => row.subject)).size !== mappings.length)) throw new Error("organization code-flow roster requires unique subjects and principal ids");
   const policy = protectedJson(refs.delegationPolicyPath, "organization delegation policy") as Record<string, unknown>;
   exact(policy, ["schema", "tenantId", "parents"], "organization delegation policy");
   if (policy["schema"] !== "keep.delegation-policy/v1" || policy["tenantId"] !== refs.tenantId || !Array.isArray(policy["parents"]) || policy["parents"].length < 1 || policy["parents"].length > mappings.length) throw new Error("organization delegation policy binding is invalid");
@@ -37,8 +39,12 @@ export function loadInstalledOrganizationRuntime(refs: NonNullable<CapturedRunti
   const allowedPurposes = safeList(residency["allowedPurposes"], "residency purpose");
   const allowedRegions = safeList(residency["allowedRegions"], "residency region");
   const egressAllowlist = hostList(residency["egressAllowlist"]);
+  const provider = new OidcJwksProvider({ jwks: jwks as Jwks, issuer: refs.issuer, audience: refs.audience, ...(refs.login ? { leewaySec: refs.login.leewaySec } : {}) });
+  const registry = new PrincipalRegistry(mappings), sessions = new SessionStore(refs.login ? { idleMs: refs.login.sessionIdleMs, absoluteMs: refs.login.sessionAbsoluteMs, maxSessions: refs.login.maxSessions } : {});
+  const codeFlow = refs.login === undefined ? undefined : new OidcCodeFlow(refs.login, refs.issuer, refs.tenantId, sessions, { ...transport,
+    verify: (assertion, now, transaction) => provider.verifyCodeFlow(assertion, now, transaction), principal: identity => registry.resolve(identity) });
   return Object.freeze({
-    identity: Object.freeze({ provider: new OidcJwksProvider({ jwks: jwks as Jwks, issuer: refs.issuer, audience: refs.audience }), registry: new PrincipalRegistry(mappings), sessions: new SessionStore() }),
+    identity: Object.freeze({ provider, registry, sessions, ...(codeFlow ? { codeFlow } : {}) }),
     parentFor: (id: string, tenant?: string) => tenant === refs.tenantId && admittedParents.has(id) ? principals.get(id) : undefined,
     residency: Object.freeze({ allowedPurposes, allowedRegions, egressAllowlist }),
   });
@@ -52,7 +58,8 @@ function protectedJson(path: string, label: string): unknown {
 function principal(value: unknown, tenantId: string, index: number): PrincipalMapping {
   if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error(`principal ${index} is invalid`);
   const row = value as Record<string, unknown>; exact(row, ["id", "role", "subject"], `principal ${index}`);
-  const id = safeText(row["id"], `principal ${index} id`), subject = safeText(row["subject"], `principal ${index} subject`);
+  const id = safeText(row["id"], `principal ${index} id`), subject = row["subject"];
+  if (typeof subject !== "string" || !subject || subject.length > 255 || /[^\x21-\x7e]/u.test(subject)) throw new Error(`principal ${index} subject is invalid`);
   if (typeof row["role"] !== "string" || !ROLES.has(row["role"] as Role)) throw new Error(`principal ${index} role is invalid`);
   return { id, subject, role: row["role"] as Role, tenant: tenantId };
 }
