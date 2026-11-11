@@ -1,27 +1,65 @@
-name: Source checks
+name: Independent published release
+run-name: Independent .21 download — ${{ inputs.phase }}
 
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
+    inputs:
+      phase:
+        description: Verification slice
+        type: choice
+        options: [baseline]
+        default: baseline
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
-  source:
-    name: TypeScript, notices and focused tests
+  installed:
+    name: Fresh x64 public-download consumer
     runs-on: ubuntu-24.04
     steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Select declared Node runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          persist-credentials: false
-      - name: Select supported Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version-file: package.json
+          node-version: 22.23.4
           package-manager-cache: false
-      - name: Run the partial source profile
-        run: node tools/run_ci_checks.mjs
+      - name: Create independent workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = x86_64
+          test "$(id -u)" != 0
+          test ! -e "$GITHUB_WORKSPACE/package.json"
+          KEEP_VERIFY_ROOT=$(mktemp -d "$HOME/keep-independent-XXXXXXXX")
+          mkdir "$KEEP_VERIFY_ROOT/bootstrap-home"
+          echo "KEEP_VERIFY_ROOT=$KEEP_VERIFY_ROOT" >> "$GITHUB_ENV"
+          printf 'No source checkout, dependency cache, maintainer home or credentials supplied.\n'
+      - name: Download pinned public release inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$KEEP_VERIFY_ROOT"
+          base=https://github.com/RedRookAI/keep-research-preview/releases/download/keep-preview-2026-11-11.2
+          for asset in keep-combined-0.0.21-preview.1-linux-x64.tar.gz installed-preview-2026-11-11.2.mjs native-publisher-check-2026-11-11.mjs native-publisher-fixture-2026-11-11.json; do
+            curl --fail --location --silent --show-error --proto '=https' "$base/$asset" --output "$asset"
+          done
+          cat > expected.sha256 <<'SUMS'
+          7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca  keep-combined-0.0.21-preview.1-linux-x64.tar.gz
+          dc93efe0fb023e5251010a13371f9731ab2e27b3e5e5fc4dad1b164f1ea55952  installed-preview-2026-11-11.2.mjs
+          39a6ad011a49beaba3d5b1c1bea5ec4a170713f7a9c96c655e878194880e5e2d  native-publisher-check-2026-11-11.mjs
+          2f7826b74c48fa3046860080350be6ab96acd3e0b0c444b8940bf36fd599893d  native-publisher-fixture-2026-11-11.json
+          SUMS
+          sha256sum --check expected.sha256
+      - name: Run published unprivileged consumer without developer configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$KEEP_VERIFY_ROOT"
+          node_path=$(command -v node)
+          env -i PATH="$PATH" HOME="$KEEP_VERIFY_ROOT/bootstrap-home" "$node_path" installed-preview-2026-11-11.2.mjs "$KEEP_VERIFY_ROOT/keep-combined-0.0.21-preview.1-linux-x64.tar.gz" 7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca
+      - name: Run published native SDK consumer on the same extraction
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$KEEP_VERIFY_ROOT"
+          node_path=$(command -v node)
+          env -i PATH="$PATH" HOME="$KEEP_VERIFY_ROOT/bootstrap-home" "$node_path" native-publisher-check-2026-11-11.mjs "$KEEP_VERIFY_ROOT/fresh owner/keep-0.0.21-preview.1" "$KEEP_VERIFY_ROOT/keep-combined-0.0.21-preview.1-linux-x64.tar.gz" 7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca "$KEEP_VERIFY_ROOT/native-publisher-fixture-2026-11-11.json" "$KEEP_VERIFY_ROOT"
