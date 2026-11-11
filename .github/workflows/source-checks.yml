@@ -7,7 +7,7 @@ on:
       phase:
         description: Verification slice
         type: choice
-        options: [baseline]
+        options: [baseline, preparation]
         default: baseline
 
 permissions: {}
@@ -50,6 +50,7 @@ jobs:
           SUMS
           sha256sum --check expected.sha256
       - name: Run published unprivileged consumer without developer configuration
+        if: inputs.phase == 'baseline'
         shell: bash
         run: |
           set -euo pipefail
@@ -57,9 +58,40 @@ jobs:
           node_path=$(command -v node)
           env -i PATH="$PATH" HOME="$KEEP_VERIFY_ROOT/bootstrap-home" "$node_path" installed-preview-2026-11-11.2.mjs "$KEEP_VERIFY_ROOT/keep-combined-0.0.21-preview.1-linux-x64.tar.gz" 7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca
       - name: Run published native SDK consumer on the same extraction
+        if: inputs.phase == 'baseline'
         shell: bash
         run: |
           set -euo pipefail
           cd "$KEEP_VERIFY_ROOT"
           node_path=$(command -v node)
           env -i PATH="$PATH" HOME="$KEEP_VERIFY_ROOT/bootstrap-home" "$node_path" native-publisher-check-2026-11-11.mjs "$KEEP_VERIFY_ROOT/fresh owner/keep-0.0.21-preview.1" "$KEEP_VERIFY_ROOT/keep-combined-0.0.21-preview.1-linux-x64.tar.gz" 7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca "$KEEP_VERIFY_ROOT/native-publisher-fixture-2026-11-11.json" "$KEEP_VERIFY_ROOT"
+      - name: Build declared namespace prerequisite from public source
+        if: inputs.phase == 'preparation'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$KEEP_VERIFY_ROOT"
+          curl --fail --location --silent --show-error "https://raw.githubusercontent.com/RedRookAI/keep-research-preview/83a67b04fa03e6fd1a1564b6b93cc1c3f19deb24/tools/bubblewrap/Dockerfile" --output Dockerfile
+          printf '%s\n' 'a317b76c36d96871effb743645147046c8f2dd00d9fa7eac29ea4f8cc994306f  Dockerfile' | sha256sum --check
+          if ! docker build --tag keep-independent-helper --file Dockerfile . > helper-build.log 2>&1; then tail -80 helper-build.log; exit 1; fi
+          helper_container=$(docker create keep-independent-helper)
+          trap 'docker rm "$helper_container" >/dev/null' EXIT
+          docker cp "$helper_container:/opt/keep/bubblewrap/0.13.0/bwrap" bwrap
+          docker cp "$helper_container:/build/build-packages.txt" build-packages.txt
+          sha256sum bwrap
+          printf '%s\n' 'e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f  bwrap' | sha256sum --check
+          sudo install -d -m 0755 "/opt/keep-independent-$GITHUB_RUN_ID"
+          sudo install -m 0755 bwrap "/opt/keep-independent-$GITHUB_RUN_ID/bwrap"
+      - name: Verify offline preparation using only public package inputs
+        if: inputs.phase == 'preparation'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$KEEP_VERIFY_ROOT"
+          curl --fail --location --silent --show-error "https://raw.githubusercontent.com/RedRookAI/keep-research-preview/$GITHUB_SHA/docs/qualification/independent-preparation.mjs" --output independent-preparation.mjs
+          printf '%s\n' '8739889205baed99800404272d9835205a67a66d11e66dbbea6b270a2badee0f  independent-preparation.mjs' | sha256sum --check
+          mkdir installed
+          tar -xzf keep-combined-0.0.21-preview.1-linux-x64.tar.gz -C installed
+          node_path=$(command -v node)
+          node_root=$("$node_path" -p 'require("node:path").dirname(require("node:path").dirname(process.execPath))')
+          env -i PATH="$PATH" HOME="$KEEP_VERIFY_ROOT/bootstrap-home" "$node_path" independent-preparation.mjs "$KEEP_VERIFY_ROOT/installed/keep-0.0.21-preview.1" "$node_root" "/opt/keep-independent-$GITHUB_RUN_ID/bwrap" "$KEEP_VERIFY_ROOT/preparation"
