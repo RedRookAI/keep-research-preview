@@ -1,7 +1,7 @@
 {
   "name": "keep",
-  "version": "0.0.19-preview.1",
-  "description": "Self-hostable, provider-agnostic build orchestrator with consequence-gated autonomy",
+  "version": "0.0.20-preview.1",
+  "description": "Self-hosted platform for AI work, persistent knowledge, reusable skills and governed execution",
   "main": "dist/src/index.js",
   "scripts": {
     "build": "npm run clean && tsc -p tsconfig.json && node tools/build_native_transport.mjs",
@@ -135,7 +135,8 @@
     "docs/qualification/provider-check-2026-10-05.json",
     "docs/qualification/provider-check-pricing-2026-10-05.json",
     "docs/qualification/recovery-source-2026-10-20.json",
-    "KEEP_RELEASE.md"
+    "KEEP_RELEASE.md",
+    "docs/maintenance-2026-11-11.md"
   ],
   "exports": {
     ".": "./dist/src/index.js",

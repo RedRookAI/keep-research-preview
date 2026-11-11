@@ -36,7 +36,7 @@ Required-jail work additionally needs the measured Bubblewrap 0.13.0 helper in a
 
 ## Build from source
 
-The current public source and combined download are **0.0.19-preview.1**. The downloadable source snapshot is bound to its exact release commit; later documentation corrections do not rebuild or requalify that archive. See [the release record](../KEEP_RELEASE.md) for source identity and [Contributing](../WORKFLOW.md) for build interfaces and evidence limits.
+Current development source is **0.0.20-preview.1**; the latest combined download remains **0.0.19-preview.1**. Saved setup flags and evaluation/CI fixes documented in the November 11 source update require the newer source. The downloadable source snapshot is bound to its exact release commit; later documentation corrections do not rebuild or requalify that archive. See [the release record](../KEEP_RELEASE.md) for source identity and [Contributing](../WORKFLOW.md) for build interfaces and evidence limits.
 
 Contributors need isolated Linux x64 resources, Node.js 22.23.3 or later on Node 22, npm and Git, pinned Rust 1.97.1 with its musl target and host C build tools. Follow [Contributing](../WORKFLOW.md); the build verifies existing pinned tools rather than fetching replacements.
 

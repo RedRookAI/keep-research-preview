@@ -1,6 +1,10 @@
 # Project status and roadmap
 
-Updated October 21, 2026. This page distinguishes the shipped portfolio preview from the remaining product commitments. Future capabilities are not claims about the downloadable preview.
+Updated November 11, 2026. This page distinguishes the shipped portfolio preview from the remaining product commitments. Future capabilities are not claims about the downloadable preview.
+
+## Current development
+
+Source **0.0.20-preview.1** adds explicit saved Codex setup, requires capability and safety evaluation evidence before self-improvement promotion, and aligns source CI with the supported Node range. The [November 11 maintenance record](docs/maintenance-2026-11-11.md) identifies checks and remaining limits. The last downloadable archive remains **0.0.19-preview.1**.
 
 ## Available to inspect
 
@@ -19,7 +23,7 @@ The account-free repository walkthrough uses two scripted responses and simulate
 
 ## Remaining delivery priorities
 
-The completed portfolio milestone does not close the full enterprise platform. Further work should deliver one usable consumer at a time; this ordering is product direction, not an already activated implementation batch.
+The completed portfolio milestone does not close the full enterprise platform. Further work should deliver one usable consumer at a time; implementation is proceeding in dependency order, beginning with setup, evaluation admission and source CI.
 
 1. **Make adoption easier.** Reduce manual setup for a new owner's supported Codex/OpenClaw repository workflow, including clear readiness failures and the required helper/runtime prerequisites. The shipped archive and existing walkthrough remain usable now.
 2. **Deliver live organization identity and isolation.** Implement an attributable organization credential lifecycle, scoped non-human identity and tenant boundaries while preserving personal operation. Injected tenant fixtures do not establish these capabilities in a live deployment.

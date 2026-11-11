@@ -1,6 +1,7 @@
 # Contributing to Keep
 
-The source and current combined Linux x64 preview are **0.0.19-preview.1**.
+Development source is **0.0.20-preview.1**. The latest combined Linux x64 download
+is **0.0.19-preview.1**; source changes do not rebuild that archive.
 The download includes the generation-only Codex engine and restricted OpenClaw
 plugin. Start with [installation](docs/quickstart.md) to try the preview, or
 [architecture](docs/architecture.md) to inspect the design.
@@ -20,7 +21,7 @@ Run these commands from a source checkout, not inside an installed package.
 | --- | --- | --- |
 | npm ci | Install locked dependencies; no native compile hook | Node/npm and registry access or a populated cache |
 | npm run test:fast | TypeScript typecheck only | Installed locked dependencies |
-| node tools/run_ci_checks.mjs | Locked script-disabled install, TypeScript compilation, notices and nine focused test files; a partial profile | Supported Node from package.json, registry access or a populated cache, complete vendor trees and Linux GNU timeout |
+| node tools/run_ci_checks.mjs | Locked script-disabled install, TypeScript compilation, notices and eleven focused test files; a partial profile | Supported Node from package.json, registry access or a populated cache, complete vendor trees and Linux GNU timeout |
 | npm run test:notices | Check the retained attribution bundle | Complete vendor trees and installed locked dependencies |
 | npm run test:portable | Compile and run the selected portable test profile | Node, Git and the qualified Linux test environment described below |
 | npm run build | Compile TypeScript and verify/build native outputs | Pinned Linux x64 Rust toolchain and host C build tools |

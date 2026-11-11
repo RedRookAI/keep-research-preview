@@ -6,7 +6,7 @@ Keep brings project goals, memory, reusable skills and execution records into on
 
 The implementation spans software development, research, knowledge management and content workflows. The most developed installed workflow takes a repository goal through generation, workspace edits, executable checks and review.
 
-**Current release: 0.0.19-preview.1, a Linux x64 research preview.** The repository contains runnable workflows, tested components and experimental integration points. Readiness varies by capability; the broader platform remains under development.
+**Development source: 0.0.20-preview.1. Latest download: 0.0.19-preview.1, a Linux x64 research preview.** The repository contains runnable workflows, tested components and experimental integration points. Readiness varies by capability; the broader platform remains under development.
 
 ## Scope and implementation status
 
@@ -77,7 +77,11 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/KEEP_RELEASE.md
 
 Completion work includes simpler setup, complete installed consumers across the broader platform, consistent build/CI verification, wider real-task evaluation and operational recovery. Organization deployments also need live identity, credential/signing separation and qualified isolation.
 
-Two unresolved source findings affect readiness. The optional self-improvement path substitutes empty arrays for omitted evaluation corpora, and its shadow gate can report a pass with zero cases. The CI script pins Node 22.23.2 while the public package requires at least 22.23.3.
+Current source adds saved Codex setup through `keep instance init`, with explicit engine/model/limits and actionable prerequisite failures. Self-improvement now requires executed capability and safety checks before promotion; missing, empty or unusable evaluations hold the candidate. Source CI uses the supported Node range and checks actual test execution. These changes are newer than the downloadable archive.
+
+November 11 source changes and validation:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/maintenance-2026-11-11.md
 
 The measured release profile and evidence retain their observation dates. Current evidence covers developer-administered Linux fixtures and the single genuine repository case above. General model quality, independent security verification and macOS/Windows support remain unqualified.
 

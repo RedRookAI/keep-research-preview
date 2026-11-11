@@ -87,9 +87,10 @@ test("full runner retains product tests and distinguishes partial/portable profi
   assert.doesNotMatch(runner, /outcome_card|writer_lease|discipline_guard/u);
 });
 
-test("documented expected-checksum gate stops before install on mismatch or missing inputs", () => {
+test("historical npm checksum gate stops before install on mismatch or missing inputs", () => {
   const guide = readFileSync(join(root, "docs/quickstart.md"), "utf8");
-  const block = guide.match(/```sh\n(\(\n[\s\S]*?\n\))\n```/u)?.[1];
+  const block = [...guide.matchAll(/```sh\n(\(\n[\s\S]*?\n\))\n```/gu)]
+    .map(match => match[1]!).find(candidate => candidate.includes("npm install"));
   assert.ok(block, "documented install block missing");
   // Installation follows the qualified release, which can precede development source.
   const archive = block.match(/'(?<archive>keep-[0-9]+\.[0-9]+\.[0-9]+-preview\.[0-9]+\.tgz)'/u)?.groups?.archive;
@@ -119,6 +120,46 @@ chmod +x "$3/node_modules/.bin/keep"
       } else {
         assert.notEqual(result.status, 0, variant);
         assert.equal(existsSync(sentinel), false, `${variant} reached installation`);
+      }
+    } finally { rmSync(fixture, { recursive: true, force: true }); }
+  }
+});
+
+test("current combined quickstart checks the recorded checksum before extracting or running", () => {
+  const guide = readFileSync(join(root, "docs/quickstart.md"), "utf8");
+  const block = [...guide.matchAll(/```sh\n(\(\n[\s\S]*?\n\))\n```/gu)]
+    .map(match => match[1]!).find(candidate => candidate.includes("tar -xzf"));
+  assert.ok(block, "current combined installation block exists");
+  const archive = block.match(/'(keep-combined-[^']+\.tar\.gz)'/u)?.[1];
+  const directory = block.match(/^  cd (keep-[^\n]+)$/mu)?.[1];
+  const publishedHash = block.match(/'([a-f0-9]{64})'/u)?.[1];
+  assert.ok(archive && directory && publishedHash);
+  assert.ok(readFileSync(join(root, "KEEP_RELEASE.md"), "utf8").includes(publishedHash), "example hash matches retained release evidence");
+  for (const variant of ["matching", "mismatch", "missing"] as const) {
+    const fixture = mkdtempSync(join(tmpdir(), "keep-combined-checksum-"));
+    try {
+      const staging = join(fixture, "staging"), executable = join(staging, directory, "bin/keep"), calls = join(fixture, "calls");
+      mkdirSync(dirname(executable), { recursive: true });
+      writeFileSync(executable, '#!/bin/sh\nprintf "%s\\n" "$*" >> "$KEEP_CHECK_SENTINEL"\n', { mode: 0o700 });
+      const packed: ReturnType<typeof spawnSync> = spawnSync("tar", ["-czf", join(fixture, archive), "-C", staging, directory], { encoding: "utf8", timeout: 5000 });
+      assert.equal(packed.status, 0, String(packed.stderr));
+      const syntheticHash = createHash("sha256").update(readFileSync(join(fixture, archive))).digest("hex");
+      if (variant === "missing") rmSync(join(fixture, archive));
+      // Exercise the published shell flow with a synthetic archive's expected hash.
+      // The downloaded product and its historical identity are not changed or qualified here.
+      const script: string = block.replace(publishedHash, variant === "matching" ? syntheticHash : "0".repeat(64));
+      const result: ReturnType<typeof spawnSync> = spawnSync("/bin/sh", ["-c", script], {
+        cwd: fixture, encoding: "utf8", timeout: 5000,
+        env: { PATH: process.env.PATH ?? "/usr/bin:/bin", KEEP_CHECK_SENTINEL: calls },
+      });
+      if (variant === "matching") {
+        assert.equal(result.status, 0, String(result.stderr));
+        assert.equal(readFileSync(calls, "utf8"), "version\ndemo project\n");
+        assert.ok(existsSync(join(fixture, directory, "bin/keep")));
+      } else {
+        assert.notEqual(result.status, 0, variant);
+        assert.equal(existsSync(join(fixture, directory)), false, "refusal occurs before extraction");
+        assert.equal(existsSync(calls), false, "refusal occurs before product execution");
       }
     } finally { rmSync(fixture, { recursive: true, force: true }); }
   }

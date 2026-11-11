@@ -1,6 +1,6 @@
 # Codex for owner repository projects
 
-Source **0.0.19-preview.1** provides a project generation role using an existing signed-in Codex CLI. A [genuine installed follow-up](genuine-codex-walkthrough.md) now passes through Keep, native OpenClaw tools and the browser console. Earlier failed attempts and their uncertainty remain recorded. The [combined preview](combined-preview.md) packages this route; the historical **0.0.12-preview.1** download does not support this selector.
+Development source **0.0.20-preview.1** provides a project generation role using an existing signed-in Codex CLI. A [genuine installed follow-up](genuine-codex-walkthrough.md) now passes through Keep, native OpenClaw tools and the browser console. Earlier failed attempts and their uncertainty remain recorded. The [combined preview](combined-preview.md) packages this route; the historical **0.0.12-preview.1** download does not support this selector.
 
 Keep's intended division of responsibility is structured generation through Codex, with edits, tests, approval and proposals controlled by Keep. The bundled source-derived generation-only CLI has passed a credential-free tool-catalog check; stock CLI flags do not establish that boundary. The genuine account workflow is observed. The combined preview supplies the measured native engine; see the supported scope below.
 
