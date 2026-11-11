@@ -1,27 +1,39 @@
-name: Source checks
-
+name: Independent namespace capability probe
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
-
-permissions:
-  contents: read
-
+permissions: {}
 jobs:
-  source:
-    name: TypeScript, notices and focused tests
+  namespace:
     runs-on: ubuntu-24.04
     steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - name: Select supported Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version-file: package.json
-          package-manager-cache: false
-      - name: Run the partial source profile
-        run: node tools/run_ci_checks.mjs
+      - name: Build exact public helper in the disposable VM
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" != 0
+          KEEP_NAMESPACE_ROOT=$(mktemp -d "$HOME/keep-namespace-XXXXXXXX")
+          echo "KEEP_NAMESPACE_ROOT=$KEEP_NAMESPACE_ROOT" >> "$GITHUB_ENV"
+          cd "$KEEP_NAMESPACE_ROOT"
+          curl --fail --location --silent --show-error https://raw.githubusercontent.com/RedRookAI/keep-research-preview/83a67b04fa03e6fd1a1564b6b93cc1c3f19deb24/tools/bubblewrap/Dockerfile --output Dockerfile
+          printf '%s\n' 'a317b76c36d96871effb743645147046c8f2dd00d9fa7eac29ea4f8cc994306f  Dockerfile' | sha256sum --check
+          if ! docker build --tag keep-namespace-helper --file Dockerfile . > helper-build.log 2>&1; then tail -80 helper-build.log; exit 1; fi
+          helper_container=$(docker create keep-namespace-helper)
+          trap 'docker rm "$helper_container" >/dev/null' EXIT
+          docker cp "$helper_container:/opt/keep/bubblewrap/0.13.0/bwrap" bwrap
+          printf '%s\n' 'e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f  bwrap' | sha256sum --check
+          sudo install -d -m 0755 "/var/lib/keep-namespace-$GITHUB_RUN_ID"
+          sudo install -m 0755 bwrap "/var/lib/keep-namespace-$GITHUB_RUN_ID/bwrap"
+      - name: Capture the actual namespace refusal with unchanged host policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$KEEP_NAMESPACE_ROOT"
+          printf 'uid=%s\n' "$(id -u)"
+          cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns
+          set +e
+          env -i PATH=/usr/bin:/bin "/var/lib/keep-namespace-$GITHUB_RUN_ID/bwrap" --unshare-user --unshare-pid --unshare-ipc --unshare-uts --unshare-net --cap-drop ALL --new-session --die-with-parent --ro-bind / / --proc /proc --dev /dev -- /usr/bin/true > namespace-probe.log 2>&1
+          probe_status=$?
+          set -e
+          cat namespace-probe.log
+          printf 'Actual namespace probe exit=%s; no host policy changed\n' "$probe_status"
+          exit "$probe_status"
