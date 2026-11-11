@@ -139,7 +139,9 @@
     "docs/maintenance-2026-11-11.md",
     "docs/proposal-export.md",
     "docs/organization-login.md",
-    "docs/maintenance-2026-11-11.2.md"
+    "docs/maintenance-2026-11-11.2.md",
+    "docs/native-patch-application.md",
+    "docs/maintenance-2026-11-11.3.md"
   ],
   "exports": {
     ".": "./dist/src/index.js",

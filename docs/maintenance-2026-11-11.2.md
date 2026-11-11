@@ -12,6 +12,10 @@ The new local fixture passed **11/11** checks after clean TypeScript compilation
 
 After integration with native capture, clean TypeScript emission and **67/67** affected organization, legacy identity/session/profile, CI-coordinator and public-documentation checks passed, with zero failures, skips or cancellations. The full compiled public API imported successfully. Previously passing native codec/Rust/SDK checks were reused because their input files were unchanged by organization integration.
 
+GitHub's hosted partial source profile also passed at commit `274a0655238bb6ea9a9f6040cefcabd9fbd83880`: supported Node **22.23.4**, locked script-disabled installation, emitting compilation, attribution checks and **129/129 tests** across fourteen selected files, with zero failures, skips or cancellations. This profile excludes native builds and installed-artifact qualification.
+
+https://github.com/RedRookAI/keep-research-preview/actions/runs/43103953966
+
 Setup and supported profile:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/organization-login.md

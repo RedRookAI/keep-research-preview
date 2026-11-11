@@ -4,7 +4,7 @@ Updated November 11, 2026. This page distinguishes the shipped portfolio preview
 
 ## Current development
 
-Source **0.0.21-preview.1** adds configured organization code/PKCE acquisition and bound native capture descriptors, alongside explicit saved Codex setup, requires capability and safety evaluation evidence before self-improvement promotion, and aligns source CI with the supported Node range. The [November 11 maintenance record](docs/maintenance-2026-11-11.md) identifies checks and remaining limits. The exact **0.0.20-preview.1** combined archive passed scoped unprivileged demo, instance and export checks; real positive required-jail preparation and a new genuine owner trial remain open.
+Source **0.0.21-preview.1** adds organization code/PKCE login, pinned key refresh, session-bound project dispatch and captured native patch application. Unsupported organization effect routes remain held pending their session checks. Earlier changes add saved Codex setup, require capability and safety evidence before self-improvement promotion, and align CI with the supported Node range. The [current maintenance record](docs/maintenance-2026-11-11.3.md) identifies checks and remaining limits. The exact **0.0.20-preview.1** combined archive passed scoped unprivileged demo, instance and export checks; real positive required-jail preparation and a new genuine owner trial remain open.
 
 ## Available to inspect
 
