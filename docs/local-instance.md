@@ -47,6 +47,8 @@ Current source adds a separate workspace-preparation handoff. `keep instance sta
 
 Keep clones the pinned revision into this instance's `workspaces/project` directory. Ignored dependencies in the original source are not copied into it. The software project flow holds before generation when check prerequisites are missing. Correct the owned workspace, then resume that same held project through the existing capability control using `repository-check-prerequisites` and new evidence. Rechecking a missing prerequisite does not rerun generation.
 
+New materializations copy Git objects independently from the original local repository. Earlier local clones may contain shared object inodes, which the required jail refuses. Inspect the retained workspace and its preparation outcome before choosing a replacement; Keep does not detach shared objects or discard an unresolved workspace automatically.
+
 Using your existing configured project client, substitute the actual held run ID:
 
 ```sh
@@ -78,13 +80,13 @@ keep instance init /absolute/path/to/my-keep \
 keep instance prepare /absolute/path/to/my-keep
 ```
 
-Preparation uses the selected distribution's Node and npm CLI, with their measured bytes rechecked before dispatch. The full selected toolchain is mounted read-only; only the two entry files are hashed. The fixed command is `npm ci --offline --ignore-scripts`, with audit/funding disabled, global mode off, explicit workspace prefix/cache, and user/global npm configuration disabled. Preparation inherits the configured checker timeout, CPU and captured-output limits. It uses the existing required namespace backend and grants no network access or extra writable host paths. Missing or untrusted helpers and unsupported host namespace setup refuse before installation; process fallback cannot enable preparation.
+Preparation uses the selected distribution's Node and npm CLI, with their measured bytes rechecked before dispatch. The full selected toolchain is mounted read-only; only the two entry files are hashed. Select a dedicated Node distribution rather than a broad system directory containing unrelated software. The fixed command is `npm ci --offline --ignore-scripts`, with audit/funding disabled, global mode off, explicit workspace prefix/cache, and separate private empty user/global npm configuration files. These empty files remain under the workspace's Git metadata for inspection. Preparation inherits the configured checker timeout, CPU and captured-output limits. It uses the existing required namespace backend and grants no network access or extra writable host paths. Missing or untrusted helpers and unsupported host namespace setup refuse before installation; process fallback cannot enable preparation.
 
 Commit `package-lock.json` or `npm-shrinkwrap.json` in the selected source revision. If npm needs cached packages, supply an existing offline cache in this instance's `workspaces/project/.keep-preparation-cache` directory and explicitly retry prepare. Keep does not fetch missing packages or install a toolchain. Other package managers, missing lockfiles, unavailable offline packages and dependencies needing build scripts retain a hold with a next action. Already prepared repositories using another manager can still run their configured checker.
 
 Stop the owned worker before prepare. An active worker or unresolved startup refuses preparation, and the lifecycle/materialization locks prevent overlapping setup commands. A pending integrity hold is saved in the workspace's Git metadata before preparation dispatch. Throws, failed checks and uncertain completion retain it. Inspect the actual process state and reconcile both source and workspace tracked bytes with their saved identities before explicitly running prepare to recheck the hold; source is never restored automatically. A pending hold alone leaves the outcome unresolved. Supported environment selections are `KEEP_TEST_PREREQUISITES_JSON`, `KEEP_WORKSPACE_PREPARATION=npm-offline` and `KEEP_WORKSPACE_TOOLCHAIN`. These settings use the existing private instance profile.
 
-The preparation handoff has source component checks, including a simulated enforcing-runner success and a real unavailable-helper refusal. Real positive namespace execution and installed archive qualification remain required before this addition is confirmed for an installed release.
+The preparation handoff has source component checks, a real unavailable-helper refusal and a positive unprivileged changed-source consumer. That consumer observed an empty-cache refusal, an explicit seeded retry, installation of TypeScript 5.9.3 and a passing transpilation checker under the required namespace policy. Exact installed-release qualification is recorded separately in the current release receipt; source or hybrid observations do not qualify another archive.
 
 ## Start and inspect
 

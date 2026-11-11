@@ -32,6 +32,10 @@ The earlier source checkpoint also has successful hosted evidence: Node 22.23.4,
 
 https://github.com/RedRookAI/keep-research-preview/actions/runs/43103953966
 
+The integrated checkpoint `9dd1d742ba9eeb24a29647577596d48a1f7beedf` subsequently passed the expanded hosted profile: **149/149** tests across sixteen selected files, with zero failures, skips or cancellations. Its locked install, emitting compilation and notices passed. This remains a partial source profile.
+
+https://github.com/RedRookAI/keep-research-preview/actions/runs/43111305661
+
 Organization setup and exact route scope:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/organization-login.md
@@ -39,3 +43,13 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/docs/organization-l
 Native application API and outcome handling:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/native-patch-application.md
+
+## Real offline preparation corrections
+
+A real saved-instance preparation attempt exposed two defects that simulated runner checks had missed. Local Git clones shared object inodes with the original source, so the required jail correctly refused them. Cloning now uses `--no-hardlinks`; a regression modifies every disposable object and confirms the original objects and source remain unchanged. The existing hardlink-refusal controls stay in place.
+
+The next attempt reached npm but failed because both user and global configuration named `/dev/null`. npm 10.9.9 rejects loading the same canonical file twice. The recipe now uses distinct private empty configuration files under Git metadata. They remain available after execution, avoiding parent-side cleanup through paths writable by the command.
+
+An unprivileged changed-source consumer then observed an actual empty-cache `ENOTCACHED` hold, an explicit seeded retry installing TypeScript 5.9.3, and a configured checker importing TypeScript and verifying transpilation output. The required namespace and resource-limit setup was launcher-confirmed without degradation, installation scripts stayed disabled, and the original source stayed clean and unchanged. Initial toolchain selection and checker-fixture errors were retained separately from product failures. This was a hybrid installed consumer before the final archive; its exact source/artifact subjects are preserved in the release qualification.
+
+After integration, emitting TypeScript compilation and **23/23** affected prerequisite, clone-isolation, workflow and CI checks passed. The two emitted repair modules exactly match the hybrid consumer's observed modules. The new clone regression joins partial hosted CI; the redundant new hardlink-refusal case was removed because the existing required-jail suite already exercises that policy. No unchanged native build or passing native test was repeated for these TypeScript repairs.

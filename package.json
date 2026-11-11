@@ -141,7 +141,8 @@
     "docs/organization-login.md",
     "docs/maintenance-2026-11-11.2.md",
     "docs/native-patch-application.md",
-    "docs/maintenance-2026-11-11.3.md"
+    "docs/maintenance-2026-11-11.3.md",
+    "docs/qualification/installed-preview-2026-11-11.2.mjs"
   ],
   "exports": {
     ".": "./dist/src/index.js",

@@ -12,6 +12,9 @@ prepare a separate output directory owned by the invoking user with mode 0700.
 The consumer rejects directory-source declarations for application, overlapping
 input paths, symlinks and input/output root containment.
 
+Native root acquisition refuses mount crossings from `/`. Select roots on that
+filesystem; a bind-mounted temporary directory does not satisfy this profile.
+
 ```ts
 import { publishPackagedNativePatchApplicationV1 } from "keep";
 

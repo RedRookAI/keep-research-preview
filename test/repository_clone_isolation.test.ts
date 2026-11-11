@@ -1,12 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { chmodSync, linkSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { materializeRepository } from "../src/git/repository_materializer.js";
 import { gitChildHardening } from "../src/cli/runtime_config.js";
-import { prepareRequiredJail } from "../src/infra/required_project_jail.js";
 
 test("local materialization owns every Git object and cannot overwrite its source object bytes", async () => {
   const root = mkdtempSync(join(tmpdir(), "keep-clone-isolation-"));
@@ -38,20 +37,5 @@ test("local materialization owns every Git object and cannot overwrite its sourc
     }
     assert.equal(git("rev-parse", "HEAD"), commit); assert.equal(git("status", "--porcelain"), "");
     assert.equal(readFileSync(join(source, "work.txt"), "utf8"), "original source\n");
-  } finally { rmSync(root, { recursive: true, force: true }); }
-});
-
-test("required workspace admission still refuses a deliberately shared inode before dispatch", () => {
-  const root = mkdtempSync(join(tmpdir(), "keep-clone-hardlink-refusal-")), project = join(root, "project"), outside = join(root, "outside");
-  mkdirSync(project); writeFileSync(outside, "preserve outside bytes\n"); linkSync(outside, join(project, "linked"));
-  try {
-    assert.throws(() => {
-      const selected = process.env["KEEP_TEST_JAIL_EXECUTABLE"];
-      const plan = prepareRequiredJail("/usr/bin/true", [], { mode: "required", projectDir: project,
-        ...(selected === undefined ? {} : { jailExecutable: selected }) }, undefined, {}, Date.now() + 5000);
-      plan.close();
-    }, /shared inode \(hard link\)/u);
-    assert.equal(readFileSync(outside, "utf8"), "preserve outside bytes\n");
-    assert.equal(statSync(outside).nlink, 2);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
