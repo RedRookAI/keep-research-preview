@@ -2,7 +2,7 @@
 import test, { type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { captureWorkspacePreparation, describeRepositoryReadiness, inspectRepositoryReadiness, prepareRepositoryWorkspace, validatePrerequisitePaths } from "../src/solve/repository_prerequisites.js";
@@ -58,14 +58,25 @@ test("explicit preparation component uses selected toolchain and fixed offline r
   const f = fixture(t); f.clone();
   const sibling = join(f.root, "sibling"); mkdirSync(sibling); writeFileSync(join(sibling, "unchanged"), "untouched");
   let runs = 0;
+  const privateConfigs: string[] = [];
   const runner = (config: ConstructorParameters<typeof SandboxedCommandRunner>[0]) => ({ run: async () => {
     runs++; assert.equal(config.command, f.preparation.node); assert.equal(config.projectDir, f.workspace);
     assert.equal(config.namespaceJail, "required"); assert.equal(config.allowNet, false); assert.deepEqual(config.readOnlyPaths, [f.toolchain]);
     assert.ok(config.args.includes("--offline")); assert.ok(config.args.includes("--ignore-scripts")); assert.equal(config.args[0], f.preparation.npmCli);
+    const userConfig = config.args.find(arg => arg.startsWith("--userconfig="))!.slice("--userconfig=".length);
+    const globalConfig = config.args.find(arg => arg.startsWith("--globalconfig="))!.slice("--globalconfig=".length);
+    assert.notEqual(userConfig, globalConfig, "npm requires distinct canonical user/global configuration files");
+    for (const path of [userConfig, globalConfig]) {
+      assert.ok(path.startsWith(join(f.workspace, ".git") + "/"));
+      assert.equal(readFileSync(path, "utf8"), "", "ambient npm configuration is not copied");
+      assert.equal(lstatSync(path).mode & 0o777, 0o600);
+      privateConfigs.push(path);
+    }
     f.supply(f.workspace); return componentSuccess;
   } });
   const report = await prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [], preparation: f.preparation }, runner);
   assert.equal(report.ready, true); assert.equal(runs, 1);
+  assert.ok(privateConfigs.every(path => existsSync(path) && readFileSync(path, "utf8") === ""), "private empty configuration files are retained for inspection without path-based cleanup");
   await prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [], preparation: f.preparation }, () => { throw new Error("prepared path must not reinstall"); });
   assert.equal(f.git(f.source, "status", "--porcelain"), ""); assert.equal(f.git(f.workspace, "diff", "HEAD"), "");
   assert.equal(readFileSync(join(sibling, "unchanged"), "utf8"), "untouched");

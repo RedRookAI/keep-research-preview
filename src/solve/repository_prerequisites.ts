@@ -1,6 +1,6 @@
 /** Read-only repository readiness and explicitly requested, offline workspace preparation. */
 import { createHash } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, lstatSync, openSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdtempSync, openSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from "node:fs";
 import { delimiter, isAbsolute, join, sep } from "node:path";
 import { SandboxedCommandRunner } from "./sandboxed_runner.js";
 import type { TestRunner } from "./validate.js";
@@ -134,9 +134,16 @@ export async function prepareRepositoryWorkspace(repository: string, workspace: 
   // This durable intent precedes factory construction and runner dispatch. Throws,
   // uncertain completion and failed readback retain it until explicit reconciliation.
   recordPreparationIntent(workspace, beforeWorkspace, beforeSource);
-  const result = await runnerFor({ command: p.node, args: [p.npmCli, "ci", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", "--global=false", "--userconfig=/dev/null", "--globalconfig=/dev/null", `--prefix=${workspace}`, `--cache=${join(workspace, ".keep-preparation-cache")}`],
-    projectDir: workspace, namespaceJail: "required", ...(command.jailExecutable ? { jailExecutable: command.jailExecutable } : {}),
-    readOnlyPaths: [p.toolchainRoot], allowNet: false, envAllowlist: [], timeoutMs: command.timeoutMs, cpuLimitSec: command.cpuLimitSec, maxOutputBytes: command.maxOutputBytes,
+  // npm refuses loading one canonical file as both user and global config.
+  // Separate private empty files suppress ambient configuration without aliasing.
+  const configDirectory = mkdtempSync(join(workspace, ".git", "keep-preparation-npmrc-"));
+  const userConfig = join(configDirectory, "user.npmrc"), globalConfig = join(configDirectory, "global.npmrc");
+  for (const path of [userConfig, globalConfig]) writeFileSync(path, "", { flag: "wx", mode: 0o600 });
+  // Retain the empty files for inspection. The command can rename workspace
+  // parents; parent-side path cleanup could otherwise follow a replacement.
+  const result = await runnerFor({ command: p.node, args: [p.npmCli, "ci", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", "--global=false", `--userconfig=${userConfig}`, `--globalconfig=${globalConfig}`, `--prefix=${workspace}`, `--cache=${join(workspace, ".keep-preparation-cache")}`],
+      projectDir: workspace, namespaceJail: "required", ...(command.jailExecutable ? { jailExecutable: command.jailExecutable } : {}),
+      readOnlyPaths: [p.toolchainRoot], allowNet: false, envAllowlist: [], timeoutMs: command.timeoutMs, cpuLimitSec: command.cpuLimitSec, maxOutputBytes: command.maxOutputBytes,
   }).run(".");
   if (JSON.stringify(await trackedState(workspaceGit)) !== JSON.stringify(beforeWorkspace) || JSON.stringify(await trackedState(sourceGit)) !== JSON.stringify(beforeSource)) {
     throw new Error("Preparation changed tracked repository/checker bytes. Preserve this workspace for inspection; no project generation or automatic retry is admitted.");
