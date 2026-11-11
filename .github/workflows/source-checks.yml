@@ -23,7 +23,7 @@ jobs:
           set -euo pipefail
           KEEP_SOURCE_ROOT=$(mktemp -d "$HOME/keep-source-build-XXXXXXXX")
           mkdir "$KEEP_SOURCE_ROOT/home" "$KEEP_SOURCE_ROOT/tmp"
-          env -i PATH="$PATH" HOME="$KEEP_SOURCE_ROOT/home" RUSTUP_HOME="$KEEP_SOURCE_ROOT/rustup" CARGO_HOME="$KEEP_SOURCE_ROOT/cargo" LANG=C.UTF-8 rustup toolchain install 1.97.1 --profile minimal --component rustfmt --target x86_64-unknown-linux-musl
+          env -i PATH="$PATH" HOME="$KEEP_SOURCE_ROOT/home" RUSTUP_HOME="$KEEP_SOURCE_ROOT/rustup" CARGO_HOME="$KEEP_SOURCE_ROOT/cargo" LANG=C.UTF-8 rustup toolchain install 1.97.1 --no-self-update --profile minimal --component rustfmt --target x86_64-unknown-linux-musl
           env -i PATH="$PATH" HOME="$KEEP_SOURCE_ROOT/home" TMPDIR="$KEEP_SOURCE_ROOT/tmp" RUSTUP_HOME="$KEEP_SOURCE_ROOT/rustup" CARGO_HOME="$KEEP_SOURCE_ROOT/cargo" KEEP_P1_TOOLCHAIN_ROOT="$KEEP_SOURCE_ROOT/rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu" NPM_CONFIG_CACHE="$KEEP_SOURCE_ROOT/npm-cache" LANG=C.UTF-8 GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null /usr/bin/bash --noprofile --norc -eu -o pipefail <<'BUILD'
           test "$(git rev-parse HEAD)" = f4fd9e35f7655c646998c0618fa37639e10a24a1
           npm ci --ignore-scripts --no-audit --no-fund
