@@ -13,7 +13,7 @@ import { isCanonicalNativeP2RelativePath } from "../src/platform/native_p2_path.
 import { resolvedPackageMembers } from "./helpers/native_package_membership.js";
 
 const root = process.cwd();
-const oracle = fileURLToPath(new URL("../../native/target/x86_64-unknown-linux-musl/debug/keep-native-p2-d2-overlay-oracle", import.meta.url));
+const oracle = process.env.KEEP_P2_CAPTURE_ORACLE ?? fileURLToPath(new URL("../../native/target/x86_64-unknown-linux-musl/debug/keep-native-p2-d2-overlay-oracle", import.meta.url));
 const emptyDigest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 const digest = (n: number): string => n.toString(16).padStart(64, "0");
 

@@ -1,7 +1,9 @@
 #![forbid(unsafe_code)]
 
 use keep_native_p2_d2_evidence::audit_plan::capture_audit_plan_v1;
-use keep_native_p2_d2_evidence::{capture_patch_byte_carrier_set, capture_patch_overlay};
+use keep_native_p2_d2_evidence::{
+    capture_patch_byte_carrier_set, capture_patch_descriptor, capture_patch_overlay,
+};
 use keep_native_protocol::patch_capture::{ArchiveFormat, MAX_INPUT_BYTES, capture_archive};
 use std::io::{self, BufRead};
 
@@ -80,7 +82,17 @@ fn main() {
             }
         };
         let result = (|| {
-            if let Some(source) = line.strip_prefix("SOURCE\t") {
+            if let Some(descriptor) = line.strip_prefix("DESCRIPTOR\t") {
+                let fields: Vec<_> = descriptor.splitn(4, '\t').collect();
+                if fields.len() != 3 {
+                    return Err("MALFORMED");
+                }
+                let overlay = decode_hex(fields[1])?;
+                let carriers = decode_hex(fields[2])?;
+                capture_patch_descriptor(&overlay, &carriers, fields[0])
+                    .map(|capture| capture.descriptor_digest().to_owned())
+                    .map_err(|error| error.0)
+            } else if let Some(source) = line.strip_prefix("SOURCE\t") {
                 let fields: Vec<_> = source.splitn(4, '\t').collect();
                 if fields.len() != 3 {
                     return Err("MALFORMED");

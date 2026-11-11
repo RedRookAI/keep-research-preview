@@ -8,6 +8,7 @@ import { types } from "node:util";
 import { decodeCanonical, encodeCanonical, type CanonicalValue } from "../eir/canonical.js";
 import { parsePolicyJson } from "../policy/json.js";
 import { isCanonicalNativeP2RelativePath } from "./native_p2_path.js";
+import { captureNativePatchDescriptorV1, type ValidatedNativePatchDescriptorV1 } from "./native_p2_d2_carriers.js";
 
 const MIB = 1024 * 1024;
 const FRAME = 65_536;
@@ -73,6 +74,7 @@ export type CapturedNativePatchInputsV1 = CaptureIdentity & (
   | { readonly sourceKind: "tar" | "tar-gzip"; readonly sourceStreamDigest: string }
 ) & {
   readonly kind: "CapturedNativePatchInputsV1";
+  readonly descriptor: ValidatedNativePatchDescriptorV1;
   readonly files: readonly CapturedNativePatchFileV1[];
   overlayBytes(): Uint8Array;
   carrierBytes(): Uint8Array;
@@ -330,9 +332,8 @@ class CaptureReceiver {
       this.begin(Number(row.byteLength), digest(row.byteDigest), bytes => {
         const domain = role === "overlay" ? "keep.p2-d2-patch-overlay/v1\0" : "keep.p2-d2-patch-byte-carrier-set/v1\0";
         if (createHash("sha256").update(domain, "ascii").update(bytes).digest("hex") !== this.header![`${role}TypedDigest`]) fail("INTEGRITY", "typed input digest");
-        // Bulk canonical parsing and the exact overlay/carrier operation join are
-        // owned by the verified native executable, before it emits any response.
-        // Re-running the legacy JS bulk encoder here would violate the RAM bound.
+        // Native validation precedes emission. Once the complete exchange closes,
+        // finish also consumes these owned bytes into the bound descriptor.
         if (role === "overlay") this.overlay = bytes; else this.carrier = bytes;
       });
       return;
@@ -350,8 +351,21 @@ class CaptureReceiver {
     if (this.used !== 0 || this.endDigest === undefined || this.header === undefined || this.overlay === undefined || this.carrier === undefined || this.body !== undefined)
       fail("MALFORMED", "incomplete response");
     const overlay = this.overlay, carrier = this.carrier;
+    // Transport hashes alone do not prove canonical schemas or the carrier
+    // equation. Reconsume the owned bytes and check every native typed claim.
+    let descriptor: ValidatedNativePatchDescriptorV1;
+    try {
+      descriptor = captureNativePatchDescriptorV1(overlay, carrier, this.request.sourceKind === "directory"
+        ? this.request.declaredBaseArchiveDigest : this.request.sourceStreamDigest);
+    } catch { fail("INTEGRITY", "overlay/carrier byte validation refused"); }
+    if (descriptor.patchOverlayDigest !== this.header.overlayTypedDigest ||
+        descriptor.patchByteCarrierSetDigest !== this.header.carrierTypedDigest ||
+        descriptor.overlayByteDigest !== this.request.overlayByteDigest ||
+        descriptor.carrierByteDigest !== this.request.carrierByteDigest)
+      fail("INTEGRITY", "overlay/carrier descriptor identity mismatch");
     const result = Object.freeze({
       kind: "CapturedNativePatchInputsV1" as const,
+      descriptor,
       ...(this.request.sourceKind === "directory"
         ? { sourceKind: "directory" as const, declaredBaseArchiveDigest: this.request.declaredBaseArchiveDigest }
         : { sourceKind: this.request.sourceKind, sourceStreamDigest: this.request.sourceStreamDigest }),
@@ -440,7 +454,9 @@ export async function capturePackagedNativePatchInputsV1(input: unknown, options
         if (code === 2 && exitSignal === null && stdoutBytes === 0 && CODES.some(value => refusal === `${value}\n`))
           fail(refusal.slice(0, -1) as NativePatchCaptureCode, "native input refused");
         if (code !== 0 || exitSignal !== null || stdinFailed || !stdoutEnded || !stderrEnded || stderrBytes !== 0) fail("IO", "capture did not terminate cleanly");
-        resolve(receiver.finish());
+        const captured = receiver.finish();
+        if (performance.now() - started >= timeout) fail("CANCELLED", "capture deadline exceeded during byte validation");
+        resolve(captured);
       } catch (error) { receiver.discard(); reject(wrapped(error)); }
     });
     child.stdin!.end(frame);

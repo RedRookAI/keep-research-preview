@@ -5,8 +5,9 @@
 
 use keep_native_linux_abi::{CaptureIoFailure, PinnedDirectory};
 use keep_native_protocol::p2_d2::{
-    MAX_CARRIER_SET_ENCODED_BYTES, ValidatedPatchByteCarrierSet, ValidatedPatchOverlayPlan,
-    capture_patch_byte_carrier_set, capture_patch_overlay, join_patch_application_inputs,
+    MAX_CARRIER_SET_ENCODED_BYTES, ValidatedNativePatchDescriptorV1, ValidatedPatchByteCarrierSet,
+    ValidatedPatchOverlayPlan, bind_patch_descriptor, capture_patch_byte_carrier_set,
+    capture_patch_overlay,
 };
 use keep_native_protocol::patch_capture::{
     CAPTURE_CHUNK_BYTES, CAPTURE_FRAME_LIMITS, CAPTURE_RESPONSE_DOMAIN, CaptureError,
@@ -41,6 +42,7 @@ pub struct CapturedPatchInputs {
     source: CapturedSourceRows,
     overlay: ValidatedPatchOverlayPlan,
     carrier: ValidatedPatchByteCarrierSet,
+    descriptor: ValidatedNativePatchDescriptorV1,
 }
 
 pub fn capture_patch_inputs(
@@ -68,7 +70,8 @@ pub fn capture_patch_inputs(
         }
         capture_patch_byte_carrier_set(raw.bytes()).map_err(|_| CaptureError::Malformed)?
     }; // Release original carrier bytes before acquiring any source payload.
-    join_patch_application_inputs(&overlay, &carrier).map_err(|_| CaptureError::Integrity)?;
+    let descriptor = bind_patch_descriptor(&overlay, &carrier, request.overlay_base_digest())
+        .map_err(|_| CaptureError::Integrity)?;
     let source = match request.source() {
         CaptureSource::Archive {
             format,
@@ -98,6 +101,7 @@ pub fn capture_patch_inputs(
         source,
         overlay,
         carrier,
+        descriptor,
     };
     result.check_response_budget()?;
     Ok(result)
@@ -111,6 +115,9 @@ fn number(value: usize) -> Value {
 }
 
 impl CapturedPatchInputs {
+    pub fn descriptor(&self) -> &ValidatedNativePatchDescriptorV1 {
+        &self.descriptor
+    }
     pub fn source(&self) -> &CapturedSourceRows {
         &self.source
     }

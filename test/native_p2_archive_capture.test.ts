@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { constants, gzipSync } from "node:zlib";
 import { encodeCanonical, decodeCanonical, type CanonicalValue } from "../src/eir/canonical.js";
 import { captureNativePatchOverlayV1 } from "../src/platform/native_p2_d2_overlay.js";
-import { captureNativePatchByteCarrierSetV1 } from "../src/platform/native_p2_d2_carriers.js";
+import { captureNativePatchByteCarrierSetV1, captureNativePatchDescriptorV1 } from "../src/platform/native_p2_d2_carriers.js";
 
 // Test-only fixture oracle override for isolated builds. The operational SDK must
 // resolve only its fixed, verified installed executable, never this environment key.
@@ -296,7 +296,7 @@ type CaptureSdk = typeof import("../src/platform/native_patch_capture.js");
 // package-shaped fixture. This is receiver integration, NOT npm/tarball qualification.
 async function sdkFixture(root: string, executable: Buffer = readFileSync(captureBinary)) {
   const deployed = join(root, "sdk");
-  for (const relative of ["platform/native_patch_capture.js", "platform/native_p2_path.js", "eir/canonical.js", "policy/json.js"]) {
+  for (const relative of ["platform/native_patch_capture.js", "platform/native_p2_path.js", "platform/native_p2_d2_carriers.js", "platform/native_p2_d2_overlay.js", "eir/canonical.js", "policy/json.js"]) {
     const target = join(deployed, "src", relative); mkdirSync(dirname(target), { recursive: true });
     copyFileSync(fileURLToPath(new URL(`../src/${relative}`, import.meta.url)), target);
   }
@@ -361,8 +361,53 @@ test("capture SDK returns exact immutable owned data from all three actual nativ
       assert.equal(Object.hasOwn(result, "declaredBaseArchiveDigest"), kind === "directory");
       assert.equal(result.overlayTypedDigest, captureNativePatchOverlayV1(fixture.overlay).patchOverlayDigest);
       assert.equal(result.carrierTypedDigest, captureNativePatchByteCarrierSetV1(fixture.carrier).patchByteCarrierSetDigest);
+      const descriptor = captureNativePatchDescriptorV1(fixture.overlay, fixture.carrier,
+        String(fixture.request.declaredBaseArchiveDigest ?? fixture.request.sourceStreamDigest));
+      assert.equal(result.descriptor.descriptorDigest, descriptor.descriptorDigest);
+      assert.ok(Object.isFrozen(result.descriptor));
+      const copy = result.descriptor.canonicalBytes(); copy.fill(0);
+      assert.deepEqual(result.descriptor.canonicalBytes(), descriptor.canonicalBytes());
     } finally { rmSync(fixture.root, { recursive: true }); }
   }
+});
+
+test("capture SDK refuses semantically hostile bytes even with consistent transport commitments", async () => {
+  const fixture = createCaptureFixture("directory");
+  try {
+    const native = invokeCapture(frame(encodeCanonical(fixture.request))); assert.equal(native.status, 0);
+    const records = decodedFrames(native.stdout).map(row => row.value);
+    const sourceEnd = records.findIndex(row => row.record === "input");
+    const originalOverlay = decodeCanonical(fixture.overlay) as Record<string, CanonicalValue>;
+    const originalCarrier = decodeCanonical(fixture.carrier) as Record<string, CanonicalValue>;
+    const carrierEntries = originalCarrier.entries as Record<string, CanonicalValue>[];
+    const { sdk } = await sdkFixture(fixture.root, emitter(fixture.root));
+    const responsePath = join(fixture.root, "response.bin");
+    const variants: [string, Uint8Array, Uint8Array][] = [
+      ["substituted carrier", fixture.overlay, encodeCanonical({ ...originalCarrier, entries: [{ ...carrierEntries[0]!, bytes: new Uint8Array([1, 2, 3]) }] })],
+      ["traversal", fixture.overlay, encodeCanonical({ ...originalCarrier, entries: [{ ...carrierEntries[0]!, path: "../outside" }] })],
+      ["noncanonical overlay", new Uint8Array([0x18, 1]), fixture.carrier],
+      ["different base", encodeCanonical({ ...originalOverlay, baseArchiveDigest: "5".repeat(64) }), fixture.carrier],
+    ];
+    for (const [name, overlay, carrier] of variants) {
+      const request = { ...fixture.request, overlayByteDigest: sha(overlay), carrierByteDigest: sha(carrier) };
+      const requestDigest = createHash("sha256").update("keep.patch-input-request/v1\0", "ascii").update(encodeCanonical(request)).digest("hex");
+      const typed = (role: string, bytes: Uint8Array) => createHash("sha256").update(`keep.p2-d2-${role}/v1\0`, "ascii").update(bytes).digest("hex");
+      const header = { ...records[0]!, requestDigest, overlayByteDigest: sha(overlay), carrierByteDigest: sha(carrier),
+        overlayTypedDigest: typed("patch-overlay", overlay), carrierTypedDigest: typed("patch-byte-carrier-set", carrier),
+        overlayBytes: BigInt(overlay.length), carrierBytes: BigInt(carrier.length) };
+      const rows = [header, ...records.slice(1, sourceEnd)];
+      for (const [role, bytes] of [["overlay", overlay], ["carrier", carrier]] as const) {
+        rows.push({ record: "input", role, byteLength: BigInt(bytes.length), byteDigest: sha(bytes) });
+        for (let offset = 0, sequence = 0; offset < bytes.length; offset += 32768, sequence++)
+          rows.push({ record: "chunk", sequence: BigInt(sequence), bytes: Uint8Array.from(bytes.subarray(offset, offset + 32768)) });
+      }
+      writeFileSync(responsePath, responseBytes(rows));
+      await assert.rejects(sdk.capturePackagedNativePatchInputsV1(request), codeIs("INTEGRITY"), name);
+      for (const row of fixture.rows) assert.deepEqual(readFileSync(join(fixture.root, "source", row.path)), row.bytes, name);
+      assert.deepEqual(readFileSync(join(fixture.root, "overlay.cbor")), fixture.overlay);
+      assert.deepEqual(readFileSync(join(fixture.root, "carrier.cbor")), fixture.carrier);
+    }
+  } finally { rmSync(fixture.root, { recursive: true }); }
 });
 
 test("capture SDK refuses inert-shape/path/options violations before touching the package", async () => {
@@ -540,6 +585,10 @@ test("capture SDK survives actual offline npm pack/install without install scrip
     assert.equal(sha(readFileSync(artifact)), sha(readFileSync(captureBinary)));
     const sdk = await import(pathToFileURL(join(installed, "src/platform/native_patch_capture.js")).href) as CaptureSdk;
     const result = await sdk.capturePackagedNativePatchInputsV1(fixture.request);
+    assert.equal(result.descriptor.baseArchiveDigest, fixture.request.declaredBaseArchiveDigest);
+    assert.equal(result.descriptor.overlayByteDigest, fixture.request.overlayByteDigest);
+    assert.equal(result.descriptor.carrierByteDigest, fixture.request.carrierByteDigest);
+    assert.equal(result.descriptor.admission, false);
     assert.equal(result.sourceRowDigest, rowDigest(fixture.rows));
     assert.deepEqual(Buffer.from(result.files[0]!.bytes()), fixture.rows[0]!.bytes);
     // This proves the real packaging/mode seam only. The complete Keep package,

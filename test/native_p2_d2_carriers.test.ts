@@ -11,7 +11,7 @@ import {
   NativeP2D2CarrierError,
 } from "../src/platform/native_p2_d2_carriers.js";
 
-const oracle = fileURLToPath(new URL("../../native/target/x86_64-unknown-linux-musl/debug/keep-native-p2-d2-overlay-oracle", import.meta.url));
+const oracle = process.env.KEEP_P2_CAPTURE_ORACLE ?? fileURLToPath(new URL("../../native/target/x86_64-unknown-linux-musl/debug/keep-native-p2-d2-overlay-oracle", import.meta.url));
 const digest = (bytes: Uint8Array | string): string => createHash("sha256").update(bytes).digest("hex");
 const hexDigest = (n: number): string => n.toString(16).padStart(64, "0");
 const replacement = Buffer.from("new Cargo manifest\n", "utf8");

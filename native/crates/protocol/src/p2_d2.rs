@@ -472,6 +472,93 @@ pub fn join_patch_application_inputs(
     Ok(())
 }
 
+/// Immutable byte-validation receipt, with no filesystem or admission capability.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ValidatedNativePatchDescriptorV1 {
+    canonical_bytes: Vec<u8>,
+    descriptor_digest: String,
+}
+impl ValidatedNativePatchDescriptorV1 {
+    pub fn canonical_bytes(&self) -> &[u8] {
+        &self.canonical_bytes
+    }
+    pub fn descriptor_digest(&self) -> &str {
+        &self.descriptor_digest
+    }
+}
+
+/// Bind the original captured bytes; typed values have private constructors.
+pub fn bind_patch_descriptor(
+    overlay: &ValidatedPatchOverlayPlan,
+    carriers: &ValidatedPatchByteCarrierSet,
+    base_archive_digest: &str,
+) -> Result<ValidatedNativePatchDescriptorV1, OverlayError> {
+    if overlay.overlay.base_archive_digest != base_archive_digest {
+        return Err(OverlayError("overlay is bound to a different base archive"));
+    }
+    join_patch_application_inputs(overlay, carriers)?;
+    let text = |value: &str| Value::Text(value.to_owned());
+    let value = Value::Map(vec![
+        ("schema".into(), text("keep.p2-d2-patch-descriptor")),
+        ("version".into(), Value::Unsigned(1)),
+        ("packageId".into(), text(OVERLAY_PACKAGE_ID)),
+        ("baseArchiveDigest".into(), text(base_archive_digest)),
+        (
+            "overlayByteDigest".into(),
+            text(&sha256_hex(overlay.canonical_bytes())),
+        ),
+        (
+            "carrierByteDigest".into(),
+            text(&sha256_hex(carriers.canonical_bytes())),
+        ),
+        (
+            "patchOverlayDigest".into(),
+            text(overlay.patch_overlay_digest()),
+        ),
+        (
+            "patchByteCarrierSetDigest".into(),
+            text(carriers.patch_byte_carrier_set_digest()),
+        ),
+        (
+            "resultTreeDigest".into(),
+            text(&overlay.overlay.result_tree_digest),
+        ),
+        (
+            "auditPlanDigest".into(),
+            text(&overlay.overlay.audit_plan_digest),
+        ),
+        (
+            "operationCount".into(),
+            Value::Unsigned(overlay.overlay.operations.len() as u64),
+        ),
+        (
+            "carrierCount".into(),
+            Value::Unsigned(carriers.entries.len() as u64),
+        ),
+    ]);
+    let canonical_bytes = encode_bounded(&value, Limits::WIRE)
+        .map_err(|_| OverlayError("descriptor encode refused"))?;
+    let mut preimage = b"keep.p2-d2-patch-descriptor/v1\0".to_vec();
+    preimage.extend_from_slice(&canonical_bytes);
+    Ok(ValidatedNativePatchDescriptorV1 {
+        descriptor_digest: sha256_hex(&preimage),
+        canonical_bytes,
+    })
+}
+
+/// Byte-only consumer, sharing the descriptor used by native input capture.
+pub fn capture_patch_descriptor(
+    overlay_bytes: &[u8],
+    carrier_bytes: &[u8],
+    base_archive_digest: &str,
+) -> Result<ValidatedNativePatchDescriptorV1, OverlayError> {
+    bind_patch_descriptor(
+        &capture_patch_overlay(overlay_bytes)?,
+        &capture_patch_byte_carrier_set(carrier_bytes)?,
+        base_archive_digest,
+    )
+}
+
 fn capture_archive_tree(
     archive: &CapturedNativeArchiveV1,
 ) -> Result<BTreeMap<String, Vec<u8>>, OverlayError> {

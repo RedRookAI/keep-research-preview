@@ -1,9 +1,10 @@
 /** Dependency-free, byte-only P2-D2 add/replace carrier capture and overlay join. */
 import { createHash } from "node:crypto";
 import { types } from "node:util";
-import { CanonicalByteLimitError, decodeCanonicalSnapshot, type CanonicalValue } from "../eir/canonical.js";
+import { CanonicalByteLimitError, decodeCanonicalSnapshot, encodeCanonical, type CanonicalValue } from "../eir/canonical.js";
 import {
   P2_D2_OVERLAY_LIMITS,
+  captureNativePatchOverlayV1,
   type NativePatchOperationKindV1,
   type ValidatedPatchOverlayPlan,
 } from "./native_p2_d2_overlay.js";
@@ -43,6 +44,57 @@ export interface ValidatedPatchApplicationInputs {
   readonly build: false;
   readonly admission: false;
   readonly launch: false;
+}
+
+/** Byte-validation receipt. Result/audit digests retain the overlay's commitments. */
+export interface ValidatedNativePatchDescriptorV1 {
+  readonly kind: "ValidatedNativePatchDescriptorV1";
+  readonly baseArchiveDigest: string;
+  readonly overlayByteDigest: string;
+  readonly carrierByteDigest: string;
+  readonly patchOverlayDigest: string;
+  readonly patchByteCarrierSetDigest: string;
+  readonly resultTreeDigest: string;
+  readonly auditPlanDigest: string;
+  readonly operationCount: bigint;
+  readonly carrierCount: bigint;
+  readonly descriptorDigest: string;
+  readonly filesystem: false;
+  readonly build: false;
+  readonly admission: false;
+  readonly launch: false;
+  canonicalBytes(): Uint8Array;
+}
+
+/** Consume only original canonical bytes, never caller-supplied validated objects. */
+export function captureNativePatchDescriptorV1(
+  overlayBytes: unknown,
+  carrierBytes: unknown,
+  baseArchiveDigest: string,
+): ValidatedNativePatchDescriptorV1 {
+  const overlay = captureNativePatchOverlayV1(overlayBytes);
+  const carrier = captureNativePatchByteCarrierSetV1(carrierBytes);
+  if (overlay.overlay.baseArchiveDigest !== baseArchiveDigest)
+    throw new NativeP2D2CarrierError("overlay is bound to a different base archive");
+  joinValidatedPatchApplicationInputs(overlay, carrier);
+  const fields = {
+    baseArchiveDigest,
+    overlayByteDigest: createHash("sha256").update(overlay.canonicalBytes()).digest("hex"),
+    carrierByteDigest: createHash("sha256").update(carrier.canonicalBytes()).digest("hex"),
+    patchOverlayDigest: overlay.patchOverlayDigest,
+    patchByteCarrierSetDigest: carrier.patchByteCarrierSetDigest,
+    resultTreeDigest: overlay.overlay.resultTreeDigest,
+    auditPlanDigest: overlay.overlay.auditPlanDigest,
+    operationCount: BigInt(overlay.overlay.operations.length),
+    carrierCount: BigInt(carrier.entries.length),
+  };
+  const canonical = encodeCanonical({ schema: "keep.p2-d2-patch-descriptor", version: 1n, packageId: PACKAGE_ID, ...fields });
+  return Object.freeze({
+    kind: "ValidatedNativePatchDescriptorV1" as const, ...fields,
+    descriptorDigest: createHash("sha256").update("keep.p2-d2-patch-descriptor/v1\0", "ascii").update(canonical).digest("hex"),
+    filesystem: false, build: false, admission: false, launch: false,
+    canonicalBytes: () => Uint8Array.from(canonical),
+  });
 }
 
 function record(value: CanonicalValue, path: string): Record<string, CanonicalValue> {
