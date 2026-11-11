@@ -14,7 +14,30 @@ keep instance init /absolute/path/to/my-keep \
 
 The instance directory must be new, outside the source repository, with an existing parent directory. Keep creates private `data/` and `workspaces/` directories there and saves an inert `instance.json` profile. It captures the current branch's exact commit. Use `--branch=<existing-branch>` to select another branch. Advancing that branch requires deliberately reconciling the saved revision before a new startup; it does not silently change the source used by an existing project.
 
-No API key, owner token or Codex authentication value is saved in the profile. For an already configured experimental [Codex project role](codex-project.md), init captures the supplied `KEEP_PROJECT_MODEL` and `KEEP_CODEX_*` settings. Startup still does not establish successful generation or complete native tool exclusion. Review the profile before enabling model work. Profile edits apply after stopping and restarting this owned instance; status distinguishes saved setup from the live dispatch state.
+No API key, owner token or Codex authentication value is saved in the profile. Initialization also accepts explicit generation settings, so you can save the [Codex project role](codex-project.md) without assembling environment variables:
+
+```sh
+keep instance init /absolute/path/to/my-keep \
+  --repository=/absolute/path/to/my-public-project \
+  --test-command=npm --test-args='["test"]' \
+  --project-model=codex \
+  --codex-processing=owner-public-repository \
+  --codex-executable=/absolute/path/to/keep-install/engines/codex-generation.2/bin/codex \
+  --codex-model=your-supported-codex-model \
+  --codex-max-invocations=2 \
+  --codex-max-prompt-bytes=65536 \
+  --codex-max-output-bytes=262144 \
+  --codex-timeout-ms=180000
+keep instance status /absolute/path/to/my-keep
+```
+
+Select an existing native executable and a model supported by your account. The engine path above identifies the measured bundled generation engine inside an extracted combined installation; substitute its actual absolute location. Another existing compatible engine can be selected explicitly, with its own qualification limits. Keep checks version metadata and the engine's existing ChatGPT login. Init and status make zero generation calls. Status reports the saved model, executable and caller limits before the first start and alongside the live dispatch state after startup.
+
+The example limits are choices for this instance. Choose each value deliberately; all four must be positive safe integers, and the timeout must be at most 2147483647 milliseconds. They bound CLI invocations, submitted prompt bytes, captured output bytes and local process time. Subscription billing, full model input and output tokens retain the limits described in the Codex guide. Public owner-repository processing consent remains explicit.
+
+These flags write the existing private `instance.json` profile. Each option is accepted once. Environment-based setup remains available: init captures supported `KEEP_PROJECT_MODEL`, `KEEP_CODEX_*` and helper settings, with explicit flags taking precedence. Existing profiles remain readable. Profile edits apply after stopping and restarting this owned instance. Startup and metadata checks leave generation qualification separate.
+
+If the executable, version metadata or login is unusable, init identifies the correction. Sign in through the selected engine's own login command, then retry the corrected init command. Invalid limits and helper selections name their corrective options. Failed validation removes empty setup directories; unexpected nonempty state is retained for inspection. Existing instance directories are always preserved.
 
 Without a project model, Keep starts its real gateway/worker with dispatch paused and the local deterministic stub selected. That mode lets you operate the instance without a model request; it is not live AI generation. Repository dependencies and the configured test command must be available in the eventual project workspace before useful repository work can pass.
 
@@ -63,19 +86,22 @@ For a remote development box, the loopback address is local to that box. Use an 
 
 ## Selecting an existing required-jail helper
 
-Before `keep instance init`, an operator with the qualified Bubblewrap0.13.0
-helper in a protected root-owned installation can select it explicitly:
+An operator with the qualified Bubblewrap0.13.0 helper in a protected root-owned
+installation can add these options to the same init command:
 
 ```sh
-export KEEP_TEST_NAMESPACE_JAIL=required
-export KEEP_TEST_JAIL_EXECUTABLE=/absolute/protected/keep/bwrap
+  --test-namespace-jail=required \
+  --test-jail-executable=/absolute/protected/keep/bwrap
 ```
 
-Initialization saves these settings in the private instance profile. The expected
-helper bytes and ownership checks remain fixed; no global installation, `/opt`
-mount or host-policy change is performed. Omit the path to retain the existing
+Initialization saves these settings in the private instance profile and inspects
+the required helper's fixed bytes and protected ownership without executing it.
+Missing or untrusted helpers refuse with the corrective options. No global installation, `/opt`
+mount or host-policy change is performed. Omit the path to select the existing
 `/opt/keep/bubblewrap/0.13.0/bwrap` default. A selected path requires required mode;
-it cannot silently enable a best-effort fallback.
+it cannot silently enable a best-effort fallback. The other explicit modes are
+`--test-namespace-jail=best-effort` and `--test-namespace-jail=off`. Existing
+`KEEP_TEST_NAMESPACE_JAIL` and `KEEP_TEST_JAIL_EXECUTABLE` selections remain supported.
 
 With the ordinary project settings configured, `keep doctor` reports missing or
 untrusted helper prerequisites without a model call. A trusted-helper result

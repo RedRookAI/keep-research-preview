@@ -4,7 +4,35 @@ Source **0.0.19-preview.1** provides a project generation role using an existing
 
 Keep's intended division of responsibility is structured generation through Codex, with edits, tests, approval and proposals controlled by Keep. The bundled source-derived generation-only CLI has passed a credential-free tool-catalog check; stock CLI flags do not establish that boundary. The genuine account workflow is observed. The combined preview supplies the measured native engine; see the supported scope below.
 
-Use an existing ChatGPT Codex login on the same machine. Keep checks `codex --version` and `codex login status`; it does not copy authentication files or change global configuration. Select a public repository you own or are authorized to process. Configure the repository/test variables in [repository settings](installed-solve.md#repository-settings), then explicitly set:
+Use an existing ChatGPT Codex login on the same machine. Keep checks `codex --version` and `codex login status`; it does not copy authentication files or change global configuration. Select a public repository you own or are authorized to process.
+
+## Save generation setup with the instance CLI
+
+Current source accepts the project model, engine, processing consent and finite caller limits directly in `keep instance init`. Choose a new instance directory outside your repository and the actual native engine supplied by your installation:
+
+```sh
+keep instance init /absolute/path/to/my-keep \
+  --repository=/absolute/path/to/my-public-project \
+  --test-command=npm --test-args='["test"]' \
+  --project-model=codex \
+  --codex-processing=owner-public-repository \
+  --codex-executable=/absolute/path/to/keep-install/engines/codex-generation.2/bin/codex \
+  --codex-model=your-supported-codex-model \
+  --codex-max-invocations=2 \
+  --codex-max-prompt-bytes=65536 \
+  --codex-max-output-bytes=262144 \
+  --codex-timeout-ms=180000
+keep instance status /absolute/path/to/my-keep
+keep instance start /absolute/path/to/my-keep --paused
+```
+
+This saves the existing `keep.instance/v1` profile; later start commands reuse it. Explicit options override supported inherited environment settings. Init checks version/login metadata without generating; status reads the saved configuration without invoking the engine. Keep gives corrective options for missing engine/login, invalid model/limits and untrusted required helpers. The [instance guide](local-instance.md) covers helper selection, startup and review controls. The new explicit init options require updated source; the existing 0.0.19-preview.1 archive retains its environment-based setup.
+
+Select the measured bundled engine above or explicitly choose another existing native engine. A version response and successful login establish metadata admission; generation compatibility and tool exclusion require their own evidence. No account secret is saved in the instance profile.
+
+## Environment-based setup
+
+Existing environment commands remain supported. For direct `keep solve` or `keep doctor`, configure the repository/test variables in [repository settings](installed-solve.md#repository-settings), then explicitly set:
 
 ```sh
 export KEEP_PROVIDER=local
