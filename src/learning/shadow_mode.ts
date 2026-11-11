@@ -21,6 +21,8 @@ export interface ShadowResult {
   readonly lessonId: string;
   readonly passed: boolean;
   readonly failedCases: readonly string[];
+  readonly evaluatedCases: number;
+  readonly unavailableReason?: "empty-corpus" | "evaluator-error" | "invalid-result";
 }
 
 export class ShadowModeGate {
@@ -35,17 +37,27 @@ export class ShadowModeGate {
    * the failing case ids. Records the shadow run to the spine.
    */
   evaluate(lessonId: string, lessonContent: string): ShadowResult {
+    const cases = [...this.corpus];
     const failedCases: string[] = [];
-    for (const c of this.corpus) {
-      if (!c.passesUnder(lessonContent)) failedCases.push(c.id);
+    let evaluatedCases = 0;
+    let unavailableReason: ShadowResult["unavailableReason"] = cases.length === 0 ? "empty-corpus" : undefined;
+    for (const c of cases) {
+      let result: unknown;
+      try { result = c.passesUnder(lessonContent); }
+      catch { unavailableReason = "evaluator-error"; break; }
+      if (typeof result !== "boolean") { unavailableReason = "invalid-result"; break; }
+      evaluatedCases++;
+      if (!result) failedCases.push(c.id);
     }
-    const passed = failedCases.length === 0;
+    const passed = unavailableReason === undefined && evaluatedCases > 0 && failedCases.length === 0;
+    const result: ShadowResult = { lessonId, passed, failedCases, evaluatedCases,
+      ...(unavailableReason === undefined ? {} : { unavailableReason }) };
     this.spine.stage({
       type: "identity.action",
       actor: "shadow-mode",
-      payload: { event: "shadow_eval", lessonId, passed, failedCases, ts: this.clock() },
+      payload: { event: "shadow_eval", ...result, ts: this.clock() },
     });
-    return { lessonId, passed, failedCases };
+    return result;
   }
 
   /**

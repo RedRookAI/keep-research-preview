@@ -12,7 +12,7 @@
  */
 
 import { decideTraining, type TrainingSignals, type TrainingDecision, type TrainingDecisionOptions } from "../autotrain/training_decision.js";
-import type { ShadowModeGate } from "./shadow_mode.js";
+import type { ShadowModeGate, ShadowResult } from "./shadow_mode.js";
 
 export type PlannedAction = "author-skill" | "stage-training" | "gradient-free";
 
@@ -50,6 +50,12 @@ export interface SelfImprovementOutcome {
   readonly safetyRegressed: boolean;
   /** Training was warranted → STAGED for operator-authorized compute (seam S-10); never executed here. */
   readonly stagedTrainingOnly: boolean;
+  /** Required evaluation was unavailable; no promotion or regression is inferred. */
+  readonly evaluationHold?: {
+    readonly gate: "capability" | "safety";
+    readonly reason: "missing-gate" | NonNullable<ShadowResult["unavailableReason"]>;
+    readonly evaluatedCases: number;
+  };
   readonly rationale: string;
 }
 
@@ -87,14 +93,21 @@ export function runSelfImprovementCycle(signals: TrainingSignals, deps: SelfImpr
   // (3) IMPLEMENT behind shadow-mode + (4) VERIFY.
   // CARDINAL: the SAFETY-regression gate runs FIRST and its verdict is FINAL. A candidate that regresses a refusal/
   // guardrail is reverted no matter how well it performs on capability — safety is never overridden by capability.
-  if (deps.safety) {
-    const safe = deps.safety.evaluate(deps.candidate.id, deps.candidate.content);
-    if (!safe.passed) {
-      return { ran: true, recognizedGap: true, plannedAction: "author-skill", decision, implemented: true, promoted: false, reverted: true, safetyRegressed: true, stagedTrainingOnly: false, rationale: `improvement REGRESSED the safety corpus (${safe.failedCases.length} guardrail/refusal case(s)) — BLOCKED from promotion and reverted; safety is cardinal and is never overridden by capability` };
-    }
+  const hold = (gate: "capability" | "safety", reason: NonNullable<SelfImprovementOutcome["evaluationHold"]>["reason"], evaluatedCases: number): SelfImprovementOutcome => ({
+    ran: true, recognizedGap: true, plannedAction: "author-skill", decision,
+    implemented: evaluatedCases > 0, promoted: false, reverted: false, safetyRegressed: false,
+    stagedTrainingOnly: false, evaluationHold: { gate, reason, evaluatedCases },
+    rationale: `Candidate held: ${gate} evaluation unavailable (${reason}); prior behavior retained.`,
+  });
+  if (!deps.safety) return hold("safety", "missing-gate", 0);
+  const safe = deps.safety.evaluate(deps.candidate.id, deps.candidate.content);
+  if (safe.unavailableReason !== undefined) return hold("safety", safe.unavailableReason, safe.evaluatedCases);
+  if (!safe.passed) {
+    return { ran: true, recognizedGap: true, plannedAction: "author-skill", decision, implemented: true, promoted: false, reverted: true, safetyRegressed: true, stagedTrainingOnly: false, rationale: `Candidate failed ${safe.failedCases.length} safety case(s); prior behavior retained.` };
   }
   // Capability regression gate — promote ONLY on a clean evaluation; otherwise revert.
   const shadow = deps.shadow.evaluate(deps.candidate.id, deps.candidate.content);
+  if (shadow.unavailableReason !== undefined) return hold("capability", shadow.unavailableReason, shadow.evaluatedCases);
   if (!shadow.passed) {
     return { ran: true, recognizedGap: true, plannedAction: "author-skill", decision, implemented: true, promoted: false, reverted: true, safetyRegressed: false, rationale: `improvement failed shadow verification (${shadow.failedCases.length} regression(s)) — reverted; the system is uncorrupted`, stagedTrainingOnly: false };
   }
