@@ -15,7 +15,7 @@ import { SessionStore } from "../src/identity/session_store.js";
 import { OWNER } from "../src/identity/rbac.js";
 import { handleReviewRequest, type WebRequest } from "../src/review/review_web.js";
 import { handleGatewayRequest, startGatewayServer } from "../src/gateway/http_gateway.js";
-import { composeKeep } from "../src/compose.js";
+import { composeKeep, type KeepApp } from "../src/compose.js";
 
 const ISSUER = "https://issuer.fixture.invalid/tenant/", CLIENT = "keep-org-fixture", ORIGIN = "https://keep.fixture.invalid";
 const NOW = Math.floor(Date.now() / 1000) * 1000;
@@ -279,4 +279,29 @@ test("code-flow browser effect routes are held before console or review handlers
   }
   assert.equal(dispatches, 0); assert.equal(f.app.spine.currentEvents().some(event => event.payload["event"] === "review.decided"), false);
   assert.equal((await request("GET", "/console")).status, 200); assert.equal(dispatches, 1);
+});
+
+
+test("server-only or mismatched code-flow identity is refused before API/browser effects while exact composition remains usable", async t => {
+  const f = fixture(t), logged = await f.callback(await f.start()), cookie = logged.headers["Set-Cookie"]!.split(";")[0]!, sid = cookie.split("=")[1]!;
+  assert.ok(f.identity.sessions.get(sid, NOW), "a real synthetic code exchange has admitted this session");
+  let effects = 0;
+  const standalone = { ...composeKeep({ dataDir: join(f.root, "standalone") }), frontDoorForSubject: () => ({}), frontDoorMessage: async () => { effects++; return { observed: true }; } } as unknown as KeepApp;
+  assert.throws(() => startGatewayServer(standalone, { port: 0, token: "fixture-gateway", identity: f.identity }), /exact configured identity instance/u);
+  const api = (app: KeepApp, identity: typeof f.identity, path: string) => handleGatewayRequest(app, { method: path === "/projects" ? "GET" : "POST", path, query: {}, body: '{"message":"synthetic"}',
+    headers: { authorization: "Bearer fixture-gateway", "x-keep-session": sid } }, { token: "fixture-gateway", identity });
+  assert.equal((await api(standalone, f.identity, "/message")).status, 403);
+  assert.equal((await api(standalone, f.identity, "/projects")).status, 403);
+  const wrapper = { ...f.identity }; // Same codeFlow object is insufficient: registry/store boundary must be exact too.
+  assert.equal((await api(f.app, wrapper, "/projects")).status, 403);
+  assert.throws(() => startGatewayServer(f.app, { port: 0, identity: wrapper }), /exact configured identity instance/u);
+  const other = fixture(t);
+  assert.equal((await api(f.app, other.identity, "/projects")).status, 403);
+  assert.throws(() => startGatewayServer(f.app, { port: 0, identity: other.identity }), /exact configured identity instance/u);
+  const browser = (app: KeepApp, identity: typeof f.identity) => handleReviewRequest(app, { method: "GET", path: "/console", query: {}, body: "", headers: { host: new URL(ORIGIN).host, cookie } },
+    { token: "fixture-gateway", origin: ORIGIN, allowedHosts: [new URL(ORIGIN).host], principal: OWNER, identity, now: NOW,
+      projectConsole: async () => { effects++; return { status: 200, headers: {}, body: "effect" }; } });
+  assert.equal((await browser(standalone, f.identity)).status, 403); assert.equal((await browser(f.app, wrapper)).status, 403); assert.equal(effects, 0);
+  assert.equal((await api(f.app, f.identity, "/projects")).status, 200);
+  const server = await startGatewayServer(f.app, { port: 0, identity: f.identity }); await server.close();
 });

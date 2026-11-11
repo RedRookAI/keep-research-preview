@@ -121,7 +121,7 @@ function redirect(to: string, extra: Record<string, string> = {}): WebResponse {
 export async function handleReviewRequest(app: KeepApp, req: WebRequest, sec: WebSecurity): Promise<WebResponse> {
   // 1) DNS-rebinding guard — reject any Host we did not bind (CVE-2025-66414 defense).
   if (!sec.allowedHosts.includes(req.headers["host"] ?? "")) return textRes(403, "Forbidden: unexpected Host header.");
-  if (app.identity?.codeFlow && sec.identity?.codeFlow !== app.identity.codeFlow) return textRes(403, "Configured organization identity is required.");
+  if ((app.identity?.codeFlow || sec.identity?.codeFlow) && sec.identity !== app.identity) return textRes(403, "Configured organization identity is required.");
   return sec.identity ? handleMultiUser(app, req, sec, sec.now ?? Date.now()) : handleSingleOwner(app, req, sec);
 }
 

@@ -199,7 +199,8 @@ function readProjectProjection<T>(read: () => T): { ok: true; value: T } | { ok:
 export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, sec: GatewaySecurity): Promise<GatewayResponse> {
   // Liveness is unauthenticated (a client checks the gateway is up before sending the token).
   if (req.method === "GET" && req.path === "/health") return json(200, { ok: true });
-  if (app.identity?.codeFlow && sec.principalFor === undefined && sec.identity?.codeFlow !== app.identity.codeFlow) return json(403, { error: "configured organization identity is required" });
+  if ((sec.identity?.codeFlow && sec.identity !== app.identity)
+    || (app.identity?.codeFlow && sec.principalFor === undefined && sec.identity !== app.identity)) return json(403, { error: "configured organization identity is required" });
 
   // TOKEN-AUTHED: everything else requires the token. No unauthenticated caller drives a run.
   let restricted: RestrictedClientProfile | undefined;
@@ -1593,6 +1594,7 @@ export interface GatewayServerHandle {
 
 /** Thin socket adapter around the pure handler. Owns only binding, body, and the per-instance token. */
 export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}): Promise<GatewayServerHandle> {
+  if (opts.identity?.codeFlow && opts.identity !== app.identity) throw new Error("Organization code flow requires the app's exact configured identity instance");
   if (app.identity?.codeFlow) {
     if ((opts.identity && opts.identity !== app.identity) || opts.principalFor) throw new Error("Configured organization code flow cannot be replaced by another server identity mode");
     opts = { ...opts, identity: app.identity };
