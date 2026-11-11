@@ -41,6 +41,51 @@ If the executable, version metadata or login is unusable, init identifies the co
 
 Without a project model, Keep starts its real gateway/worker with dispatch paused and the local deterministic stub selected. That mode lets you operate the instance without a model request; it is not live AI generation. Repository dependencies and the configured test command must be available in the eventual project workspace before useful repository work can pass.
 
+## Prepare repository checks
+
+Current source adds a separate workspace-preparation handoff. `keep instance status` shows the saved checker and arguments, detected package manager and lockfile, and missing declared prerequisite paths. Node repositories also check for each declared runtime/development dependency's package metadata. These presence checks leave the executable checker responsible for verifying behavior.
+
+Keep clones the pinned revision into this instance's `workspaces/project` directory. Ignored dependencies in the original source are not copied into it. The software project flow holds before generation when check prerequisites are missing. Correct the owned workspace, then resume that same held project through the existing capability control using `repository-check-prerequisites` and new evidence. Rechecking a missing prerequisite does not rerun generation.
+
+Using your existing configured project client, substitute the actual held run ID:
+
+```sh
+keep project resume ACTUAL_RUN_ID \
+  --capability=repository-check-prerequisites \
+  --evidence=owned-workspace-prepared
+```
+
+For an already prepared workspace, use the existing checker and no preparation recipe. You can declare additional required files or directories with `--test-prerequisites='["relative/path"]'` at init. Paths must remain inside the repository and cannot target Git metadata. To explicitly materialize and inspect an instance without installing anything:
+
+```sh
+keep instance prepare /absolute/path/to/my-keep
+keep instance status /absolute/path/to/my-keep
+```
+
+Missing prerequisites return the actual owned workspace path and a next action. Supply the dependencies there with your selected toolchain, then run prepare again. Existing prepared workspaces return readiness without an installation process. Independent repository checks use a disposable copy containing those workspace dependencies; the original source stays separate.
+
+For offline npm preparation, add these settings when creating a new instance. Select an existing Node distribution containing `bin/node` and `lib/node_modules/npm/bin/npm-cli.js`, outside the source and workspace directories:
+
+```sh
+keep instance init /absolute/path/to/my-keep \
+  --repository=/absolute/path/to/my-project \
+  --test-command=/absolute/path/to/selected-node/bin/node \
+  --test-args='["--test","test/check.cjs"]' \
+  --workspace-preparation=npm-offline \
+  --workspace-toolchain=/absolute/path/to/selected-node \
+  --test-namespace-jail=required \
+  --test-jail-executable=/absolute/protected/keep/bwrap
+keep instance prepare /absolute/path/to/my-keep
+```
+
+Preparation uses the selected distribution's Node and npm CLI, with their measured bytes rechecked before dispatch. The full selected toolchain is mounted read-only; only the two entry files are hashed. The fixed command is `npm ci --offline --ignore-scripts`, with audit/funding disabled, global mode off, explicit workspace prefix/cache, and user/global npm configuration disabled. Preparation inherits the configured checker timeout, CPU and captured-output limits. It uses the existing required namespace backend and grants no network access or extra writable host paths. Missing or untrusted helpers and unsupported host namespace setup refuse before installation; process fallback cannot enable preparation.
+
+Commit `package-lock.json` or `npm-shrinkwrap.json` in the selected source revision. If npm needs cached packages, supply an existing offline cache in this instance's `workspaces/project/.keep-preparation-cache` directory and explicitly retry prepare. Keep does not fetch missing packages or install a toolchain. Other package managers, missing lockfiles, unavailable offline packages and dependencies needing build scripts retain a hold with a next action. Already prepared repositories using another manager can still run their configured checker.
+
+Stop the owned worker before prepare. An active worker or unresolved startup refuses preparation, and the lifecycle/materialization locks prevent overlapping setup commands. Preparation preserves tracked source and checker bytes; a detected change retains the workspace and a hold in its Git metadata. Restore the exact prior tracked bytes and explicitly run prepare to recheck that hold. Supported environment selections are `KEEP_TEST_PREREQUISITES_JSON`, `KEEP_WORKSPACE_PREPARATION=npm-offline` and `KEEP_WORKSPACE_TOOLCHAIN`. These settings use the existing private instance profile.
+
+The preparation handoff has source component checks, including a simulated enforcing-runner success and a real unavailable-helper refusal. Real positive namespace execution and installed archive qualification remain required before this addition is confirmed for an installed release.
+
 ## Start and inspect
 
 ```sh

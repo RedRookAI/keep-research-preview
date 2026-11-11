@@ -236,6 +236,7 @@ export async function main(argv: readonly string[]): Promise<number> {
       repositoryMaterialization: { sourceDir: project.repository.root, workspaceBase: project.workspaceBase.root, repoRef: project.repoRef, commit: project.revision, baseBranch: project.baseBranch },
       sourceLanding: true,
       testCommand: project.testCommand,
+      ...(project.repositoryCheckSetup ? { repositoryCheckSetup: project.repositoryCheckSetup } : {}),
       projectPosture: project.posture,
       runtimePaths: { repository: project.repository.root, workspace: project.workspaceBase.root },
     } : runtime?.repository && runtime.workspace

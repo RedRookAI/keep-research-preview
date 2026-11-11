@@ -98,7 +98,7 @@ export class LocalFsWorkspace implements Workspace {
       let entries: string[] = [];
       try { entries = readdirSync(dir); } catch { return; }
       for (const name of entries) {
-        if (name === "node_modules" || name === ".git" || name === "dist") continue;
+        if (name === "node_modules" || name === ".keep-preparation-cache" || name === ".git" || name === "dist") continue;
         const full = join(dir, name);
         let st;
         try { st = lstatSync(full); } catch { continue; }

@@ -149,6 +149,7 @@ export interface AutonomyLoopConfig {
   readonly softwareOperation?: {
     readonly binding: string;
     readonly authorize: (runId: string, projectId: ProjectId | undefined, goal: string) => boolean;
+    readonly readiness?: (state: ProjectState) => Promise<string | undefined>;
   };
   /** Optional independent isolated post-implementation verifier. */
   readonly projectTester?: import("./project_test_stage.js").ProjectTester;
@@ -359,6 +360,13 @@ export function buildAutonomyLoop(cfg: AutonomyLoopConfig): AutonomyLoop {
     } else if (!Object.hasOwn(state.artifacts, "software_preparation") && (previous?.solve?.preparedProposal !== undefined || (state.posture === "autonomous"
       && authorizeAutonomousAction({ description: state.goal, consequence: estimateConsequence({ message: state.goal }).consequence }, { canAfford: () => true }).verdict === "veto"))) {
       return hold("This held goal lacks its native preparation disposition; resume cannot grant execution authority.");
+    }
+    if (cfg.softwareOperation?.readiness && ["understand", "plan", "implement"].includes(stage)) {
+      let reason: string | undefined;
+      try { reason = await cfg.softwareOperation.readiness(state); }
+      catch { reason = "Repository check readiness is unavailable. Inspect the owned workspace, checker and preparation settings before resuming this project."; }
+      if (reason) return { output: state.artifacts[stage] ?? { reason }, control: "capability-unavailable" as const,
+        capability: "repository-check-prerequisites", headline: reason };
     }
     return execute(state, control);
   }]));

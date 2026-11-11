@@ -30,6 +30,8 @@ This saves the existing `keep.instance/v1` profile; later start commands reuse i
 
 Select the measured bundled engine above or explicitly choose another existing native engine. A version response and successful login establish metadata admission; generation compatibility and tool exclusion require their own evidence. No account secret is saved in the instance profile.
 
+Repository checks have a separate [workspace preparation handoff](local-instance.md#prepare-repository-checks). Missing declared dependencies hold the project before generation. Prepared workspaces keep the no-install path; optional offline npm preparation requires a selected existing toolchain and the qualified required namespace helper. Status, readiness and explicit preparation invoke no generation engine.
+
 ## Environment-based setup
 
 Existing environment commands remain supported. For direct `keep solve` or `keep doctor`, configure the repository/test variables in [repository settings](installed-solve.md#repository-settings), then explicitly set:

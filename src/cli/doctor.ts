@@ -1,4 +1,4 @@
-import { constants, statSync } from "node:fs";
+import { constants, existsSync, statSync } from "node:fs";
 import { delimiter, isAbsolute, join } from "node:path";
 import { captureInstalledPackageSubjectDigest } from "../release/solo_non_regression.js";
 import { readReleaseBootBundle, readReleaseTrustRoot } from "../graph/release_bundle.js";
@@ -7,6 +7,7 @@ import { remoteProviderIdentityDigest } from "../gateway/provider_descriptor.js"
 import { captureRuntimeContract, RuntimeConfigError, type CapturedRuntimeContract, type RuntimeConfigContext } from "./runtime_config.js";
 import { loadMemoryRetentionProfile } from "./memory_retention_profile.js";
 import { inspectRequiredJailLauncher } from "../infra/required_project_jail.js";
+import { describeRepositoryReadiness, inspectRepositoryReadiness } from "../solve/repository_prerequisites.js";
 
 export type DoctorStatus = "ready" | "missing-input" | "unsupported" | "security-refusal";
 export interface DoctorCheck { readonly name: string; readonly status: DoctorStatus; readonly detail: string; }
@@ -65,6 +66,12 @@ export function inspectInstalledReadiness(env: Readonly<Record<string, string | 
     checks.push({ ...checkRelease(encoderContract, options), name: "encoder-release-admission" });
   }
   checks.push(checkCommand(contract.installedProject!.testCommand.command, options));
+  const project = contract.installedProject!;
+  try {
+    const workspace = join(project.workspaceBase.root, project.repoRef);
+    const readiness = inspectRepositoryReadiness(project.repository.root, existsSync(workspace) ? workspace : undefined, project.testCommand, project.repositoryCheckSetup);
+    checks.push({ name: "repository-check-prerequisites", status: readiness.ready ? "ready" : "missing-input", detail: describeRepositoryReadiness(readiness) });
+  } catch { checks.push({ name: "repository-check-prerequisites", status: "missing-input", detail: "Repository metadata/readiness is unavailable; inspect the owned workspace before running project checks." }); }
   if (contract.installedProject!.testCommand.namespaceJail === "required") {
     try {
       (options.inspectJailLauncher ?? inspectRequiredJailLauncher)(contract.installedProject!.testCommand.jailExecutable);

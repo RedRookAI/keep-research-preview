@@ -7,6 +7,13 @@ import { createGatewayClient } from "./gateway_client.js";
 import { launchNativeWorker, type NativeWorkerReceipt } from "./native_worker.js";
 import { captureRuntimeContract, gitChildHardening, RuntimeConfigError } from "./runtime_config.js";
 import { inspectRequiredJailLauncher } from "../infra/required_project_jail.js";
+import { describeRepositoryReadiness, inspectRepositoryReadiness, prepareRepositoryWorkspace } from "../solve/repository_prerequisites.js";
+import { materializeRepository, spineMaterializationJournal } from "../git/repository_materializer.js";
+import { Spine } from "../spine/spine.js";
+import { FileSpineStore } from "../spine/store.js";
+import { FileSystemLock } from "../lock/lock.js";
+import { SchemaRegistry } from "../spine/upcaster.js";
+import { FileWitnessSink } from "../spine/witness_sink.js";
 
 interface InstanceProfile { readonly schema: "keep.instance/v1"; readonly environment: Record<string, string>; }
 const PROFILE = "instance.json";
@@ -15,17 +22,29 @@ const PENDING = "startup-pending.json";
 const FIELDS = new Set(["KEEP_OPENCLAW_CLIENT_PROFILE", "KEEP_PROVIDER", "KEEP_DATA_DIR", "KEEP_REPOSITORY", "KEEP_WORKSPACE_BASE", "KEEP_REVISION", "KEEP_REPO_REF", "KEEP_BASE_BRANCH", "KEEP_TEST_COMMAND", "KEEP_TEST_ARGS_JSON", "KEEP_TEST_NAMESPACE_JAIL", "KEEP_TEST_JAIL_EXECUTABLE", "KEEP_PROJECT_MODEL", "KEEP_CODEX_PROCESSING", "KEEP_CODEX_EXECUTABLE", "KEEP_CODEX_MODEL", "KEEP_CODEX_MAX_INVOCATIONS", "KEEP_CODEX_MAX_PROMPT_BYTES", "KEEP_CODEX_MAX_OUTPUT_BYTES", "KEEP_CODEX_TIMEOUT_MS"]);
 const CODEX_FIELDS = [...FIELDS].filter(key => key === "KEEP_PROJECT_MODEL" || key.startsWith("KEEP_CODEX_"));
 const INIT_SETTINGS: Readonly<Record<string, string>> = {
+  "test-prerequisites": "KEEP_TEST_PREREQUISITES_JSON", "workspace-preparation": "KEEP_WORKSPACE_PREPARATION", "workspace-toolchain": "KEEP_WORKSPACE_TOOLCHAIN",
   "project-model": "KEEP_PROJECT_MODEL", "codex-processing": "KEEP_CODEX_PROCESSING", "codex-executable": "KEEP_CODEX_EXECUTABLE",
   "codex-model": "KEEP_CODEX_MODEL", "codex-max-invocations": "KEEP_CODEX_MAX_INVOCATIONS", "codex-max-prompt-bytes": "KEEP_CODEX_MAX_PROMPT_BYTES",
   "codex-max-output-bytes": "KEEP_CODEX_MAX_OUTPUT_BYTES", "codex-timeout-ms": "KEEP_CODEX_TIMEOUT_MS",
   "test-namespace-jail": "KEEP_TEST_NAMESPACE_JAIL", "test-jail-executable": "KEEP_TEST_JAIL_EXECUTABLE",
 };
+for (const field of Object.values(INIT_SETTINGS)) FIELDS.add(field);
 const within = (parent: string, child: string): boolean => child === parent || child.startsWith(parent + sep);
 
 function generationSetup(profile: InstanceProfile): string {
   const env = profile.environment;
   if (!env.KEEP_PROJECT_MODEL) return "Generation is not configured. The local stub will start with dispatch paused.";
   return `Codex selected; model=${env.KEEP_CODEX_MODEL}; executable=${env.KEEP_CODEX_EXECUTABLE ?? "runtime PATH selection"}\nSaved caller limits: invocations=${env.KEEP_CODEX_MAX_INVOCATIONS}; prompt bytes=${env.KEEP_CODEX_MAX_PROMPT_BYTES}; captured output bytes=${env.KEEP_CODEX_MAX_OUTPUT_BYTES}; timeout ms=${env.KEEP_CODEX_TIMEOUT_MS}\nGeneration qualification is separate. Profile edits apply after an owned stop/start.`;
+}
+
+function checkSetup(profile: InstanceProfile): string {
+  const env = profile.environment;
+  const workspace = join(env.KEEP_WORKSPACE_BASE!, env.KEEP_REPO_REF!);
+  let prerequisites: string[];
+  try { prerequisites = JSON.parse(env.KEEP_TEST_PREREQUISITES_JSON ?? "[]") as string[]; }
+  catch { return "Repository check prerequisites are malformed; correct KEEP_TEST_PREREQUISITES_JSON in the saved profile."; }
+  return describeRepositoryReadiness(inspectRepositoryReadiness(env.KEEP_REPOSITORY!, existsSync(workspace) ? workspace : undefined,
+    { command: env.KEEP_TEST_COMMAND!, args: JSON.parse(env.KEEP_TEST_ARGS_JSON ?? "[]") as string[] }, { prerequisites, ...(env.KEEP_WORKSPACE_PREPARATION ? { preparation: true } : {}) }));
 }
 
 function inspectSetup(environment: Record<string, string>): void {
@@ -107,8 +126,8 @@ function runtimeEnvironment(profile: InstanceProfile): NodeJS.ProcessEnv {
 /** An inert owner profile around the existing worker and authenticated lifecycle API. */
 export async function runInstanceCommand(args: readonly string[], write: (text: string) => void): Promise<number> {
   const [action, directoryArg, ...options] = args;
-  if (!action || !["init", "start", "status", "projects", "stop"].includes(action) || !directoryArg || directoryArg.startsWith("--")) {
-    write("Usage: keep instance init <directory> --repository=<path> --test-command=<executable> [--test-args=<JSON>] [--branch=<branch>]\n       Codex: --project-model=codex --codex-processing=owner-public-repository --codex-executable=<absolute-path> --codex-model=<model> --codex-max-invocations=N --codex-max-prompt-bytes=N --codex-max-output-bytes=N --codex-timeout-ms=N\n       Helpers: --test-namespace-jail=required|best-effort|off [--test-jail-executable=<absolute-path>]\n       keep instance start <directory> [--port=N] [--paused]\n       keep instance status|projects|stop <directory>"); return 2;
+  if (!action || !["init", "prepare", "start", "status", "projects", "stop"].includes(action) || !directoryArg || directoryArg.startsWith("--")) {
+    write("Usage: keep instance init <directory> --repository=<path> --test-command=<executable> [--test-args=<JSON>] [--branch=<branch>]\n       Codex: --project-model=codex --codex-processing=owner-public-repository --codex-executable=<absolute-path> --codex-model=<model> --codex-max-invocations=N --codex-max-prompt-bytes=N --codex-max-output-bytes=N --codex-timeout-ms=N\n       Helpers: --test-namespace-jail=required|best-effort|off [--test-jail-executable=<absolute-path>]\n       Prerequisites: --test-prerequisites=<JSON-path-array> [--workspace-preparation=npm-offline --workspace-toolchain=<absolute-node-distribution>]\n       keep instance prepare <directory>\n       keep instance start <directory> [--port=N] [--paused]\n       keep instance status|projects|stop <directory>"); return 2;
   }
   try {
     if (action === "init") {
@@ -131,7 +150,7 @@ export async function runInstanceCommand(args: readonly string[], write: (text: 
       const environment: Record<string, string> = { KEEP_PROVIDER: "local", KEEP_DATA_DIR: join(directory, "data"), KEEP_REPOSITORY: repository,
         KEEP_WORKSPACE_BASE: join(directory, "workspaces"), KEEP_REVISION: revision, KEEP_REPO_REF: "project", KEEP_BASE_BRANCH: branch,
         KEEP_TEST_COMMAND: option("test-command")!, KEEP_TEST_ARGS_JSON: JSON.stringify(testArgs) };
-      for (const key of [...CODEX_FIELDS, "KEEP_OPENCLAW_CLIENT_PROFILE"]) if (process.env[key] !== undefined) environment[key] = process.env[key]!;
+      for (const key of [...CODEX_FIELDS, "KEEP_OPENCLAW_CLIENT_PROFILE", "KEEP_TEST_PREREQUISITES_JSON", "KEEP_WORKSPACE_PREPARATION", "KEEP_WORKSPACE_TOOLCHAIN"]) if (process.env[key] !== undefined) environment[key] = process.env[key]!;
       if (process.env.KEEP_TEST_NAMESPACE_JAIL !== undefined) environment.KEEP_TEST_NAMESPACE_JAIL = process.env.KEEP_TEST_NAMESPACE_JAIL;
       if (process.env.KEEP_TEST_JAIL_EXECUTABLE !== undefined) environment.KEEP_TEST_JAIL_EXECUTABLE = process.env.KEEP_TEST_JAIL_EXECUTABLE;
       for (const [name, field] of Object.entries(INIT_SETTINGS)) if (option(name) !== undefined) environment[field] = option(name)!;
@@ -157,6 +176,29 @@ export async function runInstanceCommand(args: readonly string[], write: (text: 
     const lock = join(directory, ".control-lock");
     try { mkdirSync(lock, { mode: 0o700 }); } catch (error) { if ((error as NodeJS.ErrnoException).code === "EEXIST") throw new Error("another instance control is in progress; inspect this instance before retrying"); throw error; }
     try {
+      if (action === "prepare") {
+        if (existsSync(join(directory, PENDING))) throw new Error("Previous startup is unresolved; reconcile this instance before preparing its workspace.");
+        if (existsSync(join(directory, CURRENT))) {
+          const previous = workerAt(directory);
+          if (!existsSync(join(directory, "data", "native-workers", `${previous.workerId}.stopped.json`))) throw new Error("Stop this owned instance before preparing its workspace; active project execution and preparation cannot overlap.");
+        }
+        const env = profile.environment;
+        // Preparation validates repository settings without inspecting or invoking the generation engine.
+        const contract = captureRuntimeContract(Object.fromEntries(Object.entries(runtimeEnvironment(profile)).filter(([key]) => key !== "KEEP_PROJECT_MODEL" && !key.startsWith("KEEP_CODEX_"))), { cwd: process.cwd() }, { projectRequired: true });
+        const project = contract.installedProject!;
+        const spine = new Spine(new FileSpineStore(env.KEEP_DATA_DIR!), new FileSystemLock(join(env.KEEP_DATA_DIR!, ".locks")), new SchemaRegistry(), undefined, new FileWitnessSink(env.KEEP_DATA_DIR!));
+        const report = await spine.withCoordinationLock("repository.materialization", async () => {
+          const materialized = await materializeRepository({ sourceDir: project.repository.root, workspaceBase: project.workspaceBase.root, repoRef: project.repoRef, commit: project.revision, baseBranch: project.baseBranch }, undefined, spineMaterializationJournal(spine));
+          let result;
+          try { result = await prepareRepositoryWorkspace(project.repository.root, materialized.projectDir, project.testCommand, project.repositoryCheckSetup ?? { prerequisites: [] }); }
+          catch (error) { throw new Error(`Owned workspace: ${materialized.projectDir}\n${(error as Error).message}`); }
+          spine.stage({ type: "identity.action", actor: "repository-preparation", payload: { event: "repository.prepared", workspace: materialized.projectDir, commit: materialized.commit,
+            checker: project.testCommand.command, args: project.testCommand.args, preparation: project.repositoryCheckSetup?.preparation ?? null } });
+          await spine.seal();
+          return result;
+        });
+        write(`Owned workspace: ${join(project.workspaceBase.root, project.repoRef)}\n${describeRepositoryReadiness(report)}`); return 0;
+      }
       if (action === "start") {
         if (options.some(option => option !== "--paused" && !/^--port=\d{1,5}$/u.test(option)) || options.filter(option => option.startsWith("--port=")).length > 1) throw new Error("start accepts --port=0..65535 and --paused");
         const port = Number(options.find(option => option.startsWith("--port="))?.slice(7) ?? "0");
@@ -178,15 +220,15 @@ export async function runInstanceCommand(args: readonly string[], write: (text: 
         return 0;
       }
       if (action === "status" && !existsSync(join(directory, CURRENT))) {
-        write(`Keep has no acknowledged worker. ${existsSync(join(directory, PENDING)) ? "Previous startup is unresolved; inspect this instance's data/native-workers before another launch." : `Start: keep instance start ${directory}`}\nState: ${profile.environment.KEEP_DATA_DIR}\nSaved generation setup: ${generationSetup(profile)}`);
+        write(`Keep has no acknowledged worker. ${existsSync(join(directory, PENDING)) ? "Previous startup is unresolved; inspect this instance's data/native-workers before another launch." : `Start: keep instance start ${directory}`}\nState: ${profile.environment.KEEP_DATA_DIR}\nSaved generation setup: ${generationSetup(profile)}\n${checkSetup(profile)}`);
         return existsSync(join(directory, PENDING)) ? 1 : 0;
       }
       const worker = workerAt(directory);
       if (existsSync(join(directory, "data", "native-workers", `${worker.workerId}.stopped.json`))) {
-        write(`Keep is stopped. State retained: ${profile.environment.KEEP_DATA_DIR}\nStart: keep instance start ${directory}\nSaved generation setup: ${generationSetup(profile)}`); return action === "projects" ? 1 : 0;
+        write(`Keep is stopped. State retained: ${profile.environment.KEEP_DATA_DIR}\nStart: keep instance start ${directory}\nSaved generation setup: ${generationSetup(profile)}\n${checkSetup(profile)}`); return action === "projects" ? 1 : 0;
       }
       const current = await status(directory, worker);
-      if (action === "status") write(`Keep is running: ${worker.origin}\nConsole: ${worker.origin}/console\nSign-in credential file (private): ${join(directory, "data", "gateway-token")}\nWorker: ${worker.workerId}\nDispatch: ${String(current.state)}\nState: ${profile.environment.KEEP_DATA_DIR}\nSaved generation setup: ${generationSetup(profile)}`);
+      if (action === "status") write(`Keep is running: ${worker.origin}\nConsole: ${worker.origin}/console\nSign-in credential file (private): ${join(directory, "data", "gateway-token")}\nWorker: ${worker.workerId}\nDispatch: ${String(current.state)}\nState: ${profile.environment.KEEP_DATA_DIR}\nSaved generation setup: ${generationSetup(profile)}\n${checkSetup(profile)}`);
       else if (action === "projects") write(JSON.stringify(await request(directory, worker, "GET", "/projects"), null, 2));
       else {
         await request(directory, worker, "POST", "/worker/stop", { workerId: worker.workerId });

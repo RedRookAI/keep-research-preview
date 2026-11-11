@@ -70,6 +70,7 @@ import { IdentityRegistry, DEFAULT_SOLVER_IDENTITY_ID } from "./identity/agent_i
 import { SandboxedCommandRunner, sandboxedRunnerFor } from "./solve/sandboxed_runner.js";
 import { LocalFsWorkspace, type Workspace } from "./solve/workspace.js";
 import { materializeRepository, spineMaterializationJournal, type MaterializeRepositoryRequest } from "./git/repository_materializer.js";
+import { describeRepositoryReadiness, inspectRepositoryReadiness, type RepositoryCheckSetup } from "./solve/repository_prerequisites.js";
 import { MultiRepositoryCoordinator, ProjectRepositoryTransactions } from "./git/multi_repository_coordinator.js";
 import { GovernedLocalMerge } from "./solve/governed_local_merge.js";
 import type { FileTree } from "./solve/patch.js";
@@ -442,6 +443,7 @@ export interface KeepConfig {
   readonly workspace?: Workspace;
   /** Exact immutable local Git input for the built-in solver; mutually exclusive with injected solve/workspace/repoRef. */
   readonly repositoryMaterialization?: MaterializeRepositoryRequest;
+  readonly repositoryCheckSetup?: RepositoryCheckSetup;
   /** Installed owner CLI: land an approved materialized proposal into its captured source repository. */
   readonly sourceLanding?: boolean;
   /** The repo the built-in solver + autonomy loop target (keys the workspace). Default ".". */
@@ -2143,10 +2145,16 @@ export function composeKeep(config: KeepConfig): KeepApp {
     && config.projectTester === undefined && config.testCommand !== undefined && config.workspace === undefined
     ? {
       binding: createHash("sha256").update(canonicalize({ version: "keep.native-repository-operation/v1",
-        preparation: softwarePreparation.binding, workspace: operationWorkspaceRoot,
+        preparation: softwarePreparation.binding, workspace: operationWorkspaceRoot, ...(config.repositoryCheckSetup ? { repositoryCheckSetup: config.repositoryCheckSetup } : {}),
         test: config.testCommand, runtimePaths: config.runtimePaths ?? null,
       })).digest("hex"),
       authorize: nativeCommandCurrent,
+      readiness: async state => {
+        const preparationOnly = Object.hasOwn(state.artifacts, "software_preparation") && !Object.hasOwn(state.artifacts, "software_operation");
+        if (!preparationOnly) await ensureMaterialized();
+        const report = inspectRepositoryReadiness(materialization!.sourceDir, preparationOnly ? undefined : solverWorkspace!.dir!(solverRepository), config.testCommand!, config.repositoryCheckSetup);
+        return report.ready ? undefined : describeRepositoryReadiness(report);
+      },
     } : undefined;
   const autonomyLoop = projectManager !== undefined && projectCheckpoints !== undefined
     ? buildAutonomyLoop({ spine, ...(codexDescriptor ? { requireGenerationApproval: true as const } : {}), ...(softwareOperation === undefined ? {} : { softwareOperation }), ...(softwarePreparation === undefined ? {} : { softwarePreparation }), solve: observedSolve ?? (async () => { throw new Error("unreachable unconfigured software solver"); }), softwareStrategyAvailable: observedSolve !== undefined, vetoQueue, checkpoints: projectCheckpoints, engineeringStatusProjections, manager: projectManager, ...(outcomeAdaptation ? { runInProjectContext: <T>(projectId: ProjectId, subjectId: string, run: () => Promise<T>) => adaptationProjectContext.run({ projectId, subjectId }, run) } : {}), ...(config.projectPosture ? { posture: config.projectPosture } : {}), ...(config.projectPermissionPolicy ? { permissionPolicy: config.projectPermissionPolicy } : {}), ...(config.projectResearch ? { research: config.projectResearch } : {}), ...(config.projectIntentRouter ? { intentRouter: config.projectIntentRouter } : {}), ...(config.projectRetriever ? { projectRetriever: config.projectRetriever } : {}), ...(config.projectRetrievalLimit !== undefined ? { projectRetrievalLimit: config.projectRetrievalLimit } : {}), ...(solverWorkspace ? { projectWorkspace: solverWorkspace } : {}), ...(config.projectLocalizer ? { projectLocalizer: config.projectLocalizer } : {}), ...(config.projectLocalizationTopK !== undefined ? { projectLocalizationTopK: config.projectLocalizationTopK } : {}), ...(config.projectPlanner ? { projectPlanner: config.projectPlanner } : {}), ...(projectEditor ? { projectEditor, solveConsumesAdmittedEdit: true as const } : {}), ...(projectTester ? { projectTester } : {}), ...(composedDomainWorkflow ? { domainWorkflow: composedDomainWorkflow } : {}), ...(composedDomainWorkflows ? { domainWorkflows: composedDomainWorkflows } : {}), ...((config.repoRef ?? materialization?.repoRef) ? { repoRef: config.repoRef ?? materialization!.repoRef } : {}), nonPersistable: nonPersistableRegistry, tracer: observability.recorder, lessonsForGoal: (goal) => skillRetrieval.retrieve({ taskShape: goal }).map((r) => r.skill.id) })
@@ -2202,7 +2210,7 @@ export function composeKeep(config: KeepConfig): KeepApp {
         // Opaque injected ports have no restart-stable implementation identity. They
         // remain usable now, but cannot silently recover as a different port later.
         binding: createHash("sha256").update(canonicalize({ version: "keep.native-project-runtime/v1", materialization: materialization ?? null,
-          runtimePaths: config.runtimePaths ?? null, testCommand: config.testCommand ?? null,
+          runtimePaths: config.runtimePaths ?? null, testCommand: config.testCommand ?? null, ...(config.repositoryCheckSetup ? { repositoryCheckSetup: config.repositoryCheckSetup } : {}),
           provider: codexDescriptor ? codexProjectIdentity(codexDescriptor) : descriptorDigest ?? (ownerDescriptor ? remoteProviderIdentityDigest(ownerDescriptor) : randomUUID()),
           ...(encoderIdentity === undefined ? {} : { semanticEncoder: encoderIdentity }),
           posture: config.projectPosture ?? null, tenant: config.tenantDeployment?.tenantId ?? null,

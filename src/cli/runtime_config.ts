@@ -20,6 +20,7 @@ import { anthropicDialect, openAiDialect, openAiDialectWithRouting, type Externa
 import { encoderCredentialReference, loadEncoderProfile, type EncoderProfile } from "./encoder_profile.js";
 
 import { PROVIDER_CHECK_PRICE_HOST, validPriceMaxAge } from "../reference/provider_check_pricing.js";
+import { captureWorkspacePreparation, validatePrerequisitePaths, type RepositoryCheckSetup } from "../solve/repository_prerequisites.js";
 
 export type ProviderMode = "local" | "openai-compatible" | "anthropic-compatible";
 export type ProviderLocation = "offline" | "local" | "external";
@@ -36,6 +37,7 @@ export type CredentialReference =
   | { readonly kind: "stdin" };
 
 export interface CapturedTestCommand {
+  readonly readOnlyPaths?: readonly string[];
   readonly command: string;
   readonly args: readonly string[];
   readonly timeoutMs: number;
@@ -48,6 +50,7 @@ export interface CapturedTestCommand {
 }
 
 export interface CapturedInstalledProjectConfig {
+  readonly repositoryCheckSetup?: RepositoryCheckSetup;
   readonly repository: ResolvedPath;
   readonly workspaceBase: ResolvedPath;
   readonly revision: string;
@@ -387,7 +390,19 @@ function captureInstalledProject(env: Readonly<Record<string, string | undefined
   if (branchCommit !== revision) throw new RuntimeConfigError("KEEP_BASE_BRANCH", "must name the local branch at exactly KEEP_REVISION");
   const posture = env["KEEP_PROJECT_POSTURE"] ?? "approval-required";
   if (posture !== "autonomous" && posture !== "policy-calibrated" && posture !== "approval-required") throw new RuntimeConfigError("KEEP_PROJECT_POSTURE", "must be autonomous, policy-calibrated, or approval-required");
-  return { repository, workspaceBase, revision, repoRef, baseBranch, posture, testCommand: captureTestCommand(env) };
+  const configuredPaths = env["KEEP_TEST_PREREQUISITES_JSON"];
+  const preparation = env["KEEP_WORKSPACE_PREPARATION"];
+  const toolchain = env["KEEP_WORKSPACE_TOOLCHAIN"];
+  let repositoryCheckSetup: RepositoryCheckSetup | undefined;
+  if (configuredPaths !== undefined || preparation !== undefined || toolchain !== undefined) {
+    const prerequisites = stringArray(configuredPaths ?? "[]", "KEEP_TEST_PREREQUISITES_JSON");
+    try { validatePrerequisitePaths(prerequisites); } catch (error) { throw new RuntimeConfigError("KEEP_TEST_PREREQUISITES_JSON", (error as Error).message); }
+    if ((preparation !== undefined && preparation !== "npm-offline") || ((preparation === undefined) !== (toolchain === undefined)))
+      throw new RuntimeConfigError("KEEP_WORKSPACE_PREPARATION", "requires npm-offline and an explicit KEEP_WORKSPACE_TOOLCHAIN; other recipes/network permissions are unavailable");
+    try { repositoryCheckSetup = { prerequisites, ...(toolchain === undefined ? {} : { preparation: captureWorkspacePreparation(toolchain, repository.root, workspaceBase.root) }) }; }
+    catch { throw new RuntimeConfigError("KEEP_WORKSPACE_TOOLCHAIN", "select an existing absolute Node distribution with bin/node and lib/node_modules/npm/bin/npm-cli.js outside repository/workspaces"); }
+  }
+  return { repository, workspaceBase, revision, repoRef, baseBranch, posture, testCommand: { ...captureTestCommand(env), ...(repositoryCheckSetup?.preparation ? { readOnlyPaths: [repositoryCheckSetup.preparation.toolchainRoot] } : {}) }, ...(repositoryCheckSetup ? { repositoryCheckSetup } : {}) };
 }
 
 function canonicalBaseBranch(value: string, repository: string, context: RuntimeConfigContext): string {
