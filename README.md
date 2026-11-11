@@ -6,7 +6,7 @@ Keep brings project goals, memory, reusable skills and execution records into on
 
 The implementation spans software development, research, knowledge management and content workflows. The most developed installed workflow takes a repository goal through generation, workspace edits, executable checks and review.
 
-**Development source: 0.0.20-preview.1. Latest download: 0.0.19-preview.1, a Linux x64 research preview.** The repository contains runnable workflows, tested components and experimental integration points. Readiness varies by capability; the broader platform remains under development.
+**Source and latest download: 0.0.20-preview.1, a Linux x64 development preview.** The repository contains runnable workflows, tested components and experimental integration points. Readiness varies by capability; the broader platform remains under development.
 
 ## Scope and implementation status
 
@@ -69,7 +69,7 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/integrations/opencl
 
 ## Release status and remaining work
 
-The exact 0.0.19-preview.1 archive has scoped installed checks for unprivileged extraction/startup, both account-free demos, instance/console lifecycle and plugin setup. Its qualification reuses matching component evidence. Historical full-suite results remain attached to the revisions they tested.
+The exact 0.0.20-preview.1 combined archive passed unprivileged extraction/startup, both account-free demos, instance/console lifecycle and authenticated proposal export with offline patch verification. It carries unchanged measured native/engine bytes and their dated evidence. Historical full-suite results remain attached to the revisions they tested.
 
 Exact release identities and qualification:
 
@@ -77,7 +77,7 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/KEEP_RELEASE.md
 
 Completion work includes simpler setup, complete installed consumers across the broader platform, consistent build/CI verification, wider real-task evaluation and operational recovery. Organization deployments also need live identity, credential/signing separation and qualified isolation.
 
-Current source adds saved Codex setup through `keep instance init`, with explicit engine/model/limits and actionable prerequisite failures. Self-improvement now requires executed capability and safety checks before promotion; missing, empty or unusable evaluations hold the candidate. Source CI uses the supported Node range and checks actual test execution. These changes are newer than the downloadable archive.
+Current source adds saved Codex setup through `keep instance init`, with explicit engine/model/limits and actionable prerequisite failures. Self-improvement now requires executed capability and safety checks before promotion; missing, empty or unusable evaluations hold the candidate. Source CI uses the supported Node range and checks actual test execution. The current combined download includes these changes.
 
 Authenticated proposal export packages the retained diff, pinned source, check results, pseudonymous attribution and delivery observations for offline inspection. The source checker refuses a changed revision or dirty checkout.
 

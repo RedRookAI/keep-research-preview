@@ -1,6 +1,6 @@
 # November 11, 2026 source update
 
-Development source is **0.0.20-preview.1**. The latest combined Linux x64 download remains **0.0.19-preview.1**, with its original checksums and qualification record.
+Development source is **0.0.20-preview.1**. The exact combined **0.0.20-preview.1** download now has scoped unprivileged installed checks. The .19 archive retains its original checksums and historical qualification.
 
 ## Working changes
 
@@ -41,3 +41,9 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/docs/local-instance
 Download identities and historical qualification:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/KEEP_RELEASE.md
+
+## Exact installed checkpoint
+
+The final combined archive, SHA-256 `41756eed35c1ef4c7c317ef9b3c86ac15494e370d1471b1e235d3722df55f1b8`, passed the unprivileged consumer at uid65534. It checked both demos, the new export path and exact CLI patch bytes, clean pinned-source verification/refusal, saved instance setup, prepared no-install readiness, paused startup, authenticated console/status and shutdown. The project case used two scripted responses and simulated approval/veto; export added zero model calls. See the exact receipt for carried inputs and unverified conditions.
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/combined-preview-2026-11-11.json

@@ -1,10 +1,10 @@
 # Install and try Keep
 
-The current **0.0.19-preview.1** combined Linux x64 download includes Keep, bundled TypeScript, the generation-only Codex engine and the restricted OpenClaw plugin. Use Linux x64 with the Ubuntu 24.04 library baseline, Node 22.23.3 or later on the Node 22 line, and Git for the repository walkthrough. This installation path needs no npm installer or Rust/C compiler. Review the dated [dependency conditions](dependency-status.md).
+The current **0.0.20-preview.1** combined Linux x64 download includes Keep, bundled TypeScript, the generation-only Codex engine and the restricted OpenClaw plugin. Use Linux x64 with the Ubuntu 24.04 library baseline, Node 22.23.3 or later on the Node 22 line, and Git for the repository walkthrough. This installation path needs no npm installer or Rust/C compiler. Review the dated [dependency conditions](dependency-status.md).
 
 ## Download, verify and run
 
-Download `keep-combined-0.0.19-preview.1-linux-x64.tar.gz` from the [current release](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-20.1) into a new directory you own. Compare its expected checksum with the [release record](../KEEP_RELEASE.md); a checksum alone does not authenticate a publisher.
+Download `keep-combined-0.0.20-preview.1-linux-x64.tar.gz` from the [current release](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-11-11.1) into a new directory you own. Compare its expected checksum with the [release record](../KEEP_RELEASE.md); a checksum alone does not authenticate a publisher.
 
 Set the Node path to an existing supported runtime. This block refuses a missing or mismatched archive before extraction:
 
@@ -12,17 +12,17 @@ Set the Node path to an existing supported runtime. This block refuses a missing
 (
   set -eu
   printf '%s  %s\n' \
-    '42625af9b7be8a493f9309f6822e137f2365c4ae3accfe869750e4be535c53c7' \
-    'keep-combined-0.0.19-preview.1-linux-x64.tar.gz' | sha256sum --check --status
-  tar -xzf keep-combined-0.0.19-preview.1-linux-x64.tar.gz
-  cd keep-0.0.19-preview.1
+    '41756eed35c1ef4c7c317ef9b3c86ac15494e370d1471b1e235d3722df55f1b8' \
+    'keep-combined-0.0.20-preview.1-linux-x64.tar.gz' | sha256sum --check --status
+  tar -xzf keep-combined-0.0.20-preview.1-linux-x64.tar.gz
+  cd keep-0.0.20-preview.1
   export KEEP_NODE_EXECUTABLE=/absolute/path/to/node22/bin/node
   ./bin/keep version
   ./bin/keep demo project
 )
 ```
 
-Expected version: `keep 0.0.19-preview.1`. The walkthrough discloses two scripted local responses and simulated approval/veto. It produces a real separate-workspace edit, passing checks, a diff and retained evidence, with no account request. [What to inspect](portfolio-walkthrough.md).
+Expected version: `keep 0.0.20-preview.1`. The walkthrough discloses two scripted local responses and simulated approval/veto. It produces a real separate-workspace edit, passing checks, a diff and retained evidence, with no account request. [What to inspect](portfolio-walkthrough.md).
 
 For later commands, select the same Node runtime and use the extracted command's absolute path, or add that archive's `bin` directory to your own shell's PATH. The [combined archive guide](combined-preview.md) covers engine selection and native OpenClaw setup. OpenClaw uses its separately supported Node 24 runtime; selecting Keep's Node does not upgrade or reconfigure another installation.
 
@@ -36,7 +36,7 @@ Required-jail work additionally needs the measured Bubblewrap 0.13.0 helper in a
 
 ## Build from source
 
-Current development source is **0.0.20-preview.1**; the latest combined download remains **0.0.19-preview.1**. Saved setup flags and evaluation/CI fixes documented in the November 11 source update require the newer source. The downloadable source snapshot is bound to its exact release commit; later documentation corrections do not rebuild or requalify that archive. See [the release record](../KEEP_RELEASE.md) for source identity and [Contributing](../WORKFLOW.md) for build interfaces and evidence limits.
+Current source and the latest combined download are **0.0.20-preview.1**. The release record names the frozen source commit, carried native/engine inputs and fresh scoped installed checks. The downloadable source snapshot is bound to its exact release commit; later documentation corrections do not rebuild or requalify that archive. See [the release record](../KEEP_RELEASE.md) for source identity and [Contributing](../WORKFLOW.md) for build interfaces and evidence limits.
 
 Contributors need isolated Linux x64 resources, Node.js 22.23.3 or later on Node 22, npm and Git, pinned Rust 1.97.1 with its musl target and host C build tools. Follow [Contributing](../WORKFLOW.md); the build verifies existing pinned tools rather than fetching replacements.
 

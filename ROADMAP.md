@@ -4,11 +4,11 @@ Updated November 11, 2026. This page distinguishes the shipped portfolio preview
 
 ## Current development
 
-Source **0.0.20-preview.1** adds explicit saved Codex setup, requires capability and safety evaluation evidence before self-improvement promotion, and aligns source CI with the supported Node range. The [November 11 maintenance record](docs/maintenance-2026-11-11.md) identifies checks and remaining limits. The last downloadable archive remains **0.0.19-preview.1**.
+Source **0.0.20-preview.1** adds explicit saved Codex setup, requires capability and safety evaluation evidence before self-improvement promotion, and aligns source CI with the supported Node range. The [November 11 maintenance record](docs/maintenance-2026-11-11.md) identifies checks and remaining limits. The exact **0.0.20-preview.1** combined archive passed scoped unprivileged demo, instance and export checks; real positive required-jail preparation and a new genuine owner trial remain open.
 
 ## Available to inspect
 
-The shipped **0.0.19-preview.1** combined Linux x64 download includes Keep, its TypeScript dependency, the generation-only Codex engine, the restricted OpenClaw plugin and the native project console. [Download and run](docs/combined-preview.md) · [Exact artifacts and checks](KEEP_RELEASE.md).
+The shipped **0.0.20-preview.1** combined Linux x64 download includes Keep, its TypeScript dependency, the generation-only Codex engine, the restricted OpenClaw plugin and the native project console. [Download and run](docs/combined-preview.md) · [Exact artifacts and checks](KEEP_RELEASE.md).
 
 The portfolio release milestone is complete at this supported scope:
 
@@ -17,7 +17,7 @@ The portfolio release milestone is complete at this supported scope:
 | Genuine Codex repository work | One historical public issue produced a working patch and passed all three unchanged predefined checks. Native OpenClaw submitted and recovered the job; actual browser approval and exact veto preserved the original source. Codex generation was real; OpenClaw tool selection was scripted and decisions developer-administered. [Inspect the result](docs/genuine-codex-walkthrough.md). |
 | Restricted OpenClaw client | Submission/status use the same Keep runtime, a separate expiring/revocable credential and a durable client journal. The two tools cannot approve or land a proposal. [Setup](integrations/openclaw/README.md). |
 | Review and recovery | The console exposes pending steps, diffs, checks and exact decisions. Scoped installed checks cover refused authority, outage, cancellation without stopping another job, and synthetic protected recovery/upgrade. These are bounded observations, not universal containment or offsite recovery. [Evidence](docs/evidence.md). |
-| Combined installation | The exact archive passed unprivileged extraction, direct startup, both account-free demos, instance/console lifecycle and plugin install/configuration/load. Final runtime comparison explicitly reuses matching component evidence; no new full-suite or live-account release run is claimed. [Qualification](docs/qualification/combined-preview-2026-10-20.json). |
+| Combined installation | The exact .20 archive passed unprivileged extraction/startup, both account-free demos, instance/console lifecycle and authenticated export/offline verification. Native/engine bytes and their dated evidence are carried unchanged. New OpenClaw package loading, a new full suite and live-account trial remain separate. [Qualification](docs/qualification/combined-preview-2026-11-11.json). |
 
 The account-free repository walkthrough uses two scripted responses and simulated decisions. It produces actual workspace edits, checks and review artifacts. The separate recovery experiment checks synthetic local effects. Configured memory, skills, usage admission and backup interfaces retain their own prerequisites and evidence limits.
 

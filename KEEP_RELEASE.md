@@ -1,4 +1,34 @@
-# Keep 0.0.19-preview.1 — combined repository workspace preview
+# Keep 0.0.20-preview.1 — saved setup and portable proposal evidence
+
+The November 11 Linux x64 checkpoint adds explicit saved Codex setup, repository-check readiness, portable retained-proposal export and evaluation admission safeguards. The exact combined archive passed the scoped unprivileged consumer below.
+
+Download:
+
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-11-11.1
+
+Frozen source commit: `08e196f987563f88fb13c4224c0c75c272e1a794`.
+
+Qualification and reproducible consumer script:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/combined-preview-2026-11-11.json
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/installed-preview-2026-11-11.mjs
+
+| Artifact | SHA256 | Bytes |
+|---|---|---|
+| `keep-0.0.20-preview.1.tgz` | `10275d8ca17cbb09b37a79e5e808ed41b2241cf35fd31f68302b9663fc24b651` | 11378616 |
+| `redrookai-openclaw-keep-0.0.20-preview.1.tgz` | `68717b139b732ed1b15c7419deb780f05f5e2c0d109a5ecbf34e087cfc9ddb16` | 12760 |
+| `keep-source-0.0.20-preview.1.tar.gz` | `e8d5522ad84c73b356a0f11281f54d4325f2d88e61e69377d3f60bfeeac05480` | 19161960 |
+| `keep-combined-0.0.20-preview.1-linux-x64.tar.gz` | `41756eed35c1ef4c7c317ef9b3c86ac15494e370d1471b1e235d3722df55f1b8` | 123619463 |
+
+The exact combined SHA-bound archive passed direct extraction/startup as uid65534 in a fresh directory with spaces and an initially empty HOME. Checks covered package import, the two-response scripted project demo, authenticated CLI/console proposal export, exact patch bytes, clean pinned-source verification, wrong-token/digest and dirty-source refusal, retained veto attribution, the24-check synthetic recovery demo, saved instance setup, prepared no-install readiness, paused startup, authenticated console/status and owned shutdown. Export added zero model calls; the entire consumer made zero paid calls.
+
+TypeScript was freshly emitted from the frozen source. Native source/locks/build-tool identities and extracted native/engine bytes match the retained .19 inputs. Their prior evidence remains dated; this checkpoint adds scoped installed TypeScript evidence. Core packaging deliberately bypassed lifecycle scripts to carry those unchanged native inputs. The source snapshot and archive contain the release documentation available at the frozen commit; this external companion records the final identities after packaging.
+
+Positive required-jail offline preparation, a new genuine account/owner trial, new OpenClaw installation/load, a fresh full/native suite and broader platform completion remain unverified. Source CI is configured; GitHub's hosted runs were queued at the last observation. Local and installed results above stand independently.
+
+## Historical 0.0.19-preview.1 record
+
 
 The combined Linux x64 archive includes Keep, bundled TypeScript, the restricted
 OpenClaw plugin and the measured Codex generation.2 engine with source support.

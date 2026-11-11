@@ -26,7 +26,7 @@ keep instance status /absolute/path/to/my-keep
 keep instance start /absolute/path/to/my-keep --paused
 ```
 
-This saves the existing `keep.instance/v1` profile; later start commands reuse it. Explicit options override supported inherited environment settings. Init checks version/login metadata without generating; status reads the saved configuration without invoking the engine. Keep gives corrective options for missing engine/login, invalid model/limits and untrusted required helpers. The [instance guide](local-instance.md) covers helper selection, startup and review controls. The new explicit init options require updated source; the existing 0.0.19-preview.1 archive retains its environment-based setup.
+This saves the existing `keep.instance/v1` profile; later start commands reuse it. Explicit options override supported inherited environment settings. Init checks version/login metadata without generating; status reads the saved configuration without invoking the engine. Keep gives corrective options for missing engine/login, invalid model/limits and untrusted required helpers. The [instance guide](local-instance.md) covers helper selection, startup and review controls. The current 0.0.20-preview.1 archive includes these explicit init options; the historical 0.0.19-preview.1 archive retains its environment-based setup.
 
 Select the measured bundled engine above or explicitly choose another existing native engine. A version response and successful login establish metadata admission; generation compatibility and tool exclusion require their own evidence. No account secret is saved in the instance profile.
 

@@ -1,6 +1,6 @@
 # Restricted OpenClaw client admission
 
-The **0.0.19-preview.1** combined preview includes the personal restricted client and native plugin for Keep's required OpenClaw integration. This page describes Keep's credential and authority boundaries; use the [plugin guide](../integrations/openclaw/README.md) for native configuration. A genuine installed Codex follow-up passed using the measured generation-only engine. That specific engine/profile evidence does not establish unrestricted OpenClaw containment; see [Codex projects](codex-project.md) and [exact release qualification](qualification/combined-preview-2026-10-20.json).
+The **0.0.20-preview.1** combined preview includes the personal restricted client and native plugin for Keep's required OpenClaw integration. This page describes Keep's credential and authority boundaries; use the [plugin guide](../integrations/openclaw/README.md) for native configuration. A genuine installed Codex follow-up passed using the measured generation-only engine. That specific engine/profile evidence does not establish unrestricted OpenClaw containment; see [Codex projects](codex-project.md) and [exact release qualification](qualification/combined-preview-2026-10-20.json).
 
 ## Issue a client
 

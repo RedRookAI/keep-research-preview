@@ -1,5 +1,11 @@
 # Validation evidence
 
+## November 11 installed checkpoint
+
+The .20 combined archive passed a fresh unprivileged direct-archive consumer covering both scripted demos, saved instance setup, prepared no-install readiness, paused lifecycle/console, authenticated proposal export and exact patch verification. Its native/engine bytes match the retained inputs. Required-jail positive preparation, a new genuine owner trial, new OpenClaw package loading and a fresh full/native suite remain open. The exact receipt records the source, archive hashes and limits.
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/combined-preview-2026-11-11.json
+
 ## October 21 portfolio correction and demonstration
 
 The [example export correction](genuine-codex-walkthrough.md#example-export-correction) adds one final newline to the published patch. A fresh exact-upstream reproduction observed the expected one-fail/two-pass baseline, ordinary `git apply` succeeded on the distributed repaired file, and the unchanged checker then passed all three cases. Historical execution receipts and old release bytes are preserved.

@@ -1,0 +1,145 @@
+{
+  "schema": "keep.combined-preview-qualification/v1",
+  "checkedUtc": "2026-11-11 20:48:38 UTC",
+  "version": "0.0.20-preview.1",
+  "source": {
+    "commit": "08e196f987563f88fb13c4224c0c75c272e1a794",
+    "tree": "1c475a1cfca3cb5c71921748dcd23a2213058138",
+    "frozenBeforeExternalReceipts": true
+  },
+  "artifacts": [
+    {
+      "name": "keep-0.0.20-preview.1.tgz",
+      "bytes": 11378616,
+      "sha256": "10275d8ca17cbb09b37a79e5e808ed41b2241cf35fd31f68302b9663fc24b651"
+    },
+    {
+      "name": "redrookai-openclaw-keep-0.0.20-preview.1.tgz",
+      "bytes": 12760,
+      "sha256": "68717b139b732ed1b15c7419deb780f05f5e2c0d109a5ecbf34e087cfc9ddb16"
+    },
+    {
+      "name": "keep-source-0.0.20-preview.1.tar.gz",
+      "bytes": 19161960,
+      "sha256": "e8d5522ad84c73b356a0f11281f54d4325f2d88e61e69377d3f60bfeeac05480"
+    },
+    {
+      "name": "keep-combined-0.0.20-preview.1-linux-x64.tar.gz",
+      "bytes": 123619463,
+      "sha256": "41756eed35c1ef4c7c317ef9b3c86ac15494e370d1471b1e235d3722df55f1b8"
+    }
+  ],
+  "consumer": {
+    "schema": "keep.installed-source-checkpoint/v1",
+    "status": "PASS",
+    "uid": 65534,
+    "version": "0.0.20-preview.1",
+    "archiveSha256": "41756eed35c1ef4c7c317ef9b3c86ac15494e370d1471b1e235d3722df55f1b8",
+    "nodeVersion": "v22.23.4",
+    "nodeSha256": "94efd062ed066c1a0b332e18249859c905e920eeada5df55d24c99b919629a90",
+    "directArchive": true,
+    "installPathContainsSpaces": true,
+    "emptyInitialHome": true,
+    "packageImport": true,
+    "scriptedProjectDemo": {
+      "modelCalls": 2,
+      "paidCalls": 0,
+      "approvalBeforeDispatch": true,
+      "restartWithoutReplay": true,
+      "sourceUnchanged": true,
+      "exactProposalVeto": true,
+      "export": {
+        "status": "PASS",
+        "schema": "keep.proposal-export/v1",
+        "proposalDigest": "6bfb53666f517a136db6e516a62fb4b033531d7e57f524e69056ef572b1e3176",
+        "baseRevision": "b24740e77d9a2a564091611e87afba44afa0d802",
+        "authenticatedHttp": true,
+        "wrongTokenRefused": true,
+        "wrongDigestRefused": true,
+        "installedCliExport": true,
+        "consoleFormLoginAttachment": true,
+        "offlineCleanSourceVerified": true,
+        "exactPatchBytes": true,
+        "changedSourceRefused": true,
+        "retainedSimulatedVetoAttribution": true,
+        "addedModelCalls": 0,
+        "assurance": "unsigned-retained-evidence"
+      }
+    },
+    "recoveryDemo": {
+      "checks": 24,
+      "modelCalls": 0
+    },
+    "instance": {
+      "savedSetup": true,
+      "preparedNoInstall": true,
+      "pausedStart": true,
+      "authenticatedConsole": true,
+      "status": true,
+      "ownedStop": true
+    },
+    "limits": "Unprivileged Linux fixture; scripted model responses and simulated decisions. Required-jail positive preparation, live account, native/full suite and broader platform remain separately qualified."
+  },
+  "harness": {
+    "path": "docs/qualification/installed-preview-2026-11-11.mjs",
+    "sha256": "be11a47813906710bdf3055911120e5dc2de2fc26a8448b7f49497382e096fb2"
+  },
+  "carriedInputs": {
+    "previousSource": "74e12f4235fb30b51179396b94a5dc7c14d2541d",
+    "previousCombinedSha256": "42625af9b7be8a493f9309f6822e137f2365c4ae3accfe869750e4be535c53c7",
+    "nativeSourceTree": "63caf70f400b1cc2f4cc55fdcd4459aa5f3283d0",
+    "nativeBuildToolBlob": "8356e8600ce60ee3aa690dcd69daf9f1509755c0",
+    "nativeArtifacts": [
+      {
+        "name": "keep-native-client",
+        "sha256": "425e5aedca788e3fbb2343bbcb17fa9fdca4a27063ea53224b9d8f9723ad3a99",
+        "bytes": 2218720,
+        "archiveMode": "0755",
+        "buildManifestMode": "0555"
+      },
+      {
+        "name": "keep-native-supervisor",
+        "sha256": "fa3067ba1008fca4f04a02d7040c2faeafc3a123a22a658800268b2cc2ea113d",
+        "bytes": 2419008,
+        "archiveMode": "0755",
+        "buildManifestMode": "0555"
+      },
+      {
+        "name": "keep-native-patch-capture",
+        "sha256": "31b124ba4246f24aabf5292a5e2f7fe20f3f0ec9fe503afa8d8e0827219f8cf0",
+        "bytes": 2313320,
+        "archiveMode": "0755",
+        "buildManifestMode": "0755"
+      }
+    ],
+    "engineSha256": "fdd9a1a3e86fc2213e4c0bd9c9b278080f38d756a5256e3217092a30e48d98c1",
+    "engineSourceSupportSha256": "c319b4804408ec2ed9e90e9a6966f227a0905342ddebbf64538e1d68d079cd60",
+    "modeObservation": "Archive native executable permissions match the retained combined archive. Client/supervisor build manifests declare0555 while packaged archives contain0755; byte identities were independently checked.",
+    "previousEvidence": "docs/qualification/combined-preview-2026-10-20.json"
+  },
+  "packaging": {
+    "core": "npm pack --ignore-scripts --offline",
+    "freshTypeScript": true,
+    "nativeRebuilt": false,
+    "nativeEngineBytesCompared": true,
+    "combinedFiles": 2366,
+    "consumerInstallOrBuild": false,
+    "mountNamespaceFixture": "Private mount namespace binds only an owned public-artifact fixture at /tmp; uid65534 has no contributor checkout access. No shared service or host installation was changed."
+  },
+  "unverified": [
+    "Required-jail positive offline npm preparation (qualified external helper absent)",
+    "New genuine owner/account trial",
+    "Fresh full/native suite",
+    "New OpenClaw package installation/load (JS unchanged; version metadata advanced)",
+    "Independent security and broader platform completion"
+  ],
+  "hostedCI": {
+    "status": "queued at last observation",
+    "runs": [
+      43095357052,
+      43096619647,
+      43097625974
+    ],
+    "successfulHostedResult": false
+  }
+}
