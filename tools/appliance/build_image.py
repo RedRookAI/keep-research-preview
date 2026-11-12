@@ -67,6 +67,18 @@ def background_freeze(script='/root/kc111-freeze.sh', serial_device='/dev/ttyS0'
     return ['bash', '-c', "trap '' HUP; setsid " + shlex.quote(script) + ' >' + shlex.quote(str(serial_device)) + ' 2>&1 </dev/null &']
 
 
+def publish_generated_runtime_support(runtime):
+    # These public additions are created under the builder's private umask077.
+    # Set only their shipping modes; carried native files keep their exact modes.
+    plugin_directory = runtime / 'integrations/openclaw'
+    archives = list(plugin_directory.glob('*.tgz'))
+    if len(archives) != 1:
+        raise RuntimeError('Expected exactly one newly packed OpenClaw plugin')
+    (runtime / 'source-support.tar.gz').chmod(0o444)
+    archives[0].chmod(0o444)
+    plugin_directory.chmod(0o755)
+
+
 def main():
     if os.environ.get('GITHUB_ACTIONS') != 'true' or platform.machine() != 'x86_64' or os.getuid() == 0:
         raise RuntimeError('Use the approved nonroot disposable CI x64 fixture only')
@@ -106,6 +118,7 @@ def main():
     run(['npm', 'pack', '--ignore-scripts', '--pack-destination', str(runtime / 'integrations/openclaw')], cwd=ROOT / 'integrations/openclaw')
     with open(runtime / 'source-support.tar.gz', 'wb') as stream:
         run(['git', 'archive', '--format=tar.gz', 'HEAD'], cwd=ROOT, stdout=stream)
+    publish_generated_runtime_support(runtime)
     if sha(runtime / 'engines/codex-generation.2/bin/codex') != ENGINE_SHA:
         raise RuntimeError('Engine changed')
     run(['tar', '-czf', str(payload / 'runtime.tgz'), '-C', str(runtime), '.'])
