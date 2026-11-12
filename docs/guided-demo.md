@@ -17,6 +17,11 @@ The public demo shares one disposable task. Refreshing or opening a new form ret
 
 ## Observed browser result
 
+Public access was checked in a fresh browser without entering a credential. It opened the start page, and attempts to submit a different task or reach raw APIs were rejected. The access and isolation record is:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/public-demo-access-2026-11-12.json
+
+
 On source `8f4f4da5d55781e4b8f5bb7417957fabb4079165`, version `0.0.30-preview.1`, a fresh certificate-checked Chromium 151 session completed preparation, four checks, approval and evidence download. The rendered diff, exported proposal and actual source commit matched. Both retained jobs completed with no unresolved work.
 
 Version 0.0.30 rejects unreviewed files before staging and checks every candidate commit against the retained proposal. The current submission snapshot records the hosted observation and tested source:

@@ -7,9 +7,11 @@
     "changes": [
       "Proposal approval rejects unreviewed untracked, ignored or staged files before committing",
       "Staged and committed diffs must equal the retained proposal on initial approval and recovery",
-      "Source comments and displayed review wording updated"
+      "Source comments and displayed review wording updated",
+      "Explicit public access for the isolated prepared sample; other instances retain authentication"
     ],
-    "copyEdit": "Public guides and source comments cleaned; execution and authority contracts preserved."
+    "copyEdit": "Public guides and source comments cleaned; execution and authority contracts preserved.",
+    "currentCodeCommit": "f8ecfc2047a44a0e96d689f0e1196748184d03d0"
   },
   "sourceChecks": {
     "run": 43261867359,
@@ -28,10 +30,9 @@
   "hosted": {
     "url": "https://keep-demo.redrook.ai/console",
     "version": "0.0.30-preview.1",
-    "source": "8f4f4da5d55781e4b8f5bb7417957fabb4079165",
+    "source": "f8ecfc2047a44a0e96d689f0e1196748184d03d0",
     "node": "22.23.5",
-    "credentialRequired": true,
-    "credentialDelivery": "Supplied separately; credentials are not published.",
+    "credentialRequired": false,
     "newSourceChangesInstalled": true,
     "workflowObservation": {
       "browser": "Chromium 151.0.7922.34",
@@ -49,9 +50,11 @@
       "settledStopExitCode": 0,
       "unresolvedJobs": 0,
       "paidCalls": 0,
-      "observedAt": "2026-11-12T16:53:04.727Z"
+      "observedAt": "2026-11-12T16:53:04.727Z",
+      "source": "8f4f4da5d55781e4b8f5bb7417957fabb4079165"
     },
-    "reviewerInvitationAtHandoff": {
+    "existingOwnerAndPanelInvitationsPreserved": true,
+    "previousPrivateInvitationAtHandoff": {
       "loginVerified": true,
       "startDemoVisible": true,
       "projects": 0,
@@ -59,7 +62,14 @@
       "automaticReset": false,
       "observedAt": "2026-11-12T16:57:49.998Z"
     },
-    "existingOwnerAndPanelInvitationsPreserved": true
+    "publicAccessObservation": {
+      "source": "f8ecfc2047a44a0e96d689f0e1196748184d03d0",
+      "observedAt": "2026-11-12T17:44:23.269Z",
+      "credentialEntered": false,
+      "startDemoVisible": true,
+      "taskSubmitted": false,
+      "qualification": "https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/public-demo-access-2026-11-12.json"
+    }
   },
   "appliance": {
     "version": "0.0.30-preview.1",

@@ -64,7 +64,7 @@ https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-20
 | Snapshot | Version |
 |---|---|
 | Development source | 0.0.30-preview.1 |
-| Hosted demo | 0.0.30-preview.1, source 8f4f4da |
+| Hosted demo | 0.0.30-preview.1, source f8ecfc2 |
 | Appliance | 0.0.30-preview.1; exact source and image hashes in its manifest |
 
 The hosted demo and appliance retain their frozen code. Fresh live-account generation on the appliance remains untested. The release record contains exact hashes and the historical direct-install archives.

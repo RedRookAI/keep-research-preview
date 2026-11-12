@@ -1,0 +1,59 @@
+{
+  "schema": "keep.public-demo-access/v1",
+  "passed": true,
+  "observedUtc": "2026-11-12T17:44:23.269Z",
+  "source": "f8ecfc2047a44a0e96d689f0e1196748184d03d0",
+  "url": "https://keep-demo.redrook.ai/console",
+  "browser": "151.0.7922.34",
+  "certificateChecked": true,
+  "credentialEntered": false,
+  "startDemoVisible": true,
+  "secureHttpOnlyCookie": true,
+  "taskSubmitted": false,
+  "rawRoutesRefused": [
+    {
+      "path": "/project",
+      "status": 404
+    },
+    {
+      "path": "/projects",
+      "status": 404
+    },
+    {
+      "path": "/worker/status",
+      "status": 404
+    },
+    {
+      "path": "/console/future",
+      "status": 404
+    }
+  ],
+  "cancelRefused": true,
+  "customGoalRefused": true,
+  "sourceChecks": {
+    "emittingCompilation": true,
+    "focusedReviewerSampleTests": 6,
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0
+  },
+  "isolation": {
+    "privateInvitationsPreserved": true,
+    "unprivileged": true,
+    "readOnlyRoot": true,
+    "allCapabilitiesDropped": true,
+    "noNewPrivileges": true,
+    "hostPortBindings": false,
+    "writableHostMounts": false,
+    "sampleStorage": "64MiB private tmpfs",
+    "applicationMemoryMiB": 512,
+    "applicationCpus": 1,
+    "applicationPids": 128,
+    "connectorMemoryMiB": 128,
+    "connectorCpus": 0.25,
+    "logLimitMiBPerContainer": 10,
+    "generationsAtStart": 0,
+    "paidCalls": 0
+  },
+  "scope": "Anonymous access to the controlled shared sample; no working repositories, account credentials or writable host directories are mounted."
+}
