@@ -91,6 +91,7 @@ def main():
         if not found: raise RuntimeError('Browser element missing: ' + selector)
         return found[0]['element-6066-11e4-a52e-4f735466cecf']
     def text(selector): return call('GET', '/element/' + element(selector) + '/text')
+    def content(selector): return call('POST', '/execute/sync', {'script': 'return document.querySelector(arguments[0]).textContent', 'args': [selector]})
     def click(selector): call('POST', '/element/' + element(selector) + '/click', {})
     def attribute(selector, name): return call('GET', '/element/' + element(selector) + '/attribute/' + name)
     def navigate(url): call('POST', '/url', {'url': url})
@@ -102,6 +103,10 @@ def main():
         if current.path == target.path and urllib.parse.parse_qs(current.query).get('projectId') == urllib.parse.parse_qs(target.query).get('projectId'):
             return
         click('a[href^="/console/project?projectId="]')
+    def inspect_diff():
+        if not call('GET', '/element/' + element('.diff') + '/displayed'):
+            click('details:has(.diff) > summary')
+        return content('.diff')
 
     try:
         for _ in range(100):
@@ -156,8 +161,9 @@ def main():
                 if elements('form[action="/console/resume"] button[value=approve]'):
                     click('form[action="/console/resume"] button[value=approve]'); open_action_result(project_url)
                 time.sleep(0.1)
-            for name in changed_files: assert 'diff --git a/' + name + ' b/' + name in text('.diff')
-            assert 'Tests passed' in text('body')
+            observed_diff = inspect_diff()
+            for name in changed_files: assert 'diff --git a/' + name + ' b/' + name in observed_diff
+            assert all(name in content('body') for name in contract['passedTests'])
             digest = attribute('input[name=proposalDigest]', 'value')
             run_id = attribute('form[action="/console/merge"] input[name=runId]', 'value')
             screenshot('checked-' + decision + '.png')
@@ -187,7 +193,8 @@ def main():
             if elements('input[name=token]'):
                 call('POST', '/element/' + element('input[name=token]') + '/value', {'text': token})
                 click('form[action="/console/login"] button'); navigate(project_url)
-            for name in changed_files: assert 'diff --git a/' + name + ' b/' + name in text('.diff')
+            observed_diff = inspect_diff()
+            for name in changed_files: assert 'diff --git a/' + name + ' b/' + name in observed_diff
             assert elements('a[href*="/console/export?"]')
             navigate('http://127.0.0.1:7788/console/new')
             recover = element('form[action="/console/submit"] button')
