@@ -62,9 +62,9 @@ def verify_carried_native(artifact, expected):
 
 
 def background_freeze(script='/root/kc111-freeze.sh', serial_device='/dev/ttyS0'):
-    # /dev/console can select VGA even when kernel messages also reach serial.
-    # This profile explicitly captures QEMU's first serial port, ttyS0.
-    return ['bash', '-c', 'nohup setsid ' + shlex.quote(script) + ' >' + shlex.quote(str(serial_device)) + ' 2>&1 </dev/null &']
+    # Ignore HUP before detaching; the ignored disposition survives exec.
+    # nohup would replace this terminal output with nohup.out, hiding the marker.
+    return ['bash', '-c', "trap '' HUP; setsid " + shlex.quote(script) + ' >' + shlex.quote(str(serial_device)) + ' 2>&1 </dev/null &']
 
 
 def main():

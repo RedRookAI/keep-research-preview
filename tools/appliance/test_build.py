@@ -4,6 +4,8 @@ import importlib.util
 import io
 import os
 from pathlib import Path
+import pty
+import select
 import subprocess
 import tarfile
 import tempfile
@@ -16,6 +18,27 @@ recipe = importlib.util.module_from_spec(spec); spec.loader.exec_module(recipe)
 
 
 class FrozenArchiveModes(unittest.TestCase):
+    def test_background_sanitization_reaches_tty_and_survives_hangup(self):
+        with tempfile.TemporaryDirectory(prefix='freeze tty ') as temporary:
+            root = Path(temporary); script = root / 'freeze step.sh'
+            script.write_text("#!/bin/sh\nkill -HUP \"$$\"\nprintf '%s\\n' 'freeze diagnostic' >&2\nprintf '%s\\n' 'KC111_IMAGE_SANITIZED'\n")
+            script.chmod(0o700)
+            master, slave = pty.openpty()
+            try:
+                subprocess.run(recipe.background_freeze(str(script), os.ttyname(slave)),
+                    cwd=root, check=True, capture_output=True, timeout=5)
+                output = b''; deadline = time.monotonic() + 2
+                while b'KC111_IMAGE_SANITIZED' not in output:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0: break
+                    if select.select([master], [], [], remaining)[0]:
+                        output += os.read(master, 4096)
+                self.assertIn(b'freeze diagnostic', output)
+                self.assertIn(b'KC111_IMAGE_SANITIZED', output)
+                self.assertFalse((root / 'nohup.out').exists())
+            finally:
+                os.close(master); os.close(slave)
+
     def test_background_sanitization_stdout_and_stderr_reach_selected_serial_sink(self):
         with tempfile.TemporaryDirectory(prefix='freeze serial ') as temporary:
             root = Path(temporary); script = root / 'freeze step.sh'; sink = root / 'selected serial sink'
