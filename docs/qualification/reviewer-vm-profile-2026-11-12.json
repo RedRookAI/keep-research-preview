@@ -1,0 +1,63 @@
+{
+  "schema": "keep.kc110-profile-decision/v1",
+  "status": "proved-profile-selected",
+  "candidate": {
+    "guest": "Debian 13 generic amd64 20261111-2659",
+    "url": "https://cloud.debian.org/images/cloud/trixie/20261111-2659/debian-13-generic-amd64-20261111-2659.qcow2",
+    "sha512": "ec8c175e39d59e711798c3a2f22ba11b9aee9bca1887c7e505a800aeffd5d7616099bd0e9fad869efba96100fe09d2c8b49d6d7001d501f0056c556bdc25b605",
+    "format": "qcow2",
+    "hypervisor": "QEMU/KVM",
+    "actualHypervisorVersion": "8.2.2 (Ubuntu 1:8.2.2+ds-0ubuntu1.18)",
+    "machine": "pc-q35-8.2",
+    "vcpus": 2,
+    "ramMiB": 2048,
+    "overlayVirtualGiB": 8,
+    "resourceValuesAreCustomerMinimums": false,
+    "actualGuestVersion": "Debian13.7",
+    "actualGuestKernel": "6.12.116+deb13-amd64",
+    "qemuSystemX86_64Sha256": "8a35ccba41582fc6c38b9df85fc9e35fa1d42f414d2d7d8090ee9b2f5e7c0854",
+    "qemuImgSha256": "634320b91165669917123e8e79cce1c4d00cee0a4aa4d662d7c0a8186479b3fb"
+  },
+  "proofSubjects": {
+    "archiveSha256": "7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca",
+    "node": "22.23.4 linux-x64",
+    "nodeExecutableSha256": "94efd062ed066c1a0b332e18249859c905e920eeada5df55d24c99b919629a90",
+    "helperPath": "/opt/keep/bubblewrap/0.13.0/bwrap",
+    "helperSha256": "e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f",
+    "engineVersion": "codex-cli 0.163.0-keep-generation.2",
+    "engineSha256": "fdd9a1a3e86fc2213e4c0bd9c9b278080f38d756a5256e3217092a30e48d98c1",
+    "nodeArchiveSha256": "1805bcd35e6815559bd2eb97db438d3fdb0eb3a5e6a977b7c1badca76337e9ce"
+  },
+  "sameGuestEngineAndRequiredJailProved": true,
+  "browserAccessProved": false,
+  "otherHypervisorsProved": false,
+  "arm64Proved": false,
+  "shippingImageBuilt": false,
+  "modelCalls": 0,
+  "proofRunId": "43132851687",
+  "proofJobId": "130900961131",
+  "proofBootId": "8016e7ab-f754-4342-aafd-278889ffd3ec",
+  "appUid": 1000,
+  "hostVmmUid": 1001,
+  "guestPolicy": {
+    "apparmorEnabled": "Y",
+    "apparmorUsernsRestriction": null,
+    "apparmorCurrent": "unconfined",
+    "unprivilegedUsernsClone": "1",
+    "maxUserNamespaces": "7717",
+    "policyChanged": false
+  },
+  "storageObservation": {
+    "fixtureLogicalBytesAtCompletion": 1817399935,
+    "fixtureAllocatedBytesAtCompletion": 1817403392,
+    "includesDockerImageOrPeak": false
+  },
+  "evidence": {
+    "jobLog": "kc110-proof.log",
+    "jobLogSha256": "6ce37f423f8948a6b3e4d905183a50428b5cf44713ab3ed9cf19e87ca4e94a99",
+    "records": "kc110-proof-records.json",
+    "recordsSha256": "7580f9bcdff67c9dcc3f1a6380c64cd8365fd5ed1fb324f5cfeca352a06a15bc",
+    "publicRunUrl": "https://github.com/RedRookAI/keep-research-preview/actions/runs/43132851687"
+  },
+  "scope": "Minimal same-guest engine metadata/login-state and required sandbox proof; not a shipped image or live generation."
+}

@@ -4,6 +4,14 @@ The foreground sample gives one assigned reviewer a separate Keep instance with 
 
 Each invitation needs its own process, new private root, credential and HTTPS origin. These are operator-assigned instances. The launcher does not allocate visitors or create hosting, DNS, certificates or services.
 
+The deployed Red Rook invitations passed actual public HTTPS browser qualification on November 12, 2026. Ask the operator for the credential assigned to your instance, then open its sign-in page:
+
+https://keep.redrook.ai/console
+
+https://keep-b.redrook.ai/console
+
+The qualification report and exact source/profile receipts are in `qualification/reviewer-handover-2026-11-12.md`. This sample demonstrates the real workflow with scripted responses; personal live-account setup is a separate path.
+
 ## Prepare an instance
 
 Use a compiled checkout with Node and Git already available. The launcher refuses an existing instance root. Supply the operator-selected canonical HTTPS origin and an optional private listener port; zero selects an available port.

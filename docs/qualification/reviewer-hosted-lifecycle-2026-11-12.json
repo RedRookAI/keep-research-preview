@@ -1,0 +1,56 @@
+{
+  "schema": "keep.hosted-reviewer-lifecycle/v1",
+  "status": "PASS",
+  "source": "fe14178df5ca1726ed13172236fe14fc181b4eef",
+  "slots": [
+    {
+      "slot": "a",
+      "retirementStatus": "PASS",
+      "stateRetained": true,
+      "unresolvedOnStop": [],
+      "otherAuthenticatedBefore": true,
+      "otherAuthenticatedAfter": true,
+      "freshInvitation": {
+        "schema": "keep.fresh-reviewer-invitation/v1",
+        "status": "PASS",
+        "slot": "a",
+        "origin": "https://keep.redrook.ai",
+        "source": "fe14178df5ca1726ed13172236fe14fc181b4eef",
+        "browser": "151.0.7922.34",
+        "publicHttps": true,
+        "oldCredentialRefused": true,
+        "oldCookieRefused": true,
+        "freshCredentialWorks": true,
+        "projects": 0,
+        "generationCalls": 0,
+        "priorQualificationStateRetained": true
+      }
+    },
+    {
+      "slot": "b",
+      "retirementStatus": "PASS",
+      "stateRetained": true,
+      "unresolvedOnStop": [],
+      "otherAuthenticatedBefore": true,
+      "otherAuthenticatedAfter": true,
+      "freshInvitation": {
+        "schema": "keep.fresh-reviewer-invitation/v1",
+        "status": "PASS",
+        "slot": "b",
+        "origin": "https://keep-b.redrook.ai",
+        "source": "fe14178df5ca1726ed13172236fe14fc181b4eef",
+        "browser": "151.0.7922.34",
+        "publicHttps": true,
+        "oldCredentialRefused": true,
+        "oldCookieRefused": true,
+        "freshCredentialWorks": true,
+        "projects": 0,
+        "generationCalls": 0,
+        "priorQualificationStateRetained": true
+      }
+    }
+  ],
+  "automaticReset": false,
+  "sharedServicesChanged": false,
+  "mainSiteDnsChanged": false
+}

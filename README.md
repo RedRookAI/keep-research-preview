@@ -16,6 +16,12 @@ Browser submission and its actual Chromium walkthrough:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/browser-project.md
 
+An interactive hosted sample is available through operator-assigned invitations. It uses two scripted responses, real workspace edits and executable checks, with no AI account or paid calls. Public HTTPS and cross-instance refusal passed in two clean browser sessions. The selected Debian 13 x64 VM profile also passed the bundled-engine and required-sandbox checks together; the downloadable appliance is still being qualified.
+
+https://keep.redrook.ai/console
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/reviewer-handover-2026-11-12.md
+
 ## Scope and implementation status
 
 | Area | Implemented scope | Current status |

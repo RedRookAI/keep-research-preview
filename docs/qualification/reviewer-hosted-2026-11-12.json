@@ -1,0 +1,70 @@
+{
+  "schema": "keep.hosted-reviewer-qualification/v1",
+  "status": "PASS",
+  "source": "fe14178df5ca1726ed13172236fe14fc181b4eef",
+  "version": "0.0.24-preview.1",
+  "browser": "151.0.7922.34",
+  "node": "v22.23.4",
+  "actualPublicHttps": true,
+  "ignoreHttpsErrors": false,
+  "scriptedResponsesPerSlot": 2,
+  "paidCalls": 0,
+  "stages": [
+    "actual-https-tls-clean-logins",
+    "separate-secure-host-only-cookies",
+    "sample-only-admission-before-effects",
+    "raw-apis-denied-with-known-invitation",
+    "cross-slot-project-job-decision-cancel-export-refused",
+    "two-actual-browser-submissions-and-step-approvals",
+    "real-workspace-edits-and-two-unchanged-checks-per-slot",
+    "fresh-form-recovers-same-jobs",
+    "two-exact-vetoes-and-verified-browser-downloads",
+    "original-sources-preserved"
+  ],
+  "slots": [
+    {
+      "slot": "a",
+      "origin": "https://keep.redrook.ai",
+      "tls": {
+        "issuer": "YE1",
+        "protocol": "TLS 1.3",
+        "subjectName": "redrook.ai",
+        "validFrom": 1793694817,
+        "validTo": 1801470816
+      },
+      "projectId": "prj_53cb69ee62ee6797f734285e6f17cc33",
+      "runId": "9c0217bd-e330-46a9-913d-10f0af050cb8",
+      "proposalDigest": "88fdcb370d84f5296c2172a3332aac7d110274260ea58d42a9328b20459bbc8c",
+      "retainedJobIds": [
+        "2a848aa5-4bdf-41d0-80d3-775c3fc63aae",
+        "9c0217bd-e330-46a9-913d-10f0af050cb8"
+      ],
+      "exportSha256": "23c77ca50b92064ab1b6e98e1efc32b0bcd99f20123125ef9da0338315a97dea",
+      "sourceUnchanged": true,
+      "workspaceFixed": true,
+      "decision": "veto"
+    },
+    {
+      "slot": "b",
+      "origin": "https://keep-b.redrook.ai",
+      "tls": {
+        "issuer": "YE1",
+        "protocol": "TLS 1.3",
+        "subjectName": "redrook.ai",
+        "validFrom": 1793694817,
+        "validTo": 1801470816
+      },
+      "projectId": "prj_1e7c73978d18eea7e1ec790b1c780d37",
+      "runId": "1739201f-d094-46dc-b60d-5b95df0af1b8",
+      "proposalDigest": "88fdcb370d84f5296c2172a3332aac7d110274260ea58d42a9328b20459bbc8c",
+      "retainedJobIds": [
+        "0afedb50-8be0-41ec-a24a-a84bf3da4b0a",
+        "1739201f-d094-46dc-b60d-5b95df0af1b8"
+      ],
+      "exportSha256": "b5ea1efff7e135046e2383ede88501fd76e3b5991c10262e0f44d5d9f092beff",
+      "sourceUnchanged": true,
+      "workspaceFixed": true,
+      "decision": "veto"
+    }
+  ]
+}
