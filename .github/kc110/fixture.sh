@@ -13,8 +13,16 @@ http_pid= qemu_pid= helper_container=
 cleanup() {
   result=$?
   trap - EXIT
+  # Allow the owned launcher to register its actual nonroot PID, even if startup
+  # failed immediately. Never block on sudo's possible root monitor during exit.
+  if test -n "$qemu_pid"; then
+    for attempt in {1..50}; do
+      test -f "$fixture/qemu.pid" && break
+      test -d "/proc/$qemu_pid" || break
+      sleep 0.1
+    done
+  fi
   if test -f "$fixture/qemu.pid"; then kill "$(cat "$fixture/qemu.pid")" 2>/dev/null || true; fi
-  if test -n "$qemu_pid"; then wait "$qemu_pid" 2>/dev/null || true; fi
   if test -n "$http_pid"; then kill "$http_pid" 2>/dev/null || true; wait "$http_pid" 2>/dev/null || true; fi
   if test -n "$helper_container"; then docker rm "$helper_container" >/dev/null 2>&1 || true; fi
   if test "$result" != 0; then
@@ -61,6 +69,7 @@ base=debian-13-generic-amd64-20261111-2659.qcow2
 base_url=https://cloud.debian.org/images/cloud/trixie/20261111-2659
 curl --fail --location --silent --show-error "$base_url/$base" -o "$fixture/$base"
 printf '%s\n' "ec8c175e39d59e711798c3a2f22ba11b9aee9bca1887c7e505a800aeffd5d7616099bd0e9fad869efba96100fe09d2c8b49d6d7001d501f0056c556bdc25b605  $fixture/$base" | sha512sum -c -
+chmod 0444 "$fixture/$base"
 curl --fail --location --silent --show-error "$base_url/SHA512SUMS" -o "$fixture/base-SHA512SUMS"
 curl --fail --location --silent --show-error "$base_url/${base%.qcow2}.json" -o "$fixture/base.json"
 curl --fail --location --silent --show-error https://github.com/RedRookAI/keep-research-preview/releases/download/keep-preview-2026-11-11.2/keep-combined-0.0.21-preview.1-linux-x64.tar.gz -o "$payload/keep.tar.gz"
@@ -69,6 +78,7 @@ curl --fail --location --silent --show-error https://nodejs.org/dist/v22.23.4/SH
 curl --fail --location --silent --show-error https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-x64.tar.xz -o "$payload/node-v22.23.4-linux-x64.tar.xz"
 node_archive_sha=$(awk '$2=="node-v22.23.4-linux-x64.tar.xz" {print $1}' "$fixture/node-SHASUMS256.txt")
 test "${#node_archive_sha}" = 64
+test "$node_archive_sha" = 1805bcd35e6815559bd2eb97db438d3fdb0eb3a5e6a977b7c1badca76337e9ce
 printf '%s\n' "$node_archive_sha  $payload/node-v22.23.4-linux-x64.tar.xz" | sha256sum -c -
 cp .github/kc110/guest-proof.mjs "$payload/guest-proof.mjs"
 ssh-keygen -q -t ed25519 -N '' -f "$fixture/guest-key"
@@ -132,13 +142,8 @@ sudo setpriv --reuid "$runner_uid" --regid "$runner_gid" --groups "$runner_group
   -smbios type=1,serial=ds=nocloud\;s=http://10.0.2.2:8765/ >"$fixture/qemu.log" 2>&1 &
 qemu_pid=$!
 export KC110_QEMU_PID="$qemu_pid"
-# Readiness polling is a technical boot timeout, not a new autonomous task budget.
-timeout 600 bash -c '
-  until ssh -i "$KC110_FIXTURE/guest-key" -o UserKnownHostsFile="$KC110_FIXTURE/known-hosts" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 -o BatchMode=yes -p 2222 keep@127.0.0.1 'test -f /opt/keep/provision.ok || test -f /opt/keep/provision.failed' 2>"$KC110_FIXTURE/ssh-readiness.log"; do
-    kill -0 "$KC110_QEMU_PID" || exit 1
-    sleep 2
-  done
-'
+# Keep the remote expression in a real script, not nested shell command strings.
+timeout 600 bash .github/kc110/await-guest.sh
 ssh_options=(-i "$fixture/guest-key" -o "UserKnownHostsFile=$fixture/known-hosts" -o StrictHostKeyChecking=yes -o ConnectTimeout=5 -o BatchMode=yes -p 2222)
 actual_qemu_pid=$(cat "$fixture/qemu.pid")
 ps -o pid,uid,gid,supgid,args -p "$actual_qemu_pid"
@@ -155,5 +160,7 @@ proofs=[json.loads(x.split('=',1)[1]) for x in lines if x.startswith('KC110_GUES
 assert len(proofs)==1 and proofs[0]['passed'] is True
 print('KC110_FINAL_JSON='+json.dumps({'schema':'keep.kc110-proof-result/v1','passed':True,'runId':os.environ['GITHUB_RUN_ID'],
 'source':os.environ['GITHUB_SHA'],'bootId':proofs[0]['bootId'],'uid':proofs[0]['uid'],'guestBooted':True,
-'sameGuestEngineAndRequiredJail':True,'guestPolicyChanged':False,'modelCalls':0,'peakFixtureBytes':sum(p.stat().st_size for p in f.rglob('*') if p.is_file())},separators=(',',':')))
+'sameGuestEngineAndRequiredJail':True,'guestPolicyChanged':False,'modelCalls':0,
+'fixtureLogicalBytesAtCompletion':sum(p.stat().st_size for p in f.rglob('*') if p.is_file()),
+'fixtureAllocatedBytesAtCompletion':sum(p.stat().st_blocks*512 for p in f.rglob('*') if p.is_file())},separators=(',',':')))
 PY
