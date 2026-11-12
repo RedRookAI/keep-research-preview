@@ -167,6 +167,15 @@ class Repack(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'Guest code/package differs'): self.run_repack()
         self.assertFalse(self.output.exists())
 
+    def test_new_sample_toolchain_helper_cannot_be_repacked_into_unchanged_image(self):
+        helper = self.repo / 'tools/reviewer_node_toolchain.mjs'
+        helper.write_text('new guest toolchain binding')
+        self.commit('guest helper added')
+        with patch.dict(os.environ, {'GITHUB_SHA': self.head()}):
+            with self.assertRaisesRegex(RuntimeError, 'Guest code/package differs'):
+                self.run_repack()
+        self.assertFalse(self.output.exists())
+
     def test_original_link_member_is_refused(self):
         self.make_archive(link=True); self.refresh_archive_identity()
         with self.assertRaisesRegex(RuntimeError, 'member type'): self.run_repack()

@@ -5,6 +5,9 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, lstatSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sampleNodeToolchain } from './reviewer_node_toolchain.mjs';
+
+const node = sampleNodeToolchain();
 
 const childMode = process.argv[2] === '--private-child';
 const args = process.argv.slice(childMode ? 3 : 2);
@@ -18,8 +21,8 @@ if (!childMode) {
   const s = lstatSync(root);
   if (!s.isDirectory() || s.isSymbolicLink() || s.uid !== process.getuid() || (s.mode & 0o077)) throw new Error('Sample root must be private and owned');
   for (const name of ['home', 'tmp']) if (!existsSync(join(root, name))) mkdirSync(join(root, name), { mode: 0o700 });
-  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), '--private-child', root, String(port)], {
-    cwd: root, stdio: 'inherit', env: { PATH: '/opt/keep/node-v22.23.4-linux-x64/bin:/usr/bin:/bin', HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'),
+  const child = spawn(node.executable, [fileURLToPath(import.meta.url), '--private-child', root, String(port)], {
+    cwd: root, stdio: 'inherit', env: { PATH: node.bin + ':/usr/bin:/bin', HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'),
       GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null', GIT_TERMINAL_PROMPT: '0' },
   });
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));
@@ -34,7 +37,7 @@ if (!childMode) {
   const tokenFile = join(root, 'invitation-token');
   if (resume && !existsSync(tokenFile)) throw new Error('Existing fixture lacks credential; inspect retained state');
   const fixture = createBrowserProjectFixture(root, { localAppliance: true, resume, requiredJail: {
-    executable: '/opt/keep/bubblewrap/0.13.0/bwrap', nodeToolchain: '/opt/keep/node-v22.23.4-linux-x64' } });
+    executable: '/opt/keep/bubblewrap/0.13.0/bwrap', nodeToolchain: node.root } });
   const token = resume ? readFileSync(tokenFile, 'utf8').trim() : randomBytes(32).toString('hex');
   if (!/^[0-9a-f]{64}$/u.test(token)) throw new Error('Invalid existing sample credential');
   if (!resume) writeFileSync(tokenFile, token + '\n', { flag: 'wx', mode: 0o600 });
