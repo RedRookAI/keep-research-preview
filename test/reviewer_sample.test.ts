@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { composeKeep } from "../src/compose.js";
 import { createBrowserProjectFixture, SAMPLE_GOAL } from "../src/demo/browser_project_fixture.js";
-import { SAMPLE_NOTICE, reviewerSampleNotice } from "../src/review/reviewer_sample.js";
+import { SAMPLE_NOTICE, SAMPLE_FILE, reviewerSampleNotice } from "../src/review/reviewer_sample.js";
 import { startGatewayServer, type GatewayServerHandle, type GatewayServerOptions } from "../src/gateway/http_gateway.js";
 
 function http(server: GatewayServerHandle, path: string, options: { method?: string; headers?: Record<string, string>; form?: Record<string, string> } = {}): Promise<{ status: number; headers: import("node:http").IncomingHttpHeaders; body: string }> {
@@ -39,9 +39,9 @@ test("local appliance resume retains the same source and refuses changed source 
     assert.equal(resumed.baseRevision, first.baseRevision);
     assert.equal(resumed.source, first.source);
     assert.equal(resumed.generations(), 0);
-    writeFileSync(join(first.source, 'calc.mjs'), 'owner changed this\n');
+    writeFileSync(join(first.source, SAMPLE_FILE), 'owner changed this\n');
     assert.throws(() => createBrowserProjectFixture(root, { localAppliance: true, resume: true }), /sample source changed/);
-    assert.equal(readFileSync(join(first.source, 'calc.mjs'), 'utf8'), 'owner changed this\n');
+    assert.equal(readFileSync(join(first.source, SAMPLE_FILE), 'utf8'), 'owner changed this\n');
     assert.throws(() => createBrowserProjectFixture(root, { resume: true }), /must be explicit/);
   } finally {
     rmSync(root, { recursive: true, force: true }); rmSync(hosted, { recursive: true, force: true });
@@ -81,7 +81,7 @@ test("simulated TLS sample ingress keeps exact Host/Origin, Secure cookie and fi
     assert.equal((await http(servers[0]!, "/console", { headers: { "x-forwarded-host": "a.sample.invalid", "x-forwarded-proto": "https" } })).status, 403, "forwarded headers cannot substitute for Host");
     assert.equal((await call(0, "/", { headers: { host: "foreign.invalid", "x-forwarded-host": "a.sample.invalid" } })).status, 403);
     assert.equal((await call(0, "/")).status, 303);
-    assert.match((await call(0, "/console")).body, /two scripted responses/);
+    assert.match((await call(0, "/console")).body, /two authored responses/);
     const login = async (index: number, token = tokens[index]!, origin = origins[index]!) => call(index, "/console/login", { method: "POST", headers: { origin }, form: { token } });
     assert.equal((await login(0, tokens[0], "https://foreign.invalid")).status, 403);
     assert.equal((await login(0, tokens[0], "null")).status, 403);
@@ -94,7 +94,7 @@ test("simulated TLS sample ingress keeps exact Host/Origin, Secure cookie and fi
       assert.ok(!signed.headers["set-cookie"]![0]!.includes("Domain="));
       cookies.push(signed.headers["set-cookie"]![0]!.split(";")[0]!);
       const form = await call(i, "/console/new?submissionKey=initial-form-key-1234", { headers: { cookie: cookies[i]! } });
-      assert.match(form.body, /readonly/); assert.ok(form.body.includes(SAMPLE_GOAL)); assert.ok(form.body.includes(SAMPLE_NOTICE));
+      assert.match(form.body, /Start demo/); assert.doesNotMatch(form.body, /<textarea/); assert.ok(form.body.includes(SAMPLE_GOAL)); assert.ok(form.body.includes(SAMPLE_NOTICE));
       assert.ok(!form.body.includes(tokens[i]!)); csrf.push(input(form.body, "csrf"));
     }
     assert.notEqual(csrf[0], csrf[1]);

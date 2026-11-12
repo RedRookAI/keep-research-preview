@@ -57,7 +57,7 @@ import { ProjectSubmissionConflictError } from "../session/project_job_journal.j
 import { ProjectSubmissionUncertainError, type ProjectJobContext } from "../session/project_runtime.js";
 import { handleReviewRequest, type IdentityLayer } from "../review/review_web.js";
 import { handleProjectConsole } from "../review/project_console.js";
-import { isReviewerSample, reviewerSampleNotice, SAMPLE_GOAL, SAMPLE_SUBMISSION_KEY } from "../review/reviewer_sample.js";
+import { isReviewerSample, reviewerSampleNotice, reviewerSampleWorkspaceOnly, SAMPLE_GOAL, SAMPLE_SUBMISSION_KEY } from "../review/reviewer_sample.js";
 import { assertRestrictedCurrent, assertRestrictedHuman, matchesRestrictedBearer, readRestrictedClientProfile, restrictedClientPrincipal, restrictedProjectStatus, type RestrictedClientProfile } from "./restricted_client.js";
 import { SessionCapacityError, type SessionReservation, type SessionAuthorityRef } from "../identity/session_store.js";
 
@@ -807,6 +807,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     if (app.projectRuntime === undefined) return json(503, { error: "durable project runtime not available" });
     const b = parseBody(req.body);
     if (b === null) return json(400, { error: "invalid json" });
+    if (b["background"] !== undefined && typeof b["background"] !== "boolean") return json(400, { error: "background must be boolean" });
     const approval = b["approval"] as Record<string, unknown> | undefined;
     const policy = b["policy"] as Record<string, unknown> | undefined;
     const reconciliation = b["reconciliation"] as Record<string, unknown> | undefined;
@@ -869,7 +870,15 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     let run;
     try {
       memoryForResume(); // Refuse before the new resume job is admitted.
-      run = await app.projectRuntime.submit(project.id, 1, async context => {
+      if (b["background"] === true) {
+        const resumes = app.projectRuntime.retainedJobs(new Set([project.id])).filter(job => job.label === "autonomy project resume");
+        if (resumes.some(job => job.state === "queued" || job.state === "running")) return json(409, { error: "resume is already queued or running; inspect the retained job" });
+        if (["failed", "stopped", "reconciliation-required"].includes(resumes.at(-1)?.state ?? "")) return json(409, { error: "the previous resume requires owner inspection; retain its job and do not retry automatically" });
+        const checkpoint = app.projectManager.session(project.id).lastCheckpoint();
+        if (input.approval && (checkpoint?.wait?.kind !== "approval" || checkpoint.wait.decisionId !== input.approval.decisionId))
+          return json(409, { error: "this approval is no longer pending; inspect current state" });
+      }
+      const tracked = app.projectRuntime.submitTracked(project.id, 1, async context => {
         const memoryContext = memoryForResume(); // Fresh original principal and source fence at execution.
         if (delegatedDecision) {
           app.spine.stage({ type: "identity.action", actor: "openclaw-client", payload: delegatedDecision });
@@ -879,6 +888,11 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
         return app.autonomyLoop!.resumeManagedProject(project.id, runId, input, { signal: context.signal, trackActivity: context.trackActivity,
           ...(memoryContext === undefined ? {} : { memoryContext }) });
       }, "autonomy project resume");
+      if (b["background"] === true) {
+        void tracked.completion.catch(() => undefined);
+        return json(202, { projectId: project.id, runId, jobId: tracked.jobId, status: "accepted" });
+      }
+      run = await tracked.completion;
     } catch (error) {
       if (error instanceof ProjectFinalizationError) return projectFinalizationFailure(project.id, error);
       if (error instanceof TaskMemoryUnavailableError || error instanceof NativeProjectCommandUnavailableError) return json(409, { error: error.message });
@@ -1688,7 +1702,7 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
             return handleGatewayRequest(app, {
             method, path, query, body: body === undefined ? "" : JSON.stringify(body), headers: { authorization: `Bearer ${token}` },
           }, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(opts.identity ? { principalFor: () => principal, ...(sessionAuthority ? { sessionAuthority } : {}) } : {}) });
-          }, { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline"), cancel: can(app.authorization, principal, "change.solve"), submit: can(app.authorization, principal, "change.solve") }, opts.reviewerSample ? { goal: SAMPLE_GOAL, notice: reviewerSampleNotice(app) } : undefined),
+          }, { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline"), cancel: can(app.authorization, principal, "change.solve"), submit: can(app.authorization, principal, "change.solve") }, opts.reviewerSample ? { goal: SAMPLE_GOAL, notice: reviewerSampleNotice(app), workspaceOnly: reviewerSampleWorkspaceOnly(app) } : undefined),
         });
       } else resp = await handleGatewayRequest(app, greq, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(workerControl ? { workerControl } : {}), ...(opts.principalFor ? { principalFor: opts.principalFor } : {}), ...(opts.identity ? { identity: opts.identity } : {}) });
       res.writeHead(resp.status, { ...resp.headers });

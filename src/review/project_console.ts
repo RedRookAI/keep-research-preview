@@ -3,6 +3,7 @@
 import type { WebRequest, WebResponse } from "./review_web.js";
 import type { GatewayResponse } from "../gateway/http_gateway.js";
 import { randomUUID } from "node:crypto";
+import { SAMPLE_SUBMISSION_KEY, SAMPLE_CHECK_NAMES } from "./reviewer_sample.js";
 
 export type ConsoleApi = (method: "GET" | "POST", path: string, query?: Record<string, string>, body?: Record<string, unknown>) => Promise<GatewayResponse>;
 export interface ConsolePermissions { readonly approve: boolean; readonly decline: boolean; readonly cancel?: boolean; readonly submit?: boolean; }
@@ -29,8 +30,8 @@ function diffView(diff: string): string {
   return `${files.length ? `<ul class="files">${files.map(file => `<li>${esc(file)}</li>`).join("")}</ul>` : ""}<pre class="diff">${diff.split("\n").map(line => `<span class="${line.startsWith("+") ? "added" : line.startsWith("-") ? "removed" : line.startsWith("@@") ? "hunk" : "context"}">${esc(line)}\n</span>`).join("")}</pre>`;
 }
 const security = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "same-origin", "Content-Security-Policy": "default-src 'none'; style-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" };
-function page(title: string, content: string, status = 200): WebResponse {
-  return { status, headers: { ...security, "Content-Type": "text/html; charset=utf-8" }, body: `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · Keep</title><link rel="stylesheet" href="/console/style.css"></head><body><header><a class="brand" href="/console">KEEP<span>Workspace control</span></a><nav><a href="/console">Projects</a></nav></header><main>${content}</main><footer>Keep · Local project console · State and evidence from your running instance</footer></body></html>` };
+function page(title: string, content: string, status = 200, refresh = false): WebResponse {
+  return { status, headers: { ...security, "Content-Type": "text/html; charset=utf-8" }, body: `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · Keep</title>${refresh ? '<meta http-equiv="refresh" content="2">' : ""}<link rel="stylesheet" href="/console/style.css"></head><body><header><a class="brand" href="/console">KEEP<span>Workspace control</span></a><nav><a href="/console">Projects</a></nav></header><main>${content}</main><footer>Keep · Local project console · State and evidence from your running instance</footer></body></html>` };
 }
 function failure(response: GatewayResponse): WebResponse {
   let message = "The operation could not be confirmed. Inspect current state before retrying.";
@@ -54,11 +55,89 @@ function workerNotice(list: Row): string {
   return runtime["paused"] === true ? '<p class="notice">Worker dispatch is paused. Jobs remain queued until the owner resumes the worker. Refresh to inspect its state.</p>' : "";
 }
 
-export interface ConsoleSample { readonly goal: string; readonly notice: string; }
+export interface ConsoleSample { readonly goal: string; readonly notice: string; readonly workspaceOnly?: boolean; }
+function demoSteps(current: number): string {
+  return `<ol class="demo-route" aria-label="Demo stages">${["Start", "Prepare the fix", "Review", "Decision"].map((step, i) => `<li${i + 1 === current ? ' aria-current="step"' : ""}>${step}</li>`).join("")}</ol>`;
+}
+const demoScope = '<p class="scope">This sample remembers processed delivery IDs in memory. It demonstrates duplicate handling within one running state. Production exactly-once delivery is outside this demonstration.</p>';
+function sampleLanding(sample: ConsoleSample, list: Row, csrf: string, permissions: ConsolePermissions, suppliedKey?: string): string {
+  const retained = rows(list["projects"])[0];
+  const key = suppliedKey && submissionKeyValid(suppliedKey) ? suppliedKey : SAMPLE_SUBMISSION_KEY;
+  const form = permissions.submit ? `<form method="post" action="/console/submit">${hidden("csrf", csrf)}${hidden("goal", sample.goal)}${hidden("idempotencyKey", key)}<button>${retained ? "Recover demo" : "Start demo"}</button></form>` : '<p class="notice">Demo submission is held by the current owner permissions.</p>';
+  return `${demoSteps(1)}<p class="eyebrow">A guided repository task</p><h1>Count each delivery once.</h1><p class="intro">Apps sometimes send the same event again. This sample counts a repeated delivery twice. Keep will prepare a small fix and run the checks. You decide whether to approve or veto the proposal.</p><section><h2>The behavior we want</h2><div class="demo-example"><article><span>Delivery A arrives</span><strong>Count: 1</strong></article><article><span>Delivery A arrives again</span><strong>Count stays: 1</strong></article><article><span>A different delivery B arrives</span><strong>Count: 2</strong></article></div><p>These are the task's expected results. The next steps will run the code and show the actual checks.</p>${workerNotice(list)}${retained ? `<div class="demo-actions"><a class="button" href="${esc(link(retained["id"]))}">Continue demo</a></div><p>Your task is retained. Return to its current result and decision.</p><details><summary>Recover the existing submission</summary><p>This recovers the same demo. It starts no additional response pair.</p>${form}</details>` : `<div class="demo-actions">${form}</div><p>Start opens the task. You'll approve preparation next.</p>`}</section>${demoScope}<details><summary>Task and technical scope</summary><p>${esc(sample.goal)}</p><p>Keep uses the prepared synthetic repository, authored responses and fixed executable checks. The job and exact proposal are retained for review.</p></details>`;
+}
+function sampleResultCopy(result: Row, sample: ConsoleSample): { title: string; message: string } {
+  if (result["decision"] === "veto" && result["status"] === "refused") return { title: "Proposal vetoed.", message: "Keep recorded your veto of this exact proposal. The generated workspace and check results remain available as evidence; the veto does not apply the change to the source repository." };
+  if (result["status"] === "merged") {
+    const sourceStatus = row(result["sourceDelivery"])["status"];
+    if (sourceStatus === "landed") return { title: "Change applied to the demo source.", message: "Keep recorded the exact proposal's landing in this synthetic source repository. Download the diff, checks and decision below." };
+    if (sample.workspaceOnly) return { title: "Change approved in the demo workspace.", message: "The reviewed workspace is retained. This local sample leaves the source repository unchanged. Download the diff, checks and decision below." };
+    return { title: "Workspace approved; inspect source delivery.", message: "The workspace merge was recorded. Source delivery is not confirmed here; inspect the recorded outcome before another attempt." };
+  }
+  return { title: "The decision needs attention.", message: str(result["reason"], "Inspect the recorded result before taking another action.") };
+}
+function sampleEvidenceLink(runId: unknown, digest: unknown): string {
+  return typeof runId === "string" && typeof digest === "string" && /^[a-f0-9]{64}$/u.test(digest)
+    ? `<a class="button" href="/console/export?runId=${encodeURIComponent(runId)}&amp;proposalDigest=${digest}">Download evidence</a>` : "";
+}
+function sampleDecision(result: Row, projectId: string, runId: string, digest: string, sample: ConsoleSample): string {
+  const copy = sampleResultCopy(result, sample);
+  return `${demoSteps(4)}<p class="eyebrow">Your proposal decision</p><h1>${esc(copy.title)}</h1><p class="intro">${esc(copy.message)}</p><section><h2>Take the evidence with you.</h2><p>The export contains the exact diff, pinned source, executed check results and recorded decision. It lets you inspect this same proposal later.</p><div class="demo-actions">${sampleEvidenceLink(runId, digest)}<a class="button secondary" href="${esc(link(projectId))}">Review retained demo</a></div></section>${demoScope}<details><summary>Technical decision result</summary><pre>${pretty(result)}</pre></details>`;
+}
+function sampleProject(detail: Row, list: Row, jobs: Row, projectId: string, csrf: string, permissions: ConsolePermissions, sample: ConsoleSample): WebResponse {
+  const state = row(detail["project"]), wait = row(state["wait"]), proposal = row(detail["proposal"]), checks = row(proposal["checks"]);
+  const jobRows = rows(jobs["jobs"]), runtime = row(list["runtime"]), repository = row(detail["repository"]);
+  const runId = str(state["runId"], str(rows(list["projects"]).find(p => p["id"] === projectId)?.["runId"], "")), digest = row(proposal["rollback"])["patchSha256"];
+  const outcome = rows(detail["decisionHistory"]).filter(decision => str(decision["event"], "").startsWith("local_merge.")).at(-1);
+  const unresolved = jobRows.some(job => job["state"] === "reconciliation-required");
+  const failedResume = jobRows.filter(job => job["label"] === "autonomy project resume").at(-1);
+  const resumeNeedsInspection = ["failed", "stopped"].includes(str(failedResume?.["state"], ""));
+  const resuming = jobRows.some(job => job["label"] === "autonomy project resume" && ["queued", "running"].includes(str(job["state"])));
+  const active = !unresolved && runtime["paused"] !== true && (resuming || !wait["kind"] && !str(state["status"], "").startsWith("waiting-")) && jobRows.some(job => ["queued", "running"].includes(str(job["state"])));
+  const ready = typeof proposal["diff"] === "string" && !active;
+  const phase = outcome ? 4 : ready ? 3 : 2;
+  let title: string, message: string, controls = "";
+  if (outcome) {
+    const copy = sampleResultCopy({ ...outcome, status: str(outcome["event"], "").split(".").at(-1), sourceDelivery: row(row(repository["source"])["merge"]) }, sample);
+    title = copy.title; message = copy.message;
+    controls = `<p>The evidence contains the exact diff, pinned source, check results and your recorded decision.</p><div class="demo-actions">${sampleEvidenceLink(runId, digest)}</div>`;
+  } else if (unresolved || runtime["paused"] === true) {
+    title = unresolved ? "This demo needs reconciliation." : "The demo worker is paused.";
+    message = unresolved ? str(jobRows.find(job => job["state"] === "reconciliation-required")?.["reason"], "Ask the operator to reconcile the retained work before another attempt.") : "Your job is retained. The operator must resume the worker before it can continue.";
+  } else if (resumeNeedsInspection) {
+    title = "The demo needs attention.";
+    message = str(failedResume?.["reason"], "Preparation did not complete. Ask the operator to inspect the retained job before another attempt.");
+    controls = '<p>Preparation is held. Ask the operator to inspect this job; opening a new form will recover the same demo.</p>';
+  } else if (wait["kind"] === "approval" && !resuming) {
+    title = "Ready to prepare the fix.";
+    message = "Keep is waiting for your approval before it edits the sample workspace and runs the checks.";
+    controls = `<form class="demo-actions" method="post" action="/console/resume">${hidden("csrf", csrf)}${hidden("projectId", projectId)}${hidden("runId", runId)}${hidden("decisionId", wait["decisionId"])}${permissions.approve ? '<button name="action" value="approve">Prepare the fix</button>' : ""}${permissions.decline ? '<button class="secondary" name="action" value="decline">Decline preparation</button>' : ""}</form><p>The prepared change will come back to you for a separate proposal decision.</p>`;
+  } else if (ready && !unresolved && !wait["kind"]) {
+    title = checks["testsPassed"] === true && checks["vettingCleared"] === true ? "Review the checked change." : "The checks need attention.";
+    message = "The proposal records each delivery ID before updating the count. Review the actual results and code change below.";
+    const effect = sample.workspaceOnly ? "Approval retains this exact proposal in the demo workspace. The source repository stays unchanged." : "Approval asks Keep to apply this exact proposal to the synthetic source repository. The next view reports the actual result.";
+    controls = `<p>${effect} Veto records your decision to stop this proposal.</p><form class="demo-actions" method="post" action="/console/merge">${hidden("csrf", csrf)}${hidden("projectId", projectId)}${hidden("runId", runId)}${hidden("proposalDigest", digest)}${permissions.approve ? '<button name="action" value="approve">Approve this proposal</button>' : ""}${permissions.decline ? '<button class="secondary" name="action" value="veto">Veto this proposal</button>' : ""}</form>`;
+  } else if (active) {
+    title = state["stage"] === "vet_artifact" ? "Checking the change." : "Preparing and checking the fix.";
+    message = "Keep is working in the sample workspace. This view refreshes the recorded state while work is active. You can leave and return to this same task.";
+  } else {
+    title = unresolved ? "This demo needs reconciliation." : runtime["paused"] === true ? "The demo worker is paused." : "The demo needs attention.";
+    message = str(wait["reason"] ?? state["note"], str(jobRows.find(job => job["reason"])?.["reason"], "Ask the operator to inspect the retained job before another attempt."));
+    if (runtime["paused"] === true) message = "Your job is retained. The operator must resume the worker before it can continue.";
+  }
+  const passed = Array.isArray(checks["passedTests"]) ? checks["passedTests"].filter((value): value is string => typeof value === "string") : [];
+  const failed = Array.isArray(checks["failures"]) ? checks["failures"].filter((value): value is string => typeof value === "string") : [];
+  const names = [...SAMPLE_CHECK_NAMES, "goal: requested outcome"];
+  const resultList = `<ul class="demo-checks">${names.map(name => `<li><span>${esc(name === "goal: requested outcome" ? "Independent goal check" : name)}</span><strong class="${passed.includes(name) ? "demo-success" : failed.includes(name) ? "demo-error" : "muted"}">${passed.includes(name) ? "Passed" : failed.includes(name) ? "Failed" : "Not recorded"}</strong></li>`).join("")}</ul>`;
+  const stageCopy: Readonly<Record<string, string>> = { understand: "Opening the prepared task.", research: "Checking the task context.", rag: "Reading the repository context.", plan: "Preparing the change plan.", vet_plan: "Checking the plan.", ticket: "Recording the bounded task.", implement: "Preparing the code change and running repository checks.", vet_artifact: "Running the independent check.", learn: "Saving the result.", done: "Task processing finished." };
+  const useful = ready || outcome ? `<section><h2>Actual check results</h2>${resultList}<p class="muted">${checks["testsPassed"] === true ? "Repository tests passed." : checks["testsPassed"] === false ? "Repository tests failed." : "Repository test result is unavailable."} ${checks["vettingCleared"] === true ? "Artifact vetting cleared." : "Artifact vetting is not cleared."}</p><details><summary>Inspect the code change</summary>${diffView(str(proposal["diff"], "No diff recorded."))}</details></section>` : "";
+  return page("Webhook delivery demo", `${demoSteps(phase)}<a class="back" href="/console">← Demo overview</a><p class="eyebrow">Count each delivery once</p><h1>${esc(title)}</h1><p class="intro">${esc(message)}</p><section class="next"><h2>${outcome ? "Your retained decision" : active ? "Current work" : wait["kind"] === "approval" ? "You control preparation" : ready ? "You control the proposal" : "Current work"}</h2>${controls || `<p>${active ? esc(stageCopy[str(state["stage"], "")] ?? "Waiting for the worker to start this job.") : "The job state is retained."}</p><a class="button secondary" href="${esc(link(projectId))}">Refresh status</a>`}</section>${useful}${demoScope}<details><summary>Job, decision and technical evidence</summary><pre>${pretty({ projectId, runId, proposalDigest: digest, stage: state["stage"], status: state["status"], jobs: jobRows, checks, repository, decisions: detail["decisionHistory"] })}</pre></details>`, 200, active);
+}
+
 export async function handleProjectConsole(req: WebRequest, csrf: string, api: ConsoleApi, permissions: ConsolePermissions, sample?: ConsoleSample): Promise<WebResponse> {
   const response = await routeProjectConsole(req, csrf, api, permissions, sample);
   return sample && response.headers["Content-Type"]?.startsWith("text/html")
-    ? { ...response, body: response.body.replace("<main>", `<main><p class="notice" role="note">${esc(sample.notice)}</p>`) } : response;
+    ? { ...response, body: response.body.replace("<main>", `<main class="guided-demo"><p class="sample-disclosure" role="note">${esc(sample.notice)}</p>`).replace('Workspace control</span>', 'Guided demo</span>').replace('<a href="/console">Projects</a>', '<a href="/console">Demo</a>') } : response;
 }
 async function routeProjectConsole(req: WebRequest, csrf: string, api: ConsoleApi, permissions: ConsolePermissions, sample?: ConsoleSample): Promise<WebResponse> {
   if (req.path === "/console/style.css" && req.method === "GET") return { status: 200, headers: { ...security, "Content-Type": "text/css; charset=utf-8" }, body: CONSOLE_STYLE };
@@ -83,6 +162,11 @@ async function routeProjectConsole(req: WebRequest, csrf: string, api: ConsoleAp
     }
     const result = row(JSON.parse(response.body));
     return { status: 303, headers: { ...security, Location: link(result["projectId"]) }, body: "" };
+  }
+  if (sample && req.method === "GET" && ["/console", "/console/new"].includes(req.path)) {
+    const list = await read(api, "/projects");
+    if (isResponse(list)) return failure(list);
+    return page("Count each delivery once", sampleLanding(sample, list, csrf, permissions, req.query["submissionKey"]));
   }
   if (req.path === "/console/new" && req.method === "GET") {
     if (!permissions.submit) return page("Forbidden", "<h1>You cannot submit project goals.</h1>", 403);
@@ -125,15 +209,17 @@ async function routeProjectConsole(req: WebRequest, csrf: string, api: ConsoleAp
       const wait = row(row(state["project"])["wait"]);
       if (wait["kind"] !== "approval" || wait["decisionId"] !== form.get("decisionId") || !["approve", "decline"].includes(action ?? ""))
         return page("Stale decision", "<h1>This approval is no longer pending.</h1><a href=\"/console\">Reload projects</a>", 409);
-      body = { runId, approval: { decisionId: wait["decisionId"], approved: action === "approve" } };
+      body = { runId, approval: { decisionId: wait["decisionId"], approved: action === "approve" }, ...(sample ? { background: true } : {}) };
     } else {
       if (!["approve", "veto"].includes(action ?? "")) return page("Invalid decision", "<h1>Choose approve or veto.</h1>", 400);
       body = { runId, decision: action, proposalDigest: form.get("proposalDigest") };
     }
     const response = await api("POST", req.path === "/console/resume" ? "/project/resume" : "/project/merge", {}, body);
-    if (response.status !== 200) return failure(response);
+    if (response.status !== 200 && !(sample && req.path === "/console/resume" && response.status === 202)) return failure(response);
     // Display the actual result. A saved decision, workspace merge and source landing differ.
     const result = row(JSON.parse(response.body));
+    if (sample && req.path === "/console/resume") return { status: 303, headers: { ...security, Location: link(projectId) }, body: "" };
+    if (sample) return page("Demo decision", sampleDecision(result, projectId, runId, form.get("proposalDigest") ?? "", sample));
     return page("Decision result", `<p class="eyebrow">Decision recorded</p><h1>${esc(str(result["status"], "Result recorded"))}</h1><p>${esc(str(result["reason"], str(result["note"], "Inspect the updated project before taking another action.")))}</p><section><h2>Observed result</h2><pre>${pretty(result)}</pre></section><a class="button" href="${esc(link(projectId))}">Open updated project</a>`);
   }
   if (req.method !== "GET") return page("Method not allowed", "<h1>Method not allowed</h1>", 405);
@@ -155,6 +241,7 @@ async function routeProjectConsole(req: WebRequest, csrf: string, api: ConsoleAp
   let detail = typeof runId === "string" ? await read(api, "/project", { runId }) : {};
   if (isResponse(detail) && detail.status === 404 && rows(jobs["jobs"]).some(job => ["queued", "running"].includes(str(job["state"])))) detail = {};
   if (isResponse(detail)) return failure(detail);
+  if (sample) return sampleProject(detail, list, jobs, String(projectId), csrf, permissions, sample);
   const state = row(detail["project"]), wait = row(state["wait"]), proposal = row(detail["proposal"]), checks = row(proposal["checks"]);
   const repository = row(detail["repository"] ?? selected["repository"]), source = row(repository["source"]);
   const sourceMerge = row(source["merge"]), workspace = row(repository["workspace"]);
@@ -178,4 +265,5 @@ async function routeProjectConsole(req: WebRequest, csrf: string, api: ConsoleAp
 }
 
 export const CONSOLE_STYLE = `
+.sample-disclosure{font-size:12px;color:#52666d;padding:12px 16px;border:1px solid var(--line);border-radius:8px;background:#edf3f1;margin:0 0 32px}.guided-demo{max-width:1050px}.guided-demo h1{max-width:800px;font-size:clamp(29px,4vw,46px)}.guided-demo .intro{font-size:18px;color:var(--muted);max-width:720px}.demo-route{display:flex;gap:18px;list-style:none;padding:0;margin:25px 0;color:var(--muted);font-size:13px}.demo-route li[aria-current=step]{color:var(--accent);font-weight:700}.demo-route li+li:before{content:"→";margin-right:18px;color:#889b9c}.demo-example{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:28px 0}.demo-example article{padding:18px;border:1px solid var(--line);border-radius:8px}.demo-example strong{display:block;font-size:19px}.demo-checks{list-style:none;padding:0}.demo-checks li{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--line)}.demo-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:20px 0}.guided-demo details{padding:16px 20px}.guided-demo .scope{font-size:13px;color:var(--muted);max-width:750px}.guided-demo .next p{max-width:760px}.demo-error{color:#873532}.demo-success{color:#175b37}@media(max-width:620px){.demo-example{grid-template-columns:1fr;gap:8px}.demo-route{gap:8px;flex-wrap:wrap}.demo-route li+li:before{margin-right:8px}.demo-checks li{align-items:flex-start}.guided-demo .demo-actions .button,.guided-demo .demo-actions button{width:100%;text-align:center}}
 :root{color-scheme:light;--ink:#172c36;--muted:#5b6f78;--line:#dbe3e5;--paper:#f6f8f7;--accent:#14594e}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:var(--accent);text-underline-offset:4px}header{display:flex;align-items:center;justify-content:space-between;padding:22px max(5vw,24px);background:white;border-bottom:1px solid var(--line)}.brand{font-weight:800;font-size:25px;letter-spacing:.16em;text-decoration:none;color:var(--ink)}.brand span{font-size:12px;letter-spacing:0;font-weight:500;margin-left:22px;color:var(--muted)}nav a{text-decoration:none;font-weight:600}main{max-width:1260px;margin:auto;padding:48px max(4vw,24px)}h1{font-size:clamp(27px,3.5vw,43px);line-height:1.16;letter-spacing:-.04em;margin:8px 0 14px;overflow-wrap:anywhere}h2{font-size:20px;line-height:1.4;margin:0 0 14px}h3{font-size:15px}.eyebrow{color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px}.lede{color:var(--muted);font-size:17px;max-width:670px}.heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:30px 0}.metrics section{display:flex;flex-direction:column;gap:5px}.metrics strong{font-size:34px;line-height:1.2}.metrics .small{font-size:21px;overflow-wrap:anywhere}.metrics span{color:var(--muted);font-size:13px}section,details{background:white;border:1px solid var(--line);border-radius:12px;padding:24px;margin-bottom:20px}.metrics section{margin:0}.section-title{margin:36px 0 14px}.project{display:flex;justify-content:space-between;gap:24px;text-decoration:none;color:var(--ink);background:white;border:1px solid var(--line);border-radius:12px;padding:24px;margin-bottom:12px}.project:hover{border-color:var(--accent)}.project>div:last-child{text-align:right;min-width:150px}.project h2{margin-bottom:5px;overflow-wrap:anywhere}.badge{display:inline-block;font-size:12px;font-weight:600;border:1px solid #c8ddd7;background:#eef7f2;color:#245d4c;padding:4px 10px;border-radius:30px}.muted{color:var(--muted)}.mono,pre,code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}.mono{overflow-wrap:anywhere}pre{background:#f5f7f7;border:1px solid #e5ebeb;border-radius:7px;padding:16px;overflow:auto;max-height:480px;white-space:pre-wrap;overflow-wrap:anywhere}.diff{white-space:pre;max-height:650px}.added{color:#175b37;background:#e6f4e9}.removed{color:#873532;background:#ffebe9}.hunk{color:#365a97}.files{font:12px/1.8 ui-monospace,monospace;overflow-wrap:anywhere}.timeline{list-style:none;padding:0}.timeline li{padding:12px 0;border-bottom:1px solid var(--line)}.timeline li p{margin:6px 0}.columns{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px}.columns section{min-width:0}.next{border-left:4px solid var(--accent)}button,.button{display:inline-block;background:var(--accent);color:white;border:1px solid var(--accent);border-radius:7px;padding:10px 17px;font:600 13px/1.5 system-ui;text-decoration:none;cursor:pointer}.secondary{background:white;color:var(--ink);border-color:var(--line)}input,textarea{display:block;width:100%;padding:12px;border:1px solid #a9bbbf;border-radius:7px;margin:8px 0 18px;font:inherit}.back{display:inline-block;margin-bottom:24px}.notice{padding:20px;border-left:3px solid #a46b29;background:#fff4e7}.signin{max-width:560px;margin:10vh auto}.signin .brand{display:block;margin-bottom:32px}.signin p{color:var(--muted)}label{font-size:13px;font-weight:600}.empty{text-align:center;padding:55px 24px}footer{text-align:center;color:var(--muted);font-size:12px;padding:25px;border-top:1px solid var(--line)}summary{cursor:pointer;font-weight:600}a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #b18232;outline-offset:4px}@media(max-width:760px){.brand span{display:none}main{padding-top:30px}.heading,.project{display:block}.heading .button{margin-top:12px}.metrics{gap:8px}.metrics section{padding:16px 12px}.metrics strong{font-size:27px}.columns{grid-template-columns:1fr;gap:0}.project>div:last-child{text-align:left;margin-top:18px}button{margin-bottom:8px}}`;

@@ -1,6 +1,6 @@
 # Controlled reviewer sample
 
-The foreground sample gives one assigned reviewer a separate Keep instance with a fixed repository task. Two authored provider responses produce a real workspace edit and executable checks. The reviewer submits the goal, approves the pending step, inspects the diff, approves or vetoes the exact proposal, and downloads retained evidence. Every console page identifies the scripted sample. No AI account or paid provider is used.
+The foreground sample gives one assigned reviewer a separate Keep instance with a prepared webhook reliability task: a repeated delivery is counted twice. The fix records a delivery ID before updating the count. Two authored provider responses produce a real workspace edit and executable checks. The reviewer chooses **Start demo**, then deliberately chooses **Prepare the fix** at the pending approval step. Keep edits a separate workspace and runs the frozen first-delivery, duplicate-ID and distinct-ID checks plus an independent goal check. The reviewer inspects the actual results, approves or vetoes the exact proposal, and downloads retained evidence. Every console page identifies the scripted sample. No AI account or paid provider is used.
 
 Each invitation needs its own process, new private root, credential and HTTPS origin. These are operator-assigned instances. The launcher does not allocate visitors or create hosting, DNS, certificates or services.
 
@@ -34,7 +34,7 @@ Enable `reviewerSample:true` only on the controlled fixture app. This setting cl
 
 ## One retained sample
 
-The goal form is prefilled and read-only. The server validates the exact sample goal and rejects additional submission fields. All accepted forms use one private canonical submission identity. A refresh, lost response, double submission or fresh form recovers the original project/job. It cannot start another pair of responses. Explicit approval resume jobs remain separate retained jobs.
+The guided entry explains the prepared task and expected behavior. It has a **Start demo** action with a fixed hidden goal; it offers no arbitrary repository or goal input. The server validates the exact sample goal and rejects additional submission fields. All accepted forms use one private canonical submission identity. A refresh, lost response, double submission or fresh form recovers the original project/job. It cannot start another pair of responses. Explicit approval resume jobs remain separate retained jobs.
 
 Cancellation, failure or uncertain effects remain visible. The operator must inspect retained state before deciding what to do next. A new form does not reset the sample. After the reviewer finishes, retain the proposal export and decide whether to retire that instance.
 
@@ -56,4 +56,6 @@ The existing browser runner accepts an optional final `--sample` flag. With an a
 node acceptance/browser_project.mjs "$NEW_EVIDENCE_ROOT" "$PLAYWRIGHT_ENTRY" "$BROWSER_EXECUTABLE" --sample
 ```
 
-It drives the enforced sample using a private browser profile with muted audio, verifies the real checks and exact veto/export, and confirms that a fresh form adds no job or provider calls. Public deployment needs its own actual HTTPS browser qualification with assigned credentials, correct routing and two isolated reviewer instances.
+It drives the enforced sample using a private browser profile with muted audio, verifies the real checks and exact veto/export, and confirms that a fresh form adds no job or provider calls. The shared `SAMPLE_CONTRACT` binds source/expected file bytes, the fixed goal and actual expected check names for browser and appliance consumers. IDs, raw records and the diff remain in expandable technical detail. Active work refreshes only its actual GET state; pending decisions, paused/failed/uncertain work and completed results do not auto-refresh. The demo remembers processed IDs in memory within one running state; production exactly-once delivery is outside this demonstration.
+
+Public deployment needs its own actual HTTPS browser qualification with assigned credentials, correct routing and two isolated reviewer instances.
