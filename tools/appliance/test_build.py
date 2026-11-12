@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import tarfile
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -15,6 +16,18 @@ recipe = importlib.util.module_from_spec(spec); spec.loader.exec_module(recipe)
 
 
 class FrozenArchiveModes(unittest.TestCase):
+    def test_background_sanitization_stdout_and_stderr_reach_selected_serial_sink(self):
+        with tempfile.TemporaryDirectory(prefix='freeze serial ') as temporary:
+            root = Path(temporary); script = root / 'freeze step.sh'; sink = root / 'selected serial sink'
+            script.write_text("#!/bin/sh\nprintf '%s\\n' 'freeze diagnostic' >&2\nprintf '%s\\n' 'KC111_IMAGE_SANITIZED'\n")
+            script.chmod(0o700)
+            subprocess.run(recipe.background_freeze(str(script), sink), check=True, capture_output=True, timeout=5)
+            deadline = time.monotonic() + 2
+            while not sink.exists() or 'KC111_IMAGE_SANITIZED' not in sink.read_text():
+                if time.monotonic() >= deadline: self.fail('background freeze output did not reach selected sink')
+                time.sleep(0.01)
+            self.assertEqual(sink.read_text().splitlines(), ['freeze diagnostic', 'KC111_IMAGE_SANITIZED'])
+
     def test_private_umask_does_not_change_frozen_native_modes(self):
         with tempfile.TemporaryDirectory(prefix='native modes ') as temporary:
             root = Path(temporary); archive = root / 'frozen archive.tgz'
