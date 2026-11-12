@@ -16,13 +16,17 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/docs/guided-demo.md
 
 **Development source: 0.0.29-preview.1. Hosted demo: 0.0.25-preview.1. Latest appliance download: 0.0.29-preview.1 for Linux x64.** The broader platform remains under development; the table below separates implemented scope from observed readiness.
 
-The new self-contained Linux x64 appliance carries its own Node runtime, sandbox helper and generation engine. The exact .29 archive passed both browser approval and veto on a fresh CI machine, four real checks, evidence export and stop/restart with retained jobs. Two fresh instances received distinct identities. Its matching source companion includes all 289 required source/version pairs. Download the qualified appliance and follow its start guide. Fresh live-account generation and current OpenClaw-to-Keep integration remain open.
+The new self-contained Linux x64 appliance carries its own Node runtime, sandbox helper and generation engine. The exact .29 archive passed both browser approval and veto on a fresh CI machine, four real checks, evidence export and stop/restart with retained jobs. Two fresh instances received distinct identities. Its matching source companion includes all 289 required source/version pairs. Download the qualified appliance and follow its start guide. The current native OpenClaw client also passed submission and fresh-process recovery against the shipped Keep API with dispatch paused. Fresh live-account generation and the complete owner handover remain open.
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-29-2026-11-12.md
 
 https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/reviewer-appliance.md
+
+Current native client API observation:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/current-openclaw-api-2026-11-12.json
 
 Browser submission, recovery and evidence:
 
@@ -41,7 +45,7 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/
 | Skills and learning | Trajectory extraction, validation, comparison against a baseline, content-bound admission, monitored reuse, retirement and regression response. | Managed lifecycle and persistence are implemented. Execution validation needs a configured oracle; useful reuse requires workload-specific measurement. |
 | Providers and resource control | Local/remote adapters, routing and cascades, cancellation, spending reservations, usage settlement and retained uncertainty. | Selected generation and embedding routes have checks. The default local provider is an offline fixture; metering coverage varies by route. |
 | Authority and governance | Permissions, delegation, consequence gates, privacy/egress controls, audit records, tenant-scoped decisions, attributable memory controls and evidence export; organization code/PKCE login with pinned key refresh and session checks. | Controls govern specific entry points. Live organization deployment, current membership, independent custody and complete effect-path coverage remain open. |
-| Clients and operations | CLI, authenticated gateway, browser submission/review console, saved-instance restricted OpenClaw credentials, traces and protected backup/restore interfaces. | Credentials preserve the saved repository, checker, model, limits and usage history. Combined archive startup, instance lifecycle, console and historical plugin setup have installed checks. Current patched OpenClaw compatibility, offsite recovery and wider operational qualification remain open. |
+| Clients and operations | CLI, authenticated gateway, browser submission/review console, saved-instance restricted OpenClaw credentials, traces and protected backup/restore interfaces. | Credentials preserve the saved repository, checker, model, limits and usage history. Combined archive startup, instance lifecycle, console and historical plugin setup have installed checks. Current native OpenClaw submission/status passed a paused SDK fixture. Fresh account/CLI handover, offsite recovery and wider operational qualification remain open. |
 | Domain workflows and adaptation | Stage contracts for fiction, academic papers, chapter books, social video and audiobooks; optional model adaptation and training interfaces. | Experimental. External effects need configured capabilities. Weight training requires an external backend; complete installed domain workflows remain to be qualified. |
 | Execution isolation | Process controls, an opt-in required namespace jail, native protocol/capture code and microVM probes. | Selected Linux jail behavior has scoped checks. The packaged native supervisor provides a refusal exchange; production native authority and independent attestation remain unfinished. |
 

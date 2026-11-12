@@ -7,7 +7,9 @@ Two optional native tools connect OpenClaw to Keep's repository workflow:
 
 The plugin cannot approve, merge, change configuration or choose arbitrary endpoints, identities, source paths or commands through tool arguments. Human decisions happen in the same Keep browser console used by the direct CLI.
 
-Current development package: **0.0.29-preview.1**, targeting **OpenClaw2026.11.3**. A candidate with the same client code passed native plugin loading, the exact two-tool catalog, submission and fresh-process status on Node24.22.3 against a scripted local endpoint. Actual Keep integration and fresh-account generation remain under qualification. The historical results below retain their named versions.
+Current shipped plugin: **0.0.29-preview.1**, targeting **OpenClaw 2026.11.3**. The actual native client on Node 24.22.3 submitted to the shipped Keep gateway and recovered the same queued job from a fresh process: one POST and two GETs. Current tool results, source preservation, audit records and owned shutdown passed. Dispatch stayed paused; tool selection was scripted, with zero account or model calls. This SDK fixture uses a refusal descriptor. Fresh saved-instance CLI login, genuine generation and independent owner handover remain open. Historical observations retain their named versions.
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/current-openclaw-api-2026-11-12.json
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/current-openclaw-contract-2026-11-12.json
 

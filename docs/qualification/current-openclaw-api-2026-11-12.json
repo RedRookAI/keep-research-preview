@@ -1,0 +1,97 @@
+{
+  "schema": "keep.openclaw.actual-api-observation/v1",
+  "observedDate": "2026-11-12",
+  "operator": "developer-administered private CI",
+  "scope": {
+    "sdkOnlyFixture": true,
+    "savedInstanceCliQualified": false,
+    "actualGeneration": false,
+    "securityAdmission": null,
+    "toolSelection": "scripted loopback selector",
+    "keepExecution": "actual shipped gateway, issuer and durable queued job; dispatch paused"
+  },
+  "runId": 43198364895,
+  "workflowSource": "b3df18781191c15669c9fed2855ff94821fd8ebd",
+  "artifact": {
+    "id": 13934511284,
+    "sha256": "9e87284ec0e327412c3f36b230ec8380c44221724604995ffd88f615eea683d0",
+    "bytes": 10318,
+    "fullZipDigestVerified": true,
+    "jsonEntriesVerified": 9,
+    "resultSha256": "8bf33ef04a87af16ba30e8c9f1d4b6c4d8fa602bc3a43d69ca17f353da6b252f"
+  },
+  "appliance": {
+    "url": "https://github.com/RedRookAI/keep-research-preview/releases/download/keep-reviewer-2026-11-12.3/keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repack.tar.xz",
+    "sha256": "b4a0208da9ff6e713a624b0eca034ba4d6d70090f8a88f6c456474f44fc0ec51",
+    "expectedHostAssemblySource": "73fabd7a98971335153590193ac9235140d5fbe3",
+    "expectedImageSource": "253fbca62133bef33ecc7d0c4b2192541cb55918",
+    "expectedImageSha256": "0ec8468c91ebf2afabeb88c149e8d48fc85e1485211c6c8849085b52900f1897"
+  },
+  "plugin": {
+    "baseSource": "253fbca62133bef33ecc7d0c4b2192541cb55918",
+    "shippedArchive": "redrookai-openclaw-keep-0.0.29-preview.1.tgz",
+    "archiveSha256": "59ae25a1654a0b501d4dcbb2554afeb31275451258375314d7b49096d5b5b7b4",
+    "sourceSupportSha256": "7916a0d2981fbb91cd2f048fb7877dc9cd52c87aa2ae614ea764f793f9da8fea",
+    "distributionSupport": {
+      "url": "https://github.com/RedRookAI/keep-research-preview/releases/download/keep-reviewer-2026-11-12.3/guest-distribution-support.tar.gz",
+      "sha256": "aa036b0781abbd6e53d6a1fc471503e248eb7018c72ae68d34607a4f3f961724"
+    },
+    "filesSha256": {
+      "LICENSE": "ec5c7e7d69b81a6b4b88fde927c5b2038f33a1d3ed60d32cd06ac8b44ce82b67",
+      "README.md": "bce407d4fa7f9f6c09d9452ae0b1ad87d5a1b56ecdc92d478e1f8726804e0f3f",
+      "client.mjs": "034b35e591a75e655e05cd338ebfe9980fe425939bc301aeb44d68e01defca74",
+      "contracts.mjs": "e54c4f4fe2f9bada627b56eb8dfc7d8919498bd9d896c8a41aef230d6a154a17",
+      "example.openclaw.json": "a54f688feed4445f9d99c48b6c5b405298806373ae4cfb2ad5b2ca6804f3d932",
+      "index.mjs": "9d7a7d000df3dc5e3cc4b49ab1ed0749b833486a3fa8fd833a218ebcf43c5806",
+      "openclaw.plugin.json": "2e56d8312d6f76e4185cd2abbe34891c5b48a922911644dc8ad657fb0befd2f5",
+      "package.json": "ab267f82339f71b7b90fb24ebdd25ce78ff2c087e4f43813b7dbcc73f4bee879"
+    },
+    "publicShippedPlugin": true
+  },
+  "client": {
+    "nodeVersion": "24.22.3",
+    "nodeExecutableSha256": "a7ec1b37e6ff9d187e4198c5b6df9a4eb1c74dd31804fb3bac55cc4ceca1ac01",
+    "openclawVersion": "2026.11.3",
+    "lockSha256": "ae7631ecde512f99a517b0eec24e0da26fd62a9dcc2f1429a3b617558e2db279",
+    "uid": 65534,
+    "ownerFilesDenied": true,
+    "runtimeWriteDenied": true
+  },
+  "observed": {
+    "passed": true,
+    "actualNativeCli": true,
+    "submitHttpCounts": {
+      "submit": 1,
+      "status": 1
+    },
+    "freshStatusHttpCounts": {
+      "submit": 0,
+      "status": 1
+    },
+    "httpCounts": {
+      "submit": 1,
+      "status": 2
+    },
+    "freshProcessSameJobAndProject": true,
+    "currentToolResultsVerified": true,
+    "jobState": "queued",
+    "paused": true,
+    "sourceUnchanged": true,
+    "audit": {
+      "grantIssuedEvents": 1,
+      "jobSubmissionEvents": 1,
+      "queuedIntentEvents": 1,
+      "jobDispatchEvents": 0,
+      "spineVerified": true
+    },
+    "ownedTeardownPassed": true,
+    "claimed": 0,
+    "unresolved": 0,
+    "followupAuthorizations": 0,
+    "generationEvents": 0,
+    "refusalProviderCalls": 0,
+    "accountCalls": 0,
+    "liveProviderCalls": 0
+  },
+  "limits": "The real saved-instance CLI requires the operator account. This paused SDK fixture uses a labelled refusal descriptor and provides no genuine generation or independent-operator evidence. Private credentials, journals and raw diagnostics remain private."
+}
