@@ -2,9 +2,9 @@
 
 The guided demo opens with a prepared webhook task and a **Start demo** button. A small app counts repeated deliveries twice. Keep prepares a change in its own workspace, runs the repository checks and waits for your proposal decision.
 
-Open your assigned invitation and enter the credential supplied by the operator:
+Open the console URL in your assigned invitation and enter the credential supplied separately by the operator. The current reviewer endpoint is:
 
-https://keep.redrook.ai/console
+https://keep-b.redrook.ai/console
 
 1. Choose **Start demo**, then **Prepare the fix**.
 2. Watch the actual job state update. The review shows three repository checks and a separate developer-authored goal check. The hosted .25 interface calls the fourth assertion **Independent goal check**; it is part of the prepared sample, rather than an outside evaluation. Current source labels it **Goal check**.
@@ -14,6 +14,8 @@ https://keep.redrook.ai/console
 Approval in the hosted demo applies the checked change to its synthetic source repository. Veto retains the proposal and evidence. The appliance's local sample uses workspace-only approval and says so in the interface. Both use two authored responses, real edits and executable checks, with no AI account or paid calls.
 
 A fresh form recovers the same task. The operator retains each invitation's state; a new form does not reset it. The source includes the normal configured-owner workflow separately from this controlled sample.
+
+Each invitation opens one retained task. The panel invitation is reserved with a fresh task; use the operator's separate owner invitation for practice.
 
 ## Observed browser result
 

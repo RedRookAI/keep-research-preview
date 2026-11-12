@@ -8,9 +8,9 @@ The repository workflow shows the core in action: Keep edits a separate workspac
 
 ## Explore Keep
 
-1. **Try a checked code change.** Open your assigned invitation, choose **Start demo**, then **Prepare the fix**. Keep repairs a webhook handler that counts repeated deliveries twice. Inspect four executed checks and the diff, approve or veto the proposal, then download the evidence. The sample uses two authored responses and requires no AI account or paid calls. Ask the operator for an invitation if one was not supplied.
+1. **Try a checked code change.** Open your assigned invitation, choose **Start demo**, then **Prepare the fix**. Keep repairs a webhook handler that counts repeated deliveries twice. Inspect four executed checks and the diff, approve or veto the proposal, then download the evidence. The sample uses two authored responses and requires no AI account or paid calls. Use the invitation credential supplied separately by the operator. This reviewer endpoint is separate from existing owner invitations.
 
-https://keep.redrook.ai/console
+https://keep-b.redrook.ai/console
 
 2. **See the genuine Codex case.** Read the retained Unicode-regex fix, actual patch, unchanged checker and execution record. The patch and three checks can be inspected or reproduced without a Keep account. This historical case used real generation.
 
@@ -30,12 +30,16 @@ https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-20
 
 | Subject | Version | Scope |
 |---|---|---|
-| Development source | 0.0.29-preview.1 | Current source changes; source checks use Node >=22.23.5 <23. Full native builds additionally require the documented Rust/C toolchain. |
+| Development source | 0.0.29-preview.1, tested code 70bdde3 | Current source changes; source checks use Node >=22.23.5 <23. Full native builds additionally require the documented Rust/C toolchain. |
 | Hosted demo | 0.0.25-preview.1, source 8e8eeaa | Prepared webhook task with real edits, four checks, approval/veto and evidence export. Assigned invitation required. |
 | Linux x64 appliance | 0.0.29-preview.1, frozen runtime 253fbca / assembly 73fabd7 | Exact archive checked on fresh CI for the account-free browser workflow, export and restart. New development-source changes are separate. |
 | Historical direct Node download | 0.0.21-preview.1 | Earlier archive and its own installation receipts. |
 
 The broader platform remains under development. The table below separates implemented mechanisms from observed readiness. The existing appliance's matching source companion includes all 289 required source/version pairs. Its native OpenClaw API observation used dispatch paused and zero provider calls; fresh live-account generation remains untested.
+
+The tested source passed 347 cases in its partial CI profile on Node 22.23.5. The final reviewer invitation passed fresh sign-in and retains an unused task. Exact source, hosted and appliance subjects:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/submission-snapshot-2026-11-12.json
 
 Walkthrough, artifact evidence and source-build instructions:
 
