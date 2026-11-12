@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import socket
@@ -19,11 +20,42 @@ def execute(args, **options):
                           env={'PATH': os.environ['PATH'], 'HOME': os.environ['HOME'], 'LANG': 'C.UTF-8'}, **options).stdout.strip()
 
 
+def verify_manifest_source(manifest, expected_source):
+    if not expected_source or not re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', expected_source) or manifest['source'] != expected_source:
+        raise RuntimeError('Downloaded candidate manifest differs from independently supplied frozen source')
+
+
+def verify_export(exported, project_id, run_id, decision, digest, expected_tests):
+    if set(exported) != {'schema', 'assurance', 'data', 'sha256'} or exported['schema'] != 'keep.proposal-export/v1' or exported['assurance'] != 'unsigned-retained-evidence':
+        raise RuntimeError('Unexpected portable proposal schema')
+    body = {key: exported[key] for key in ('schema', 'assurance', 'data')}
+    # This fixed export schema has ASCII object keys and string/bool/null values.
+    # Match src/spine/event.ts canonicalize: recursively sort keys, compact UTF-8 JSON.
+    encoded = json.dumps(body, ensure_ascii=False, separators=(',', ':'), sort_keys=True).encode()
+    if hashlib.sha256(encoded).hexdigest() != exported['sha256']: raise RuntimeError('Portable proposal canonical checksum mismatch')
+    data = exported['data']
+    if data['projectId'] != project_id or data['runId'] != run_id: raise RuntimeError('Proposal belongs to another project/run')
+    if hashlib.sha256(data['proposal']['diff'].encode()).hexdigest() != digest or data['proposal']['patchSha256'] != digest:
+        raise RuntimeError('Proposal patch differs from exact decided digest')
+    checks = data['proposal']['checks']
+    if checks['testsPassed'] is not True or checks['vettingCleared'] is not True or checks['passedTests'] != expected_tests:
+        raise RuntimeError('Proposal lacks the frozen sample check results')
+    matching = [item for item in data['decisions'] if item['event'] == 'project.human-proposal-decision'
+                and item['decision'] == decision and item['proposalDigest'] == digest
+                and isinstance(item['humanIdSha256'], str) and re.fullmatch(r'[0-9a-f]{64}', item['humanIdSha256'])]
+    if not matching: raise RuntimeError('Exact human proposal decision is absent')
+    wanted_status = 'refused' if decision == 'veto' else 'merged'
+    if not any(item['status'] == wanted_status for item in matching): raise RuntimeError('Exact decision has no confirmed expected result')
+    if decision == 'approve' and data['delivery']['workspace'] != 'merged': raise RuntimeError('Workspace approval was not recorded as merged')
+    return data
+
+
 def main():
     bundle, output = [Path(value).resolve() for value in sys.argv[1:3]]
     output.mkdir(mode=0o700)
     cli = bundle / 'keep-appliance.py'
     manifest = json.loads((bundle / 'manifest.json').read_text())
+    verify_manifest_source(manifest, os.environ.get('KC111_EXPECTED_SOURCE'))
     contract = manifest['sampleContract']
     for name in contract['sourceFiles']:
         if Path(name).name != name: raise RuntimeError('Unsupported controlled sample path contract')
@@ -64,6 +96,12 @@ def main():
     def navigate(url): call('POST', '/url', {'url': url})
     def screenshot(name): (output / name).write_bytes(base64.b64decode(call('GET', '/screenshot')))
     def control(state, action, *args): return execute([sys.executable, str(cli), action, str(state), *args])
+    def open_action_result(project_url):
+        current = urllib.parse.urlsplit(call('GET', '/url'))
+        target = urllib.parse.urlsplit(project_url)
+        if current.path == target.path and urllib.parse.parse_qs(current.query).get('projectId') == urllib.parse.parse_qs(target.query).get('projectId'):
+            return
+        click('a[href^="/console/project?projectId="]')
 
     try:
         for _ in range(100):
@@ -105,16 +143,18 @@ def main():
             click('form[action="/console/submit"] button')
             project_url = call('GET', '/url')
             project_id = urllib.parse.parse_qs(urllib.parse.urlsplit(project_url).query)['projectId'][0]
-            for _ in range(100):
+            deadline = time.monotonic() + 600
+            while time.monotonic() < deadline:
                 call('POST', '/refresh', {})
-                if elements('button[value=approve]'): break
+                if elements('form[action="/console/resume"] button[value=approve]'): break
                 time.sleep(0.1)
-            click('form[action="/console/resume"] button[value=approve]'); click('a[href^="/console/project?projectId="]')
-            for _ in range(100):
+            click('form[action="/console/resume"] button[value=approve]'); open_action_result(project_url)
+            deadline = time.monotonic() + 600
+            while time.monotonic() < deadline:
                 call('POST', '/refresh', {})
                 if elements('form[action="/console/merge"]'): break
                 if elements('form[action="/console/resume"] button[value=approve]'):
-                    click('form[action="/console/resume"] button[value=approve]'); click('a[href^="/console/project?projectId="]')
+                    click('form[action="/console/resume"] button[value=approve]'); open_action_result(project_url)
                 time.sleep(0.1)
             for name in changed_files: assert 'diff --git a/' + name + ' b/' + name in text('.diff')
             assert 'Tests passed' in text('body')
@@ -122,7 +162,7 @@ def main():
             run_id = attribute('form[action="/console/merge"] input[name=runId]', 'value')
             screenshot('checked-' + decision + '.png')
             click('form[action="/console/merge"] button[value=' + decision + ']')
-            click('a[href^="/console/project?projectId="]')
+            open_action_result(project_url)
             previous = set(output.glob('*.json'))
             click('a[href^="/console/export?"]')
             deadline = time.monotonic() + 30
@@ -131,21 +171,14 @@ def main():
                 time.sleep(0.1)
             downloaded = (set(output.glob('*.json')) - previous).pop()
             exported = json.loads(downloaded.read_text())
-            data = exported['data']
-            assert exported['schema'] == 'keep.proposal-export/v1'
-            assert hashlib.sha256(json.dumps(data, ensure_ascii=False, separators=(',', ':')).encode()).hexdigest() == exported['sha256']
-            assert hashlib.sha256(data['proposal']['diff'].encode()).hexdigest() == digest == data['proposal']['patchSha256']
-            assert data['proposal']['checks']['testsPassed'] is True
-            assert data['proposal']['checks']['passedTests'] == contract['passedTests']
-            assert data['runId'] == run_id and data['projectId'] == project_id
-            assert any(d['decision'] in ([decision] if decision == 'veto' else ['approve', 'approved']) for d in data['decisions'])
+            data = verify_export(exported, project_id, run_id, decision, digest, contract['passedTests'])
             assert token not in downloaded.read_text()
             downloaded.rename(output / ('proposal-' + decision + '.json'))
             for name, original in contract['sourceFiles'].items():
-                source = control(state, 'run', '--', 'cat', '/home/keep/reviewer-sample/source/' + name)
-                workspace = control(state, 'run', '--', 'cat', '/home/keep/reviewer-sample/workspaces/project/' + name)
-                assert source == original.strip()
-                assert workspace == contract['expectedFiles'][name].strip()
+                source = control(state, 'run', '--', 'sha256sum', '/home/keep/reviewer-sample/source/' + name).split()[0]
+                workspace = control(state, 'run', '--', 'sha256sum', '/home/keep/reviewer-sample/workspaces/project/' + name).split()[0]
+                assert source == hashlib.sha256(original.encode()).hexdigest()
+                assert workspace == hashlib.sha256(contract['expectedFiles'][name].encode()).hexdigest()
             control(state, 'sample-stop')
             resumed = json.loads(control(state, 'sample-start'))
             assert resumed['sample']['resumed'] is True and resumed['sample']['generations'] == 0
@@ -156,7 +189,11 @@ def main():
                 click('form[action="/console/login"] button'); navigate(project_url)
             for name in changed_files: assert 'diff --git a/' + name + ' b/' + name in text('.diff')
             assert elements('a[href*="/console/export?"]')
-            navigate('http://127.0.0.1:7788/console/new'); click('form[action="/console/submit"] button')
+            navigate('http://127.0.0.1:7788/console/new')
+            recover = element('form[action="/console/submit"] button')
+            if not call('GET', '/element/' + recover + '/displayed'):
+                click('details:has(form[action="/console/submit"]) > summary')
+            click('form[action="/console/submit"] button')
             assert call('GET', '/url') == project_url, 'retained sample must recover its original project'
             assert control(state, 'credential') == token
             screenshot('reopened-' + decision + '.png')
@@ -177,6 +214,12 @@ def main():
             'stages': stages, 'freshCloneIdentities': identities, 'paidCalls': 0}
         (output / 'consumer.json').write_text(json.dumps(receipt, indent=2) + '\n')
         print('KC111_CONSUMER_JSON=' + json.dumps(receipt), flush=True)
+    except Exception as error:
+        (output / 'failure.json').write_text(json.dumps({'source': manifest['source'], 'stages': stages, 'error': str(error)}, indent=2) + '\n')
+        if session:
+            try: screenshot('failure.png')
+            except Exception: pass
+        raise
     finally:
         if session:
             try: call('DELETE', '', None)

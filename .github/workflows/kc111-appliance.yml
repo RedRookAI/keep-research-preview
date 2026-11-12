@@ -40,6 +40,7 @@ jobs:
           node --test --test-concurrency=1 dist/test/reviewer_sample.test.js
           python3 tools/appliance/test_launcher.py
           python3 tools/appliance/test_dispatch.py
+          python3 tools/appliance/test_supply_chain.py
   build:
     if: contains(github.event.head_commit.message, '[kc111-build-approved]')
     needs: source
@@ -113,6 +114,8 @@ jobs:
           print('KC111_CONSUMER_ARCHIVE_SHA256='+h.hexdigest())
           PY
       - name: Clean actual consumer using shipped controls and existing browser
+        env:
+          KC111_EXPECTED_SOURCE: ${{ github.sha }}
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends qemu-system-x86 qemu-utils
@@ -120,12 +123,14 @@ jobs:
           runner_gid=$(id -g)
           groups=$(printf '%s\n' "$(id -G | tr ' ' ',')",$(stat -c %g /dev/kvm) | tr ',' '\n' | sort -un | paste -sd, -)
           bundle=$(cat bundle-path)
-          sudo setpriv --reuid "$runner_uid" --regid "$runner_gid" --groups "$groups" -- env -i PATH="$PATH" HOME="$HOME" CHROMEWEBDRIVER="${CHROMEWEBDRIVER:-}" python3 "$bundle/qualify.py" "$bundle" "$GITHUB_WORKSPACE/consumer-evidence"
+          sudo setpriv --reuid "$runner_uid" --regid "$runner_gid" --groups "$groups" -- env -i PATH="$PATH" HOME="$HOME" CHROMEWEBDRIVER="${CHROMEWEBDRIVER:-}" KC111_EXPECTED_SOURCE="$KC111_EXPECTED_SOURCE" python3 "$bundle/qualify.py" "$bundle" "$GITHUB_WORKSPACE/consumer-evidence"
       - name: Retain small proof receipts and screenshots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: kc111-consumer-evidence
-          path: consumer-evidence/
+          path: |
+            consumer-evidence/*.json
+            consumer-evidence/*.png
           if-no-files-found: warn
           retention-days: 1
