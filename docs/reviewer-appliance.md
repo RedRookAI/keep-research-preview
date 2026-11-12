@@ -33,7 +33,7 @@ https://keep.redrook.ai/console
 
 The operator supplies its invitation credential separately.
 
-Choose **Submit a repository goal**, then **Submit goal**. Approve the displayed step to run the sample. Inspect the checked diff, choose **Veto proposal**, open the updated project and download the proposal evidence. The original sample repository remains unchanged after veto. Opening or refreshing the console does not submit another goal.
+Choose **Start demo**, then **Prepare the fix**. Keep will edit a small webhook handler and run four checks. Inspect the checked diff, approve or veto the proposal, then choose **Download evidence** to save the patch, checks and decision.
 
 In this appliance sample, proposal approval retains the reviewed workspace and leaves the source repository unchanged. You can reopen either an approved or vetoed sample to inspect its retained decision and export.
 
@@ -43,6 +43,12 @@ python3 keep-appliance.py sample-start /your/private/keep-instance
 ```
 
 Restart reopens the same sample and its retained jobs. It preserves decisions and exports. If a job was interrupted, inspect its recorded state before resuming; startup does not reset the instance or create a replacement task.
+
+## Distribution records
+
+The qualification consumer captures the final guest's installed package metadata, including source versions and Built-Using fields, plus its copyright notices and existing Keep, engine and Node support files. The capture records file checksums and the exact image and source identities. The bundle also retains the pinned Bubblewrap source archive and its build recipe.
+
+The Debian source companion must contain the exact source packages and Debian patches identified by that guest inventory before the appliance binary is published. Candidate builds remain private drafts while this companion and the clean consumer are being qualified.
 
 ## Set up your own repository
 
