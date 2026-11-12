@@ -105,6 +105,51 @@ def verify_export(exported, project_id, run_id, decision, digest, expected_tests
     return data
 
 
+def console_project_id(url):
+    parsed = urllib.parse.urlsplit(url)
+    query = urllib.parse.parse_qs(parsed.query)
+    values = query.get('projectId', [])
+    if (parsed.scheme, parsed.netloc, parsed.path) != ('http', '127.0.0.1:7788', '/console/project'):
+        return None
+    if set(query) != {'projectId'} or len(values) != 1 or not re.fullmatch(r'[A-Za-z0-9_-]+', values[0]):
+        return None
+    return values[0]
+
+
+def wait_for_console_navigation(read_page, previous_document, deadline, *, project_url=None, action_path=None):
+    """Observe one dispatched navigation; never click, reload or resubmit here."""
+    expected_id = console_project_id(project_url) if project_url else None
+    if project_url and not expected_id:
+        raise RuntimeError('Expected retained project URL is invalid')
+    while time.monotonic() < deadline:
+        page = read_page()
+        if page['document'] != previous_document and page['ready'] == 'complete':
+            project_id = console_project_id(page['url'])
+            if project_id:
+                if expected_id and project_id != expected_id:
+                    raise RuntimeError('Navigation reached another project; no action retried')
+                return page['url'], project_id
+            parsed = urllib.parse.urlsplit(page['url'])
+            if action_path and (parsed.scheme, parsed.netloc, parsed.path) == ('http', '127.0.0.1:7788', action_path):
+                if expected_id and console_project_id(page.get('projectLink', '')) == expected_id:
+                    return page['url'], expected_id
+                raise RuntimeError('Action response lacks its expected retained project; no action retried')
+            raise RuntimeError('Console navigation reached an unexpected/error page; no submission or action retried')
+        time.sleep(0.1)
+    raise RuntimeError('Console navigation not confirmed before deadline; inspect retained work; no submission or action retried')
+
+
+def failure_diagnostics(url, body, credential=None):
+    parsed = urllib.parse.urlsplit(url)
+    # Retain the route only: invitation, CSRF, submission and export query values
+    # are unnecessary to diagnose the rendered page. Body excludes input values.
+    route = urllib.parse.urlunsplit((parsed.scheme, parsed.netloc.rsplit('@', 1)[-1], parsed.path, '', ''))
+    if credential:
+        body = body.replace(credential, '[redacted credential]')
+    body = re.sub(r'(?i)\b[0-9a-f]{64}\b', '[redacted digest/credential]', body)
+    return {'urlWithoutQuery': route, 'bodyText': body[:8192]}
+
+
 def main():
     bundle, output = [Path(value).resolve() for value in sys.argv[1:3]]
     output.mkdir(mode=0o700)
@@ -129,7 +174,7 @@ def main():
     browser_driver = subprocess.Popen([driver_path, '--port=' + str(driver_port), '--allowed-ips=127.0.0.1'], stdout=log, stderr=log,
         env={'PATH': os.environ['PATH'], 'HOME': os.environ['HOME'], 'LANG': 'C.UTF-8'})
     base = 'http://127.0.0.1:' + str(driver_port)
-    session = None; active_state = None
+    session = None; active_state = None; token = None
     stages, identities = [], []
 
     def webdriver(method, path, data=None):
@@ -152,12 +197,20 @@ def main():
     def navigate(url): call('POST', '/url', {'url': url})
     def screenshot(name): (output / name).write_bytes(base64.b64decode(call('GET', '/screenshot')))
     def control(state, action, *args): return execute([sys.executable, str(cli), action, str(state), *args])
-    def open_action_result(project_url):
-        current = urllib.parse.urlsplit(call('GET', '/url'))
-        target = urllib.parse.urlsplit(project_url)
-        if current.path == target.path and urllib.parse.parse_qs(current.query).get('projectId') == urllib.parse.parse_qs(target.query).get('projectId'):
+    def page_state():
+        return call('POST', '/execute/sync', {'script': 'return {url: location.href, document: performance.timeOrigin, ready: document.readyState, projectLink: document.querySelector(\'a[href^="/console/project?projectId="]\')?.href || ""}', 'args': []})
+    def click_navigation(selector):
+        previous = page_state()['document']
+        click(selector)
+        return previous
+    def open_action_result(project_url, previous_document, action_path, deadline):
+        current, _ = wait_for_console_navigation(page_state, previous_document, deadline,
+                                                 project_url=project_url, action_path=action_path)
+        if console_project_id(current):
             return
-        click('a[href^="/console/project?projectId="]')
+        target = urllib.parse.urlsplit(project_url)
+        previous = click_navigation('a[href="' + target.path + '?' + target.query + '"]')
+        wait_for_console_navigation(page_state, previous, deadline, project_url=project_url)
     def inspect_diff():
         if not call('GET', '/element/' + element('.diff') + '/displayed'):
             click('details:has(.diff) > summary')
@@ -203,21 +256,22 @@ def main():
             click('form[action="/console/login"] button')
             assert len(elements('.project')) == 0
             assert attribute('[name=goal]', 'value') == contract['goal']
-            click('form[action="/console/submit"] button')
-            project_url = call('GET', '/url')
-            project_id = urllib.parse.parse_qs(urllib.parse.urlsplit(project_url).query)['projectId'][0]
             deadline = time.monotonic() + 600
+            previous = click_navigation('form[action="/console/submit"] button')
+            project_url, project_id = wait_for_console_navigation(page_state, previous, deadline)
             while time.monotonic() < deadline:
                 call('POST', '/refresh', {})
                 if elements('form[action="/console/resume"] button[value=approve]'): break
                 time.sleep(0.1)
-            click('form[action="/console/resume"] button[value=approve]'); open_action_result(project_url)
             deadline = time.monotonic() + 600
+            previous = click_navigation('form[action="/console/resume"] button[value=approve]')
+            open_action_result(project_url, previous, '/console/resume', deadline)
             while time.monotonic() < deadline:
                 call('POST', '/refresh', {})
                 if elements('form[action="/console/merge"]'): break
                 if elements('form[action="/console/resume"] button[value=approve]'):
-                    click('form[action="/console/resume"] button[value=approve]'); open_action_result(project_url)
+                    previous = click_navigation('form[action="/console/resume"] button[value=approve]')
+                    open_action_result(project_url, previous, '/console/resume', deadline)
                 time.sleep(0.1)
             observed_diff = inspect_diff()
             for name in changed_files: assert 'diff --git a/' + name + ' b/' + name in observed_diff
@@ -225,8 +279,9 @@ def main():
             digest = attribute('input[name=proposalDigest]', 'value')
             run_id = attribute('form[action="/console/merge"] input[name=runId]', 'value')
             screenshot('checked-' + decision + '.png')
-            click('form[action="/console/merge"] button[value=' + decision + ']')
-            open_action_result(project_url)
+            deadline = time.monotonic() + 30
+            previous = click_navigation('form[action="/console/merge"] button[value=' + decision + ']')
+            open_action_result(project_url, previous, '/console/merge', deadline)
             previous = set(output.glob('*.json'))
             click('a[href^="/console/export?"]')
             deadline = time.monotonic() + 30
@@ -258,8 +313,10 @@ def main():
             recover = element('form[action="/console/submit"] button')
             if not call('GET', '/element/' + recover + '/displayed'):
                 click('details:has(form[action="/console/submit"]) > summary')
-            click('form[action="/console/submit"] button')
-            assert call('GET', '/url') == project_url, 'retained sample must recover its original project'
+            deadline = time.monotonic() + 30
+            previous = click_navigation('form[action="/console/submit"] button')
+            recovered_url, recovered_id = wait_for_console_navigation(page_state, previous, deadline, project_url=project_url)
+            assert recovered_url == project_url and recovered_id == project_id, 'retained sample must recover its original project'
             assert control(state, 'credential') == token
             screenshot('reopened-' + decision + '.png')
             call('DELETE', '', None); session = None
@@ -281,10 +338,13 @@ def main():
         (output / 'consumer.json').write_text(json.dumps(receipt, indent=2) + '\n')
         print('KC111_CONSUMER_JSON=' + json.dumps(receipt), flush=True)
     except Exception as error:
-        (output / 'failure.json').write_text(json.dumps({'source': manifest['source'], 'stages': stages, 'error': str(error)}, indent=2) + '\n')
+        failure = {'source': manifest['source'], 'stages': stages, 'error': str(error)}
         if session:
+            try: failure['browser'] = failure_diagnostics(call('GET', '/url'), text('body'), token)
+            except Exception: pass
             try: screenshot('failure.png')
             except Exception: pass
+        (output / 'failure.json').write_text(json.dumps(failure, indent=2) + '\n')
         raise
     finally:
         if session:

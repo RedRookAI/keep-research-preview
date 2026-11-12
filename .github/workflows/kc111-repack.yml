@@ -28,6 +28,7 @@ jobs:
           python3 tools/appliance/test_dispatch.py
           python3 tools/appliance/test_repack.py
           python3 tools/appliance/test_supply_chain.py
+          python3 tools/appliance/test_consumer_navigation.py
           python3 tools/appliance/test_distribution_input.py
           python3 tools/appliance/test_source_upload.py
       - name: Download the exact existing image archive and its frozen receipt
