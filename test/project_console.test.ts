@@ -125,3 +125,130 @@ test("console cancellation requires its own solve permission before any API effe
   const response = await handleProjectConsole({ method: "POST", path: "/console/cancel", query: {}, headers: {}, body: "" }, "csrf", api, { approve: true, decline: true, cancel: false });
   assert.equal(response.status, 403);
 });
+
+test("browser goal submission keeps one durable identity across refresh, duplicate POST and a lost response", async () => {
+  const root = mkdtempSync(join(tmpdir(), "keep-console-submit-")), token = "owned-submission-fixture";
+  let solves = 0;
+  const app = composeKeep({ dataDir: root, projectRuntimePaused: true, solve: async () => { solves++; throw new Error("paused job must never execute"); } });
+  const server = await startGatewayServer(app, { port: 0, token });
+  try {
+    const login = await fetch(server.origin + "/console/login", { method: "POST", redirect: "manual", headers: { origin: server.origin }, body: new URLSearchParams({ token }) });
+    const cookie = login.headers.get("set-cookie")!.split(";")[0]!;
+    const entry = await fetch(server.origin + "/console/new", { headers: { cookie }, redirect: "manual" });
+    assert.equal(entry.status, 303);
+    const url = server.origin + entry.headers.get("location")!;
+    const html = await (await fetch(url, { headers: { cookie } })).text();
+    assert.match(html, /dispatch is paused/); assert.ok(!html.includes(token));
+    const key = /name="idempotencyKey" value="([^"]+)"/u.exec(html)![1]!;
+    const csrf = /name="csrf" value="([^"]+)"/u.exec(html)![1]!;
+    assert.ok((await (await fetch(url, { headers: { cookie } })).text()).includes(key));
+    assert.equal(app.projectManager!.list().length, 0, "reading/refreshing never creates a project");
+    const goal = "Fix the bounded repository arithmetic <script>bad()</script>";
+    const send = (overrides: { cookie?: string; csrf?: string; origin?: string; goal?: string } = {}) => fetch(server.origin + "/console/submit", {
+      method: "POST", redirect: "manual", headers: { cookie: overrides.cookie ?? cookie, origin: overrides.origin ?? server.origin },
+      body: new URLSearchParams({ csrf: overrides.csrf ?? csrf, idempotencyKey: key, goal: overrides.goal ?? goal, repoDir: "/forged/path", command: "forged" }),
+    });
+    assert.equal((await send({ cookie: "keep_token=foreign-session" })).status, 401);
+    for (const badCsrf of ["", "incorrect", token]) assert.equal((await send({ csrf: badCsrf })).status, 403);
+    assert.equal((await send({ origin: "https://foreign.invalid" })).status, 403);
+    assert.equal(app.projectManager!.list().length, 0);
+    const [first, duplicate] = await Promise.all([send(), send()]);
+    assert.equal(first.status, 303); assert.equal(duplicate.status, 303);
+    assert.equal(first.headers.get("location"), duplicate.headers.get("location"));
+    assert.equal(app.projectManager!.list().length, 1); assert.equal(solves, 0);
+    const projectId = app.projectManager!.list()[0]!.id;
+    assert.equal(app.projectRuntime!.jobs(new Set([projectId])).length, 1);
+    const changed = await send({ goal: "Different goal" });
+    assert.equal(changed.status, 409); assert.match(await changed.text(), new RegExp(key));
+    assert.equal(app.projectManager!.list().length, 1);
+    // Simulate the bridge losing its response after the canonical gateway committed.
+    const api: ConsoleApi = async (method, path, query = {}, body) => {
+      const response = await handleGatewayRequest(app, { method, path, query, headers: { authorization: `Bearer ${token}` }, body: JSON.stringify(body) }, { token });
+      if (method === "POST") throw new Error("response lost after commit");
+      return response;
+    };
+    const lost = await handleProjectConsole({ method: "POST", path: "/console/submit", query: {}, headers: {}, body: new URLSearchParams({ idempotencyKey: key, goal }).toString() }, csrf, api, { approve: true, decline: true, submit: true });
+    assert.equal(lost.status, 503); assert.match(lost.body, /outcome is uncertain/); assert.ok(lost.body.includes(key));
+    assert.match(lost.body, /&lt;script&gt;/); assert.ok(!lost.body.includes("<script>"));
+    const recovered = await send();
+    assert.equal(recovered.status, 303); assert.equal(recovered.headers.get("location"), first.headers.get("location"));
+    const detail = await (await fetch(server.origin + first.headers.get("location")!, { headers: { cookie } })).text();
+    assert.match(detail, /queued/); assert.match(detail, /dispatch is paused/); assert.match(detail, /Request cancellation/);
+    assert.equal(app.projectRuntime!.jobs(new Set([projectId])).length, 1);
+    assert.equal(solves, 0);
+  } finally {
+    for (const project of app.projectManager!.list()) for (const job of app.projectRuntime!.jobs(new Set([project.id]))) await app.projectRuntime!.cancel(job.id);
+    await server.close(); rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("submission permission and unconfigured worker refuse without a job; held setup retains the original goal", async () => {
+  const req = { method: "POST", path: "/console/submit", query: {}, headers: {}, body: "" };
+  const denied = await handleProjectConsole(req, "csrf", async () => { throw new Error("must not call"); }, { approve: true, decline: true, submit: false });
+  assert.equal(denied.status, 403);
+  const root = mkdtempSync(join(tmpdir(), "keep-console-unconfigured-"));
+  const app = composeKeep({ dataDir: root }), token = "unconfigured-owner";
+  const api: ConsoleApi = (method, path, query = {}, body) => handleGatewayRequest(app, { method, path, query, body: body === undefined ? "" : JSON.stringify(body), headers: { authorization: `Bearer ${token}` } }, { token });
+  try {
+    const form = await handleProjectConsole({ ...req, method: "GET", path: "/console/new", query: { submissionKey: "unconfigured-key-1234" } }, "csrf", api, { approve: true, decline: true, submit: true });
+    assert.match(form.body, /solver is unconfigured/);
+    const result = await handleProjectConsole({ ...req, body: new URLSearchParams({ idempotencyKey: "unconfigured-key-1234", goal: "Repair missing dependencies <img>" }).toString() }, "csrf", api, { approve: true, decline: true, submit: true });
+    assert.equal(result.status, 501); assert.match(result.body, /unconfigured-key-1234/); assert.match(result.body, /&lt;img&gt;/);
+    assert.equal(app.projectManager!.list().length, 0);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("revoking solve permission after the form was read prevents browser submission", async () => {
+  const root = mkdtempSync(join(tmpdir(), "keep-console-revoked-")), token = "revocation-owner-fixture";
+  let allowed = true;
+  const app = composeKeep({ dataDir: root, projectRuntimePaused: true, solve: async () => { throw new Error("must not dispatch"); },
+    authorization: { authorize: (_principal, action) => ({ allow: action !== "change.solve" || allowed, reason: "mutable fixture policy" }) } });
+  const server = await startGatewayServer(app, { port: 0, token });
+  try {
+    const login = await fetch(server.origin + "/console/login", { method: "POST", redirect: "manual", headers: { origin: server.origin }, body: new URLSearchParams({ token }) });
+    const cookie = login.headers.get("set-cookie")!.split(";")[0]!;
+    const form = await (await fetch(server.origin + "/console/new?submissionKey=revocation-key-12345", { headers: { cookie } })).text();
+    const csrf = /name="csrf" value="([^"]+)"/u.exec(form)![1]!;
+    allowed = false;
+    const denied = await fetch(server.origin + "/console/submit", { method: "POST", headers: { cookie, origin: server.origin }, body: new URLSearchParams({ csrf, idempotencyKey: "revocation-key-12345", goal: "Fix arithmetic" }) });
+    assert.equal(denied.status, 403); assert.equal(app.projectManager!.list().length, 0); assert.equal(app.projectRuntime!.jobs().length, 0);
+  } finally { await server.close(); rmSync(root, { recursive: true, force: true }); }
+});
+
+test("retained console jobs show the recorded terminal failure after active capacity is released", async () => {
+  const root = mkdtempSync(join(tmpdir(), "keep-console-failed-")), token = "failed-job-owner";
+  const app = composeKeep({ dataDir: root });
+  const project = app.projectManager!.create({ name: "Dependency failure" });
+  const tracked = app.projectRuntime!.submitTracked(project.id, 1, async () => { throw new Error("Missing dependency: checker executable unavailable; owner must correct setup"); }, "repository checker");
+  await assert.rejects(tracked.completion, /Missing dependency/);
+  assert.equal(app.projectRuntime!.jobs(new Set([project.id])).length, 0, "terminal job consumes no active capacity");
+  const api: ConsoleApi = (method, path, query = {}, body) => handleGatewayRequest(app, { method, path, query, body: body === undefined ? "" : JSON.stringify(body), headers: { authorization: `Bearer ${token}` } }, { token });
+  try {
+    const detail = await handleProjectConsole({ method: "GET", path: "/console/project", query: { projectId: project.id }, headers: {}, body: "" }, "csrf", api, { approve: true, decline: true });
+    assert.equal(detail.status, 200); assert.match(detail.body, /failed/); assert.match(detail.body, /callback failed/);
+    assert.ok(detail.body.includes(tracked.jobId)); assert.doesNotMatch(detail.body, /<button[^>]*>Request cancellation/);
+    const foreign = await handleGatewayRequest(app, { method: "GET", path: "/project/jobs", query: { includeTerminal: "true" }, headers: { authorization: `Bearer ${token}` }, body: "" }, { token, principalFor: () => ({ id: "foreign-owner", kind: "human", role: "owner", tenant: "foreign" }) });
+    assert.equal(foreign.status, 200); assert.deepEqual(JSON.parse(foreign.body).jobs, [], "retained history preserves tenant filtering");
+    const reopened = composeKeep({ dataDir: root });
+    assert.equal(reopened.projectRuntime!.retainedJobs(new Set([project.id]))[0]!.state, "failed", "retained navigation survives runtime reconstruction");
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("console projects missing prerequisites, uncertain work and a pre-checkpoint queued job without dispatch", async () => {
+  for (const state of ["missing-prerequisites", "reconciliation-required", "queued"]) {
+    const jobId = "33333333-3333-4333-8333-333333333333";
+    const jobState = state === "missing-prerequisites" ? "completed" : state;
+    const reason = state === "missing-prerequisites" ? "Missing check prerequisites: node_modules/fixture/package.json. Ask the owner to prepare the workspace." : "Interrupted work; reconcile effects before retrying.";
+    let writes = 0;
+    const api: ConsoleApi = async (method, path, query) => {
+      if (method === "POST") writes++;
+      const data = path === "/projects" ? { projects: [{ id: "p1", name: "Bounded goal", runId: "r1" }] }
+        : path === "/project/jobs" ? query?.jobId ? { job: { id: jobId, projectId: "p1", state: jobState }, activities: [] } : { jobs: [{ id: jobId, projectId: "p1", label: "retained work", state: jobState, reason }] }
+        : { projectId: "p1", project: { status: "waiting-capability", wait: { kind: "capability", reason } } };
+      return { status: path === "/project" && state === "queued" ? 404 : 200, headers: {}, body: JSON.stringify(data) };
+    };
+    const response = await handleProjectConsole({ method: "GET", path: "/console/project", query: { projectId: "p1" }, headers: {}, body: "" }, "csrf", api, { approve: true, decline: true });
+    assert.equal(response.status, 200); assert.ok(response.body.includes(reason)); assert.equal(writes, 0);
+    assert.match(response.body, /No repository check result is recorded yet/);
+  }
+});
