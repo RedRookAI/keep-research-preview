@@ -43,7 +43,7 @@ sudo apt-get update -qq
 sudo apt-get install -y -qq --no-install-recommends qemu-system-x86 qemu-utils
 qemu-system-x86_64 --version
 qemu-img --version
-qemu-system-x86_64 -machine help | awk '{print $1}' | rg '^pc-q35-8\.2$'
+qemu-system-x86_64 -machine help | awk '$1=="pc-q35-8.2" {found=1; print $0} END {if (!found) exit 1}'
 sha256sum "$(command -v qemu-system-x86_64)" "$(command -v qemu-img)"
 dpkg-query -W qemu-system-x86 qemu-system-common qemu-utils qemu-system-data
 
