@@ -1,4 +1,4 @@
-name: KC110 package-profile capability probe
+name: KC110 same-guest package-profile proof
 on:
   push:
     branches: [work/kc110-profile-proof-2026-11-12]
@@ -16,31 +16,6 @@ jobs:
         with:
           node-version: 22.23.4
           package-manager-cache: false
-      - name: Read disposable x64 fixture capabilities without changing policy
+      - name: Run approved disposable Debian x64 fixture
         shell: bash
-        run: |
-          python3 - <<'PY'
-          import os,platform,shutil,subprocess,json,pathlib,hashlib
-          def read(path):
-            try:return pathlib.Path(path).read_text().strip()
-            except OSError:return None
-          tools={}
-          for name in ['qemu-system-x86_64','qemu-img','cloud-localds','genisoimage','xorriso','python3','curl','tar','ssh','ssh-keygen','node']:
-            path=shutil.which(name)
-            item={'path':path}
-            if path:
-              item['sha256']=hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
-              if name in ['qemu-system-x86_64','qemu-img','python3','curl','node']:
-                result=subprocess.run([path,'--version'],capture_output=True,text=True,timeout=10)
-                item['version']=(result.stdout+result.stderr).splitlines()[:2]
-            tools[name]=item
-          space=os.statvfs('.')
-          record={'schema':'keep.kc110-fixture-capabilities/v1','source':os.environ.get('GITHUB_SHA'),'runId':os.environ.get('GITHUB_RUN_ID'),
-            'runnerImage':{k:os.environ.get(k) for k in ['ImageOS','ImageVersion','RUNNER_OS','RUNNER_ARCH']},
-            'machine':platform.machine(),'kernel':platform.release(),'uid':os.getuid(),'osRelease':read('/etc/os-release'),
-            'kvm':{'exists':os.path.exists('/dev/kvm'),'readable':os.access('/dev/kvm',os.R_OK),'writable':os.access('/dev/kvm',os.W_OK)},
-            'cpuVirtualizationFlag':any(x in (read('/proc/cpuinfo') or '').split() for x in ['vmx','svm']),
-            'workspaceFreeBytes':space.f_bavail*space.f_frsize,'apparmorUsernsRestriction':read('/proc/sys/kernel/apparmor_restrict_unprivileged_userns'),
-            'tools':tools,'guestBooted':False,'policyChanged':False,'packagesInstalled':False}
-          print('KC110_CAPABILITIES_JSON='+json.dumps(record,separators=(',',':')))
-          PY
+        run: bash .github/kc110/fixture.sh
