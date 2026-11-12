@@ -58,10 +58,22 @@ test("explicit preparation component uses selected toolchain and fixed offline r
   const f = fixture(t); f.clone();
   const sibling = join(f.root, "sibling"); mkdirSync(sibling); writeFileSync(join(sibling, "unchanged"), "untouched");
   let runs = 0;
+  let deadline: number | undefined;
   const privateConfigs: string[] = [];
-  const runner = (config: ConstructorParameters<typeof SandboxedCommandRunner>[0]) => ({ run: async () => {
+  const runner = (config: ConstructorParameters<typeof SandboxedCommandRunner>[0]) => ({ run: async (_repo: string, execution?: { deadline?: number }) => {
     runs++; assert.equal(config.command, f.preparation.node); assert.equal(config.projectDir, f.workspace);
     assert.equal(config.namespaceJail, "required"); assert.equal(config.allowNet, false); assert.deepEqual(config.readOnlyPaths, [f.toolchain]);
+    assert.deepEqual(config.envAllowlist, []);
+    assert.ok(execution?.deadline !== undefined);
+    if (runs === 1) {
+      deadline = execution.deadline;
+      assert.equal(config.args[0], "-e");
+      assert.match(config.args[1]!, /required sandbox preflight/u);
+      assert.equal(config.args.some(arg => arg === f.preparation.npmCli), false, "preflight never launches npm");
+      assert.equal(existsSync(join(f.workspace, "node_modules")), false);
+      return componentSuccess;
+    }
+    assert.equal(execution.deadline, deadline, "npm shares the preflight deadline instead of replenishing it");
     assert.ok(config.args.includes("--offline")); assert.ok(config.args.includes("--ignore-scripts")); assert.equal(config.args[0], f.preparation.npmCli);
     const userConfig = config.args.find(arg => arg.startsWith("--userconfig="))!.slice("--userconfig=".length);
     const globalConfig = config.args.find(arg => arg.startsWith("--globalconfig="))!.slice("--globalconfig=".length);
@@ -75,11 +87,52 @@ test("explicit preparation component uses selected toolchain and fixed offline r
     f.supply(f.workspace); return componentSuccess;
   } });
   const report = await prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [], preparation: f.preparation }, runner);
-  assert.equal(report.ready, true); assert.equal(runs, 1);
+  assert.equal(report.ready, true); assert.equal(runs, 2);
   assert.ok(privateConfigs.every(path => existsSync(path) && readFileSync(path, "utf8") === ""), "private empty configuration files are retained for inspection without path-based cleanup");
   await prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [], preparation: f.preparation }, () => { throw new Error("prepared path must not reinstall"); });
   assert.equal(f.git(f.source, "status", "--porcelain"), ""); assert.equal(f.git(f.workspace, "diff", "HEAD"), "");
   assert.equal(readFileSync(join(sibling, "unchanged"), "utf8"), "untouched");
+});
+
+test("sandbox preflight holds before npm when setup or useful runtime execution is unconfirmed", async t => {
+  const failures = [
+    { ...componentSuccess, processIsolation: { ...componentSuccess.processIsolation, namespaceSetup: "unverified" as const } },
+    { ...componentSuccess, processIsolation: { ...componentSuccess.processIsolation, rlimitSetup: "unverified" as const } },
+    { ...componentSuccess, processIsolation: { ...componentSuccess.processIsolation, degraded: ["required-setup-unverified"] } },
+    { ...componentSuccess, results: [] },
+    { ...componentSuccess, results: [{ name: "runtime failed", passed: false }] },
+    { ...componentSuccess, runnerError: "required-jail control pipe 3 failed" },
+  ];
+  for (const [index, failure] of failures.entries()) await t.test(`refusal ${index + 1}`, async child => {
+    const f = fixture(child); f.clone(); let launches = 0;
+    await assert.rejects(prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [], preparation: f.preparation }, config => ({ run: async () => {
+      launches++; assert.equal(config.args[0], "-e", "only the fixed preflight may dispatch"); return failure;
+    } })), error => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /required sandbox preflight failed/u);
+      assert.match(error.message, /npm was not launched/u);
+      assert.match(error.message, /AppArmor or container policy/u);
+      assert.doesNotMatch(error.message, /cache.*unavailable/u, "setup refusal must not be reported as a package cache failure");
+      return true;
+    });
+    assert.equal(launches, 1); assert.equal(existsSync(join(f.workspace, "node_modules")), false);
+    assert.equal(existsSync(join(f.workspace, ".git/keep-preparation-hold.json")), true);
+    assert.equal(f.git(f.source, "status", "--porcelain"), ""); assert.equal(f.git(f.workspace, "diff", "HEAD"), "");
+  });
+});
+
+test("installation failures distinguish a later setup refusal from an offline npm failure", async t => {
+  for (const setupConfirmed of [false, true]) await t.test(`installation setup ${setupConfirmed}`, async child => {
+    const f = fixture(child); f.clone(); let launches = 0;
+    await assert.rejects(prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [], preparation: f.preparation }, config => ({ run: async () => {
+      if (++launches === 1) return componentSuccess;
+      assert.equal(config.args[0], f.preparation.npmCli);
+      return { ...componentSuccess, results: [{ name: "install", passed: false }],
+        processIsolation: { ...componentSuccess.processIsolation, namespaceSetup: setupConfirmed ? "launcher-confirmed" as const : "unverified" as const } };
+    } })), setupConfirmed ? /npm did not complete successfully inside the confirmed required sandbox/u : /earlier preflight does not qualify a later process/u);
+    assert.equal(launches, 2); assert.equal(existsSync(join(f.workspace, ".git/keep-preparation-hold.json")), true);
+    assert.equal(existsSync(join(f.workspace, "node_modules")), false);
+  });
 });
 
 test("unsupported manager, lockfile, changed toolchain and real unavailable helper hold without fallback", async t => {

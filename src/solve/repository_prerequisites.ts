@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { closeSync, existsSync, fsyncSync, lstatSync, mkdtempSync, openSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from "node:fs";
 import { delimiter, isAbsolute, join, sep } from "node:path";
 import { SandboxedCommandRunner } from "./sandboxed_runner.js";
-import type { TestRunner } from "./validate.js";
+import type { TestRunner, TestRunResult } from "./validate.js";
 import type { CapturedTestCommand } from "../cli/runtime_config.js";
 import { GitAdapter } from "../infra/git_adapter.js";
 
@@ -33,6 +33,15 @@ const preparationHold = (workspace: string) => join(workspace, ".git", "keep-pre
 const trackedState = async (git: GitAdapter) => [await git.head(), (await git.git(["diff", "--binary", "--no-ext-diff", "--no-textconv", "HEAD", "--"])).stdout];
 const stateDigest = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const PENDING_INTEGRITY = "workspace preparation integrity is pending or unresolved";
+const PREFLIGHT = "process.stdout.write('TAP version 13\\n1..1\\nok 1 - required sandbox preflight\\n')";
+function requiredSetupConfirmed(result: TestRunResult): boolean {
+  const observation = result.processIsolation;
+  return observation?.namespacePolicy === "required" && observation.namespaceSetup === "launcher-confirmed"
+    && observation.basis === "launcher-status" && observation.rlimitSetup === "launcher-confirmed" && observation.degraded.length === 0;
+}
+function commandPassed(result: TestRunResult): boolean {
+  return !result.runnerError && result.results.length > 0 && result.results.every(row => row.passed);
+}
 function recordPreparationIntent(workspace: string, beforeWorkspace: unknown, beforeSource: unknown): void {
   const fd = openSync(preparationHold(workspace), "wx", 0o600);
   try {
@@ -134,6 +143,19 @@ export async function prepareRepositoryWorkspace(repository: string, workspace: 
   // This durable intent precedes factory construction and runner dispatch. Throws,
   // uncertain completion and failed readback retain it until explicit reconciliation.
   recordPreparationIntent(workspace, beforeWorkspace, beforeSource);
+  const config = { command: p.node, projectDir: workspace, namespaceJail: "required" as const,
+    ...(command.jailExecutable ? { jailExecutable: command.jailExecutable } : {}),
+    readOnlyPaths: [p.toolchainRoot], allowNet: false, envAllowlist: [], timeoutMs: command.timeoutMs,
+    cpuLimitSec: command.cpuLimitSec, maxOutputBytes: command.maxOutputBytes };
+  // Exercise the actual selected runtime and required boundary before npm. This
+  // fixed program loads no repository code or dependencies. Both launches share
+  // the original preparation deadline; the preflight cannot replenish it.
+  const execution = { deadline: Date.now() + command.timeoutMs };
+  const preflight = await runnerFor({ ...config, args: ["-e", PREFLIGHT] }).run(".", execution);
+  if (JSON.stringify(await trackedState(workspaceGit)) !== JSON.stringify(beforeWorkspace) || JSON.stringify(await trackedState(sourceGit)) !== JSON.stringify(beforeSource))
+    throw new Error("Preparation changed tracked repository/checker bytes. Preserve this workspace for inspection; no project generation or automatic retry is admitted.");
+  if (!requiredSetupConfirmed(preflight) || !commandPassed(preflight))
+    throw new Error("Offline workspace preparation held: required sandbox preflight failed. Namespace/resource-limit setup or the selected Node runtime could not be confirmed. npm was not launched; adding packages to the cache will not resolve this preflight failure. Check the qualified helper, protected installation path, Linux user/network namespace permissions and AppArmor or container policy. Use a namespace-capable host or an administrator-reviewed application-specific policy, then explicitly retry prepare. The preparation hold is retained; no host policy was changed.");
   // npm refuses loading one canonical file as both user and global config.
   // Separate private empty files suppress ambient configuration without aliasing.
   const configDirectory = mkdtempSync(join(workspace, ".git", "keep-preparation-npmrc-"));
@@ -141,17 +163,15 @@ export async function prepareRepositoryWorkspace(repository: string, workspace: 
   for (const path of [userConfig, globalConfig]) writeFileSync(path, "", { flag: "wx", mode: 0o600 });
   // Retain the empty files for inspection. The command can rename workspace
   // parents; parent-side path cleanup could otherwise follow a replacement.
-  const result = await runnerFor({ command: p.node, args: [p.npmCli, "ci", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", "--global=false", `--userconfig=${userConfig}`, `--globalconfig=${globalConfig}`, `--prefix=${workspace}`, `--cache=${join(workspace, ".keep-preparation-cache")}`],
-      projectDir: workspace, namespaceJail: "required", ...(command.jailExecutable ? { jailExecutable: command.jailExecutable } : {}),
-      readOnlyPaths: [p.toolchainRoot], allowNet: false, envAllowlist: [], timeoutMs: command.timeoutMs, cpuLimitSec: command.cpuLimitSec, maxOutputBytes: command.maxOutputBytes,
-  }).run(".");
+  const result = await runnerFor({ ...config, args: [p.npmCli, "ci", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", "--global=false", `--userconfig=${userConfig}`, `--globalconfig=${globalConfig}`, `--prefix=${workspace}`, `--cache=${join(workspace, ".keep-preparation-cache")}`],
+  }).run(".", execution);
   if (JSON.stringify(await trackedState(workspaceGit)) !== JSON.stringify(beforeWorkspace) || JSON.stringify(await trackedState(sourceGit)) !== JSON.stringify(beforeSource)) {
     throw new Error("Preparation changed tracked repository/checker bytes. Preserve this workspace for inspection; no project generation or automatic retry is admitted.");
   }
-  const observation = result.processIsolation;
-  if (result.runnerError || observation?.namespacePolicy !== "required" || observation.namespaceSetup !== "launcher-confirmed" || observation.basis !== "launcher-status"
-    || observation.degraded.length > 0 || !result.results.length || result.results.some(row => !row.passed))
-    throw new Error("Offline workspace preparation held. The required helper/setup, selected toolchain or offline dependencies are unavailable, or preparation failed. Inspect the selected helper and workspace cache; network access was not granted. No automatic retry or generation was started.");
+  if (!requiredSetupConfirmed(result))
+    throw new Error("Offline workspace preparation held: required sandbox setup was not confirmed for the installation attempt. The earlier preflight does not qualify a later process. Inspect the helper and host namespace policy before retrying; preserve the workspace and preparation hold because installation effects may be unresolved. No fallback or automatic retry was started.");
+  if (!commandPassed(result))
+    throw new Error("Offline workspace preparation held: npm did not complete successfully inside the confirmed required sandbox. Inspect the retained npm logs, lockfile and workspace/.keep-preparation-cache for missing offline packages or an installation error. Network access was not granted. The preparation hold is retained; no automatic retry or generation was started.");
   const after = inspectRepositoryReadiness(repository, workspace, command, setup);
   if (after.missing.some(path => path !== PENDING_INTEGRITY)) throw new Error(describeRepositoryReadiness(after));
   unlinkSync(hold);
