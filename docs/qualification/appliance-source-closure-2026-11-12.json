@@ -1,0 +1,67 @@
+{
+  "schema": "keep.appliance.source-closure-observation/v1",
+  "observedDate": "2026-11-12",
+  "runId": 43164616788,
+  "jobId": 131003454554,
+  "conclusion": "success",
+  "runUrl": "https://github.com/RedRookAI/keep-research-preview/actions/runs/43164616788",
+  "closure": {
+    "requiredPairs": 289,
+    "acquiredPairs": 289,
+    "missingPairs": 0
+  },
+  "imageSource": "fbd88f7c0190da905b49809290dfa496af290e10",
+  "imageSha256": "77ac8d6b57ee4ef6815294aecdf59f8bc7ef90044e9e3014631a0c43de0cc50b",
+  "collectorSource": "4730c249206c31e4fb466afc54622df93358443b",
+  "capturePurpose": "captured-distribution",
+  "consumerQualified": false,
+  "publicBinaryPublished": false,
+  "sourceTransfer": {
+    "schema": "keep.appliance.source-transfer/v1",
+    "source": "fbd88f7c0190da905b49809290dfa496af290e10",
+    "imageSha256": "77ac8d6b57ee4ef6815294aecdf59f8bc7ef90044e9e3014631a0c43de0cc50b",
+    "assemblySource": "99923cecbb2fc3d053ec200aab23ceb5394c6f05",
+    "scriptSource": "4730c249206c31e4fb466afc54622df93358443b",
+    "releaseId": 442420387,
+    "tag": "keep-reviewer-2026-11-12",
+    "draft": true,
+    "assets": {
+      "source-index.json": {
+        "sha256": "0cccb151ec4a7cb8fad661087765c3987176591edb63dff924546709a17ce103",
+        "bytes": 768477,
+        "id": 738275364
+      },
+      "distribution-input.json": {
+        "sha256": "235c9c9991932ac417b6e27f2601214c637a4272d63b4d10d2ef4cf05b896ae4",
+        "bytes": 1193,
+        "id": 738275393
+      },
+      "guest-dpkg-status": {
+        "sha256": "d951e0c25092367010a58637b254a7ae959f2809c9177edb704957ffbe7d3d0c",
+        "bytes": 330730,
+        "id": 738275420
+      },
+      "guest-packages.tsv": {
+        "sha256": "4b3501e589ff15592851cb130baafc09cd1c539d320b81178a88841d0a60645e",
+        "bytes": 15989,
+        "id": 738275459
+      },
+      "guest-distribution-support.tar.gz": {
+        "sha256": "154ece88d36833ab14ff796a76fef1ab28feb2d67229f280fd4c3ade6026fb31",
+        "bytes": 46553711,
+        "id": 738275500
+      },
+      "debian-sources-0001.tar": {
+        "sha256": "d26529691a1d131119f1f36e99bf0c91e794d0730cc5e5884b2692733594bf07",
+        "bytes": 867338240,
+        "id": 738275573
+      },
+      "SHA256SUMS": {
+        "sha256": "9462fb82f0f3a2a4092e5760e5dbcc0c372a57baaa36eb491bbfa5d6ad4f3ea8",
+        "bytes": 533,
+        "id": 738276534
+      }
+    }
+  },
+  "interpretation": "Matching sources and notices were acquired and retained in the private candidate draft. This observation does not establish the complete browser consumer or fresh-account handover."
+}

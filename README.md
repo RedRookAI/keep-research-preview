@@ -6,27 +6,23 @@ Keep brings project goals, memory, reusable skills and execution records into on
 
 The implementation spans software development, research, knowledge management and content workflows. The most developed installed workflow takes a repository goal through generation, workspace edits, executable checks and review.
 
-**Development source: 0.0.27-preview.1. Latest download: 0.0.21-preview.1, a Linux x64 development preview.** The repository contains runnable workflows, tested components and experimental integration points. Readiness varies by capability; the broader platform remains under development.
+**Try the guided demo:** use your assigned invitation, choose **Start demo**, then **Prepare the fix**. Keep edits a small webhook handler and runs four actual checks. Inspect the diff, approve or veto the exact proposal, then download the evidence. The sample uses two authored responses and requires no AI account or paid calls.
 
-Source .27 selects Node22.23.5 and fixes generated source/plugin file readability in the appliance recipe. The previous candidate booted and passed its required jail/engine proof; its distribution capture exposed the permission defect before browser qualification. The corrected image remains under qualification.
+https://keep.redrook.ai/console
 
-Source .26 adds restricted-client issuance directly from a saved instance, preserving its original repository, checker, model, limits and usage history. It also adds exact guest source-companion acquisition and checksummed draft transfer. These are source changes; the hosted guided demo remains .25 and the appliance is still being qualified.
-
-Source .25 adds a guided duplicate-webhook demo, visible background preparation and an x64 appliance recipe with owned startup/recovery controls. The recipe and source checks precede exact-image qualification. Source .24 added the controlled reviewer sample and an explicit personal HTTPS-origin setting. It includes .23 browser goal submission, same-submission recovery and retained job history. It includes the .22 tenant-scoped review decisions and attributable durable-memory control events. Download .21 includes organization code/PKCE login, pinned key refresh and session checks at supported project dispatch points. Unverified organization routes remain held. Native capture can also publish a separate patch candidate with retained inputs and application evidence. These additions have controlled source and SDK checks; live organization deployment, current membership and production-native authority remain open. The .21 release receipt identifies its exact payload and preparation checks.
-
-https://github.com/RedRookAI/keep-research-preview/blob/main/docs/maintenance-2026-11-11.4.md
-
-Browser submission and its actual Chromium walkthrough:
-
-https://github.com/RedRookAI/keep-research-preview/blob/main/docs/browser-project.md
-
-The interactive hosted invitation opens a guided duplicate-webhook task with a clear Start demo action. The walkthrough leads through preparation, four actual checks, your exact proposal decision and evidence download.
+Walkthrough and observed desktop/phone browser results:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/guided-demo.md
 
-An interactive hosted sample is available through operator-assigned invitations. It uses two scripted responses, real workspace edits and executable checks, with no AI account or paid calls. Public HTTPS and cross-instance refusal passed in two clean browser sessions. The selected Debian 13 x64 VM profile also passed the bundled-engine and required-sandbox checks together; the downloadable appliance is still being qualified.
+**Development source: 0.0.27-preview.1. Hosted demo: 0.0.25-preview.1. Latest download: 0.0.21-preview.1, a Linux x64 development preview.** The broader platform remains under development; the table below separates implemented scope from observed readiness.
 
-https://keep.redrook.ai/console
+The new self-contained Linux x64 appliance carries its own Node runtime, sandbox helper and generation engine. Its fresh guest passed the required-sandbox and engine checks, and all 289 required Debian source/version pairs were acquired. The complete downloadable browser workflow is still being qualified. Fresh live-account generation and current OpenClaw compatibility remain separate handover conditions.
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-source-closure-2026-11-12.json
+
+Browser submission, recovery and evidence:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/browser-project.md
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/reviewer-handover-2026-11-12.md
 
@@ -35,13 +31,13 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/
 | Area | Implemented scope | Current status |
 |---|---|---|
 | Project orchestration | Typed state, dependency-aware plans and task contracts, bounded execution, approval waits, cancellation and restart recovery. | Composed into the runtime. An ordinary software run admits one root task; a separate goal coordinator schedules bounded task contracts. General project completion needs broader qualification. |
-| Software delivery | Pinned revisions, separate workspaces, structured edits, executable checks, exact-proposal decisions, local source landing and revert. | Installed proposal/review workflow demonstrated. Landing, revert and interrupted-operation recovery have focused tests; the introductory demo ends at veto. |
+| Software delivery | Pinned revisions, separate workspaces, structured edits, executable checks, exact-proposal decisions, local source landing and revert; native-captured patch candidates with retained application evidence. | Installed proposal/review workflow demonstrated. The guided demo supports approval and veto. Landing, revert and interrupted-operation recovery have focused tests. |
 | Memory and knowledge | Encrypted persistent custody, source provenance, creation/correction, scoped retrieval, retention controls, temporal relationships and task-context assembly. | Durable memory commands and selected retrieval paths have scoped checks. Conversational memory and automatic learning have separate persistence and configuration limits. |
 | Research and retrieval | Bounded research coordination, citation records, freshness checks, corpus ingestion and lexical/vector retrieval. | Components and configured routes are implemented. Live source access depends on supplied adapters and permissions. |
 | Skills and learning | Trajectory extraction, validation, comparison against a baseline, content-bound admission, monitored reuse, retirement and regression response. | Managed lifecycle and persistence are implemented. Execution validation needs a configured oracle; useful reuse requires workload-specific measurement. |
 | Providers and resource control | Local/remote adapters, routing and cascades, cancellation, spending reservations, usage settlement and retained uncertainty. | Selected generation and embedding routes have checks. The default local provider is an offline fixture; metering coverage varies by route. |
-| Authority and governance | Permissions, delegation, consequence gates, privacy/egress controls, audit records, tenant-scoped components and evidence export. | Controls govern specific entry points. Live organization identity, independent custody and complete effect-path coverage remain open. |
-| Clients and operations | CLI, authenticated gateway, browser review console, restricted OpenClaw client, traces and protected backup/restore interfaces. | Combined archive startup, instance lifecycle, console and plugin setup have installed checks. Offsite recovery and wider operational qualification remain open. |
+| Authority and governance | Permissions, delegation, consequence gates, privacy/egress controls, audit records, tenant-scoped decisions, attributable memory controls and evidence export; organization code/PKCE login with pinned key refresh and session checks. | Controls govern specific entry points. Live organization deployment, current membership, independent custody and complete effect-path coverage remain open. |
+| Clients and operations | CLI, authenticated gateway, browser submission/review console, saved-instance restricted OpenClaw credentials, traces and protected backup/restore interfaces. | Credentials preserve the saved repository, checker, model, limits and usage history. Combined archive startup, instance lifecycle, console and historical plugin setup have installed checks. Current patched OpenClaw compatibility, offsite recovery and wider operational qualification remain open. |
 | Domain workflows and adaptation | Stage contracts for fiction, academic papers, chapter books, social video and audiobooks; optional model adaptation and training interfaces. | Experimental. External effects need configured capabilities. Weight training requires an external backend; complete installed domain workflows remain to be qualified. |
 | Execution isolation | Process controls, an opt-in required namespace jail, native protocol/capture code and microVM probes. | Selected Linux jail behavior has scoped checks. The packaged native supervisor provides a refusal exchange; production native authority and independent attestation remain unfinished. |
 
@@ -51,7 +47,7 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/src/compose.ts
 
 ## Demonstrated behavior
 
-The account-free repository walkthrough makes a real workspace edit, runs executable checks and displays the proposed diff. It also exercises approval, restart recovery, wrong-token refusal and veto. Its two model responses are scripted locally; its decisions are simulated through Keep's controls.
+The account-free repository walkthrough makes a real workspace edit, runs executable checks and displays the proposed diff. It exercises approval, restart recovery, wrong-token refusal and veto. The responses are authored locally; the reviewer makes the proposal decision through Keep's controls. Hosted approval applies the change to the synthetic source repository. The local appliance retains the reviewed workspace and preserves its source repository.
 
 Recording and execution details:
 
