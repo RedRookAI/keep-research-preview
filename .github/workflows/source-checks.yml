@@ -1,27 +1,74 @@
-name: Source checks
-
+name: Independent required preparation
+run-name: Fresh Ubuntu 22.04 required-jail preparation
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
-
-permissions:
-  contents: read
-
+permissions: {}
 jobs:
-  source:
-    name: TypeScript, notices and focused tests
-    runs-on: ubuntu-24.04
+  preparation:
+    name: Public release and fresh namespace-capable host
+    runs-on: ubuntu-22.04
     steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Select declared Node runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          persist-credentials: false
-      - name: Select supported Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version-file: package.json
+          node-version: 22.23.4
           package-manager-cache: false
-      - name: Run the partial source profile
-        run: node tools/run_ci_checks.mjs
+      - name: Create independent workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = x86_64
+          test "$(id -u)" != 0
+          test ! -e "$GITHUB_WORKSPACE/package.json"
+          KEEP_VERIFY_ROOT=$(mktemp -d "$HOME/keep-independent-XXXXXXXX")
+          mkdir "$KEEP_VERIFY_ROOT/bootstrap-home"
+          echo "KEEP_VERIFY_ROOT=$KEEP_VERIFY_ROOT" >> "$GITHUB_ENV"
+          printf 'No source checkout, dependency cache, maintainer home or credentials supplied.\n'
+      - name: Download pinned public release
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$KEEP_VERIFY_ROOT"
+          curl --fail --location --silent --show-error --proto '=https' "https://github.com/RedRookAI/keep-research-preview/releases/download/keep-preview-2026-11-11.2/keep-combined-0.0.21-preview.1-linux-x64.tar.gz" --output keep-combined-0.0.21-preview.1-linux-x64.tar.gz
+          printf '%s\n' '7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca  keep-combined-0.0.21-preview.1-linux-x64.tar.gz' | sha256sum --check
+      - name: Build declared namespace prerequisite from public source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$KEEP_VERIFY_ROOT"
+          curl --fail --location --silent --show-error "https://raw.githubusercontent.com/RedRookAI/keep-research-preview/83a67b04fa03e6fd1a1564b6b93cc1c3f19deb24/tools/bubblewrap/Dockerfile" --output Dockerfile
+          printf '%s\n' 'a317b76c36d96871effb743645147046c8f2dd00d9fa7eac29ea4f8cc994306f  Dockerfile' | sha256sum --check
+          if ! docker build --tag keep-independent-helper --file Dockerfile . > helper-build.log 2>&1; then tail -80 helper-build.log; exit 1; fi
+          helper_container=$(docker create keep-independent-helper)
+          trap 'docker rm "$helper_container" >/dev/null' EXIT
+          docker cp "$helper_container:/opt/keep/bubblewrap/0.13.0/bwrap" bwrap
+          docker cp "$helper_container:/build/build-packages.txt" build-packages.txt
+          sha256sum bwrap
+          printf '%s\n' 'e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f  bwrap' | sha256sum --check
+          stat -c '%a %u:%g %n' / /opt /var /var/lib
+          sudo install -d -m 0755 "/var/lib/keep-independent-$GITHUB_RUN_ID"
+          sudo install -m 0755 bwrap "/var/lib/keep-independent-$GITHUB_RUN_ID/bwrap"
+      - name: Verify offline preparation using only public package inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$KEEP_VERIFY_ROOT"
+          curl --fail --location --silent --show-error "https://raw.githubusercontent.com/RedRookAI/keep-research-preview/$GITHUB_SHA/docs/qualification/independent-preparation.mjs" --output independent-preparation.mjs
+          printf '%s\n' '8015b6dbde3c72a4d3ab8c8ed12cfd07b5a36fc4dcecb33974e3ad7843240d69  independent-preparation.mjs' | sha256sum --check
+          mkdir installed
+          tar -xzf keep-combined-0.0.21-preview.1-linux-x64.tar.gz -C installed
+          stat -c '%a %u:%g %n' /home /home/runner "$KEEP_VERIFY_ROOT"
+          for policy in /proc/sys/kernel/apparmor_restrict_unprivileged_userns /proc/sys/kernel/unprivileged_userns_clone /proc/sys/user/max_user_namespaces; do
+            if test -r "$policy"; then printf '%s=' "$policy"; cat "$policy"; fi
+          done
+          stat -c '%a %u:%g %n' /var/lib "/var/lib/keep-independent-$GITHUB_RUN_ID" "/var/lib/keep-independent-$GITHUB_RUN_ID/bwrap"
+          node_path=$(command -v node)
+          "$node_path" --input-type=module <<'JS'
+          import {pathToFileURL} from 'node:url';
+          import {resolve} from 'node:path';
+          const api=await import(pathToFileURL(resolve('installed/keep-0.0.21-preview.1/dist/src/infra/required_project_jail.js')));
+          try{api.inspectRequiredJailLauncher('/var/lib/keep-independent-'+process.env.GITHUB_RUN_ID+'/bwrap');console.log('Packaged helper admission PASS');}
+          catch(error){console.error('Packaged helper admission: '+error.message);throw error;}
+          JS
+          node_root=$("$node_path" -p 'require("node:path").dirname(require("node:path").dirname(process.execPath))')
+          env -i PATH="$PATH" HOME="$KEEP_VERIFY_ROOT/bootstrap-home" "$node_path" independent-preparation.mjs "$KEEP_VERIFY_ROOT/installed/keep-0.0.21-preview.1" "$node_root" "/var/lib/keep-independent-$GITHUB_RUN_ID/bwrap" "$KEEP_VERIFY_ROOT/preparation"
