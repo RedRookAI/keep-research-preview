@@ -102,7 +102,7 @@ def main():
     source = run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, capture_output=True, text=True).stdout.strip()
     if source != os.environ['GITHUB_SHA']:
         raise RuntimeError('Checkout differs from frozen CI source')
-    for path, wanted in [('native', 'bbc14279d4d5ebb5f105371b79a0f36ea0e18576'), ('tools/build_native_transport.mjs', '8356e8600ce60ee3aa690dcd69daf9f1509755c0')]:
+    for path, wanted in [('native', '2f5675ff5971d1e2c7425fb1c955e9ba22a1048b'), ('tools/build_native_transport.mjs', '8356e8600ce60ee3aa690dcd69daf9f1509755c0')]:
         actual = run(['git', 'rev-parse', 'HEAD:' + path], cwd=ROOT, capture_output=True, text=True).stdout.strip()
         if actual != wanted: raise RuntimeError('Native build inputs changed; carried bytes require review: ' + path)
     os.umask(0o077)
