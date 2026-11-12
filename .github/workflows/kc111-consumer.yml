@@ -1,6 +1,12 @@
 name: KC111 frozen appliance clean consumer
 on:
   workflow_dispatch:
+    inputs:
+      readability_diagnostic:
+        description: Inspect public runtime readability only; never a qualification pass
+        required: true
+        type: boolean
+        default: false
 permissions:
   contents: read
 env:
@@ -10,6 +16,7 @@ env:
   KC111_ASSET_SHA256: 72ce45c6aa370f4d55d00d94ce1e2c53295635e793bc28a2f7738bd03e5629de
   KC111_ASSET_BYTES: "491691468"
   KC111_IMAGE_SHA256: a2017da939df38625934679c0364a369b9b9e24b5dd637bd3b7d2b0f414d6850
+  KC111_READABILITY_DIAGNOSTIC: ${{ inputs.readability_diagnostic }}
   KC111_ASSET_NAME: keep-reviewer-0.0.26-preview.1-linux-x64-88c1a1eb6030-43153320417.tar.xz
 jobs:
   consumer:
@@ -63,13 +70,29 @@ jobs:
           runner_gid=$(id -g)
           groups=$(printf '%s\n' "$(id -G | tr ' ' ',')",$(stat -c %g /dev/kvm) | tr ',' '\n' | sort -un | paste -sd, -)
           bundle=$(cat bundle-path)
-          sudo setpriv --reuid "$runner_uid" --regid "$runner_gid" --groups "$groups" -- env -i PATH="$PATH" HOME="$HOME" CHROMEWEBDRIVER="${CHROMEWEBDRIVER:-}" KC111_EXPECTED_SOURCE="$KC111_EXPECTED_SOURCE" python3 - "$bundle" "$GITHUB_WORKSPACE/consumer-evidence" <<'PY'
-          import os,sys,runpy,pathlib,json
-          assert set(os.environ)<={'PATH','HOME','CHROMEWEBDRIVER','KC111_EXPECTED_SOURCE','LC_CTYPE'}
+          sudo setpriv --reuid "$runner_uid" --regid "$runner_gid" --groups "$groups" -- env -i PATH="$PATH" HOME="$HOME" CHROMEWEBDRIVER="${CHROMEWEBDRIVER:-}" KC111_EXPECTED_SOURCE="$KC111_EXPECTED_SOURCE" KC111_READABILITY_DIAGNOSTIC="$KC111_READABILITY_DIAGNOSTIC" python3 - "$bundle" "$GITHUB_WORKSPACE/consumer-evidence" <<'PY'
+          import os,sys,runpy,pathlib,json,subprocess
+          assert set(os.environ)<={'PATH','HOME','CHROMEWEBDRIVER','KC111_EXPECTED_SOURCE','KC111_READABILITY_DIAGNOSTIC','LC_CTYPE'}
           bundle=pathlib.Path(sys.argv[1]);output=sys.argv[2]
           print('KC111_PRODUCT_ENVIRONMENT_JSON='+json.dumps({'githubCredentialPresent':False,'environmentKeys':sorted(os.environ),'checkoutAvailable':False}),flush=True)
-          sys.argv=[str(bundle/'qualify.py'),str(bundle),output]
-          runpy.run_path(str(bundle/'qualify.py'),run_name='__main__')
+          if os.environ['KC111_READABILITY_DIAGNOSTIC']=='true':
+            output=pathlib.Path(output);output.mkdir(mode=0o700)
+            state=pathlib.Path.cwd()/'readability diagnostic instance'
+            def control(*args):
+              return subprocess.run([sys.executable,str(bundle/'keep-appliance.py'),*args],check=True,capture_output=True,text=True,timeout=600).stdout
+            probe="import json,os,pathlib;paths=['/opt/keep/runtime/source-support.tar.gz','/opt/keep/runtime/integrations/openclaw','/opt/keep/runtime/integrations/openclaw/redrookai-openclaw-keep-0.0.26-preview.1.tgz','/opt/keep/runtime/native/licenses','/opt/keep/runtime/engines/codex-generation.2/source-support.tar.gz','/opt/keep/node-v22.23.4-linux-x64/LICENSE'];out=[]\nfor name in paths:\n try:\n  p=pathlib.Path(name);s=p.stat();out.append({'path':name,'mode':oct(s.st_mode&0o777),'uid':s.st_uid,'readable':os.access(p,os.R_OK),'searchable':os.access(p,os.X_OK) if p.is_dir() else None})\n except OSError as error:out.append({'path':name,'error':type(error).__name__})\nprint(json.dumps({'uid':os.getuid(),'files':out,'diagnosticOnly':True,'qualificationPassed':False}))"
+            try:
+              control('start',str(state),'--port','7788','--ssh-port','2222')
+              receipt=control('run',str(state),'--','python3','-c',probe)
+              (output/'guest-readability.json').write_text(receipt)
+              print('KC111_GUEST_READABILITY_JSON='+receipt,flush=True)
+            finally:print(control('stop',str(state)),flush=True)
+          else:
+            sys.argv=[str(bundle/'qualify.py'),str(bundle),output]
+            try:runpy.run_path(str(bundle/'qualify.py'),run_name='__main__')
+            except subprocess.CalledProcessError as error:
+              if error.stderr:print('KC111_COMMAND_STDERR='+error.stderr[:8192].decode(errors='replace'),flush=True)
+              raise
           PY
       - name: Retain small proof and actual distribution inputs
         if: always()
