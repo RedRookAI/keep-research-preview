@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Retain a complete exact-image source companion in the reviewed private draft."""
+import hashlib
 import json
 import os
 import re
@@ -45,12 +46,45 @@ def verify_destination(release, release_id, tag, assembly_source):
         raise RuntimeError('Destination differs from exact reviewed assembly draft')
 
 
+def consumer_qualification(input_dir, output, source, image, purpose):
+    """Retain exact validated consumer bytes separately from source-only checksums."""
+    if purpose == 'captured-distribution':
+        return None
+    if purpose != 'qualified-consumer':
+        raise RuntimeError('Unknown source capture purpose; no qualification asset')
+    custody = json.loads((input_dir / 'custody.json').read_text())
+    if (custody.get('schema') != 'keep.appliance.distribution-custody/v1' or custody.get('purpose') != purpose
+            or custody.get('consumerQualified') is not True or custody.get('source') != source or custody.get('imageSha256') != image):
+        raise RuntimeError('Distribution custody does not confirm this qualified consumer')
+    path = input_dir / 'consumer.json'
+    if path.is_symlink() or not path.is_file() or path.stat().st_nlink != 1:
+        raise RuntimeError('Consumer qualification input is not an ordinary retained file')
+    data = path.read_bytes()
+    consumer = json.loads(data)
+    if (consumer.get('schema') != 'keep.appliance.clean-consumer/v1' or consumer.get('passed') is not True
+            or consumer.get('source') != source or consumer.get('imageSha256') != image
+            or type(consumer.get('paidCalls')) is not int or consumer['paidCalls'] != 0):
+        raise RuntimeError('Exact account-free consumer qualification did not pass')
+    destination = output / 'consumer-qualification.json'
+    if destination.exists() or destination.is_symlink():
+        if destination.is_symlink() or not destination.is_file() or destination.stat().st_nlink != 1 or destination.read_bytes() != data:
+            raise RuntimeError('Retained consumer qualification differs; no overwrite')
+    else:
+        with destination.open('xb') as stream:
+            stream.write(data)
+    return {'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data)}
+
+
 def main():
     if os.environ.get('GITHUB_ACTIONS') != 'true': raise RuntimeError('Disposable CI only')
     output = Path('source-output')
     source, image = os.environ['KC111_EXPECTED_SOURCE'], os.environ['KC111_IMAGE_SHA256']
     files = verified_files(output, source, image)
     files['SHA256SUMS'] = {'sha256': digest(output / 'SHA256SUMS'), 'bytes': (output / 'SHA256SUMS').stat().st_size}
+    qualification = consumer_qualification(Path('distribution-input'), output, source, image,
+                                           os.environ.get('KC111_CAPTURE_PURPOSE', 'qualified-consumer'))
+    if qualification is not None:
+        files['consumer-qualification.json'] = qualification
     release_id = int(os.environ['KC111_DRAFT_RELEASE_ID']); tag = os.environ['KC111_DRAFT_RELEASE_TAG']
     assembly_source = os.environ['KC111_DRAFT_TARGET_SOURCE']
     release = api('/releases/' + str(release_id))
