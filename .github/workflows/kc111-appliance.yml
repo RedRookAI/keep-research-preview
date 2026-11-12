@@ -1,7 +1,7 @@
 name: KC111 appliance source and candidate
 on:
   push:
-    branches: [work/kc111-appliance-2026-11-12, work/kc111-candidate-2026-11-12-4ct, work/kc111-candidate-2026-11-12-4ct-02, work/kc111-candidate-2026-11-12-4ct-03]
+    branches: [work/kc111-appliance-2026-11-12, work/kc111-candidate-2026-11-12-4ct, work/kc111-candidate-2026-11-12-4ct-02, work/kc111-candidate-2026-11-12-4ct-03, work/kc111-candidate-2026-11-12-4ct-04]
 permissions:
   contents: read
 env:
@@ -134,5 +134,8 @@ jobs:
           path: |
             consumer-evidence/*.json
             consumer-evidence/*.png
+            consumer-evidence/guest-packages.tsv
+            consumer-evidence/guest-dpkg-status
+            consumer-evidence/guest-distribution-support.tar.gz
           if-no-files-found: warn
           retention-days: 1

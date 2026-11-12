@@ -20,6 +20,37 @@ def execute(args, **options):
                           env={'PATH': os.environ['PATH'], 'HOME': os.environ['HOME'], 'LANG': 'C.UTF-8'}, **options).stdout.strip()
 
 
+def capture_file(args, path):
+    """Keep guest bytes intact, including compressed data and trailing newlines."""
+    with path.open('xb') as stream:
+        subprocess.run(args, check=True, stdout=stream, stderr=subprocess.PIPE, timeout=600,
+                       env={'PATH': os.environ['PATH'], 'HOME': os.environ['HOME'], 'LANG': 'C.UTF-8'})
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b''): digest.update(block)
+    return {'file': path.name, 'sha256': digest.hexdigest(), 'bytes': path.stat().st_size}
+
+
+def capture_distribution(cli, state, output, manifest):
+    run = [sys.executable, str(cli), 'run', str(state), '--']
+    files = [capture_file(run + ['cat', '/var/lib/dpkg/status'], output / 'guest-dpkg-status')]
+    files.append(capture_file(run + ['dpkg-query', '-W',
+        '--showformat=${binary:Package}\t${Version}\t${source:Package}\t${source:Version}\n'], output / 'guest-packages.tsv'))
+    # These are the final guest's notices and exact Keep/engine source support,
+    # without any home, account or per-import credential state.
+    paths = ['usr/share/doc', 'usr/share/common-licenses',
+        'opt/keep/runtime/LICENSE', 'opt/keep/runtime/NOTICE', 'opt/keep/runtime/THIRD_PARTY_NOTICES.txt',
+        'opt/keep/runtime/native/licenses', 'opt/keep/runtime/source-support.tar.gz',
+        'opt/keep/runtime/engines/codex-generation.2/source-support.tar.gz',
+        'opt/keep/node-v22.23.4-linux-x64/LICENSE', 'opt/keep/node-v22.23.4-linux-x64/lib/node_modules/npm']
+    files.append(capture_file(run + ['tar', '-czf', '-', '-C', '/', *paths], output / 'guest-distribution-support.tar.gz'))
+    receipt = {'schema': 'keep.appliance.distribution-input/v1', 'source': manifest['source'],
+        'imageSha256': manifest['files']['keep.qcow2'], 'files': files,
+        'debianSourcesAcquired': False, 'noticeAndSupportPaths': paths}
+    (output / 'distribution-input.json').write_text(json.dumps(receipt, indent=2) + '\n')
+    return receipt
+
+
 def verify_manifest_source(manifest, expected_source):
     if not expected_source or not re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', expected_source) or manifest['source'] != expected_source:
         raise RuntimeError('Downloaded candidate manifest differs from independently supplied frozen source')
@@ -125,9 +156,7 @@ def main():
             assert proof['passed'] is True and proof['source'] == manifest['source']
             (output / ('guest-proof-' + str(index) + '.json')).write_text(json.dumps(proof, indent=2) + '\n')
             if index == 1:
-                packages = control(state, 'run', '--', 'dpkg-query', '-W',
-                    '--showformat=${binary:Package}\t${Version}\t${source:Package}\t${source:Version}\n')
-                (output / 'guest-packages.tsv').write_text(packages + '\n')
+                capture_distribution(cli, state, output, manifest)
             # A fresh clone's authorized key must be exactly this import's public key.
             guest_key = control(state, 'run', '--', 'cat', '/home/keep/.ssh/authorized_keys').strip()
             public_key = (state / 'owner-key.pub').read_text().strip()

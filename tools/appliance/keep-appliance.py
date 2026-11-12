@@ -346,13 +346,14 @@ def sample(path, data, action):
     value = json.loads(result.stdout)
     if action == 'start':
         tunnel(path, data)
+        notice = json.loads((BUNDLE / 'manifest.json').read_text())['sampleContract']['notice']
         deadline = time.monotonic() + 30
         url = 'http://127.0.0.1:' + str(data['port']) + '/console'
         while True:
             try:
                 with urllib.request.urlopen(url, timeout=3) as response:
                     body = response.read().decode()
-                if 'Instance credential' not in body or 'two scripted responses' not in body:
+                if 'Instance credential' not in body or notice not in body:
                     fail('Forwarded endpoint did not identify the sample console')
                 break
             except OSError:

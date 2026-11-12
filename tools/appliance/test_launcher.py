@@ -1,5 +1,6 @@
 """Cheap host refusal/ownership checks; no image, installation or VM boot."""
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -9,6 +10,7 @@ import tempfile
 import time
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 spec = importlib.util.spec_from_file_location('keep_appliance', Path(__file__).with_name('keep-appliance.py'))
 app = importlib.util.module_from_spec(spec)
@@ -22,6 +24,19 @@ class HostControls(unittest.TestCase):
 
     def tearDown(self):
         self.temporary.cleanup()
+
+    def test_sample_readiness_uses_shipped_notice_and_refuses_older_console(self):
+        notice = 'Scripted demo · two authored responses · real edits and checks · no AI account or paid calls.'
+        (self.root / 'manifest.json').write_text(json.dumps({'sampleContract': {'notice': notice}}))
+        data = {'port': 7788}
+        with patch.object(app, 'BUNDLE', self.root), patch.object(app, 'refuse_pending'), \
+             patch.object(app, 'verify_overlay'), patch.object(app, 'tunnel'), \
+             patch.object(app, 'guest', return_value=SimpleNamespace(stdout='{"status":"running"}')):
+            with patch.object(app.urllib.request, 'urlopen', return_value=io.BytesIO(('Instance credential ' + notice).encode())):
+                self.assertEqual(app.sample(self.root, data, 'start')['checkedBrowserOrigin'], 'http://127.0.0.1:7788/console')
+            with patch.object(app.urllib.request, 'urlopen', return_value=io.BytesIO(b'Instance credential two scripted responses')):
+                with self.assertRaisesRegex(RuntimeError, 'did not identify'):
+                    app.sample(self.root, data, 'start')
 
     def test_private_instance_paths_with_spaces_are_preserved(self):
         path = self.root / 'my private instance'

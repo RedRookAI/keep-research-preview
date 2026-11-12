@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import subprocess
+import sys
 
 
 def load(name, file):
@@ -18,6 +20,17 @@ consumer = load('candidate_consumer', 'consumer.py')
 
 
 class FrozenCandidate(unittest.TestCase):
+    def test_guest_binary_capture_preserves_bytes_and_refuses_failed_command(self):
+        with tempfile.TemporaryDirectory(prefix='guest evidence ') as temporary:
+            root = Path(temporary)
+            wanted = b'\x1f\x8b\x00\xff\n\n'
+            path = root / 'support.tar.gz'
+            receipt = consumer.capture_file([sys.executable, '-c', 'import sys;sys.stdout.buffer.write(bytes.fromhex("1f8b00ff0a0a"))'], path)
+            self.assertEqual(path.read_bytes(), wanted)
+            self.assertEqual(receipt, {'file': path.name, 'sha256': hashlib.sha256(wanted).hexdigest(), 'bytes': len(wanted)})
+            with self.assertRaises(subprocess.CalledProcessError):
+                consumer.capture_file([sys.executable, '-c', 'raise SystemExit(4)'], root / 'failed')
+
     def test_postfreeze_bytes_size_descriptor_and_source_must_all_match(self):
         with tempfile.TemporaryDirectory(prefix='candidate bytes ') as temporary:
             root = Path(temporary); archive = root / 'candidate.tar.xz'; archive.write_bytes(b'frozen test transport')
