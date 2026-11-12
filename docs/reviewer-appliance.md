@@ -37,7 +37,7 @@ Open the reported address and enter the credential. The guest and host use the s
 
 On a remote host, add an SSH tunnel from your browser's computer using that same local port. For example, forward your computer's `127.0.0.1:7788` to the appliance host's `127.0.0.1:7788`, then open it in your own browser.
 
-For the hosted walkthrough, use your assigned invitation and its separately supplied credential:
+You can also open the public hosted demo without signing in:
 
 https://keep-demo.redrook.ai/console
 

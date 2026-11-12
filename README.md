@@ -8,11 +8,13 @@ For repository work, Keep edits a separate workspace, runs executable checks and
 
 ## Try Keep
 
-Open the browser demo with the invitation credential supplied separately. Choose **Start demo**, then **Prepare the fix**. Keep repairs a webhook handler that counts repeated deliveries twice. Review the diff and four checks, approve or veto the proposal, then download the evidence.
+**Open the demo directly. No sign-in or AI account is needed.**
 
 https://keep-demo.redrook.ai/console
 
-The prepared task uses two authored responses with real workspace edits and executable checks. It needs no AI account. Each invitation retains one task and its decision.
+Choose **Start demo**, then **Prepare the fix**. Keep repairs a webhook handler that counts repeated deliveries twice. Review the diff and four checks, approve or veto the proposal, then choose **Download evidence**.
+
+The demo uses two authored responses with real workspace edits and executable checks. It shares one disposable sample task; if a decision is already recorded, you can inspect the retained result and download its evidence. The downloadable appliance below gives you your own copy.
 
 Walkthrough:
 

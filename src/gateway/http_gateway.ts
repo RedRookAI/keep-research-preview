@@ -1632,6 +1632,8 @@ export interface GatewayServerOptions {
   readonly publicBrowserOrigin?: string;
   /** Only the controlled synthetic fixture may select this closed browser-only ingress. */
   readonly reviewerSample?: true;
+  /** Explicit credential-free entry for a controlled sample behind its exact HTTPS origin. */
+  readonly publicReviewerSample?: true;
   readonly restrictedClientProfile?: string;
   readonly worker?: { readonly id: string; readonly onStopped: () => void };
   readonly port?: number; // default 7788; 0 = ephemeral (tests)
@@ -1657,6 +1659,9 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
     try { publicOrigin = new URL(opts.publicBrowserOrigin); } catch { throw new Error("publicBrowserOrigin must be a canonical HTTPS origin"); }
     if (publicOrigin.protocol !== "https:" || publicOrigin.origin !== opts.publicBrowserOrigin || publicOrigin.username || publicOrigin.password
       || publicOrigin.pathname !== "/" || publicOrigin.search || publicOrigin.hash) throw new Error("publicBrowserOrigin must be a canonical HTTPS origin");
+  }
+  if (opts.publicReviewerSample !== undefined && (opts.publicReviewerSample !== true || opts.reviewerSample !== true || !publicOrigin)) {
+    throw new Error("publicReviewerSample requires reviewerSample:true and a canonical HTTPS publicBrowserOrigin");
   }
   if (publicOrigin || opts.reviewerSample) {
     if (opts.identity || opts.principalFor || app.identity || app.tenantDeployment || opts.restrictedClientProfile || opts.worker)
@@ -1727,7 +1732,8 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
       if (opts.reviewerSample) {
         const allowed = greq.method === "GET" && ["/", "/console", "/console/new", "/console/project", "/console/export", "/console/style.css"].includes(greq.path)
           || greq.method === "POST" && ["/console/login", "/console/submit", "/console/resume", "/console/merge", "/console/cancel"].includes(greq.path);
-        if (!allowed || Object.keys(query).some(key => !["submissionKey", "projectId", "runId", "proposalDigest"].includes(key)) || headers["authorization"] !== undefined) {
+        if (!allowed || opts.publicReviewerSample && greq.path === "/console/cancel"
+          || Object.keys(query).some(key => !["submissionKey", "projectId", "runId", "proposalDigest"].includes(key)) || headers["authorization"] !== undefined) {
           res.writeHead(404, { "content-type": "text/plain", "cache-control": "no-store" }); res.end("Sample route unavailable."); return;
         }
       }
@@ -1735,6 +1741,11 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
       let resp;
       if (greq.method === "GET" && url.pathname === "/" && !headers["authorization"] && !query["token"]) {
         resp = { status: 303, headers: { location: "/console", "cache-control": "no-store" }, body: "" };
+      } else if (opts.publicReviewerSample && greq.method === "GET" && greq.path === "/console") {
+        // Opening the public sample only enters the existing browser boundary.
+        // Preparation and proposal decisions still require explicit CSRF-checked POSTs.
+        resp = { status: 303, headers: { location: "/console/new", "cache-control": "no-store",
+          "set-cookie": `keep_token=${encodeURIComponent(token)}; Path=/console; HttpOnly; SameSite=Strict; Secure` }, body: "" };
       } else if (browserRoute) {
         if (opts.principalFor) resp = json(403, { error: "browser sign-in requires a configured identity session" });
         else resp = await handleReviewRequest(app, greq, {
@@ -1750,7 +1761,7 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
             return handleGatewayRequest(app, {
             method, path, query, body: body === undefined ? "" : JSON.stringify(body), headers: { authorization: `Bearer ${token}` },
           }, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(opts.identity ? { principalFor: () => principal, ...(sessionAuthority ? { sessionAuthority } : {}) } : {}) });
-          }, { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline"), cancel: can(app.authorization, principal, "change.solve"), submit: can(app.authorization, principal, "change.solve") }, opts.reviewerSample ? { goal: SAMPLE_GOAL, notice: reviewerSampleNotice(app), workspaceOnly: reviewerSampleWorkspaceOnly(app) } : undefined),
+          }, { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline"), cancel: !opts.publicReviewerSample && can(app.authorization, principal, "change.solve"), submit: can(app.authorization, principal, "change.solve") }, opts.reviewerSample ? { goal: SAMPLE_GOAL, notice: reviewerSampleNotice(app), workspaceOnly: reviewerSampleWorkspaceOnly(app) } : undefined),
         });
       } else resp = await handleGatewayRequest(app, greq, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(workerControl ? { workerControl } : {}), ...(opts.principalFor ? { principalFor: opts.principalFor } : {}), ...(opts.identity ? { identity: opts.identity } : {}) });
       res.writeHead(resp.status, { ...resp.headers });

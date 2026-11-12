@@ -1,6 +1,6 @@
 # Install and try Keep
 
-Open your assigned browser invitation and enter its separately supplied credential:
+Open the public browser demo. No sign-in is needed:
 
 https://keep-demo.redrook.ai/console
 

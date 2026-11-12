@@ -12,7 +12,7 @@ import { createBrowserProjectFixture, SAMPLE_GOAL } from "../src/demo/browser_pr
 import { SAMPLE_NOTICE, SAMPLE_FILE, reviewerSampleNotice } from "../src/review/reviewer_sample.js";
 import { startGatewayServer, type GatewayServerHandle, type GatewayServerOptions } from "../src/gateway/http_gateway.js";
 
-function http(server: GatewayServerHandle, path: string, options: { method?: string; headers?: Record<string, string>; form?: Record<string, string> } = {}): Promise<{ status: number; headers: import("node:http").IncomingHttpHeaders; body: string }> {
+function http(server: Pick<GatewayServerHandle, "origin">, path: string, options: { method?: string; headers?: Record<string, string>; form?: Record<string, string> } = {}): Promise<{ status: number; headers: import("node:http").IncomingHttpHeaders; body: string }> {
   return new Promise((resolve, reject) => {
     const req = request(server.origin + path, { method: options.method ?? "GET", headers: { ...options.headers, ...(options.form ? { "content-type": "application/x-www-form-urlencoded" } : {}) } }, response => {
       let body = ""; response.setEncoding("utf8"); response.on("data", chunk => { body += chunk; });
@@ -59,6 +59,9 @@ test("public personal browser origin rejects invalid origins, nonloopback and am
     for (const addition of [{ identity: {} }, { tenantDeployment: {} }])
       assert.throws(() => startGatewayServer({ ...app, ...addition } as typeof app, { publicBrowserOrigin: "https://a.example" }), /cannot replace/);
     assert.throws(() => startGatewayServer(app, { reviewerSample: true }), /controlled synthetic fixture/);
+    assert.throws(() => startGatewayServer(app, { publicReviewerSample: true, publicBrowserOrigin: "https://a.example" }), /requires reviewerSample:true/);
+    assert.throws(() => startGatewayServer(app, { publicReviewerSample: true, reviewerSample: true }), /canonical HTTPS publicBrowserOrigin/);
+    assert.throws(() => startGatewayServer(app, { publicReviewerSample: true, reviewerSample: true, publicBrowserOrigin: "https://a.example" }), /controlled synthetic fixture/);
     const local = await startGatewayServer(app, { port: 0, token: "local-compatibility" });
     try {
       assert.match(local.origin, /^http:\/\/127\.0\.0\.1:/);
@@ -81,7 +84,9 @@ test("simulated TLS sample ingress keeps exact Host/Origin, Secure cookie and fi
     assert.equal((await http(servers[0]!, "/console", { headers: { "x-forwarded-host": "a.sample.invalid", "x-forwarded-proto": "https" } })).status, 403, "forwarded headers cannot substitute for Host");
     assert.equal((await call(0, "/", { headers: { host: "foreign.invalid", "x-forwarded-host": "a.sample.invalid" } })).status, 403);
     assert.equal((await call(0, "/")).status, 303);
-    assert.match((await call(0, "/console")).body, /two scripted responses/);
+    const privateEntry = await call(0, "/console");
+    assert.match(privateEntry.body, /two scripted responses/); assert.match(privateEntry.body, /Invitation credential/);
+    assert.equal(privateEntry.headers["set-cookie"], undefined);
     const login = async (index: number, token = tokens[index]!, origin = origins[index]!) => call(index, "/console/login", { method: "POST", headers: { origin }, form: { token } });
     assert.equal((await login(0, tokens[0], "https://foreign.invalid")).status, 403);
     assert.equal((await login(0, tokens[0], "null")).status, 403);
@@ -136,9 +141,58 @@ test("simulated TLS sample ingress keeps exact Host/Origin, Secure cookie and fi
   }
 });
 
-test("foreground launcher owns a new private root and retains it on stop without printing credentials", { timeout: 20000 }, async () => {
+test("public sample opens without a credential while retaining fixed-task, Host, Origin and CSRF boundaries", async () => {
+  const root = mkdtempSync(join(tmpdir(), "keep-public-sample-"));
+  const fixture = createBrowserProjectFixture(root), origin = "https://public.sample.invalid", token = "public-sample-internal-token";
+  fixture.app.projectRuntime!.pauseDispatch();
+  for (const options of [{ publicBrowserOrigin: undefined }, { reviewerSample: undefined }, { host: "0.0.0.0" }, { identity: {} }, { principalFor: () => undefined }, { worker: { id: "foreign", onStopped() {} } }, { restrictedClientProfile: "/unused" }]) {
+    assert.throws(() => startGatewayServer(fixture.app, { reviewerSample: true, publicReviewerSample: true, publicBrowserOrigin: origin, ...options } as GatewayServerOptions));
+  }
+  const server = await startGatewayServer(fixture.app, { port: 0, token, reviewerSample: true, publicReviewerSample: true, publicBrowserOrigin: origin });
+  const call = (path: string, options: Parameters<typeof http>[2] = {}) => http(server, path, { ...options, headers: { host: new URL(origin).host, ...options.headers } });
+  try {
+    assert.equal((await http(server, "/console", { headers: { "x-forwarded-host": "public.sample.invalid", "x-forwarded-proto": "https" } })).status, 403);
+    const opened = await call("/console");
+    assert.equal(opened.status, 303); assert.equal(opened.headers.location, "/console/new");
+    assert.equal(opened.headers["cache-control"], "no-store");
+    assert.match(opened.headers["set-cookie"]![0]!, /Path=\/console; HttpOnly; SameSite=Strict; Secure/);
+    assert.ok(!opened.headers["set-cookie"]![0]!.includes("Domain="));
+    assert.ok(!opened.body.includes(token)); assert.ok(!opened.headers.location!.includes(token));
+    const cookie = opened.headers["set-cookie"]![0]!.split(";")[0]!;
+    const landing = await call("/console/new", { headers: { cookie } });
+    assert.equal(landing.status, 200); assert.match(landing.body, /Start demo/); assert.doesNotMatch(landing.body, /Invitation credential|name="token"/);
+    const csrf = input(landing.body, "csrf");
+    await call("/console"); await call("/console/new", { headers: { cookie } });
+    assert.equal(fixture.generations(), 0); assert.equal(fixture.app.projectManager!.list().length, 0); assert.equal(fixture.app.projectRuntime!.retainedJobs().length, 0);
+    for (const path of ["/health", "/projects", "/project", "/worker/status", "/console/future", "/console?token=" + token]) {
+      assert.equal((await call(path, { headers: { cookie } })).status, 404, path);
+      assert.equal((await call(path, { headers: { authorization: `Bearer ${token}` } })).status, 404, path);
+    }
+    const submit = (form: Record<string, string> = {}, headers: Record<string, string> = {}) => call("/console/submit", {
+      method: "POST", headers: { cookie, origin, ...headers }, form: { csrf, goal: SAMPLE_GOAL, idempotencyKey: "public-start-fixture-1234", ...form },
+    });
+    assert.equal((await submit({ csrf: "wrong" })).status, 403);
+    assert.equal((await submit({}, { origin: "https://foreign.invalid" })).status, 403);
+    assert.equal((await submit({}, { cookie: "" })).status, 401);
+    for (const form of [{ goal: "Run a different repository" }, { repoDir: "/other" }, { command: "arbitrary" }, { provider: "live" }])
+      assert.equal((await submit(form)).status, 400);
+    const accepted = await submit(); assert.equal(accepted.status, 303);
+    assert.equal((await submit({ idempotencyKey: "second-public-browser-1234" })).headers.location, accepted.headers.location);
+    assert.equal(fixture.app.projectManager!.list().length, 1); assert.equal(fixture.app.projectRuntime!.retainedJobs().length, 1); assert.equal(fixture.generations(), 0);
+    const job = fixture.app.projectRuntime!.retainedJobs()[0]!;
+    const cancellation = await call("/console/cancel", { method: "POST", headers: { cookie, origin }, form: { csrf, projectId: job.projectId, jobId: job.id } });
+    assert.equal(cancellation.status, 404); assert.equal(fixture.app.projectRuntime!.retainedJobs()[0]!.state, "queued");
+    await call(accepted.headers.location!, { headers: { cookie } });
+    assert.equal(fixture.generations(), 0); assert.equal(fixture.app.projectRuntime!.retainedJobs().length, 1);
+  } finally {
+    for (const job of fixture.app.projectRuntime!.retainedJobs()) await fixture.app.projectRuntime!.cancel(job.id);
+    await server.close(); rmSync(root, { recursive: true, force: true });
+  }
+});
+
+for (const publicMode of [false, true]) test(`foreground ${publicMode ? "public" : "private"} launcher owns a new root and retains it on stop without printing credentials`, { timeout: 20000 }, async () => {
   const parent = mkdtempSync(join(tmpdir(), "keep-sample-launcher-")), root = join(parent, "new-instance");
-  const child = spawn(process.execPath, ["tools/reviewer_sample.mjs", root, "https://launcher.sample.invalid"], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, KEEP_PROVIDER_API_KEY: "inherited-secret-must-not-enter-sample" } });
+  const child = spawn(process.execPath, ["tools/reviewer_sample.mjs", ...(publicMode ? ["--public"] : []), root, "https://launcher.sample.invalid"], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, KEEP_PROVIDER_API_KEY: "inherited-secret-must-not-enter-sample", KEEP_PUBLIC_REVIEWER_SAMPLE: "true" } });
   let output = "", errors = "";
   const exited = new Promise<number | null>(resolve => child.once("exit", resolve));
   child.stderr.on("data", chunk => { errors += String(chunk); });
@@ -157,6 +211,11 @@ test("foreground launcher owns a new private root and retains it on stop without
     assert.equal(statSync(root).mode & 0o777, 0o700); assert.equal(statSync(join(root, "invitation-token")).mode & 0o777, 0o600);
     assert.equal(statSync(join(root, "home")).mode & 0o777, 0o700); assert.equal(statSync(join(root, "tmp")).mode & 0o777, 0o700);
     assert.equal(ready.publicBrowserOrigin, "https://launcher.sample.invalid"); assert.equal(ready.scripted, true);
+    assert.equal(ready.publicReviewerSample, publicMode, "only the explicit launcher flag selects public mode");
+    const entry = await http({ origin: String(ready.privateOrigin) }, "/console", { headers: { host: "launcher.sample.invalid" } });
+    assert.equal(entry.status, publicMode ? 303 : 200);
+    if (publicMode) assert.equal(entry.headers.location, "/console/new");
+    else { assert.match(entry.body, /Invitation credential/); assert.equal(entry.headers["set-cookie"], undefined); }
     assert.ok(!output.includes(token)); assert.ok(!output.includes("inherited-secret-must-not-enter-sample"));
     const childPid = readFileSync(`/proc/${child.pid}/task/${child.pid}/children`, "utf8").trim().split(/\s+/u)[0]!;
     const childEnv = readFileSync(`/proc/${childPid}/environ`, "utf8").split("\0");

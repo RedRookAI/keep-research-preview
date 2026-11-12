@@ -2,7 +2,7 @@
 
 A small webhook handler counts repeated deliveries twice. Keep prepares a fix in a separate workspace, runs four checks and waits for your decision.
 
-Open your assigned invitation and enter the credential supplied separately by the operator:
+Open the public demo directly. No sign-in is needed:
 
 https://keep-demo.redrook.ai/console
 
@@ -13,7 +13,7 @@ https://keep-demo.redrook.ai/console
 
 The sample uses two authored responses and needs no AI account or paid calls. Hosted approval applies the checked change to the synthetic source repository. Appliance approval retains the reviewed workspace and leaves its source unchanged. Veto preserves the proposal and evidence.
 
-Each invitation retains one task. Refreshing or opening a new form returns to it, including its decision and export.
+The public demo shares one disposable task. Refreshing or opening a new form returns to it, including its decision and export. If it has already been completed, inspect the retained result or run the downloadable appliance for your own copy.
 
 ## Observed browser result
 
