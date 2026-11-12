@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 
-const selected = ["workflow", "release_licensing", "runtime_config", "oidc_provider", "identity_x1", "filesystem_lock", "instance_isolation", "chat_channel", "ci_checks", "self_improvement_loop", "instance_setup", "proposal_export", "repository_prerequisites", "organization_login", "organization_refresh", "organization_admission", "repository_clone_isolation", "tenant_review_boundary", "tenant_memory_evidence", "tenant_audit", "project_console", "guided_demo", "reviewer_sample", "restricted_client"];
+const selected = ["workflow", "release_licensing", "runtime_config", "oidc_provider", "identity_x1", "filesystem_lock", "instance_isolation", "chat_channel", "ci_checks", "self_improvement_loop", "instance_setup", "proposal_export", "repository_prerequisites", "organization_login", "organization_refresh", "organization_admission", "repository_clone_isolation", "tenant_review_boundary", "tenant_memory_evidence", "tenant_audit", "project_console", "guided_demo", "reviewer_sample", "restricted_client", "gateway_shutdown"];
 
 /** Exercise the real coordinator with inert install/compile/notice commands and
  * real Node test files. These fixtures do not qualify dependencies or notices. */
