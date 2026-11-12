@@ -14,9 +14,9 @@ Walkthrough and observed desktop/phone browser results:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/guided-demo.md
 
-**Development source: 0.0.27-preview.1. Hosted demo: 0.0.25-preview.1. Latest download: 0.0.21-preview.1, a Linux x64 development preview.** The broader platform remains under development; the table below separates implemented scope from observed readiness.
+**Development source: 0.0.28-preview.1. Hosted demo: 0.0.25-preview.1. Latest download: 0.0.21-preview.1, a Linux x64 development preview.** The broader platform remains under development; the table below separates implemented scope from observed readiness.
 
-The new self-contained Linux x64 appliance carries its own Node runtime, sandbox helper and generation engine. Its fresh guest passed the required-sandbox and engine checks, and all 289 required Debian source/version pairs were acquired. The complete downloadable browser workflow is still being qualified. Fresh live-account generation and current OpenClaw compatibility remain separate handover conditions.
+The new self-contained Linux x64 appliance carries its own Node runtime, sandbox helper and generation engine. The .27 candidate passed required-sandbox and engine startup checks, and all 289 required Debian source/version pairs were acquired. Its browser run exposed a stale sandbox runtime path; source .28 corrects that path and awaits a new image qualification. Fresh live-account generation and current OpenClaw compatibility remain separate handover conditions.
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-source-closure-2026-11-12.json
 

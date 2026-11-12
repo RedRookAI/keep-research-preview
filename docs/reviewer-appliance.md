@@ -2,7 +2,7 @@
 
 The appliance carries Keep, its Node runtime, Git, the fixed sandbox helper and the bundled generation engine in a Debian13 guest. The account-free sample lets you submit a goal, inspect real edits and checks, veto the proposal and download its evidence. It uses two scripted responses.
 
-This package targets Linux x64 with QEMU/KVM and the pc-q35-8.2 machine. QEMU8.2.2 was used for the profile proof. Your host needs Python3.8 or later, OpenSSH, qemu-system-x86_64, qemu-img, existing read/write KVM access and at least8GiB free storage. The guest uses2vCPU and2GiB RAM. Host Node/npm/Rust are unnecessary. The launcher installs no host tools or policy.
+This package targets Linux x64 with QEMU/KVM and the pc-q35-8.2 machine. QEMU8.2.2 was used for the profile proof. Your host needs Python3.8 or later, OpenSSH, qemu-system-x86_64, qemu-img and existing read/write KVM access. Allow storage for the download, the roughly2GB base image and each instance's growing writable overlay. Each guest disk has8GiB virtual capacity; this is separate from the base image's storage. The guest uses2vCPU and2GiB RAM. Host Node/npm/Rust are unnecessary. The launcher installs no host tools or policy.
 
 The source recipe is under tools/appliance. A shipping download is available only after its exact artifact passes the clean-consumer check and the release record supplies its URL and checksum. The earlier KC110 proof identifies the supported baseline; it does not qualify a new image by itself.
 

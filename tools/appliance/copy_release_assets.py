@@ -12,7 +12,7 @@ import urllib.parse
 import urllib.request
 
 REPOSITORY = 'RedRookAI/keep-research-preview'
-SOURCE_RELEASE_ID = 442420387
+SOURCE_RELEASE_ID = 442592040
 CHECKSUM_NAME = 'KEEP-RELEASE-SHA256SUMS'
 SOURCE_FILES = {'source-index.json', 'distribution-input.json', 'guest-dpkg-status',
                 'guest-packages.tsv', 'guest-distribution-support.tar.gz'}

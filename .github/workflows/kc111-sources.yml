@@ -40,8 +40,8 @@ env:
   KC111_IMAGE_SHA256: ${{ inputs.image_sha256 }}
   KC111_CAPTURE_PURPOSE: ${{ inputs.capture_purpose }}
   KC111_DRAFT_TARGET_SOURCE: ${{ inputs.draft_target_source }}
-  KC111_DRAFT_RELEASE_ID: "442420387"
-  KC111_DRAFT_RELEASE_TAG: keep-reviewer-2026-11-12
+  KC111_DRAFT_RELEASE_ID: "442592040"
+  KC111_DRAFT_RELEASE_TAG: keep-reviewer-2026-11-12.2
 jobs:
   companion:
     runs-on: ubuntu-24.04

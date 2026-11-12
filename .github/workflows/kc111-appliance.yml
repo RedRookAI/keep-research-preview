@@ -1,13 +1,13 @@
 name: KC111 appliance source and candidate
 on:
   push:
-    branches: [work/kc111-appliance-2026-11-12, work/kc111-candidate-2026-11-12-4ct, work/kc111-candidate-2026-11-12-4ct-02, work/kc111-candidate-2026-11-12-4ct-03, work/kc111-candidate-2026-11-12-4ct-04, work/kc111-candidate-2026-11-12-4ct-05, work/kc111-candidate-2026-11-12-4ct-06]
+    branches: [work/kc111-appliance-2026-11-12, work/kc111-candidate-2026-11-12-4ct, work/kc111-candidate-2026-11-12-4ct-02, work/kc111-candidate-2026-11-12-4ct-03, work/kc111-candidate-2026-11-12-4ct-04, work/kc111-candidate-2026-11-12-4ct-05, work/kc111-candidate-2026-11-12-4ct-06, work/kc111-candidate-2026-11-12-4ct-07]
 permissions:
   contents: read
 env:
   # Root supplies this exact existing draft after source/configuration review.
-  KC111_DRAFT_RELEASE_ID: "442420387"
-  KC111_DRAFT_RELEASE_TAG: keep-reviewer-2026-11-12
+  KC111_DRAFT_RELEASE_ID: "442592040"
+  KC111_DRAFT_RELEASE_TAG: keep-reviewer-2026-11-12.2
 jobs:
   source:
     runs-on: ubuntu-24.04
@@ -38,6 +38,8 @@ jobs:
           node node_modules/typescript/bin/tsc -p tsconfig.json
           node tools/release_notices.mjs --check
           node --test --test-concurrency=1 dist/test/reviewer_sample.test.js
+          node --test tools/reviewer_node_toolchain.test.mjs
+          python3 tools/appliance/test_consumer_navigation.py
           python3 tools/appliance/test_launcher.py
           python3 tools/appliance/test_dispatch.py
           python3 tools/appliance/test_stop.py

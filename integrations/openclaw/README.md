@@ -7,7 +7,7 @@ Two optional native tools connect OpenClaw to Keep's repository workflow:
 
 The plugin cannot approve, merge, change configuration or choose arbitrary endpoints, identities, source paths or commands through tool arguments. Human decisions happen in the same Keep browser console used by the direct CLI.
 
-Current development package: **0.0.27-preview.1**. Its client modules retain the historical OpenClaw2026.10.5 peer contract. Current patched-client admission is pending: Node24.22.3 and OpenClaw2026.11.3 are selected for compatibility review. The historical results below cover their named bytes; a new native account workflow waits for that review.
+Current development package: **0.0.28-preview.1**. Its client modules retain the historical OpenClaw2026.10.5 peer contract. Current patched-client admission is pending: Node24.22.3 and OpenClaw2026.11.3 are selected for compatibility review. The historical results below cover their named bytes; a new native account workflow waits for that review.
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/dependency-status.md
 
