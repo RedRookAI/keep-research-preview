@@ -24,16 +24,29 @@ def digest(path):
     return h.hexdigest()
 
 
+def verify_frozen_candidate(output, candidate, expected_source):
+    name = candidate['archive']
+    if Path(name).name != name or candidate['source'] != expected_source:
+        raise RuntimeError('Candidate name/source differs from frozen build')
+    path = output / name
+    actual = digest(path)
+    if actual != candidate['sha256'] or path.stat().st_size != candidate['compressedBytes']:
+        raise RuntimeError('Frozen candidate hash or size changed; no upload')
+    if (output / 'SHA256SUMS').read_text() != actual + '  ' + name + '\n':
+        raise RuntimeError('Candidate checksum descriptor differs from frozen bytes; no upload')
+    return path
+
+
 def main():
     if os.environ.get('GITHUB_ACTIONS') != 'true': raise RuntimeError('CI-only explicit draft transfer')
+    output = Path('appliance-output')
+    candidate = json.loads((output / 'candidate.json').read_text())
+    verify_frozen_candidate(output, candidate, os.environ['GITHUB_SHA'])
     release_id = int(os.environ['KC111_DRAFT_RELEASE_ID'])
     expected_tag = os.environ['KC111_DRAFT_RELEASE_TAG']
     release = api('/releases/' + str(release_id))
     if release['id'] != release_id or release['draft'] is not True or release['tag_name'] != expected_tag:
         raise RuntimeError('Destination differs from the reviewed owned draft; no release mutation')
-    output = Path('appliance-output')
-    candidate = json.loads((output / 'candidate.json').read_text())
-    if candidate['source'] != os.environ['GITHUB_SHA']: raise RuntimeError('Candidate source differs from frozen build')
     existing = {asset['name']: asset for asset in release['assets']}
     results = {}
     inputs = [(output / candidate['archive'], candidate['archive']),

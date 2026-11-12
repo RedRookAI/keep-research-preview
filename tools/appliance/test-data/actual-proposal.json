@@ -1,0 +1,50 @@
+{
+  "schema": "keep.proposal-export/v1",
+  "assurance": "unsigned-retained-evidence",
+  "data": {
+    "projectId": "prj_53cb69ee62ee6797f734285e6f17cc33",
+    "runId": "9c0217bd-e330-46a9-913d-10f0af050cb8",
+    "proposal": {
+      "baseRevision": "dffcbea870ce06469514ec782d00b08ea7ba8428",
+      "diff": "diff --git a/calc.mjs b/calc.mjs\nindex 75b7ba4..14d6b41 100644\n--- a/calc.mjs\n+++ b/calc.mjs\n@@ -1 +1 @@\n-export const sum = (a,b) => a-b;\n+export const sum = (a,b) => a+b;\n",
+      "patchSha256": "88fdcb370d84f5296c2172a3332aac7d110274260ea58d42a9328b20459bbc8c",
+      "checks": {
+        "testsPassed": true,
+        "vettingCleared": true,
+        "passedTests": [
+          "arithmetic",
+          "goal: requested outcome"
+        ],
+        "failedTests": []
+      }
+    },
+    "requester": {
+      "kind": "human",
+      "idSha256": "4c1029697ee358715d3a14a2add817c4b01651440de808371f78165ac90dc581"
+    },
+    "exporterIdSha256": "4c1029697ee358715d3a14a2add817c4b01651440de808371f78165ac90dc581",
+    "decisions": [
+      {
+        "event": "local_merge.refused",
+        "decision": "veto",
+        "status": null,
+        "humanIdSha256": null,
+        "proposalDigest": null
+      },
+      {
+        "event": "project.human-proposal-decision",
+        "decision": "veto",
+        "status": "refused",
+        "humanIdSha256": "4c1029697ee358715d3a14a2add817c4b01651440de808371f78165ac90dc581",
+        "proposalDigest": "88fdcb370d84f5296c2172a3332aac7d110274260ea58d42a9328b20459bbc8c"
+      }
+    ],
+    "delivery": {
+      "observation": "last-recorded",
+      "workspace": "unknown",
+      "sourceMerge": "unknown",
+      "sourceRevert": "unknown"
+    }
+  },
+  "sha256": "705363bc39ce38f9e197c0d5a0a8aa0ba7635ce21910f5c14f420da962242eb1"
+}
