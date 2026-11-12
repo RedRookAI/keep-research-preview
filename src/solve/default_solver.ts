@@ -24,6 +24,7 @@ import { RollbackLedger } from "../control/rollback.js";
 import { IdentityRegistry, DEFAULT_SOLVER_IDENTITY_ID, type AgentIdentity } from "../identity/agent_identity.js";
 import { GraphLocalizer } from "../coderag/graph_localizer.js";
 import type { SolveFn } from "../loop/review_intake.js";
+import { bindTaskSkillContext } from "../loop/task_skill_guidance.js";
 
 export interface DefaultSolverConfig {
   readonly spine: Spine;
@@ -74,7 +75,7 @@ export function validatorRunner(tree: FileTree, check: (tree: FileTree) => Promi
 
 export function buildDefaultSolver(cfg: DefaultSolverConfig): SolveFn {
   return async (issue: Issue, context: SolveExecutionContext = {}): Promise<SolveToPrResult> => {
-    context = { ...context }; // Caller mutation during an await cannot lift the ceiling.
+    context = bindTaskSkillContext(context);
     const authorized = (): boolean => { try { context.assertAuthority?.(); return true; } catch { return false; } };
     const refused = (): SolveToPrResult => ({ solveResult: { issueId: issue.id, solved: false, stagesRun: [], repairRounds: 0,
       gaveUpReason: "native project command authority unavailable" } });

@@ -13,6 +13,7 @@
 
 import type { ProjectJobActivityTracker } from "../session/project_job_journal.js";
 import type { TaskMemoryContext, TaskMemoryEmbeddingControls } from "../memory/task_context.js";
+import type { TaskSkillGuidance, TaskSkillBinding } from "../loop/task_skill_guidance.js";
 
 /** A ticket/issue to solve. */
 export interface Issue {
@@ -65,6 +66,8 @@ export interface AdmittedEditPlan {
     readonly tokensOut: number;
   };
   readonly plan: EditPlan;
+  /** Consumed advisory identity only; reconstructed current host checks remain mandatory. */
+  readonly skillBindings?: readonly TaskSkillBinding[];
 }
 
 /** Ephemeral host-owned planning capability. Never serialize this into project state. */
@@ -72,6 +75,8 @@ export interface AdmittedEditPlanningContext {
   /** Ephemeral current original-command authority; independent of optional memory. */
   readonly assertAuthority?: () => void;
   readonly memoryContext?: TaskMemoryContext;
+  /** Bind the exact consumed advisory version into the canonical effect fence. */
+  readonly bindSkillGuidance?: (guidance: TaskSkillGuidance) => void;
   readonly signal: AbortSignal;
   readonly reserveCall: (inputBytes: number) => Promise<boolean>;
   readonly reserveEmbedding?: TaskMemoryEmbeddingControls["reserve"];
@@ -84,6 +89,9 @@ export interface SolveExecutionContext {
   /** Attenuation only: prepare unexecuted data under the existing budget; never apply or run tests. */
   readonly executionCeiling?: "prepare";
   readonly memoryContext?: TaskMemoryContext;
+  readonly skillGuidance?: TaskSkillGuidance;
+  /** Canonical pipeline-owned binder; never sourced from serialized proposal data. */
+  readonly bindSkillGuidance?: (guidance: TaskSkillGuidance) => void;
   /** Ephemeral operator cancellation; never persisted as authority or a resume permit. */
   readonly signal?: AbortSignal;
   readonly trackActivity?: ProjectJobActivityTracker;

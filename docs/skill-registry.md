@@ -31,10 +31,13 @@ managed admission: catalog contents reach this snapshot only when a managed save
 occurs. Retirement keeps the current package and its retirement record while
 excluding it from current retrieval.
 
-The registry stores one current lifecycle per ID, not a complete version archive.
-Checked admission of different content under that ID starts a new lifecycle,
-including clearing the former version's retirement. Keep a private backup if that
-former record is needed. Identical-content re-admission retains its retirement.
+The managed registry keeps the current lifecycle and retained exact admitted
+versions needed for restoration. Checked replacement starts a content-bound
+lifecycle and preserves the previous admitted package and its feedback. History
+contains only versions actually retained by this build; it cannot recover bytes
+already replaced by an older release. Identical-content re-admission retains its
+retirement. Restoring prior content requires current validation and a new admission
+instance, so an old in-flight attempt cannot regain authority through a version cycle.
 The trusted `trackValidated` integration port relies on its caller having checked
 the supplied candidate; it does not run that check itself. Canary reactivation and
 promotion outcomes are separate from the managed binding and must agree before
@@ -137,7 +140,9 @@ The corrected reader retains valid v1 packages, reuse history, and retirement
 records, but marks their existing lifecycle bindings `legacy-unverified`. They
 are not automatically activated. Packages without lifecycle records are
 `catalog-only`. Loading does not rewrite the file. The next ordinary managed save
-writes schema version 2, keeping unresolved legacy bindings explicitly null.
+writes schema version 3 with retained version history and admission-instance fences,
+keeping unresolved legacy bindings explicitly null. Version2 snapshots remain readable;
+an unchanged load preserves their existing identity and does not rewrite the file.
 
 Before using a newer build with existing state, retain a private backup of that
 state. Inspect each intended skill and explicitly submit its exact package through
@@ -147,8 +152,8 @@ catalog install, restarting, or manually filling in a hash is not revalidation.
 Re-admission starts version-specific use history where the earlier content binding
 was unknown: use/reward counters start at zero and the new lifecycle starts at the
 accepted package's publication time. The original backup retains the old history;
-it is not silently credited to the newly checked content. There is no built-in
-archive of every former lifecycle.
+it is not silently credited to the newly checked content. Versions lost before this upgrade remain unavailable; the new history does not
+reconstruct their content or manufacture admission evidence.
 
 A legacy retirement remains effective even if submitted content or metadata changes.
 Ordinary admission, bundle import, and trusted retention do not reactivate that ID.
@@ -235,3 +240,39 @@ consistency problem without teaching the old runtime to enforce those restrictio
 This is a targeted data-compatibility correction. It does not qualify every skill
 generation, refinement, evaluation, promotion, or storage-failure path. Consult
 the evidence for the particular build and workflow being used.
+
+
+## Restore a regressed version in a source build
+
+The development source exposes personal skill recovery through the existing
+operator gateway. It requires an authenticated human with both `config.write`
+and `skill.install`. Tenant and restricted model credentials cannot access the
+personal registry through this operation. The frozen reviewer appliance retains
+its original code; a source update does not add this API to that download.
+
+Read `GET /skill/versions?skillId=ID` to inspect version hashes, feedback and the
+current `subjectToken`. This read returns metadata rather than raw skill advice.
+For a current harmful-retired candidate, submit `POST /skill/restore` with exactly
+`skillId`, `failedContentHash`, `previousContentHash` and `expectedSubjectToken`.
+The last field is the current readback token, which identifies state rather than
+granting permission.
+
+Recovery checks the exact failed content and the requested prior admitted version
+against current policy and execution evidence. A stale token, missing history,
+changed/refined prior bytes, unavailable validator, withdrawn authority or failed
+persistence holds the operation. Successful recovery selects the prior content
+and activates its current canary/retrieval path. Read the current state before
+another attempt; repeating a stale request cannot select another version.
+
+The registry retains failed-version attribution. Ambiguous ID-only feedback after
+restoration is held rather than charged to the restored version. Current admission
+and the actual generator's consumed identity determine reuse; a trace label or
+retirement event alone does not demonstrate successful restoration.
+
+
+To forget a retained prior version, use `POST /skill/forget-version` with exactly
+`skillId`, `contentHash` and the current `expectedSubjectToken`. The selected current
+version cannot be removed through this history operation. Forgetting removes the
+archived body/feedback and retains an exact-hash tombstone that blocks restoration
+or managed re-admission of that content. The version readback lists those tombstone
+hashes. This operation does not erase copies in external backups or prior logs.

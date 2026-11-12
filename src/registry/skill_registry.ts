@@ -9,7 +9,7 @@
  * content; it does not authenticate the declared publisher or prove task utility.
  */
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { DistilledSkill, SkillAuthority } from "../loop/skill_distiller.js";
@@ -32,6 +32,8 @@ export interface GateVerdict {
   readonly reason?: string;
   /** Exact final candidate checked by a refining gate; omitted means unchanged input. */
   readonly checkedSkill?: DistilledSkill;
+  /** Host-observed first-round execution cases bound to the exact input content. */
+  readonly executedCases?: readonly { readonly contentHash: string; readonly caseId: string; readonly passed: boolean }[];
 }
 
 export interface RegistryStore {
@@ -166,8 +168,42 @@ export interface ManagedRegistryConfig extends InstallDeps {
   readonly onAdmit?: (skill: DistilledSkill) => void;
 }
 
-export interface PersistedSkillLifecycle { readonly skillId: string; readonly admittedHash?: string | null; readonly uses: number; readonly reward: number; readonly lastUsedAt: number; readonly retired?: { readonly reason: RetirementReason; readonly at: number; readonly replacementId?: string }; }
-export interface SkillRegistrySnapshot { readonly schemaVersion: 1 | 2; readonly packages: readonly SkillPackage[]; readonly lifecycle: readonly PersistedSkillLifecycle[]; }
+export interface PersistedSkillLifecycle {
+  readonly skillId: string; readonly admittedHash?: string | null;
+  /** An admission-instance fence, not a semantic version. Null preserves readable v2 tokens. */
+  readonly admissionInstance?: string | null;
+  readonly restoredFrom?: string;
+  readonly uses: number; readonly reward: number; readonly lastUsedAt: number;
+  readonly retired?: { readonly reason: RetirementReason; readonly at: number; readonly replacementId?: string };
+}
+export interface SkillVersionFeedback {
+  readonly solveId: string; readonly taskShape: string; readonly testsPassed: boolean;
+  readonly mergeVerdict: OutcomeSignal["mergeVerdict"]; readonly timestamp: number; readonly rejectReason?: string;
+}
+export interface PersistedSkillVersion {
+  readonly pkg: SkillPackage; readonly lifecycle: PersistedSkillLifecycle;
+  readonly feedback: readonly SkillVersionFeedback[];
+  readonly counterexamples: readonly { readonly contentHash: string; readonly caseId: string; readonly passed: false }[];
+}
+export interface SkillVersionHistory {
+  readonly skillId: string; readonly contentHash: string; readonly current: boolean;
+  readonly lifecycle: SkillLifecycleRecord; readonly previouslyAdmitted: boolean;
+  readonly feedback: readonly SkillVersionFeedback[];
+  readonly counterexamples: PersistedSkillVersion["counterexamples"];
+}
+export interface RestoreSkillRequest {
+  readonly skillId: string; readonly failedContentHash: string; readonly previousContentHash: string;
+  readonly expectedSubjectToken: string;
+}
+export type RestoreSkillResult =
+  | { readonly ok: true; readonly pkg: SkillPackage; readonly subjectToken: string }
+  | { readonly ok: false; readonly reason: "changed" | "not-regressed" | "history-unavailable" | "rejected-prior"; readonly detail: string };
+export interface SkillRegistrySnapshot {
+  readonly schemaVersion: 1 | 2 | 3; readonly packages: readonly SkillPackage[];
+  readonly lifecycle: readonly PersistedSkillLifecycle[];
+  readonly versions?: readonly PersistedSkillVersion[];
+  readonly forgottenVersions?: readonly { readonly skillId: string; readonly contentHash: string }[];
+}
 /** Synchronous trusted port. A successful save must make the snapshot available to
  * load; an ordinary thrown error may have occurred after commit and fences the
  * managed writer until reconstruction. The default file writer can identify its
@@ -190,7 +226,8 @@ export class FileSkillRegistryPersistence implements SkillRegistryPersistence {
     let raw: string;
     try { raw = readFileSync(this.path, "utf8"); } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined; throw error; }
     const value = JSON.parse(raw) as SkillRegistrySnapshot;
-    if ((value?.schemaVersion !== 1 && value?.schemaVersion !== 2) || !Array.isArray(value.packages) || !Array.isArray(value.lifecycle)) throw new Error("invalid persisted skill registry");
+    if (![1, 2, 3].includes(value?.schemaVersion) || !Array.isArray(value.packages) || !Array.isArray(value.lifecycle)
+      || (value.schemaVersion === 3 && (!Array.isArray(value.versions) || !Array.isArray(value.forgottenVersions)))) throw new Error("invalid persisted skill registry");
     return value;
   }
   save(snapshot: SkillRegistrySnapshot): void {
@@ -210,12 +247,14 @@ export type ImportResult =
 /**
  * Product lifecycle around the registry. Rewards use supplied solve outcomes.
  * Harmful reuse and inactivity retire the current version without deleting its
- * package. Checked replacement starts a new version-specific record; this store
- * is not an archive of all prior versions. Equivalent envelopes/programs merge
+ * package. Checked replacement starts a new version-specific record; prior bound
+ * versions remain available for explicit rechecked restoration. Equivalent envelopes/programs merge
  * provenance. Exchange is bounded and uses the configured admission gate.
  */
 export class ManagedSkillRegistry {
-  private records = new Map<string, { admittedHash: string | null; uses: number; reward: number; lastUsedAt: number; retired?: { reason: RetirementReason; at: number; replacementId?: string } }>();
+  private records = new Map<string, { admittedHash: string | null; admissionInstance: string | null; restoredFrom?: string; uses: number; reward: number; lastUsedAt: number; retired?: { reason: RetirementReason; at: number; replacementId?: string } }>();
+  private versions = new Map<string, PersistedSkillVersion>();
+  private forgotten = new Set<string>();
   private draft = false;
   private committing = false;
   private reconstructionRequired = false;
@@ -229,7 +268,8 @@ export class ManagedSkillRegistry {
     this.allowedImportAuthorities = new Set(config.allowedImportAuthorities ?? ["workspace:read", "workspace:write", "sandbox:execute"]);
     const restored = config.persistence?.load();
     if (restored) {
-      if ((restored.schemaVersion !== 1 && restored.schemaVersion !== 2) || !Array.isArray(restored.packages) || !Array.isArray(restored.lifecycle)) throw new Error("invalid persisted skill registry");
+      if (![1, 2, 3].includes(restored.schemaVersion) || !Array.isArray(restored.packages) || !Array.isArray(restored.lifecycle)
+        || (restored.schemaVersion === 3 && (!Array.isArray(restored.versions) || !Array.isArray(restored.forgottenVersions)))) throw new Error("invalid persisted skill registry");
       const packageIds = new Set<string>();
       for (const pkg of restored.packages) {
         if (!isPackage(pkg) || packageIds.has(pkg.skill.id) || hashSkill(pkg.skill) !== pkg.contentHash) {
@@ -240,15 +280,33 @@ export class ManagedSkillRegistry {
       const lifecycleIds = new Set<string>();
       for (const record of restored.lifecycle) {
         if (!isLifecycle(record) || lifecycleIds.has(record.skillId) || !packageIds.has(record.skillId)) throw new Error("invalid persisted skill lifecycle");
-        if (restored.schemaVersion === 2 && record.admittedHash !== null && (typeof record.admittedHash !== "string" || !/^[a-f0-9]{64}$/.test(record.admittedHash))) throw new Error("invalid persisted skill admission binding");
+        if (restored.schemaVersion >= 2 && record.admittedHash !== null && (typeof record.admittedHash !== "string" || !/^[a-f0-9]{64}$/.test(record.admittedHash))) throw new Error("invalid persisted skill admission binding");
+        if (restored.schemaVersion === 3 && !validInstance(record.admissionInstance)) throw new Error("invalid persisted skill admission instance");
         lifecycleIds.add(record.skillId);
       }
       // Catalog-only entries have no admission record. Preview v1 could also attach
       // another version's lifecycle to replaced content; its binding cannot be inferred.
-      for (const pkg of restored.packages) config.store.put(pkg);
       for (const record of restored.lifecycle) {
-        this.records.set(record.skillId, { admittedHash: restored.schemaVersion === 2 ? record.admittedHash! : null, uses: record.uses, reward: record.reward, lastUsedAt: record.lastUsedAt, ...(record.retired ? { retired: { ...record.retired } } : {}) });
+        this.records.set(record.skillId, { admittedHash: restored.schemaVersion >= 2 ? record.admittedHash! : null,
+          admissionInstance: restored.schemaVersion === 3 ? record.admissionInstance! : null,
+          ...(record.restoredFrom === undefined ? {} : { restoredFrom: record.restoredFrom }),
+          uses: record.uses, reward: record.reward, lastUsedAt: record.lastUsedAt, ...(record.retired ? { retired: { ...record.retired } } : {}) });
       }
+      for (const item of (restored.schemaVersion === 3 ? restored.forgottenVersions : []) ?? []) {
+        if (!item || typeof item.skillId !== "string" || typeof item.contentHash !== "string" || !/^[a-f0-9]{64}$/u.test(item.contentHash)) throw new Error("invalid persisted skill version tombstone");
+        const key = versionKey(item.skillId, item.contentHash);
+        if (this.forgotten.has(key)) throw new Error("invalid persisted skill version tombstone: duplicate content");
+        this.forgotten.add(key);
+      }
+      for (const version of (restored.schemaVersion === 3 ? restored.versions : []) ?? []) {
+        if (!validVersion(version) || !packageIds.has(version.pkg.skill.id)) throw new Error("invalid persisted skill version history");
+        const key = versionKey(version.pkg.skill.id, version.pkg.contentHash);
+        if (this.versions.has(key) || this.forgotten.has(key)) throw new Error("invalid persisted skill version history: duplicate or forgotten content");
+        this.versions.set(key, immutableCopy(version));
+      }
+      // Publish the validated snapshot only after its history and erasure
+      // tombstones have also passed; malformed history cannot install a prefix.
+      for (const pkg of restored.packages) config.store.put(pkg);
     }
   }
 
@@ -270,6 +328,9 @@ export class ManagedSkillRegistry {
   /** Record a locally validated candidate synchronously after the caller's execution gate; this grants no activation. */
   trackValidated(skill: DistilledSkill, origin: string, now: number = Date.now()): { readonly pkg: SkillPackage; readonly active: boolean; readonly mergedInto?: string } {
     if (!this.draft) return this.commit(draft => draft.trackValidated(skill, origin, now));
+    if (this.forgotten.has(versionKey(skill.id, hashSkill(skill)))) throw new Error("forgotten skill version cannot be re-admitted");
+    if (this.versions.get(versionKey(skill.id, hashSkill(skill)))?.lifecycle.retired && this.records.get(skill.id)?.admittedHash !== hashSkill(skill))
+      throw new Error("retired historical skill version cannot be re-admitted");
     skill = immutableCopy(skill);
     const existing = this.config.store.get(skill.id);
     if (existing && this.records.has(skill.id)) {
@@ -281,7 +342,7 @@ export class ManagedSkillRegistry {
       // The caller checked this candidate, not the previous content under its ID.
       const pkg = publishSkill(skill, origin, now);
       this.config.store.put(pkg);
-      if (lifecycle.admittedHash !== pkg.contentHash) this.records.set(skill.id, { admittedHash: pkg.contentHash, uses: 0, reward: 0, lastUsedAt: now });
+      if (lifecycle.admittedHash !== pkg.contentHash) this.records.set(skill.id, { admittedHash: pkg.contentHash, admissionInstance: randomUUID(), uses: 0, reward: 0, lastUsedAt: now });
       this.persist(); return { pkg, active: true };
     }
     const pkg = publishSkill(skill, origin, now);
@@ -294,6 +355,9 @@ export class ManagedSkillRegistry {
 
   private async preparePackage(pkg: SkillPackage): Promise<InstallResult> {
     if (!isPackage(pkg)) return { ok: false, reason: "tampered", detail: "package schema is invalid" };
+    if (this.forgotten.has(versionKey(pkg.skill.id, pkg.contentHash))) return { ok: false, reason: "rejected-unsafe", detail: "forgotten skill version cannot be re-admitted" };
+    if (this.versions.get(versionKey(pkg.skill.id, pkg.contentHash))?.lifecycle.retired && this.records.get(pkg.skill.id)?.admittedHash !== pkg.contentHash)
+      return { ok: false, reason: "rejected-unsafe", detail: "retired historical skill version cannot be re-admitted" };
     const previous = this.records.get(pkg.skill.id);
     if (previous?.retired && previous.admittedHash === null) return {
       ok: false, reason: "held-legacy-retired",
@@ -312,7 +376,7 @@ export class ManagedSkillRegistry {
 
   private finishInstalled(pkg: SkillPackage): { readonly mergedInto?: string } {
     const previous = this.records.get(pkg.skill.id);
-    if (previous?.admittedHash !== pkg.contentHash) this.records.set(pkg.skill.id, { admittedHash: pkg.contentHash, uses: 0, reward: 0, lastUsedAt: pkg.publishedAt });
+    if (previous?.admittedHash !== pkg.contentHash) this.records.set(pkg.skill.id, { admittedHash: pkg.contentHash, admissionInstance: randomUUID(), uses: 0, reward: 0, lastUsedAt: pkg.publishedAt });
     const equivalent = this.config.store.list().find((other) =>
       other.skill.id !== pkg.skill.id && this.isEligible(other.skill) && skillBehaviorHash(other.skill) === skillBehaviorHash(pkg.skill));
     if (!equivalent) return {};
@@ -326,6 +390,7 @@ export class ManagedSkillRegistry {
     const merged = publishSkill(mergedSkill, equivalent.origin, Math.max(equivalent.publishedAt, pkg.publishedAt));
     this.config.store.put(merged);
     this.records.get(equivalent.skill.id)!.admittedHash = merged.contentHash;
+    this.records.get(equivalent.skill.id)!.admissionInstance = randomUUID();
     this.retire(pkg.skill.id, "redundant", pkg.publishedAt, equivalent.skill.id);
     return { mergedInto: equivalent.skill.id };
   }
@@ -338,6 +403,16 @@ export class ManagedSkillRegistry {
       const rec = this.records.get(skillId);
       const pkg = this.config.store.get(skillId);
       if (!rec || !pkg || !this.isEligible(pkg.skill)) continue;
+      // Legacy signals name IDs only. After restoration they cannot distinguish
+      // an old failed-version replay from a use of the restored bytes.
+      if (!this.acceptsUnversionedOutcome(skillId, signal)) continue;
+      const key = versionKey(skillId, pkg.contentHash);
+      const previous = this.versions.get(key);
+      const feedback: SkillVersionFeedback = { solveId: signal.solveId, taskShape: signal.taskShape,
+        testsPassed: signal.testsPassed, mergeVerdict: signal.mergeVerdict, timestamp: signal.timestamp,
+        ...(signal.rejectReason === undefined ? {} : { rejectReason: signal.rejectReason }) };
+      this.versions.set(key, { pkg, lifecycle: { skillId, ...rec },
+        feedback: [...(previous?.feedback ?? []), feedback], counterexamples: previous?.counterexamples ?? [] });
       const delta = reuseSignal(signal).reward;
       rec.uses++;
       rec.reward += delta;
@@ -365,8 +440,15 @@ export class ManagedSkillRegistry {
   lifecycle(skillId: string): SkillLifecycleRecord | undefined {
     const rec = this.records.get(skillId);
     if (!rec) return undefined;
-    const { admittedHash: _binding, ...history } = rec;
+    const { admittedHash: _binding, admissionInstance: _instance, restoredFrom: _restored, ...history } = rec;
     return { skillId, ...history, ...(rec.retired ? { retired: { ...rec.retired } } : {}) };
+  }
+
+  /** Shared by the host's existing canary/outcome boundary. Restored content
+   * cannot inherit ambiguous ID-only feedback or replay a prior version's solve. */
+  acceptsUnversionedOutcome(skillId: string, signal: OutcomeSignal): boolean {
+    return this.records.get(skillId)?.restoredFrom === undefined && ![...this.versions.values()].some(version => version.pkg.skill.id === skillId
+      && version.feedback.some(feedback => feedback.solveId === signal.solveId));
   }
 
   /** Current content eligibility, not a claim about the truth of a supplied gate's evidence. */
@@ -374,6 +456,7 @@ export class ManagedSkillRegistry {
     if (this.reconstructionRequired) return "reconstruction-required";
     const pkg = this.config.store.get(skillId), record = this.records.get(skillId);
     if (!pkg) return "missing";
+    if (this.forgotten.has(versionKey(skillId, pkg.contentHash))) return "retired";
     if (!record) return "catalog-only";
     if (record.retired && record.admittedHash === null) return "retired";
     if (record.admittedHash === null) return "legacy-unverified";
@@ -388,7 +471,90 @@ export class ManagedSkillRegistry {
   /** Content/admission/retirement precondition; counters alone do not alter it. */
   subjectToken(skillId: string): string {
     const pkg = this.config.store.get(skillId), record = this.records.get(skillId);
-    return JSON.stringify([pkg ? hashSkill(pkg.skill) : null, record?.admittedHash ?? null, record?.retired ?? null, this.reconstructionRequired]);
+    const state: unknown[] = [pkg ? hashSkill(pkg.skill) : null, record?.admittedHash ?? null, record?.retired ?? null, this.reconstructionRequired];
+    // Preserve unchanged schema-v2 tokens through load/upgrade; a new admission
+    // or restoration persists its own opaque instance and cannot create ABA.
+    if (record?.admissionInstance) state.push(record.admissionInstance);
+    return JSON.stringify(state);
+  }
+
+  /** Metadata only. A former admission is not current validation or authority. */
+  versionHistory(skillId: string): readonly SkillVersionHistory[] {
+    const current = this.config.store.get(skillId);
+    return immutableCopy((this.snapshot().versions ?? []).filter(version => version.pkg.skill.id === skillId).map(version => {
+      const { admittedHash: _binding, admissionInstance: _instance, restoredFrom: _restored, ...lifecycle } = version.lifecycle;
+      return { skillId, contentHash: version.pkg.contentHash, current: current?.contentHash === version.pkg.contentHash,
+        lifecycle, previouslyAdmitted: version.lifecycle.admittedHash === version.pkg.contentHash,
+        feedback: version.feedback, counterexamples: version.counterexamples };
+    }));
+  }
+
+  forgottenVersionHashes(skillId: string): readonly string[] {
+    return [...this.forgotten].map(key => JSON.parse(key) as [string, string]).filter(([id]) => id === skillId).map(([, hash]) => hash);
+  }
+
+  /** Removes a prior body/feedback locally and keeps only a non-authorizing
+   * tombstone. Copies outside this registry remain outside this operation. */
+  forgetPreviousVersion(request: { readonly skillId: string; readonly contentHash: string; readonly expectedSubjectToken: string }, assertAuthority: () => void = () => {}):
+    { readonly ok: true; readonly forgotten: boolean } | { readonly ok: false; readonly reason: "changed" | "selected-version"; readonly detail: string } {
+    this.ensureMutable(); assertAuthority();
+    if (request.expectedSubjectToken !== this.subjectToken(request.skillId)) return { ok: false, reason: "changed", detail: "skill selection changed" };
+    if (this.config.store.get(request.skillId)?.contentHash === request.contentHash) return { ok: false, reason: "selected-version", detail: "withdraw or replace the selected content before forgetting its history" };
+    const key = versionKey(request.skillId, request.contentHash);
+    if (!this.versions.has(key)) return { ok: true, forgotten: false };
+    assertAuthority();
+    return this.commit(draft => { draft.versions.delete(key); draft.forgotten.add(key); return { ok: true as const, forgotten: true }; });
+  }
+
+  /** Explicit operator restoration; fresh checks bind both regression and prior
+   * eligibility to exact content. The optional callback is trusted host authority,
+   * never supplied by serialized/model input. */
+  async restorePrevious(request: RestoreSkillRequest, assertAuthority: () => void = () => {}): Promise<RestoreSkillResult> {
+    this.ensureMutable(); assertAuthority();
+    const { skillId, failedContentHash, previousContentHash, expectedSubjectToken } = request;
+    const hold = (reason: Exclude<RestoreSkillResult, { ok: true }>["reason"], detail: string): RestoreSkillResult => ({ ok: false, reason, detail });
+    const observed = this.subjectToken(skillId);
+    if (observed !== expectedSubjectToken || failedContentHash === previousContentHash) return hold("changed", "restoration must name the exact current failed and different previous content");
+    const current = this.config.store.get(skillId), record = this.records.get(skillId);
+    if (!current || !record || record.admittedHash !== failedContentHash || current.contentHash !== failedContentHash
+      || hashSkill(current.skill) !== failedContentHash || record.retired?.reason !== "harmful") return hold("not-regressed", "the exact current content is not recorded as harmfully retired");
+    const prior = this.versions.get(versionKey(skillId, previousContentHash));
+    if (this.forgotten.has(versionKey(skillId, previousContentHash)) || !prior || !validVersion(prior) || prior.lifecycle.retired || prior.lifecycle.admittedHash !== previousContentHash)
+      return hold("history-unavailable", "a non-retired previously admitted exact version is unavailable");
+    const priorToken = hashValue(prior);
+    const assertUnchanged = () => {
+      this.ensureMutable(); assertAuthority();
+      return this.subjectToken(skillId) === observed && hashValue(this.versions.get(versionKey(skillId, previousContentHash)) ?? null) === priorToken;
+    };
+    // A legacy ID-only failure is not evidence about a version. Re-execute the
+    // exact failed input through the configured gate, retaining only its actual
+    // first-round failing cases. Unavailable/empty evidence cannot authorize it.
+    const failedCheck = await this.config.gate(immutableCopy(current.skill));
+    if (!assertUnchanged()) return hold("changed", "skill admission/history changed during regression checking");
+    const counterexamples = (failedCheck.executedCases ?? []).filter(item => item.contentHash === failedContentHash
+      && item.passed === false && typeof item.caseId === "string" && item.caseId.length > 0)
+      .map(item => ({ contentHash: failedContentHash, caseId: item.caseId, passed: false as const }));
+    if (counterexamples.length === 0) return hold("not-regressed", "the current gate supplied no failing execution case for the exact failed content");
+    // Persist failure evidence before a possibly unavailable prior-version check.
+    this.commit(draft => {
+      const key = versionKey(skillId, failedContentHash), old = draft.versions.get(key)!;
+      const cases = new Map([...old.counterexamples, ...counterexamples].map(item => [item.caseId, item]));
+      draft.versions.set(key, { ...old, counterexamples: [...cases.values()] });
+    });
+    if (!assertUnchanged()) return hold("changed", "skill admission/history changed before previous-version checking");
+    const checked = await this.preparePackage(prior.pkg);
+    if (!assertUnchanged()) return hold("changed", "skill admission/history changed during previous-version checking");
+    if (!checked.ok || checked.pkg.contentHash !== previousContentHash || hashSkill(checked.pkg.skill) !== previousContentHash)
+      return hold("rejected-prior", "the current gate/policy did not admit the exact retained prior content unchanged");
+    assertAuthority();
+    const pkg = this.commit(draft => {
+      draft.config.store.put(checked.pkg);
+      const { skillId: _id, admittedHash: _hash, admissionInstance: _instance, restoredFrom: _restored, retired: _retired, ...history } = prior.lifecycle;
+      draft.records.set(skillId, { ...history, admittedHash: previousContentHash, admissionInstance: randomUUID(), restoredFrom: failedContentHash });
+      return checked.pkg;
+    });
+    this.activateInstalled(pkg);
+    return { ok: true, pkg, subjectToken: this.subjectToken(skillId) };
   }
 
   /** A measured bad candidate may withdraw only the exact currently admitted content. */
@@ -447,7 +613,16 @@ export class ManagedSkillRegistry {
   }
 
   private snapshot(): SkillRegistrySnapshot {
-    return { schemaVersion: 2, packages: this.config.store.list(), lifecycle: [...this.records].map(([skillId, record]) => ({ skillId, ...record })) };
+    const versions = new Map(this.versions);
+    for (const pkg of this.config.store.list()) {
+      const record = this.records.get(pkg.skill.id);
+      if (!record || this.forgotten.has(versionKey(pkg.skill.id, pkg.contentHash)) || record.admittedHash !== pkg.contentHash || hashSkill(pkg.skill) !== pkg.contentHash) continue;
+      const key = versionKey(pkg.skill.id, pkg.contentHash), previous = versions.get(key);
+      versions.set(key, { pkg, lifecycle: { skillId: pkg.skill.id, ...record },
+        feedback: previous?.feedback ?? [], counterexamples: previous?.counterexamples ?? [] });
+    }
+    return { schemaVersion: 3, packages: this.config.store.list(), lifecycle: [...this.records].map(([skillId, record]) => ({ skillId, ...record })), versions: [...versions.values()],
+      forgottenVersions: [...this.forgotten].map(key => { const [skillId, contentHash] = JSON.parse(key) as [string, string]; return { skillId, contentHash }; }) };
   }
 
   private ensureMutable(): void {
@@ -473,6 +648,8 @@ export class ManagedSkillRegistry {
           if (this.config.store.replaceAll) this.config.store.replaceAll(after.packages);
           else for (const pkg of after.packages) this.config.store.put(pkg);
           this.records = draft.records;
+          this.versions = new Map((after.versions ?? []).map(version => [versionKey(version.pkg.skill.id, version.pkg.contentHash), version]));
+          this.forgotten = draft.forgotten;
         } catch (error) { this.reconstructionRequired = true; throw error; }
       }
       return result;
@@ -518,10 +695,37 @@ function isPackage(value: unknown): value is SkillPackage {
 function isLifecycle(value: unknown): value is PersistedSkillLifecycle {
   if (!isRecord(value) || typeof value.skillId !== "string" || !Number.isInteger(value.uses) || (value.uses as number) < 0 ||
     typeof value.reward !== "number" || !Number.isFinite(value.reward) || typeof value.lastUsedAt !== "number" || !Number.isFinite(value.lastUsedAt)) return false;
+  if ((value.admissionInstance !== undefined && !validInstance(value.admissionInstance)) ||
+    (value.restoredFrom !== undefined && (typeof value.restoredFrom !== "string" || !/^[a-f0-9]{64}$/u.test(value.restoredFrom)))) return false;
   if (value.retired === undefined) return true;
   if (!isRecord(value.retired) || !["harmful", "unused", "redundant"].includes(value.retired.reason as string) ||
     typeof value.retired.at !== "number" || !Number.isFinite(value.retired.at)) return false;
   return value.retired.replacementId === undefined || typeof value.retired.replacementId === "string";
+}
+
+function versionKey(skillId: string, contentHash: string): string { return JSON.stringify([skillId, contentHash]); }
+
+function validInstance(value: unknown): value is string | null {
+  return value === null || (typeof value === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(value));
+}
+
+function validVersion(value: unknown): value is PersistedSkillVersion {
+  if (!isRecord(value) || !isPackage(value.pkg) || hashSkill(value.pkg.skill) !== value.pkg.contentHash
+    || !isLifecycle(value.lifecycle) || value.lifecycle.skillId !== value.pkg.skill.id
+    || value.lifecycle.admittedHash !== value.pkg.contentHash || !validInstance(value.lifecycle.admissionInstance)
+    || !Array.isArray(value.feedback) || !Array.isArray(value.counterexamples)) return false;
+  const hash = value.pkg.contentHash;
+  const solves = new Set<string>();
+  for (const feedback of value.feedback) {
+    if (!isRecord(feedback) || typeof feedback.solveId !== "string" || feedback.solveId.length === 0 || solves.has(feedback.solveId)
+      || typeof feedback.taskShape !== "string" || typeof feedback.testsPassed !== "boolean"
+      || !["merged", "rejected", "pending"].includes(String(feedback.mergeVerdict))
+      || typeof feedback.timestamp !== "number" || !Number.isFinite(feedback.timestamp)
+      || (feedback.rejectReason !== undefined && typeof feedback.rejectReason !== "string")) return false;
+    solves.add(feedback.solveId);
+  }
+  return value.counterexamples.every(item => isRecord(item) && item.contentHash === hash && item.passed === false
+    && typeof item.caseId === "string" && item.caseId.length > 0);
 }
 
 function isSkill(value: unknown): value is DistilledSkill {

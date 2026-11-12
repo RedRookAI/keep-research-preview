@@ -20,6 +20,7 @@ import { ProgressNarrator } from "../autonomy/progress_narrator.js";
 import type { Issue, SolveResult, SolveStage, PrProposal, EditPlan, SolveExecutionContext, AdmittedEditPlan, PatchApplyResult, SolveLocalizationEvidence } from "./issue_model.js";
 import { isTestFile, type Localizer, type LocalizationResult, type RepoFile } from "./localize.js";
 import { planEdits } from "./edit_planner.js";
+import { bindTaskSkillContext } from "../loop/task_skill_guidance.js";
 import { TaskMemoryUnavailableError, type TaskMemoryContext } from "../memory/task_context.js";
 import { ProjectEditAdmissionError } from "../autonomy/project_edit_stage.js";
 import { applyEditPlan, canApply, resolveEditPlan, InMemoryFileTree, type FileTree } from "./patch.js";
@@ -301,7 +302,7 @@ export class SolvePipeline {
    * passing patch is produced. Never merges — the proposal is for the human gate.
    */
   async run(issue: Issue, files: readonly RepoFile[], context: SolveExecutionContext = {}): Promise<SolveResult> {
-    context = { ...context }; // Preserve attenuation across asynchronous host/model calls.
+    context = bindTaskSkillContext(context);
     if (context.executionCeiling !== undefined && context.executionCeiling !== "prepare") {
       return this.gaveUp(issue.id, [], "unknown execution ceiling");
     }
@@ -406,6 +407,7 @@ export class SolvePipeline {
         return await context.prepareAdmittedEdit!({ signal,
           ...(context.assertAuthority === undefined ? {} : { assertAuthority: context.assertAuthority }),
           ...(context.memoryContext === undefined ? {} : { memoryContext: context.memoryContext }),
+          ...(context.bindSkillGuidance === undefined ? {} : { bindSkillGuidance: context.bindSkillGuidance }),
           reserveCall: bytes => budget.reservePlanningCall(permit, bytes), observe: event => audit("plan", event),
           reserveEmbedding: work => budget.reserveEmbeddingWork(permit, work),
         });
@@ -419,6 +421,9 @@ export class SolvePipeline {
     const admitted = prepared;
     let admittedFiles: ReadonlySet<string> | undefined;
     if (admitted !== undefined) {
+      if (admitted.skillBindings !== undefined && (!context.skillGuidance
+        || JSON.stringify(admitted.skillBindings) !== JSON.stringify(context.skillGuidance.bindings)))
+        return this.gaveUp(issue.id, stagesRun, "consumed skill identities require their current host capability", localizationEvidence);
       const refusal = await this.validateAdmittedEdit(issue, files, admitted);
       if (refusal !== undefined) {
         narrator.done("plan", `Admitted project edit refused: ${refusal}`);
@@ -433,6 +438,7 @@ export class SolvePipeline {
     const plan = admitted?.plan ?? await budget.during(permit, signal => planEdits(issue, localization, files, this.deps.model, {
       ...(context.assertAuthority === undefined ? {} : { assertAuthority: context.assertAuthority }),
       ...(context.memoryContext === undefined ? {} : { memoryContext: context.memoryContext }),
+      ...(context.skillGuidance === undefined ? {} : { skillGuidance: context.skillGuidance }),
       signal, reserveCall: bytes => budget.reservePlanningCall(permit, bytes), observe: event => audit("plan", event),
       reserveEmbedding: work => budget.reserveEmbeddingWork(permit, work),
     }));
@@ -721,6 +727,7 @@ export class SolvePipeline {
           const repaired = await planEdits(issue, localization, current, this.deps.model, {
             ...(context.assertAuthority === undefined ? {} : { assertAuthority: context.assertAuthority }),
             ...(context.memoryContext === undefined ? {} : { memoryContext: context.memoryContext }),
+            ...(context.skillGuidance === undefined ? {} : { skillGuidance: context.skillGuidance }),
             repairContext: feedback, ...(signal ? { signal } : {}),
             reserveCall: bytes => budget.reservePlanningCall(repairPermit, bytes), observe: event => audit("plan", event),
             reserveEmbedding: work => budget.reserveEmbeddingWork(repairPermit, work),

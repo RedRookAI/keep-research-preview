@@ -21,6 +21,7 @@ import { vetProjectPlan } from "../autonomy/plan_gate_stage.js";
 import { isCanonicalAdmittedSolveResult } from "./solve_pipeline.js";
 import type { ProjectTester } from "../autonomy/project_test_stage.js";
 import { projectRepositoryTreeSha256 } from "../autonomy/project_localization.js";
+import { bindTaskSkillContext } from "../loop/task_skill_guidance.js";
 
 /** The minimal solve capability the loop needs — a port. A raw SolvePipeline (SolveResult) satisfies it, and so
  *  does a GOVERNED adapter (SolveToPrResult, carrying the merge-authority verdict). The loop normalizes both and,
@@ -137,6 +138,11 @@ function priorRepairReasons(state: ProjectState): readonly string[] {
  * through the loop's artifacts under the "solve" key.
  */
 export function makeSolveStageExecutors(deps: SolveWiringDeps): StageExecutors {
+  const assertGuidanceCurrent = (proposal: AdmittedEditPlan | undefined, state: ProjectState): void => {
+    if (proposal?.skillBindings === undefined) return;
+    if (!deps.projectEditor?.assertGuidanceCurrent) throw new Error("consumed skill currentness checker is unavailable");
+    deps.projectEditor.assertGuidanceCurrent(proposal, state);
+  };
   return {
     implement: async (state: ProjectState, control = {}): Promise<StageResult> => {
       const { ticket, task, criterionContext } = validatedTicket(state);
@@ -155,7 +161,7 @@ export function makeSolveStageExecutors(deps: SolveWiringDeps): StageExecutors {
       const diagnosisId = priorRecovery?.diagnosisId;
       const diagnosisPrefix = diagnosisId ? `capability:solve-diagnosis:${state.runId}:${diagnosisId}:` : undefined;
       const diagnosisSignal = diagnosisPrefix ? state.consumedSignals.find(value => value.startsWith(diagnosisPrefix)) : undefined;
-      const raw = await deps.pipeline.run(issue, files, {
+      const executionContext = bindTaskSkillContext({
         ...(deps.executionCeiling === undefined ? {} : { executionCeiling: deps.executionCeiling }),
         ...(control.memoryContext === undefined ? {} : { memoryContext: control.memoryContext }),
         ...(deps.assertAuthority === undefined ? {} : { assertAuthority: () => deps.assertAuthority!(state) }),
@@ -169,6 +175,7 @@ export function makeSolveStageExecutors(deps: SolveWiringDeps): StageExecutors {
         ...(attemptId && prefix && signal ? { recoveryReconciliation: { attemptId, evidenceId: signal.slice(prefix.length) } } : {}),
         ...(diagnosisId && diagnosisPrefix && diagnosisSignal ? { recoveryDiagnosis: { holdId: diagnosisId, evidenceId: diagnosisSignal.slice(diagnosisPrefix.length) } } : {}),
       });
+      const raw = await deps.pipeline.run(issue, files, executionContext);
       // normalize: a raw SolveResult, or a governed SolveToPrResult carrying the merge verdict
       let result: SolveResult;
       let gov;
@@ -180,7 +187,11 @@ export function makeSolveStageExecutors(deps: SolveWiringDeps): StageExecutors {
       } else {
         result = raw;
       }
-      try { deps.assertAuthority?.(state); }
+      try {
+        executionContext.assertAuthority?.();
+        assertGuidanceCurrent(admittedEdit, state);
+        if (result.admittedEdit !== admittedEdit) assertGuidanceCurrent(result.admittedEdit, state);
+      }
       catch {
         return { output: { schemaVersion: 1, task, issue, solve: { issueId: issue.id, solved: false,
           stagesRun: result.stagesRun, repairRounds: result.repairRounds,
@@ -225,6 +236,10 @@ export function makeSolveStageExecutors(deps: SolveWiringDeps): StageExecutors {
       if (deps.projectTester !== undefined && deps.snapshotFiles === undefined) throw new Error("configured project tests require a trusted live repository snapshot capability");
       const repositoryTreeAfterSha256 = deps.snapshotFiles === undefined ? undefined : projectRepositoryTreeSha256(await deps.snapshotFiles(issue.repoRef));
       const repositoryExecutionManifestSha256 = deps.snapshotExecutionManifest === undefined ? undefined : await deps.snapshotExecutionManifest(issue.repoRef);
+      try { executionContext.assertAuthority?.(); }
+      catch { return { output: { schemaVersion: 1, task, issue, solve: { ...durableResult, solved: false, prProposal: undefined,
+        projectEditReceipt: undefined, gaveUpReason: "consumed skill or command authority changed during evidence capture" } },
+        control: "capability-unavailable", capability: "project-currentness", headline: "Implementation evidence needs current authority before advancing." }; }
       if (deps.projectTester !== undefined && repositoryExecutionManifestSha256 === undefined) throw new Error("configured project tests require a trusted full execution-input manifest capability");
       if (result.projectEditReceipt && repositoryTreeAfterSha256 !== result.projectEditReceipt.repositoryTreeAfterSha256) {
         throw new Error("canonical edit receipt does not match the live post-implementation repository");
@@ -286,10 +301,19 @@ export function makeSolveStageExecutors(deps: SolveWiringDeps): StageExecutors {
       const implementation = state.artifacts["implement"] as Partial<ProjectImplementationArtifact> | undefined;
       const task = implementation?.task;
       const issue = implementation?.issue;
+      const assertVerificationAuthority = () => {
+        deps.assertAuthority?.(state);
+        assertGuidanceCurrent(result.admittedEdit, state);
+        if (implementation?.admittedEditPrepared !== result.admittedEdit) assertGuidanceCurrent(implementation?.admittedEditPrepared, state);
+      };
+      let skillFailure: string | undefined;
+      try { assertVerificationAuthority(); }
+      catch { skillFailure = "consumed skill or command authority is no longer current"; }
       let ticket: ProjectDecompositionArtifact | undefined;
       let ticketFailure: string | undefined;
       try { ticket = validatedTicket(state).ticket; } catch (error) { ticketFailure = error instanceof Error ? error.message : "durable task decomposition could not be safely inspected"; }
       const reasons = [
+        ...(skillFailure === undefined ? [] : [skillFailure]),
         ...(ticketFailure === undefined ? [] : [ticketFailure]),
         ...(task && ticket?.admittedTaskId === task.id && ticket.tasks.filter((row) => row.id === task.id).length === 1 ? [] : ["implementation is not bound to the one admitted task"]),
         ...(task && ticket && issue?.hints?.["projectTaskId"] === task.id && issue.hints?.["planStepId"] === task.planStepId && ticket.tasks.every((row) => issue.text.includes(row.objective) && row.completionCriteria.every((criterion) => issue.text.includes(criterion.statement))) ? [] : ["solver issue does not preserve every vetted task objective and completion criterion"]),
@@ -302,7 +326,12 @@ export function makeSolveStageExecutors(deps: SolveWiringDeps): StageExecutors {
         ...(result.validation?.testsPassed === true && result.validation.vettingCleared !== false ? [] : [result.validation?.detail ?? "configured verification did not pass"]),
       ];
       if (reasons.length === 0 && deps.projectTester !== undefined) {
-        const artifact = await deps.projectTester.run(issue!, state, { ...(control.signal ? { signal: control.signal } : {}), ...(deps.assertAuthority ? { assertAuthority: () => deps.assertAuthority!(state) } : {}) });
+        const artifact = await deps.projectTester.run(issue!, state, { ...(control.signal ? { signal: control.signal } : {}),
+          ...(deps.assertAuthority || result.admittedEdit?.skillBindings?.length ? { assertAuthority: assertVerificationAuthority } : {}) });
+        try { assertVerificationAuthority(); }
+        catch { return { output: { schemaVersion: 1, taskId: task?.id ?? "", planStepId: task?.planStepId ?? "", passed: false,
+          reasons: ["consumed skill or command authority changed during verification"] }, control: "capability-unavailable",
+          capability: "project-currentness", headline: "Verification cannot advance under a stale consumed skill or command." }; }
         if (artifact.verdict === "passed") return { output: artifact, control: "advance", headline: `Independent isolated tests passed for ${artifact.taskId}` };
         if (artifact.verdict === "failed") return {
           output: artifact, control: "rework", reworkTo: "implement",

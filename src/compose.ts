@@ -208,6 +208,7 @@ import { CostModel } from "./observability/cost_model.js";
 import type { LocalProbe } from "./frontdoor/brain_resolver.js";
 import { localBrain as localBrainDescriptor } from "./frontdoor/brain_port.js";
 import { skillGuided } from "./loop/skill_application.js";
+import { captureTaskSkillGuidance, assertTaskSkillBindings } from "./loop/task_skill_guidance.js";
 import { intentShapeByRule } from "./frontdoor/intent_router.js";
 import { chunkText } from "./frontdoor/chunker.js";
 import { buildProjectUnderstanding, summarizeForHuman } from "./frontdoor/project_understanding.js";
@@ -1350,7 +1351,9 @@ export function composeKeep(config: KeepConfig): KeepApp {
   selfImprovementBus.register({
     id: "skill-canary-outcome",
     loopClass: "protect",
-    onOutcome: (signal) => { for (const skillId of new Set(signal.activeArtifacts ?? [])) skillCanary.recordUse(skillId, signal); },
+    onOutcome: (signal) => { for (const skillId of new Set(signal.activeArtifacts ?? [])) {
+      if (managedSkillRegistry.acceptsUnversionedOutcome(skillId, signal)) skillCanary.recordUse(skillId, signal);
+    } },
   });
   // --- 18.7: SkillRetrieval — retrieve→filter→rerank→bounded-top-k the right skills for a task, reading REAL
   // canary (admission gate: never offer a rolled-back skill) + consolidation (utility) state via a port. ---
@@ -1891,9 +1894,12 @@ export function composeKeep(config: KeepConfig): KeepApp {
     gateVerifiesPrograms: true,
     gate: async (skill) => {
       if (!skillValidator) return { ok: false, verdict: "validator-unavailable", reason: "skill validator is not configured" };
+      const inputHash = hashSkill(skill);
       const result = skillValidator.validate(skill);
-      if (result.verdict !== "validated") return { ok: false, verdict: result.verdict, reason: result.reason };
-      return { ok: true, verdict: result.verdict, checkedSkill: result.skill };
+      const executedCases = result.executedCases.filter(item => item.round === 1)
+        .map(item => ({ contentHash: inputHash, caseId: item.testCase.id, passed: item.passed }));
+      if (result.verdict !== "validated") return { ok: false, verdict: result.verdict, reason: result.reason, executedCases };
+      return { ok: true, verdict: result.verdict, checkedSkill: result.skill, executedCases };
     },
     onAdmit: (skill) => { skillRetrieval.add(skill); skillCanary.goLive(skill.id, { revision: hashSkill(skill) }); },
   });
@@ -1931,8 +1937,27 @@ export function composeKeep(config: KeepConfig): KeepApp {
   }
   if (config.domainWorkflow && config.projectEditor) throw new Error("compose: domainWorkflow and projectEditor are mutually exclusive production strategies");
   if (config.domainWorkflow && (config.projectTester || config.projectTestRequiredTier || config.projectTestIsolation)) throw new Error("compose: domainWorkflow cannot silently discard software project-test configuration");
+  // The composed managed library is currently the personal/default registry.
+  // Do not borrow it for a tenant project merely because its files are visible.
+  const personalSkillScope = !diagnosticOrganization && config.projectPrincipal?.tenant === undefined;
+  const personalSkillScopeCurrent = (projectId: ProjectId | undefined) => {
+    if (!personalSkillScope) return false;
+    if (projectId === undefined) return true;
+    const project = projectManager.list().find(record => record.id === projectId);
+    return project !== undefined && project.tenant === undefined && projectManager.quarantine(projectId) === undefined;
+  };
   const projectEditor = config.projectEditor ?? (!config.solve && solverWorkspace && !config.domainWorkflow ? buildModelProjectEditPlanner(projectModel, solverWorkspace, solverRepository,
-    { prepareGoalCheck: config.testCommand !== undefined && typeof solverWorkspace.dir === "function" && config.projectTester === undefined }) : undefined);
+    { prepareGoalCheck: config.testCommand !== undefined && typeof solverWorkspace.dir === "function" && config.projectTester === undefined,
+      guidanceFor: (issue, _task, state) => {
+        const projectId = state.projectId;
+        const scopeCurrent = () => personalSkillScopeCurrent(projectId);
+        const taskShape = typeof issue.hints?.["taskShape"] === "string" && issue.hints["taskShape"].trim()
+          ? issue.hints["taskShape"].trim() : "software-change";
+        return captureTaskSkillGuidance(skillRetrieval, managedSkillRegistry, skillCanary, taskShape, scopeCurrent);
+      },
+      assertGuidanceCurrent: (bindings, state) => assertTaskSkillBindings(bindings, managedSkillRegistry, skillCanary,
+        () => personalSkillScopeCurrent(state.projectId)),
+    }) : undefined);
   if (config.projectTester && !solverWorkspace) throw new Error("compose: projectTester requires a canonical workspace for content-bound source evidence");
   const projectTester = config.domainWorkflow ? undefined : config.projectTester ?? (defaultProjectTesterFor = (check?: NonNullable<import("./solve/issue_model.js").EditPlan["goalCheck"]>) => {
     const workspace = solverWorkspace;

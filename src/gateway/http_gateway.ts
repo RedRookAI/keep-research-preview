@@ -1344,6 +1344,44 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
     return json(200, { ok: true, id: pkg.skill.id, contentHash: pkg.contentHash });
   }
 
+  // The composed managed registry is personal/default only. This operator path
+  // never projects that registry into a tenant or restricted model credential.
+  if ((req.method === "GET" && req.path === "/skill/versions") || (req.method === "POST" && ["/skill/restore", "/skill/forget-version"].includes(req.path))) {
+    if (principal.kind !== "human" || tenant !== undefined) return json(403, { error: "personal skill recovery requires a human operator in the personal scope" });
+    const denied = gate("config.write") ?? gate("skill.install"); if (denied) return denied;
+    const managed = app.managedSkillRegistry;
+    const assertCurrentAuthority = () => {
+      if (!can(app.authorization, principal, "config.write") || !can(app.authorization, principal, "skill.install")) throw new Error("skill recovery authority changed");
+    };
+    if (req.method === "GET") {
+      const skillId = req.query["skillId"];
+      if (typeof skillId !== "string" || !skillId.trim()) return json(400, { error: "skillId is required" });
+      return json(200, { skillId, subjectToken: managed.subjectToken(skillId), versions: managed.versionHistory(skillId), forgottenVersionHashes: managed.forgottenVersionHashes(skillId) });
+    }
+    const body = parseBody(req.body);
+    if (req.path === "/skill/forget-version") {
+      if (!body || Object.keys(body).sort().join(",") !== "contentHash,expectedSubjectToken,skillId"
+        || typeof body["skillId"] !== "string" || !body["skillId"].trim()
+        || typeof body["contentHash"] !== "string" || !/^[a-f0-9]{64}$/u.test(body["contentHash"])
+        || typeof body["expectedSubjectToken"] !== "string" || !body["expectedSubjectToken"]) {
+        return json(400, { error: "forget requires exact skillId, contentHash and expectedSubjectToken" });
+      }
+      const result = managed.forgetPreviousVersion({ skillId: body["skillId"], contentHash: body["contentHash"] as string,
+        expectedSubjectToken: body["expectedSubjectToken"] as string }, assertCurrentAuthority);
+      return result.ok ? json(200, result) : json(409, result);
+    }
+    if (!body || Object.keys(body).sort().join(",") !== "expectedSubjectToken,failedContentHash,previousContentHash,skillId"
+      || typeof body["skillId"] !== "string" || !body["skillId"].trim()
+      || ![body["failedContentHash"], body["previousContentHash"]].every(value => typeof value === "string" && /^[a-f0-9]{64}$/u.test(value))
+      || typeof body["expectedSubjectToken"] !== "string" || !body["expectedSubjectToken"]) {
+      return json(400, { error: "restore requires exact skillId, failedContentHash, previousContentHash and expectedSubjectToken" });
+    }
+    const result = await managed.restorePrevious({ skillId: body["skillId"], failedContentHash: body["failedContentHash"] as string,
+      previousContentHash: body["previousContentHash"] as string, expectedSubjectToken: body["expectedSubjectToken"] as string }, assertCurrentAuthority);
+    return result.ok ? json(200, { ok: true, skillId: result.pkg.skill.id, contentHash: result.pkg.contentHash, subjectToken: result.subjectToken })
+      : json(409, { ok: false, reason: result.reason, detail: result.detail });
+  }
+
   if (req.method === "POST" && req.path === "/skill/install") {
     if (skillRegistry === undefined) return json(501, { error: "no skill registry" });
     const denied = gate("skill.install"); if (denied) return denied;

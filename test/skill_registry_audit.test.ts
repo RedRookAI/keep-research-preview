@@ -131,7 +131,7 @@ test("exact retained legacy content can be checked and restored to use; backup r
   assert.deepEqual(restart(root).active, [good.skill.id]);
   assert.equal((await app.managedSkillRegistry.add(publishSkill(skill("later-work"), "synthetic-new"))).ok, true);
   const upgraded = readFileSync(snapshot(root));
-  assert.equal(JSON.parse(upgraded.toString()).schemaVersion, 2);
+  assert.equal(JSON.parse(upgraded.toString()).schemaVersion, 3);
   const preservedNewer = join(root, "private-upgraded.json");
   copyFileSync(snapshot(root), preservedNewer);
   // Disposable fixture only: never overwrite an operator's live data for this test.
@@ -310,7 +310,7 @@ test("v2 bindings survive JSON key reordering and refuse corrupted or orphaned r
     return Object.fromEntries(Object.entries(value).reverse().map(([k, v]) => [k, reversed(v)]));
   }
   writeFileSync(snapshot(root), JSON.stringify(reversed(original)));
-  assert.equal(original.schemaVersion, 2);
+  assert.equal(original.schemaVersion, 3);
   assert.equal(original.lifecycle[0].admittedHash, hashSkill(value));
   assert.deepEqual(restart(root).retrieval["bound"], [hashSkill(value)]);
   for (const edit of [

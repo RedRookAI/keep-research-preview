@@ -8,6 +8,7 @@ import type { ProjectTask } from "./decomposition_stage.js";
 import { projectRepositoryTreeSha256, type ProjectLocalizationArtifact } from "./project_localization.js";
 import type { ProjectState } from "./project_loop.js";
 import type { ProjectPlanArtifact } from "./plan_stage.js";
+import type { TaskSkillGuidance, TaskSkillBinding } from "../loop/task_skill_guidance.js";
 
 const MAX_RESPONSE_BYTES = 64 * 1024;
 const MAX_EDITS = 8;
@@ -23,6 +24,7 @@ export class ProjectEditAdmissionError extends Error {
 /** Planning-only port. It intentionally has no workspace write capability. */
 export interface ProjectEditPlanner {
   prepare(issue: Issue, task: ProjectTask, state: ProjectState, context?: AdmittedEditPlanningContext): Promise<AdmittedEditPlan>;
+  assertGuidanceCurrent?(proposal: AdmittedEditPlan, state: ProjectState): void;
 }
 
 function sha256(text: string): string {
@@ -80,10 +82,22 @@ function admittedFiles(state: ProjectState, task: ProjectTask, issue: Issue): re
 }
 
 export function buildModelProjectEditPlanner(model: ModelProvider, workspace: Workspace, repositoryRef: string,
-  options: { readonly prepareGoalCheck?: boolean } = {}): ProjectEditPlanner {
+  options: { readonly prepareGoalCheck?: boolean; readonly guidanceFor?: (issue: Issue, task: ProjectTask, state: ProjectState) => TaskSkillGuidance | undefined;
+    readonly assertGuidanceCurrent?: (bindings: readonly TaskSkillBinding[], state: ProjectState) => void } = {}): ProjectEditPlanner {
   return {
+    assertGuidanceCurrent(proposal, state) {
+      if (proposal.skillBindings === undefined) return; // Legacy no-skill proposals keep their contract.
+      if (!options.assertGuidanceCurrent) throw new Error("consumed skill currentness checker is unavailable");
+      options.assertGuidanceCurrent(proposal.skillBindings, state);
+    },
     async prepare(issue, task, state, context): Promise<AdmittedEditPlan> {
       if (issue.repoRef !== repositoryRef) throw new Error(`edit repository ${issue.repoRef} is outside the bound repository ${repositoryRef}`);
+      const skillGuidance = options.guidanceFor?.(issue, task, state);
+      if (skillGuidance) {
+        if (context && !context.bindSkillGuidance) throw new ProjectEditAdmissionError("bounded-edit-context", "skill guidance requires the canonical currentness binder");
+        context?.bindSkillGuidance?.(skillGuidance);
+        skillGuidance.assertCurrent();
+      }
       const persistedPlan = state.artifacts["plan"] as Partial<ProjectPlanArtifact> | undefined;
       const localization = (state.artifacts["project_localization"] ?? persistedPlan?.localization) as Partial<ProjectLocalizationArtifact> | undefined;
       if (localization?.schemaVersion !== 1 || localization.repositoryRef !== repositoryRef || !Array.isArray(localization.selected)) throw new Error("configured-model editing requires persisted repository localization");
@@ -122,6 +136,7 @@ export function buildModelProjectEditPlanner(model: ModelProvider, workspace: Wo
         ...(context ? { signal: context.signal, reserveCall: context.reserveCall, observe: context.observe } : {}),
         ...(context?.reserveEmbedding === undefined ? {} : { reserveEmbedding: context.reserveEmbedding }),
         ...(context?.memoryContext === undefined ? {} : { memoryContext: context.memoryContext }),
+        ...(skillGuidance === undefined ? {} : { skillGuidance }),
         ...(context?.assertAuthority === undefined ? {} : { assertAuthority: context.assertAuthority }),
       });
       if (plan.edits.length === 0) throw new ProjectEditAdmissionError("bounded-edit-context", plan.rationale);
@@ -130,6 +145,7 @@ export function buildModelProjectEditPlanner(model: ModelProvider, workspace: Wo
         schemaVersion: 1, mechanism: "project-edit-stage", repositoryRef, repositoryTreeSha256,
         allowedFiles, allowedFileSha256, taskId: task.id, planStepId: task.planStepId,
         generation: Object.freeze(generation), plan,
+        ...(skillGuidance === undefined ? {} : { skillBindings: skillGuidance.bindings }),
       });
     },
   };
