@@ -21,7 +21,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Fetch only the frozen image source tree for the reuse guard
-        run: git -c credential.helper= fetch --depth=1 --no-tags origin f79c31c4df445253a90402cf7b18e1541dadb15c
+        run: git -c credential.helper= fetch --depth=1 --no-tags origin 253fbca62133bef33ecc7d0c4b2192541cb55918
       - name: Focused host assembly and source custody checks
         run: |
           python3 tools/appliance/test_launcher.py
@@ -45,7 +45,7 @@ jobs:
             return urllib.request.urlopen(req,timeout=600)
           with fetch('/releases/442592040') as response:release=json.load(response)
           assert release['draft'] is True and release['tag_name']=='keep-reviewer-2026-11-12.2' and release['target_commitish']==os.environ['GITHUB_SHA']
-          for asset_id,name,wanted,size in [(738454826,'original.tar.xz','f4525f9152bdb8e4f2259cb7c6dc3b1439384e5cb643b1fc4e5fc2c8509a44ba',569083656),(738455634,'original-candidate.json','6e7051310033804c74ad54e6655b784bedcc0bdfa2147790efde6d904305e430',509)]:
+          for asset_id,name,wanted,size in [(738672585,'original.tar.xz','728b565e4269f7eee371c8c55c841cac11d9c855d62b066d9fc1e0a632db7517',569119212),(738673484,'original-candidate.json','6a508400252f1f647f1403ee400965204926f96bb818091f67ab0366943298e2',509)]:
             asset=next(a for a in release['assets'] if a['id']==asset_id)
             assert asset['digest']=='sha256:'+wanted and asset['size']==size
             h=hashlib.sha256()
