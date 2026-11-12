@@ -90,6 +90,9 @@ def port_available(port):
     if not 1024 <= port <= 65535:
         fail('Choose a port from1024..65535')
     with socket.socket() as listener:
+        # A used forward can leave TIME_WAIT after its owned listener exits.
+        # Permit that reuse while still refusing a live listener; no REUSEPORT.
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             listener.bind(('127.0.0.1', port))
         except OSError:

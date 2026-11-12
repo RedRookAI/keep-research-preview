@@ -1,5 +1,6 @@
 """Cheap host refusal/ownership checks; no image, installation or VM boot."""
 import importlib.util
+import errno
 import hashlib
 import io
 import json
@@ -172,6 +173,36 @@ class HostControls(unittest.TestCase):
                 app.port_available(port)
             with socket.create_connection(('127.0.0.1', port), timeout=1):
                 pass
+
+    def test_recently_used_forward_port_can_be_probed_without_waiting(self):
+        listener = socket.socket(); listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(('127.0.0.1', 0)); listener.listen()
+        port = listener.getsockname()[1]
+        client = socket.socket(); peer = None
+        try:
+            client.connect(('127.0.0.1', port)); peer, _ = listener.accept()
+            peer.sendall(b'fixture'); self.assertEqual(client.recv(7), b'fixture')
+            listener.close()
+            peer.shutdown(socket.SHUT_WR); self.assertEqual(client.recv(1), b'')
+            client.close(); self.assertEqual(peer.recv(1), b''); peer.close()
+            with socket.socket() as bare:
+                with self.assertRaises(OSError) as captured:
+                    bare.bind(('127.0.0.1', port))
+                self.assertEqual(captured.exception.errno, errno.EADDRINUSE)
+            app.port_available(port)
+        finally:
+            listener.close(); client.close()
+            if peer: peer.close()
+
+    def test_reuse_enabled_live_listener_is_still_refused_and_untouched(self):
+        with socket.socket() as listener:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.bind(('127.0.0.1', 0)); listener.listen()
+            port = listener.getsockname()[1]
+            with self.assertRaisesRegex(RuntimeError, 'occupied'):
+                app.port_available(port)
+            with socket.create_connection(('127.0.0.1', port)):
+                peer, _ = listener.accept(); peer.close()
 
     def test_wrong_architecture_fails_before_tool_or_policy_work(self):
         with patch.object(app.platform, 'machine', return_value='aarch64'):
