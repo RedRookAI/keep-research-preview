@@ -1,9 +1,9 @@
 /**
- * SafetyRail (Increment 16.6a) — default-on, fail-closed governance guardrails.
+ * SafetyRail — default-on, fail-closed governance guardrails.
  *
  * Composes the built-but-previously-orphaned safety subsystems (killswitch, authorization envelope +
  * budget ledger, governance ledger, vetting) into ONE ordered interface the KeepPipeline calls. Every
- * decision is recorded to the tamper-evident spine via the GovernanceLedger. SOTA-settled design
+ * decision is recorded to the tamper-evident spine via the GovernanceLedger. Design
  * (GOVERNANCE_INTEGRATION_SPEC, 2026-08-05):
  *  - Fork A: break-glass is a separate audited grant, never a config flag; it can relax the vetting
  *    VERDICT but never the human merge gate.
@@ -12,7 +12,7 @@
  *  - Fork C: no envelope → synthesize a conservative DEFAULT RESTRICTIVE envelope (secure-by-default),
  *    not an open one and not a hard refusal. N=1 / free-tier safe out of the box.
  *  - Fail-closed everywhere: a guardrail that errors or can't run gates to the human / pauses.
- * Zero deps.
+ *
  */
 
 import type { Spine } from "../spine/spine.js";

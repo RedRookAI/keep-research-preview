@@ -7,11 +7,11 @@
  *    AI Act Art. 73 severity ladder: 2 days widespread/critical-infra, 10 days if a death may be involved, else 15 days).
  *  - ResidencyEnforcer: deny-by-default data-residency + egress policy (air-gap forces egress denial).
  *
- * SOTA basis (2026-08-07): after an AI incident an org often reports on THREE clocks to THREE authorities — 24h NIS2,
+ * Research references (2026-08-07): after an AI incident an org often reports on THREE clocks to THREE authorities — 24h NIS2,
  * 72h GDPR, 15d AI Act — and the AI Act Art. 73 timeline tightens to 10 days (death) or 2 days (widespread / serious
  * critical-infrastructure disruption). Art. 73 has applied since 2 Aug 2026. The single-entry-point consolidation comes
  * from the Digital Omnibus, which is NOT yet concluded (Council vote postponed 29 Jun 2026), so the reporting target is
- * honesty-labeled as anticipated. What would change it: once the Omnibus concludes, the single entry point becomes final.
+ * honesty-labeled as anticipated. Extension considerations: once the Omnibus concludes, the single entry point becomes final.
  */
 
 import { ComplianceExporter, type EvidencePack, type SignedEvidencePack, type ControlCoverage } from "./evidence_pack.js";

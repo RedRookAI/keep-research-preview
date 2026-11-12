@@ -1,19 +1,6 @@
 /**
- * F1 — Onboarding conversation (deterministic, jargon-free cold start).
- *
- * "Human says what they want; AI asks clarifying questions that don't overwhelm or
- * expect engineering knowledge, and translates that into what needs to happen
- * (through a full vetting process)."
- *
- * Design (SOTA, Aug 2026): conversation-first, intent-adaptive, PROGRESSIVE
- * DISCLOSURE — one short question at a time (~40 words, mobile-first), recognize
- * intent from vague phrasing, let the human self-select rather than facing a menu,
- * and NEVER loop on the same question (brittle re-clarification is the top failure).
- *
- * Safety: this is a deterministic state machine, not the LLM freewheeling, so it is
- * testable and can't be talked into skipping steps. Each human directive is captured
- * as a PROBATION memory item (external origin) — it must earn trust before it
- * configures anything (F2 translates confirmed directives into real system changes).
+ * Deterministic onboarding dialogue for names, goals, contact preferences and email opt-in.
+ * Captured directives enter memory on probation; applying configuration uses separate gates.
  */
 
 import type { MemoryStore } from "../memory/store.js";
@@ -88,7 +75,7 @@ export class OnboardingConversation {
       case "ask-ai-name": {
         this.ctx.aiName = extractName(answer) || answer || "Keep";
         this.step = "ask-goal";
-        return { say: `Great — I'm ${this.ctx.aiName}. What do you want to work on today?`, awaiting: "ask-goal", done: false };
+        return { say: `I'm ${this.ctx.aiName}. What do you want to work on today?`, awaiting: "ask-goal", done: false };
       }
       case "ask-goal": {
         this.ctx.goal = answer;
@@ -114,7 +101,7 @@ export class OnboardingConversation {
         }
         this.step = "ask-email";
         return {
-          say: "Do you want me to be able to use email? I'd suggest a fresh address just for me, so your personal inbox stays separate and secure. Yes or no is fine.",
+          say: "Would you like to connect an email address for Keep? A dedicated address keeps its messages separate from your personal inbox.",
           awaiting: "ask-email",
           done: false,
         };
@@ -127,14 +114,14 @@ export class OnboardingConversation {
       }
       case "done":
       default:
-        return { say: "We're all set — tell me what you'd like to do next.", awaiting: "done", done: true };
+        return { say: "Tell me what you'd like to do next.", awaiting: "done", done: true };
     }
   }
 
   private closingLine(): string {
     const name = this.ctx.humanName ?? "there";
     const goal = this.ctx.goal ? ` on "${truncate(this.ctx.goal)}"` : "";
-    return `Perfect, ${name}. I'll start getting up to speed${goal} in the background and check in as I go. You can change any of this any time — just tell me.`;
+    return `Thanks, ${name}. We can get started${goal}. Tell me what you'd like to do next.`;
   }
 
   /** Store a directive as a probation memory item (external origin, project scope). */

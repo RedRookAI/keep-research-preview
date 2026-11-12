@@ -1,7 +1,7 @@
 /**
- * Project identity (Increment 3.5a) — the stable continuity key.
+ * Project identity — the stable continuity key.
  *
- * SOTA basis (2026-08-04): "stable conversation/project IDs are the mechanism for
+ * Research references (2026-08-04): "stable conversation/project IDs are the mechanism for
  * continuity, not model memory — skip them and you lose continuity even when memory
  * tools work perfectly" (OpenAI Agents SDK / editorialge 2026). So every project gets a
  * STABLE, OPAQUE id minted once at creation; everything the project owns (history,
@@ -11,7 +11,6 @@
  * CryptoShredKeyStore SubjectId for that project's per-project encryption key, so the
  * identity layer and the cryptographic-isolation layer share one key space by construction.
  *
- * Zero deps (node:crypto built-in).
  */
 
 import { randomBytes } from "node:crypto";

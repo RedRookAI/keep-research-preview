@@ -1,7 +1,7 @@
 /**
  * EPISODIC-TURN TRACK (M1) — the raw Track-1 ground truth for the learning loop.
  *
- * The rolling-memory research (2026 SOTA + Multiple Trace / Trace Transformation Theory) is clear on two things:
+ * The rolling-memory research (2026 research + Multiple Trace / Trace Transformation Theory) is clear on two things:
  * lossy in-band compaction is the most-hated frontier behavior (it drops the exact numbers and decisions agents
  * need), and the brain keeps BOTH a detailed episodic trace and a distilled semantic gist rather than overwriting
  * one with the other. Keep already has the semantic track (Lessons, trust tiers, consolidation/supersede). What it
@@ -19,7 +19,7 @@
  *   - provenance + trust on every record — reusing `Origin` / `TrustTier`: untrusted-source turns can NEVER be
  *     written confirmed (poison-dampener; confirmation is earned downstream, never asserted at the write boundary).
  *
- * BUILT + proven in-env: the append-only hash-chained turn store with crypto-shred erasure, write-boundary scan,
+ * Implemented: the append-only hash-chained turn store with crypto-shred erasure, write-boundary scan,
  * and provenance/trust capping. SEAM: the similarity/embedding index for relevance retrieval lives in M2 (the
  * context assembler); this module provides addressable recall by key + the full ordered track for M2 to draw from.
  */

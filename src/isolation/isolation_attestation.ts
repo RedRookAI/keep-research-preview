@@ -1,37 +1,10 @@
 /**
- * IsolationAttestation (BUILD-ORDER 1.7 — BIND-EXECUTOR-TIER-ATTESTATION) — the tier that buys the
- * autonomy ceiling becomes a SIGNED, CHECKABLE attestation the oversight router VERIFIES, not the
- * executor's word.
- *
- * Round 43 (`weakerTier`) took the minimum of the DECLARED tier and the executor's `.tier` property —
- * but `.tier` is STILL only the executor's word (a class field). A mislabelled executor, a config
- * mismatch, or a supply-chain swap that constructs `BoundaryExecutor("microvm", …)` over the process
- * floor asserts "microvm" and buys the `full` ceiling with nothing enforcing it. That is the Z156/Z193
- * confused-deputy shape at its last isolation-stack instance: an authority (autonomy) derived from the
- * thing it is supposed to govern (isolation), on a claim nothing checked.
- *
- * THE ONE THING: the executor EMITS a signed attestation `{tier, evidence, projectDir, ts, mechanism}`
- * of the tier it really ran; the router VERIFIES it before the tier grants a ceiling. Verification is
- * TWO independent checks, both required:
- *   1. SIGNATURE valid — HMAC over the canonical claim with the run-local key (integrity + provenance:
- *      a tampered attestation, or one not produced by this run's attestor, fails).
- *   2. EVIDENCE recomputes to AT LEAST the claimed tier — `recomputeTierFromEvidence` derives, from the
- *      measured evidence alone, the strongest tier that evidence PROVES; the claim is capped at it.
- * Forged / unsigned / tampered / absent → the weakest tier ("none"), NO autonomy. A validly-signed claim
- * of a stronger tier than the evidence backs is capped DOWN to the proven tier (never honoured up).
- *
- * SOTA basis (2026-08-16): remote attestation appraises EVIDENCE, not a stamped label (RFC 9683; EAT
- * Entity Attestation Tokens; SEV-SNP/TDX signed reports). THE DISCONFIRMING CASE the literature keeps
- * proving (v3→v4 SEV-SNP report parser breaks; the 2026 VCEK-seed-extraction attack): a signature is
- * only as good as the key custody, so the verifier must RECOMPUTE the claim from evidence — "a signature
- * over a lie is still a lie." A real hardware attestation (SEV-SNP/TDX) is the unforgeable-evidence
- * upgrade and is a LABELLED VERIFIED-SEAM behind the same port (`TeeVerifier`); in-env there is no TEE,
- * so this is the HMAC run-key form, labelled — a `tee-*` mechanism claim with no live TEE verifier
- * verifies as the HMAC tier, NEVER a false TEE claim. Zero new deps (node:crypto HMAC).
- *
- * Sibling to `../tcb/attestation.ts` (R37): that attests the LOADED BINARY (measurement digest match);
- * this attests the EXECUTION TIER (evidence recompute). Same fail-safe posture; the tier recompute is
- * the check R37's digest-match does not need.
+ * Signed execution-tier claims checked by the oversight router.
+ * Verification checks the run-key HMAC and recomputes the supported tier from evidence.
+ * Missing, invalid or overstated claims are refused or capped to the evidenced tier.
+ * HMAC claims trust the host and key custody. Hardware-backed evidence requires the
+ * separate TeeVerifier port; declaring a TEE mechanism cannot establish one.
+ * This differs from tcb/attestation.ts, which checks loaded-binary measurements.
  */
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
@@ -159,7 +132,7 @@ export interface AttestationVerification {
   readonly verifiedMechanism: AttestationMechanism;
   readonly reason: string;
   /**
-   * BUILD-ORDER 2.3 (REVISIT-ISOLATION-GATING) — the honest degradations the APPRAISED evidence measured
+   * the honest degradations the APPRAISED evidence measured
    * (the evidence's `degraded[]`, surfaced from the same claim the tier was recomputed from). Non-empty ⇒
    * the run PROVED LESS containment than `verifiedTier` nominally guarantees, so the autonomy-ceiling
    * decision (`isolationCeilingFromEvidence`) must not grant that tier's clean ceiling. Empty on an absent
@@ -271,7 +244,7 @@ class HmacVerifier implements IsolationVerifier {
       ok: backed,
       verifiedMechanism,
       reason: backed ? "verified" : `evidence-insufficient: claim=${att.claim.tier} proven=${proven}`,
-      // BUILD-ORDER 2.3 — surface the degradations the appraised evidence measured, so the ceiling
+      // surface the degradations the appraised evidence measured, so the ceiling
       // decision reflects a degraded boundary (net-deny unenforceable, Job Object degraded) and cannot
       // grant the tier's clean ceiling on a proven-but-degraded run.
       measuredDegradations: [...att.claim.evidence.degraded],

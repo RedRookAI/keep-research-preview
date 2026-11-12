@@ -1,10 +1,10 @@
 /**
- * MemoryConsensus (Increment C2, Phase D) — the dual-memory consensus layer. A poisoned or spurious lesson
+ * MemoryConsensus — the dual-memory consensus layer. A poisoned or spurious lesson
  * must not be trusted for retrieval on the strength of a single write. This is a SECOND, independent validation
  * view over the memory store: a lesson is only promoted to retrieval-trusted when it reaches CONSENSUS, and
  * detected anomalies are themselves recorded as lesson-memory (so the same poison is caught faster next time).
  *
- * SOTA basis (2026-08-05):
+ * Research references (2026-08-05):
  *  - A-MemGuard (arXiv 2510.02373): consensus-based validation ("a single poisoned memory may appear valid,
  *    but the reasoning it induces diverges from the consensus of related memories") + a DUAL-MEMORY structure
  *    that stores detected anomalies as lessons. Multi-source agreement before committing a memory update;
@@ -17,7 +17,7 @@
  *  - Entry-level lineage above the consensus layer (MemLineage 2605.14421) + invariant/consistency veto
  *    (SSGM): a lesson that CONTRADICTS confirmed memory is quarantined, not silently merged.
  *
- * Zero runtime deps. Wraps the trust decision behind a port; does not modify the underlying MemoryStore.
+ * Wraps the trust decision behind a port; does not modify the underlying MemoryStore.
  */
 
 /** A minimal projection of a lesson the consensus layer reasons over (decoupled from the full Lesson type). */

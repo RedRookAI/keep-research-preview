@@ -1,11 +1,11 @@
 /**
- * GovernedAnchor (Increment 18.9) — governed growth + rotation of the frozen eval anchor. The anchor is the
+ * GovernedAnchor — governed growth + rotation of the frozen eval anchor. The anchor is the
  * root of trust for ALL self-improvement validation (it is in the FROZEN_FLOOR: the improver can never edit
  * it). But a STATIC anchor goes stale as the operator's work evolves and invites overfitting. 18.9 lets the
  * anchor GROW and ROTATE — under governance that preserves the one invariant that makes the anchor trustworthy:
  * the system being validated can never influence its own validator (bounded self-modification).
  *
- * SOTA basis (2026-08-05):
+ * Research references (2026-08-05):
  *  - The core risk is IN-DISTRIBUTION CONTAMINATION: distributional similarity between what the improver
  *    produces and the test set inflates scores without real capability, amplified in self-improvement settings
  *    (arXiv 2603.25681). → new cases come ONLY from INDEPENDENTLY-VERIFIED real outcomes, NEVER from the
@@ -18,8 +18,8 @@
  *    members, INDEPENDENTLY validated, and correlated with real task performance; SATURATION trigger retires a
  *    case once trivially solved. → novelty gate + independent-verification gate + saturation retirement.
  *
- * Zero runtime deps. Builds on corpus_curation primitives (readBuildOutcomes, rotateFolds). The frozen
- * EvalAnchor is produced as a SNAPSHOT; the improver receives only the score()/weakensSafetyFloor() closures,
+ * Builds on corpus_curation primitives (readBuildOutcomes, rotateFolds). The frozen
+ * EvalAnchor is produced as a SNAPSHOT; the improver receives only the score/weakensSafetyFloor closures,
  * never the case list.
  */
 

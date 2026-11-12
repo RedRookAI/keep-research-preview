@@ -1,5 +1,5 @@
 /**
- * LENSES — Round 5 of the personalization moat. A lens is PERSONALITY + CLAMPED PREFERENCES, nothing more — so it
+ * LENSES — A lens is PERSONALITY + CLAMPED PREFERENCES, nothing more — so it
  * is safe by construction.
  *
  * SoulConfig's load-bearing rule is SEPARATE PERSONALITY FROM POLICY: a soul shapes voice/tone/stance and can
@@ -9,9 +9,9 @@
  * widen autonomy or relax a floor. Overlay composition falls out of the spine's supersede + CP-net scope: lens
  * prefs are LOW-precedence (global/unscoped), the user's explicit (scoped) prefs supersede them; "none" =
  * DEFAULT_SOUL + no overlay; "custom" = author your own (sanitized). The companion lens — the confidant-trap
- * surface — carries Round 2's anti-dependence guards.
+ * surface — carries the anti-dependence guards.
  *
- * BUILT + proven in-env: the lens abstraction, the four presets, overlay composition (precedence), and the
+ * Implemented: the lens abstraction, the four presets, overlay composition (precedence), and the
  * clamped application. SEAM: the prewired capability modules themselves (video/content creation, etc.).
  */
 

@@ -1,5 +1,5 @@
 /**
- * Capability port (Phase 6) — the unifying ecosystem abstraction.
+ * Capability port — the unifying ecosystem abstraction.
  *
  * The convergence insight (OASF, 2026): MCP servers (agent->tool) and A2A agents
  * (agent->agent) are EQUIVALENT capability sources. That maps exactly onto Keep's
@@ -9,7 +9,7 @@
  * SECURITY IS INHERITED, NOT RE-SOLVED. Per the port-security model + NSA/CISA MCP
  * guidance (Jun 2026) and the 2026 unauthenticated-server crisis (>8,000 of >10,000
  * MCP servers found unauthenticated), every capability adapter is HOSTILE:
- *   - scoped, credential-isolated identity (Phase 0),
+ * - scoped, credential-isolated identity ,
  *   - confined below the trust boundary,
  *   - a trust tier (untrusted by default; verified only after the intake gauntlet),
  *   - every invocation inspected + logged to the spine (no unmonitored side-channel).
@@ -112,7 +112,7 @@ export function capabilityInvocationDigest(inv: CapabilityInvocation, descriptor
   })).digest("hex");
 }
 
-// ── BUILD-ORDER 8.43 — the UNIVERSAL EXTERNAL-EFFECT WRAPPER (the Policy Enforcement Point) ──
+// ── the UNIVERSAL EXTERNAL-EFFECT WRAPPER (the Policy Enforcement Point) ──
 //
 // Saltzer & Schroeder's COMPLETE MEDIATION: every access to an externally-effectful capability is checked, at
 // ONE chokepoint, against the RESOLVED capability class (8.44B `resolveCapabilityEffect`) — never a caller-supplied

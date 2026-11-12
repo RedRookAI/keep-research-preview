@@ -1,5 +1,5 @@
 /**
- * Decontamination (Increment 4.1) — the contamination controls that make a SWE-bench-style resolved-rate TRUSTWORTHY.
+ * Decontamination — the contamination controls that make a SWE-bench-style resolved-rate TRUSTWORTHY.
  *
  * The 2026 literature is blunt that a raw number is inflated by three leakage sources, so a credible eval must EXCLUDE
  * contaminated instances before scoring, and report how many it excluded and why:
@@ -10,11 +10,11 @@
  *   3. Known-eval reuse — a task that appears in a public benchmark split a model may have trained on. Fix: exclude ids
  *      on a known-eval denylist.
  *
- * SOTA basis (2026-08-08): temporal decontamination (SWE-rebench arXiv 2505.20411, SWE-bench-Live), the solution/oracle
- * leakage findings on Verified, and Scale's "non-contamination by design". What would change it: a maintained public
+ * Research references (2026-08-08): temporal decontamination (SWE-rebench arXiv 2505.20411, SWE-bench-Live), the solution/oracle
+ * leakage findings on Verified, and Scale's "non-contamination by design". Extension considerations: a maintained public
  * denylist / a dataset that ships per-instance created-at dates would tighten these gates further.
  *
- * Zero deps. This does NOT weaken the resolved-rate oracle — it decides which instances are ELIGIBLE to be scored.
+ * This does NOT weaken the resolved-rate oracle — it decides which instances are ELIGIBLE to be scored.
  */
 
 import type { EvalTask } from "./swebench_task.js";

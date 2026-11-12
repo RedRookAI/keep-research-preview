@@ -1,15 +1,4 @@
-/**
- * F0 — Brain resolver. The onboarding flow you specified, exactly:
- *
- *   1. Default to LOCAL.
- *   2. PROBE for a real local runtime (Ollama/llama.cpp).
- *   3. If a local model is present -> use it (private, offline, works immediately).
- *   4. If NOT present -> do NOT dead-end. Return a friendly request for a key.
- *   5. If the human gives a key -> use it.
- *
- * The credential is stored crypto-shredded (Phase 0 keystore); the brain choice is
- * recorded to the spine with the key REDACTED. Messages are jargon-free.
- */
+/** Resolve a reachable local model or a supplied model credential and record the selection. */
 
 import type { Spine } from "../spine/spine.js";
 import type { CryptoShredKeyStore, Ciphertext } from "../keystore/keystore.js";
@@ -54,12 +43,12 @@ export class BrainResolver {
       return {
         state: "using-local",
         brain,
-        message: "You're all set — I found a private model already running on this machine, so we can start right now with nothing to pay and nothing leaving your computer. You can add your own AI key any time to unlock more powerful models.",
+        message: "I found a private model on this machine. Tell me what you'd like to work on. You can connect another model with your own AI key later.",
       };
     }
     return {
       state: "need-key",
-      message: "I couldn't find a private model on this machine yet, so let's hook up the AI of your choice. Paste your AI key (from Anthropic, OpenAI, OpenRouter, Google, Groq, NVIDIA, or others) and we'll get going. If you'd rather run fully offline, you can install a local model later and I'll pick it up automatically.",
+      message: "Connect a model to get started. Paste your AI key, or install a local model to work offline.",
     };
   }
 
@@ -81,7 +70,7 @@ export class BrainResolver {
     return {
       state: "using-key",
       brain,
-      message: `You're connected to ${brain.providerLabel}. We're ready — tell me what you're working on and I'll take it from here.`,
+      message: `You're connected to ${brain.providerLabel}. What would you like to work on?`,
     };
   }
 

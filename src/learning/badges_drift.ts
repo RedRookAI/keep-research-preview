@@ -1,5 +1,5 @@
 /**
- * Lesson confidence badges (#8) + spec-drift detection (#9) — Phase 3.5 -> Phase 3.
+ * Lesson confidence badges (#8) + spec-drift detection (#9) .
  *
  * #8: surface which CONFIRMED lessons a change relied on, as a PR badge that feeds
  *     merge-readiness (#19). Only confirmed lessons earn a badge (probation lessons

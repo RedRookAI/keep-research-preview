@@ -1,15 +1,15 @@
 /**
- * LoRA tier (Increment 10c) — the deploy orchestrator: full gate chain + canary + rollback.
+ * LoRA tier — the deploy orchestrator: full gate chain + canary + rollback.
  *
  * This ties the tier together. A deploy runs an ORDERED, FAIL-CLOSED gate chain — entry gates →
  * before/after eval gate → composition check → canary — and ANY failure rejects the deploy and keeps
  * the current (gradient-free) floor. Nothing is ever force-through. Canary adapters are registered as
  * reversible actions in the existing RollbackLedger, so a bad canary is one-tap rolled back.
  *
- * SOTA basis (2026-08-04): the locked strict spec (master plan §9.A) — sandboxed only, mandatory
+ * Research references (2026-08-04): the locked strict spec (master plan §9.A) — sandboxed only, mandatory
  * before/after eval gate, composition check (colluding-LoRA), replay buffer, versioned adapters +
  * canary + rollback, per-session human auth, verifiable rewards only. The orchestrator enforces the
- * ORDER and the fail-closed default. Zero deps.
+ * ORDER and the fail-closed default.
  */
 
 import type { Spine } from "../spine/spine.js";

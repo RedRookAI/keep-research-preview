@@ -11,7 +11,7 @@
  *
  * This reuses the R34 DSSE verify pattern (trusted keys + threshold + fail-safe) rather than inventing one.
  *
- * BUILT vs SEAM: BUILT + proven in-env is the VERIFY side — recompute the model digest, verify signatures
+ * Implementation boundary: Implemented is the VERIFY side — recompute the model digest, verify signatures
  * against trusted keys, require a threshold, fail safe (absent/unsigned/tampered/untrusted-key ⇒ reject) —
  * plus the `divergence` execution-monitor primitive. SEAM: the model's CONTENT (acquired offline) and the
  * real signer (HSM/KMS/TEE, key unreachable by the agent). The signing key must be UNREACHABLE by the

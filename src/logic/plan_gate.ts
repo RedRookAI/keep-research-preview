@@ -6,7 +6,7 @@
  * proportionality, and non-regression — BEFORE any effect is attempted. It composes ABOVE the solver's plan
  * and BELOW the effect-gate: a plan clears the logic-critics, then each of its effects clears the gate.
  *
- * WHY (SOTA, 2026 — Kambhampati LLM-Modulo): auto-regressive LLMs CANNOT reliably self-verify —
+ * WHY (research, 2026 — Kambhampati LLM-Modulo): auto-regressive LLMs CANNOT reliably self-verify —
  * self-critique WORSENS performance and degrades as more self-critique rounds are added (high false-negative
  * rate as their own verifier). The fix is EXTERNAL, SOUND critics; the LLM is an idea generator, not its own
  * judge. So — the LOAD-BEARING DESIGN RULE — every critic here is a DETERMINISTIC pure function, NEVER an LLM
@@ -16,7 +16,7 @@
  * over-reactions structurally, before bothering the human — routing to a human only when a critic cannot be
  * satisfied. It is the "maximal safe lift" enabler.
  *
- * BUILT vs SEAM: BUILT + proven in-env are the four deterministic critics + the deny-overrides composition.
+ * Implementation boundary: Implemented are the four deterministic critics + the deny-overrides composition.
  * A LEARNED goal/difficulty mapper (mapping a step to its goal-contribution, or estimating sub-problem value)
  * is a SEAM behind the critic interface — but the VERIFICATION stays deterministic.
  *

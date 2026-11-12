@@ -1,10 +1,10 @@
 /**
  * Adaptive per-model prompting + COST-OF-PASS routing (theme 1 — the reliability-weighted budget lever).
  *
- * The operator's insight, and the SOTA metric (FrugalGPT/RouteLLM + cost-of-pass, Mahmood/Erol et al.):
+ * The operator's insight, and the research metric (FrugalGPT/RouteLLM + cost-of-pass, Mahmood/Erol et al.):
  * NEVER cheap-for-cheap. The honest unit is COST-OF-PASS = inference cost ÷ P(success in that pass) — a
  * cheap model that needs several tries is more expensive than a pricier reliable one. So routing minimizes
- * cost-of-pass, not raw price. Two more SOTA pieces: PROMPT ADAPTATION (tailor the prompt to the model) and
+ * cost-of-pass, not raw price. Two more research pieces: PROMPT ADAPTATION (tailor the prompt to the model) and
  * POST-RESPONSE ESCALATION (get a cheap answer, vet it, escalate on vet-failure — beats blind upfront
  * routing). And the accessibility requirement: the operator's chosen model is a CEILING (raise-only) — the
  * policy may pick CHEAPER only when cost-of-pass predicts success; it may never exceed the operator's ceiling.
@@ -13,7 +13,7 @@
  * crude proxy; cost-of-pass reliability-weights expected cost. This module is the principled core; the v1
  * router is left intact (consolidation is a follow-up).
  *
- * BUILT vs SEAM: BUILT + proven in-env is the SELECTION + ACCOUNTING + PROMPT-ASSEMBLY logic (deterministic,
+ * Implementation boundary: Implemented is the SELECTION + ACCOUNTING + PROMPT-ASSEMBLY logic (deterministic,
  * inspectable). SEAM: the actual model calls, and a LEARNED router/success-predictor behind the same
  * interface (the in-env estimator is a transparent scoring function the operator can read and tune).
  *

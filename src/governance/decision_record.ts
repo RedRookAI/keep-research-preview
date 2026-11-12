@@ -1,5 +1,5 @@
 /**
- * Governance decision record (Phase 5) — THE foundational artifact.
+ * Governance decision record — THE foundational artifact.
  *
  * Every framework (EU AI Act, NIST AI RMF, ISO 42001) demands the SAME artifact,
  * confirmed verbatim in 2026 guidance: "a continuous, machine-generated record that

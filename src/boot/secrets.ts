@@ -1,5 +1,5 @@
 /**
- * Boot secret-requirement policy (Phase 0.5) — fixes coupling-bug #3.
+ * Boot secret-requirement policy — fixes coupling-bug #3.
  *
  * Original bug: `REQUIRED_SECRETS=["LINEAR_API_KEY","GH_TOKEN"]` raised FATAL at
  * boot, contradicting the agnostic connector layer — the PROVIDER_LOCAL zero-dep

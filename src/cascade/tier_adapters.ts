@@ -1,5 +1,5 @@
 /**
- * Domain tier adapters (Increment 3.9c) — concrete tiers wrapping existing checks.
+ * Domain tier adapters — concrete tiers wrapping existing checks.
  *
  * The cascade is "mostly composition" (spec §5): these adapters plug Keep's existing sound checks
  * in as tiers. The headline is LogicVetFloorTier — the deterministic critics from item 3.8 ARE the
@@ -7,7 +7,6 @@
  * single-brain and external-brain tiers are ports: the one-key operator runs Tiers 0-1; a fleet
  * operator additionally runs Tier 2 on the residual. One architecture, graceful either way.
  *
- * Zero deps.
  */
 
 import type { VerificationItem, VerificationTier, TierResult } from "./verification_cascade.js";

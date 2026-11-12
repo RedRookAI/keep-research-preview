@@ -1,5 +1,5 @@
 /**
- * ingress_scan_port.ts — Keep's typescript-FREE seam onto the closed-world ingress scan (Increment 3, static closure).
+ * ingress_scan_port.ts — Keep's typescript-FREE seam onto the closed-world ingress scan.
  *
  * WHY A PORT. The scan engine (tools/ingress_sweep.mjs) consumes the `typescript` devDep to parse a real AST; that
  * must never be imported from src/, or the shipped product would carry a build dependency. So the engine lives in

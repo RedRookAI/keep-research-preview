@@ -16,7 +16,7 @@
  *   - org CEILING: a compliance officer's evidence pack across users (DSAR fulfilment, residency, evidenced erase).
  * Same underlying mechanism (enumerate across stores → residency check → evidenced erase), two surfaces.
  *
- * BUILT + proven in-env: completeness (over every store) + residency enforcement + evidenced erasure. SEAM: the
+ * Implemented: completeness (over every store) + residency enforcement + evidenced erasure. SEAM: the
  * regulator-format / org-directory source (a datum's region and subject association).
  */
 

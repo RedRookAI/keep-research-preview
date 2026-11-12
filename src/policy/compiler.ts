@@ -1,7 +1,7 @@
 /**
- * TOTAL POLICY COMPILER (Mechanical-Enforcement Increment 2).
+ * TOTAL POLICY COMPILER.
  *
- * The frontier property (one sentence): every accepted policy becomes a COMPLETE, SIGNED, self-verifying EIR bundle
+ * Contract: every accepted policy becomes a COMPLETE, SIGNED, self-verifying EIR bundle
  * in which absence / ambiguity / analysis-uncertainty / version-skew / every error state is represented as DENY —
  * or compilation FAILS. There is no third outcome and no silent fall-through to permit.
  *
@@ -14,8 +14,8 @@
  * artifact, never implicit absence).
  *
  * Scope boundary (honest). Guards are PROPOSITIONAL over OPAQUE atoms (guard_dag.ts). Predicate/atom THEORY — what an
- * atom means, typed operators, interval/label solvers — and runtime EVALUATION are Increment 6 (Total Decision
- * Kernel); actual-object binding is Increment 11. This compiler decides everything decidable at the structural layer
+ * atom means, typed operators, interval/label solvers — and runtime EVALUATION are decision kernel (Total Decision
+ * Kernel); actual-object binding is resolver-bound guards. This compiler decides everything decidable at the structural layer
  * and fails closed on anything it cannot decide there (e.g. a guard over more atoms than the propositional bound).
  *
  * Composition (no duplication). Identity + canonical bytes: eir/canonical.ts + eir/eir.ts. Effect classes: the fixed

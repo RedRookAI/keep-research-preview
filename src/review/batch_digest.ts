@@ -1,13 +1,4 @@
-/**
- * Feature #20 — Batch review digests (Phase 3).
- *
- * One summary across a batch of PRs (a day's runs) instead of per-PR context-switching,
- * ORDERED by #11 reviewer-effort + #19 merge-readiness so scarce human attention goes
- * where it's most needed: blockers first, then lowest readiness, then highest effort.
- * Reads PR review outcomes (spine-sourced on the connected env; passed in here).
- *
- * Composes estimateReviewEffort (#11) and MergeReadiness (#19). Deterministic.
- */
+/** Review summaries ordered by blockers, readiness and estimated review effort. */
 
 import { estimateReviewEffort, type EffortLevel, type EffortSignals, type MergeReadiness } from "./merge_readiness.js";
 
@@ -83,8 +74,8 @@ function oneLiner(prId: string, title: string, readinessPct: number, effort: Eff
 function buildSummary(total: number, blocked: number, ready: number): string {
   if (total === 0) return "No PRs to review in this batch.";
   const parts = [`${total} PR${total === 1 ? "" : "s"} in this batch.`];
-  if (blocked > 0) parts.push(`${blocked} blocked (look at ${blocked === 1 ? "it" : "these"} first).`);
+  if (blocked > 0) parts.push(`${blocked} blocked.`);
   if (ready > 0) parts.push(`${ready} ready to merge.`);
-  parts.push("Ordered so the ones needing you most are at the top.");
+  parts.push("Blockers appear first.");
   return parts.join(" ");
 }

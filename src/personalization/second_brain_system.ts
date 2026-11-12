@@ -1,20 +1,9 @@
 /**
- * SECOND-BRAIN COMPOSITION ROOT — the wiring that integrates the personalization + teams/enterprise capabilities
- * into ONE reachable subsystem.
+ * Composes memory and personalization capabilities for composeKeep.
  *
- * The moat (8 rounds), hardening (4), and teams/enterprise (T1-T2) rounds each built and test-proved a capability,
- * but none was wired into `composeKeep` — the whole second brain was reachable only by tests. `assembleSecondBrain`
- * fixes that: it assembles the capabilities into a single `SecondBrainSystem` and is invoked by `composeKeep`, so
- * the second brain is part of the running Keep, not an island.
- *
- * It genuinely consumes each capability module (real calls, not stubs):
- *   - memory store + CI vault (per-project crypto namespace) + safe-parsing registry;
- *   - `ingest` — the H4 end-to-end path (parse → upkeep + vault → land in the store);
- *   - `anticipate` — R4 need anticipation;
- *   - `authorize` — T1 `may()` over the personalization surfaces (owner + ReBAC resolvers);
- *   - `promote` / `retract` — T2 governed team commons;
- *   - `exportBundle` / `importBundle` / `erase` — H2 portability round-trip + crypto-shred;
- *   - connector policy (`mayConnectorAct`), lens catalog + guards, inferred-preference proposal/admission.
+ * The assembled system provides memory ingestion, contextual-integrity handling, safe parsing,
+ * anticipation, authorization, governed team promotion, portability and erasure. Connector policy,
+ * lenses and inferred preferences retain their own gates and deployment requirements.
  */
 
 import type { Spine } from "../spine/spine.js";

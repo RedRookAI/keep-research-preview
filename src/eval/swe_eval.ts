@@ -1,16 +1,10 @@
 /**
- * Real SWE-eval runner (Increment 4.2) — produces a GENUINE resolved-rate by running Keep's ACTUAL solver on a
- * decontaminated suite with REAL sandboxed test execution and the exact SWE-bench oracle.
+ * Local repository evaluation runner using fail-to-pass and pass-to-pass checks.
  *
- * Per instance: decontaminate → materialize the buggy repo on disk → run the solver (buildDefaultSolver over a real
- * LocalFsWorkspace, patching real files) → independently run the hidden FAIL_TO_PASS + PASS_TO_PASS tests inside the
- * process-isolation sandbox (SandboxedCommandRunner + node --test) → judgeResolution (FAIL_TO_PASS must flip to passing,
- * PASS_TO_PASS must not regress) → aggregate with computeReport.
- *
- * HONEST SCOPE (stated in the report): the in-environment default brain is the deterministic LocalProvider (a stub that
- * cannot synthesize patches), so its resolved-rate is a genuine FLOOR, not a capability measure. Swap `provider` for a
- * frontier model (reachable but key-gated here) and the SAME harness yields a real capability number. This suite is a
- * self-authored, decontaminated micro-suite — NOT the official SWE-bench Verified number.
+ * Materializes each fixture, invokes the configured solver, executes the fixed checks through the
+ * configured command runner and aggregates the results. The default LocalProvider is deterministic
+ * and cannot synthesize general patches. Results depend on the supplied provider and execution profile;
+ * the published local fixtures do not establish a held-out or official SWE-bench Verified result.
  */
 
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";

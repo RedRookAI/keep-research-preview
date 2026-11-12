@@ -1,5 +1,5 @@
 /**
- * Real git merge port (Increment AM2b) — the physical capability behind the AM2 autonomous-merge executor. It runs
+ * Real git merge port — the physical capability behind the AM2 autonomous-merge executor. It runs
  * actual git: a working-tree-safe conflict check, a real `--no-ff` merge into the base (whose merge commit is the
  * idempotent rollback id), and a real `revert -m 1` of that merge commit.
  *
@@ -9,7 +9,7 @@
  * `autonomous-merge` (verified + reversible + low-blast + within the owner's envelope). So the base is touched only
  * for changes that are safe to auto-revert, and every step is audited.
  *
- * SOTA basis (2026-08-07): revert, not reset — a merge is undone with a new revert commit that preserves history
+ * Research references (2026-08-07): revert, not reset — a merge is undone with a new revert commit that preserves history
  * (Keep's trail is tamper-evident, so history-rewriting rollback is disqualified). `merge-tree --write-tree`
  * (git ≥2.38) computes the merge result and reports conflicts without mutating the working tree, so the pre-merge
  * check is side-effect-free. A remote push after merge is optional and off by default (auto-merge lands in the repo;

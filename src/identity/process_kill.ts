@@ -1,5 +1,5 @@
 /**
- * R35 — OS process-group kill + fencing (killer-interface seam + in-env fencing logic).
+ * OS process-group kill + fencing (killer-interface seam + in-env fencing logic).
  *
  * `IdentityRegistry.kill(id)` (agent_identity.ts) refuses a killed identity's effects at the gate. But
  * a COMPROMISED agent that bypasses the gate chokepoints, or an effect already IN FLIGHT when the kill
@@ -22,12 +22,12 @@
  * revoked agent's in-flight and future effects are rejected at commit; the failure is surfaced for
  * escalation (isolate host / revoke upstream). A missing fence entry ⇒ treat as fenced (reject).
  *
- * BUILT vs SEAM: BUILT is the fence (monotonic epoch, bump-on-kill, reject-stale-at-commit) + the
+ * Implementation boundary: this module provides the fence (monotonic epoch, bump-on-kill, reject-stale-at-commit) + the
  * killer-interface seam + the fail-safe escalation flag. The real OS PROCESS-GROUP KILL is the SEAM
  * (R35), the OS-enforcement family of R3/R27. In-env we prove the ENVELOPE-SIDE logic; the kernel
  * provides the actual termination.
  *
- * WHAT WOULD CHANGE IT: a deadman/lease with heartbeat expiry (auto-kill on missed heartbeat) extends
+ * Extension considerations: a deadman/lease with heartbeat expiry (auto-kill on missed heartbeat) extends
  * the trigger; a consensus-generated token (zxid/etcd revision) hardens monotonicity across replicas.
  * Neither lets a stale-token or killed effect commit.
  */

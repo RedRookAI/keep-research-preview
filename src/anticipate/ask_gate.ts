@@ -1,29 +1,9 @@
 /**
- * THE ASK-GATE (moat-heart #1) — the humility valve: ask the human, or proceed autonomously?
+ * Decides whether resolving intent uncertainty justifies interrupting the user.
  *
- * Keep's posture is autonomous-by-default, human-by-exception. The failure mode of most assistants is the inverse:
- * they ask whenever they are UNSURE (low classifier confidence), which floods the user with questions and defeats
- * autonomy. `intent_router` today does exactly this — ambiguity falls through to a clarifying question regardless of
- * stakes. That is the wrong gate.
- *
- * The right gate is VALUE OF INFORMATION. Asking is worth its cost only when the ambiguity is BOTH genuine AND
- * consequential: resolving it must avoid more expected loss than the autonomy cost of interrupting. So the gate is
- * scaled by CONSEQUENCE, not confidence:
- *   - reversible + uncertain      → PROCEED (reversibility beats asking; do it, let the user redirect cheaply).
- *   - reversible + very uncertain → PROCEED-WITH-NOTE (proceed on the best guess, but state the assumption).
- *   - irreversible + confident    → PROCEED (the action-side consequence-gate/veto still backstops the act itself).
- *   - irreversible + uncertain    → ASK (the ONE case worth a question: costly AND genuinely unclear).
- *   - unknown consequence         → precautionary (treated between reversible and irreversible).
- * This MINIMIZES asks and inverts the industry default, and it is invariant to a cold-start baseline (it uses only
- * intent-uncertainty + consequence — no personal cues/history — so it works correctly on turn 1).
- *
- * This is the "understand → ASK" valve of the moat-heart, sibling to `anticipate` ("predict"). It NEVER executes;
- * it returns a verdict. n=1 floor: the constant DEFAULT config (the degenerate zero-data case, mirroring
- * `floor_calibration`). Org: a calibrated config injected from (uncertainty, consequence, regret) records.
- *
- * BUILT + proven in-env: the VOI decision + consequence-scaling + verdict logic. SEAM: the consequence estimator
- * that classifies "what proceeding on a best guess would trigger" (a deployment supplies it; the front-door wiring
- * that consults this gate on the `ambiguous` branch is the next increment).
+ * Uses value of information and consequence, with proceed, proceed-with-note and ask verdicts.
+ * It returns a verdict and never executes an action. Execution still requires its own authority checks.
+ * The default configuration needs no personal history; deployments can inject calibrated parameters.
  */
 
 import type { ConsequenceClass } from "../routing/uncertainty_router.js";

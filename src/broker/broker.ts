@@ -1,9 +1,9 @@
 /**
- * EFFECT BROKER KERNEL (Mechanical-Enforcement Increment 9).
+ * EFFECT BROKER KERNEL.
  *
- * The frontier property (one sentence): a real side-effecting operation runs ONLY as the second half of an atomic
+ * Contract: a real side-effecting operation runs ONLY as the second half of an atomic
  * permit-redemption → dispatch transaction — the broker maps the requested OPERATION to the RIGHT it requires (a sealed
- * per-family operation allowlist), single-use REDEEMS a monitor-minted permit (Increment 7) bound to this exact
+ * per-family operation allowlist), single-use REDEEMS a monitor-minted permit (permit module) bound to this exact
  * subject/session/effect/object AND that required right and this family's audience, and ONLY THEN invokes the ONE
  * closed-world executor that owns the family, passing it the AUTHORIZED (effect, object, operation, right) — so the
  * action performed is mechanically the action authorized. Every path is audited fail-closed; there is no generic
@@ -12,9 +12,9 @@
  * Why the operation is bound to the right (the keystone): a caller does NOT supply the "right" — the broker DERIVES it
  * from the operation via the sealed allowlist, so a `delete` operation requires the `delete` right and a permit that
  * grants only `read` cannot drive a delete (redemption fails). The executor receives the authorized object + operation,
- * not free-form caller args as its target — binding to the EXACT resolved runtime object (TOCTOU-safe) is Increment 11.
+ * not free-form caller args as its target — binding to the EXACT resolved runtime object (TOCTOU-safe) is resolver-bound guards.
  *
- * Closed-world executors (Increment 4). Sealed against the signed effect manifest: exactly one executor per DECLARED
+ * Closed-world executors (effect inventory). Sealed against the signed effect manifest: exactly one executor per DECLARED
  * family, plus a per-family audience that MUST be UNIQUE (so a permit's audience maps to exactly one family — no
  * family-swap via a shared audience) and a per-family operation→right allowlist (so an undeclared operation is denied).
  *
@@ -28,12 +28,12 @@
  *
  * Trusted, sealed deployment config (NOT attacker input — the workload controls none of it): the per-family bindings —
  * the executor, its unique audience, and the OPERATION→REQUIRED-RIGHT allowlist — are provided at construction alongside
- * the signed manifest, exactly as Increment 8's issuance policy is. The operation→right map is the same trust level as
+ * the signed manifest, exactly as admission gate's issuance policy is. The operation→right map is the same trust level as
  * that policy (a mis-mapping is an operator error, not an attacker bypass); authenticating it inside the SIGNED effect
- * manifest is a possible Increment-4 strengthening. The SHARED RedemptionLedger and the idempotency store are the
+ * manifest is a possible effect inventory strengthening. The SHARED RedemptionLedger and the idempotency store are the
  * deployment's SINGLE stores; a multi-process deployment replaces the in-memory reference impls with durable, compare-and-
  * swap-backed stores behind the same interfaces — the ledger's, and the IdempotencyStore's atomic insert-if-absent
- * `reserve` (the documented persistence seam, as in Increment 7). TRUST BOUNDARY, stated precisely (the store is trusted
+ * `reserve` (the documented persistence seam, as in permit module). TRUST BOUNDARY, stated precisely (the store is trusted
  * sealed config, but the broker minimizes what it must trust): the AUTHORITY CEILING — no effect without an exactly-
  * authorized, single-use REDEEMED permit — holds against ANY store behaviour, because the ledger, not the store, gates
  * redemption; a Byzantine store can at worst re-drive an identical idempotency identity up to the permit's authorized
@@ -54,9 +54,9 @@
  * identity (a self-cycle would deadlock — a programming error at the executor boundary; the reservation still prevents
  * any double-execution within the authorized budget).
  *
- * Defers (honest): the executor holds RAW host authority — physically removing every ambient effect path so the broker
- * is the ONLY route to one is Increment 10; binding to the EXACT resolved object is Increment 11; ingress→effect
- * causality is Increment 12. `now`/`currentEpoch` are the trusted monitor's clock/epoch; the AuditSink, the shared
+ * Separate responsibilities: the executor holds RAW host authority — physically removing every ambient effect path so the broker
+ * is the ONLY route to one is authority boundary; binding to the EXACT resolved object is resolver-bound guards; ingress→effect
+ * causality is causal witness. `now`/`currentEpoch` are the trusted monitor's clock/epoch; the AuditSink, the shared
  * RedemptionLedger + idempotency store, the PermitKey, and the per-family executors (which must be the manifest-declared
  * owner modules — an attestation seam completed at Incr 10) are trusted broker-internal. A never-settling executor with
  * no AbortSignal — OR a Byzantine store that hands back a never-settling replay ENTRY — is the documented out-of-scope

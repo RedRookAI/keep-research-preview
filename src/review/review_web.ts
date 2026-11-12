@@ -1,20 +1,7 @@
 /**
- * Web review UI — pure request handler (Increment S2). All routing, security, and HTML rendering live here as a
- * PURE function of (app, request, security-config) → response, with no Node `http` dependency, so every security
- * property is unit-testable without opening a socket. The thin socket adapter is review_server.ts.
- *
- * It reuses the exact same core as the CLI: `listPendingReviews` / `needsDecision` to decide what to surface,
- * `buildNonEngineerView` for the plain-language content (single source of truth — the HTML and the CLI text can't
- * drift), and `applyReviewDecision` for the ONE decision path (spine + calibration together). It never merges.
- *
- * Security (SOTA 2026-08-06 — a local decision server is a real attack surface, not a "trusted" one):
- *  - Host-header validation → blocks DNS rebinding, the exact vector behind CVE-2025-66414 (MCP TS SDK, Dec 2025):
- *    a malicious web page can point a name at 127.0.0.1 and POST to your local server unless the Host is checked.
- *  - A per-run token (the Jupyter model — "don't trust localhost because it's local; add authorization anyway").
- *  - SameSite=Strict, HttpOnly cookie once authenticated + an Origin check + a CSRF token on every POST (defense
- *    in depth against localhost CSRF). The server binds 127.0.0.1 only (set in review_server.ts).
- * What would change it: exposing beyond localhost (a team deployment) would add TLS + real auth (X1 SSO) in front;
- * the Host/CSRF/token checks stay as the innermost layer.
+ * Request handling and HTML rendering for the review UI.
+ * Shares decision content and actions with the CLI. Authentication, Host/Origin checks and CSRF
+ * protection apply before decisions. The socket adapter lives in review_server.ts.
  */
 
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -357,7 +344,7 @@ function renderListPage(app: KeepApp, principal: Principal, loggedIn: boolean, c
     inner += `</ul>`;
   }
   if (auto.length > 0) {
-    inner += `<h2>Auto-approved <span class="muted">(optional to review — these passed Keep's checks)</span></h2><ul class="reviews">`;
+    inner += `<h2>Auto-approved <span class="muted">(review optional)</span></h2><ul class="reviews">`;
     for (const m of auto) inner += `<li><a href="/review/${encodeURIComponent(m.id)}"><span class="badge auto">Auto</span> ${esc(m.title ?? m.id)}</a></li>`;
     inner += `</ul>`;
   }
@@ -381,14 +368,14 @@ function renderView(id: string, v: NonEngineerView, decided: boolean, csrf: stri
   L.push(`<div class="headline ${cls}">${esc(v.headline)}</div>`);
   L.push(`<h2>What it does</h2><p>${esc(v.whatItDoes)}</p>`);
   if (v.checked.length > 0) {
-    L.push(`<h2>What Keep already checked for you</h2><ul class="checked">`);
+    L.push(`<h2>What Keep checked</h2><ul class="checked">`);
     for (const f of v.checked) L.push(`<li><strong>${esc(f.label)}:</strong> ${esc(f.value)}</li>`);
     L.push(`</ul>`);
   }
   L.push(`<h2>Can it be undone?</h2><p>${esc(v.reversalText)}</p>`);
   if (v.affects) L.push(`<p class="affects">What it affects: ${esc(v.affects)}</p>`);
   if (v.onlyYou) {
-    L.push(`<h2>What only you can decide</h2><ul class="onlyyou">`);
+    L.push(`<h2>Your review</h2><ul class="onlyyou">`);
     for (const item of v.onlyYou) L.push(`<li>${esc(item)}</li>`);
     L.push(`</ul>`);
   }
@@ -407,7 +394,7 @@ function renderView(id: string, v: NonEngineerView, decided: boolean, csrf: stri
   <button type="submit" name="action" value="approve" class="approve">Approve</button>
   <button type="submit" name="action" value="decline" class="decline">Decline</button>
 </form>
-<p class="note">Approving records your decision. Merging remains a separate, manual step — Keep never merges on its own.</p>`);
+<p class="note">Approving records your decision. Merging is a separate manual step.</p>`);
     }
   }
   return L.join("\n");

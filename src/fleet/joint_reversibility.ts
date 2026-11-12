@@ -26,7 +26,7 @@
  *    prove independence, so we assume conflict.
  *  - Transient: the conflict clears once the in-flight effect commits or releases (leaves in-flight).
  *
- * BUILT vs SEAM: BUILT + proven in-env is the conflict-detection logic (write-set ∩ inverse-dependency
+ * Implementation boundary: Implemented is the conflict-detection logic (write-set ∩ inverse-dependency
  * intersection, fail-safe on unknown, transient clearing, reversible registration) + the compose helper.
  * The real CROSS-HOST DEPENDENCY GRAPH — tracking every agent's in-flight envelopes across hosts with
  * distributed coordination — is the SEAM. Scenario 2 ONLY; R39 scenarios 3–5 remain open.

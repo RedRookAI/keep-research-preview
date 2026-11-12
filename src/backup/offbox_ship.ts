@@ -1,8 +1,8 @@
 /**
- * OFFBOX-CONTINUOUS-SHIP-AND-RESTORE (BUILD-ORDER 8.5a) — a CONTINUOUS, fail-closed-VISIBLE off-box
+ * OFFBOX-CONTINUOUS-SHIP-AND-RESTORE — a CONTINUOUS, fail-closed-VISIBLE off-box
  * ship driver that dogfoods 8.3's validate-on-write discipline at the STORAGE boundary.
  *
- * SOTA basis (2026): the 3-2-1-1-0 rule, and specifically the "0" — zero unverified restores. "A
+ * Research references (2026): the 3-2-1-1-0 rule, and specifically the "0" — zero unverified restores. "A
  * backup you have not tested is not a backup." The 2026 posture is sharper still: an un-verified
  * off-box copy is a LIABILITY, because ransomware deletes/encrypts the primary AND the un-immutable
  * copy — so a ship subsystem must VERIFY the copy it wrote (re-read the object, re-check its hash),
@@ -24,10 +24,10 @@
  *
  * HONEST SEAM (never silently claimed here): `verifyRestore` proves the COPY is complete and
  * untampered, NOT that the off-box TARGET is tamper-proof — WORM/Object-Lock, an independent witness
- * co-sign and credential separation are BUILD-ORDER 8.5b (NEEDS-8.5b) — and NOT that the source truth
+ * co-signing and credential separation remain separate requirements — and NOT that the source truth
  * was itself honest (that remains the province of the higher gates). See OFFBOX_DURABILITY_CAVEAT.
  *
- * Zero deps; no network here — the sink is an injected port, so the cadence + verify-after-ship +
+ * ; no network here — the sink is an injected port, so the cadence + verify-after-ship +
  * fail-closed logic is fully testable with an in-memory/temp-dir fake and NO real egress.
  */
 

@@ -1,7 +1,7 @@
 /**
- * Hybrid ranker via weighted Reciprocal Rank Fusion (Increment 14b).
+ * Hybrid ranker via weighted Reciprocal Rank Fusion.
  *
- * SOTA basis (2026-08-05): the dominant, near-universal hybrid-fusion method is RRF — it fuses ranked
+ * Research references (2026-08-05): the dominant, near-universal hybrid-fusion method is RRF — it fuses ranked
  * lists by summing 1/(k+rank) across retrievers (k=60 default), operating on RANK POSITIONS not raw
  * scores. This is decisively better than weighted-sum here: BM25 scores (unbounded TF sums) and
  * graph-proximity scores (hop/degree) live on incompatible scales, and naive normalization "can even
@@ -11,7 +11,7 @@
  *
  * The pipeline is the cascaded lexical→graph pattern (LARGER 2026, beats BM25 on localization): BM25
  * seeds → bounded-hop graph expansion → RRF fuse. Scales cleanly to a 3rd (embedding) retriever in
- * 14c — RRF just fuses one more ranked list. Zero deps.
+ * 14c — RRF just fuses one more ranked list.
  */
 
 import type { Issue } from "../solve/issue_model.js";

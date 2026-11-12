@@ -1,7 +1,7 @@
 /**
- * Consensus + posture switch (Increment 3.8c) — the verdict function, done soundly.
+ * Consensus + posture switch — the verdict function, done soundly.
  *
- * SOTA basis (2026-08-04):
+ * Research references (2026-08-04):
  *  - "A menagerie of partial critics where consensus is verification" (arXiv 2402.08115) — BUT
  *    consensus is only trustworthy among INDEPENDENT critics; correlated LLM critics share blind
  *    spots (SAVeR arXiv 2604.08401). So the consensus rule here privileges SOUND (deterministic)
@@ -10,7 +10,6 @@
  *    reject on any unsound step; PERMISSIVE (high-recall) for brainstorming — only kill on internal
  *    contradiction or gross infeasibility, so divergent creative ideas aren't strangled.
  *
- * Zero deps.
  */
 
 import type { CriticVerdict } from "./deterministic_critics.js";

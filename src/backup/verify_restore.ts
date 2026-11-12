@@ -1,7 +1,7 @@
 /**
- * Backup: verifyRestore + off-machine target prompt (Increment 9b).
+ * Backup: verifyRestore + off-machine target prompt.
  *
- * SOTA basis (2026-08-04): the "0" in 3-2-1-1-0 = zero unverified restores — "a backup that has never
+ * Research references (2026-08-04): the "0" in 3-2-1-1-0 = zero unverified restores — "a backup that has never
  * been tested is not a backup" (AvePoint/CISA 2026). So verifyRestore is a first-class CHECKED
  * property, not polish: it re-verifies the restored hash-chain (catching truncation/tampering via the
  * existing verifyChain) AND confirms the recomputed content root matches the snapshot's expected
@@ -10,7 +10,7 @@
  *
  * The off-machine prompt surfaces FREE options first (no lock-in, air-gap default): a private git
  * repo, then any S3-compatible/rsync target the operator controls, then paid only if materially
- * better. It is IGNORABLE and re-surfaced on a cadence — never blocking, never nagging. Zero deps.
+ * better. It is IGNORABLE and re-surfaced on a cadence — never blocking, never nagging.
  */
 
 import type { SealedBlock, VerifyResult } from "../spine/hashchain.js";

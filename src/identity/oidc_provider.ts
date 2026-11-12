@@ -1,17 +1,17 @@
 /**
- * OidcJwksProvider (Increment 3.2) — retires the identity-provider OIDC/JWKS seam with a REAL asymmetric verifier.
+ * OidcJwksProvider — retires the identity-provider OIDC/JWKS seam with a REAL asymmetric verifier.
  *
  * HmacAssertionProvider proved the login→session→RBAC flow with a symmetric shared secret. This is the real thing: it
  * verifies an OIDC ID token's RS256 signature against a JWKS (a set of public keys keyed by `kid`) using node:crypto,
- * then validates iss / aud / exp / nbf / nonce. Zero runtime deps. The ONLY remaining external piece is fetching a real
+ * then validates iss / aud / exp / nbf / nonce.  The ONLY remaining external piece is fetching a real
  * IdP's JWKS document over HTTPS (a third-party network call) — supply those keys (or a fetch hook) at deployment; the
- * verification logic below is fully built and proven here against a locally-generated keypair.
+ * verification logic below is checked against a locally-generated keypair.
  *
- * SOTA basis (2026-08-08 — CVE-2026-22817 & the alg-confusion class): the algorithm is PINNED server-side to an
+ * Research references (2026-08-08 — CVE-2026-22817 & the alg-confusion class): the algorithm is PINNED server-side to an
  * allowlist (default ["RS256"]) and NEVER derived from the token — this defeats both `alg:none` and the RS256→HS256
  * confusion attack (where the RSA public key is abused as an HMAC secret). Order: pin alg → resolve key by kid → verify
  * signature → check iss (exact) / aud (must contain) / exp / nbf with a tight ±leeway. Any failure returns null
- * (fail-closed — a verifier never throws-to-allow). What would change it: ES256/EdDSA can be added to the allowlist with
+ * (fail-closed — a verifier never throws-to-allow). Extension considerations: ES256/EdDSA can be added to the allowlist with
  * their own key handling; a live JWKS-endpoint fetch (with kid-miss refresh for key rotation) is the deployment swap.
  */
 

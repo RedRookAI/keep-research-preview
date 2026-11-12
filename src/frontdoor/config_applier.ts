@@ -1,5 +1,5 @@
 /**
- * F2 — Config applier (deterministic validate -> gate -> apply).
+ * Config applier (deterministic validate -> gate -> apply).
  *
  * The stage that actually CHANGES the running system from a directive — safely. Per
  * the 2026 consensus, the LLM never touches enforcement: a directive is translated to

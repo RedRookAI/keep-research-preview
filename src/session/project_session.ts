@@ -1,7 +1,7 @@
 /**
- * ProjectSession (Increment 3.5b) — the isolated per-project workspace.
+ * ProjectSession — the isolated per-project workspace.
  *
- * SOTA basis (2026-08-04):
+ * Research references (2026-08-04):
  *  - Durable, per-project history you can scroll/resume is the assistant-grade UX
  *    (OpenAI/Claude/Gemini pattern); continuity comes from the stable ProjectId, not memory.
  *  - Long-horizon context uses COMPACTION + TYPED NOTES (Anthropic recommendation; arXiv
@@ -13,7 +13,7 @@
  *
  * Everything this session owns is bound to one ProjectId through its ProjectNamespace, so
  * two sessions are non-overlapping by construction — a cross-project read is not expressible
- * without throwing. Zero deps.
+ * without throwing.
  */
 
 import type { ProjectNamespace } from "./project_registry.js";

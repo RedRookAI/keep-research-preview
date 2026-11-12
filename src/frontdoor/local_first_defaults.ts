@@ -1,5 +1,5 @@
 /**
- * Theme 5c (No-Account Local Defaults), Part 2 — local-first defaults resolver.
+ * local-first defaults resolver.
  *
  * A fresh Keep must be usable with ZERO external accounts and no cloud signup. This
  * resolver decides how a new install boots: probe for a LOCAL OpenAI-compatible endpoint
@@ -9,7 +9,7 @@
  * capabilities still work) and tell the operator how to add a local model — never
  * demanding an account or a cloud key.
  *
- * The probe is injected so core has no network dependency. Zero deps.
+ * The probe is injected so core has no network dependency.
  */
 
 import type { BrainDescriptor } from "./brain_port.js";

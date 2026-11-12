@@ -1,7 +1,7 @@
 /**
- * ResearchLoop orchestrator (Increment 4b) — the "become a SOTA expert first" pass.
+ * ResearchLoop orchestrator — the "become a research expert first" pass.
  *
- * SOTA basis (2026-08-04): bounded research agents with a critic loop cap (deep-research-agent
+ * Research references (2026-08-04): bounded research agents with a critic loop cap (deep-research-agent
  * "max 2 iterations"; Agon). "Cite a retrieved source for every claim; never cite from memory."
  * When no live search is available, the pass is HONEST: it still distills what it can but marks
  * claims `unverifiable` rather than fabricating currency (the currency layer's can't-verify rule).
@@ -10,7 +10,6 @@
  * Offline, the loop still runs (producing honestly-unverifiable notes from local knowledge); with
  * a live search seam, claims get real citations to be checked by the floor (4c).
  *
- * Zero deps.
  */
 
 import { createHash } from "node:crypto";
@@ -173,7 +172,7 @@ export class ResearchLoop {
   }
 }
 
-// ── The fetch-receipt primitive (BUILD-ORDER 8.6 OWNS this) ───────────────────
+// ── The fetch-receipt primitive ───────────────────
 //
 // A retrieval claim in 2026 is credible only if it carries sha256(body) + a timestamp — a bare URL
 // is a claim, not evidence (RFC 9162 CT inclusion proofs; in-toto/SLSA subject-by-digest). This is

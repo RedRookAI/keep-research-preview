@@ -1,16 +1,8 @@
 /**
- * Learning-loop heartbeat (Phase 0.5) — fixes coupling-bug #1.
+ * Provider-independent scheduler for learning-loop ticks.
  *
- * Original bug: `maybe_run_dream_cycle` lived on the provider-coupled worker and
- * idled when the provider key was absent — so swapping the provider silently
- * stopped the learning loop, an INVISIBLE moat-break. The build-records were
- * already provider-agnostic (keyed on outcome + origin); only the *heartbeat* was
- * coupled.
- *
- * Fix: the heartbeat runs on an always-on scheduler here, independent of any
- * provider/connector. It fires a provider-agnostic tick; the tick's work (dream,
- * consolidate) reads outcome-keyed records and routes any model calls through the
- * ModelGateway port — never a hardcoded provider.
+ * Ticks read outcome-keyed records and can run consolidation or dream-cycle work. Any model requests
+ * use the ModelGateway port; an absent provider credential does not disable the scheduler itself.
  */
 
 export type HeartbeatTick = () => Promise<void>;

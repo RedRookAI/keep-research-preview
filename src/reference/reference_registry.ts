@@ -1,5 +1,5 @@
 /**
- * ReferenceRegistry + dated seeds (Increment 3.6b) — the perishable categories.
+ * ReferenceRegistry + dated seeds — the perishable categories.
  *
  * Registers each shelf-life category as a ReferenceSet with an HONEST dated seed (as of today,
  * 2026-08-04) and a per-category TTL (pricing changes often → short; endpoints rarely → long).
@@ -7,7 +7,6 @@
  * current when a connected env exists. Provider-agnostic: an unknown model family isn't an error —
  * it falls through to the model-blind default (the invariant that Keep serves ANY model).
  *
- * Zero deps.
  */
 
 import { ReferenceSet, type FreshnessPolicy } from "./reference_set.js";
@@ -145,7 +144,7 @@ export class ReferenceRegistry {
   }
 }
 
-// ── Capability effect classification (BUILD-ORDER 8.44B — CAPABILITY-NOT-PROSE) ──
+// ── Capability effect classification (CAPABILITY-NOT-PROSE) ──
 //
 // External-effect / destructiveness must be decided by the RESOLVED capability identity actually being invoked
 // (the callee), NOT by re-parsing a prose description of it. Prose is attacker-controlled and unbounded — "gently

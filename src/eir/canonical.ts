@@ -1,5 +1,5 @@
 /**
- * Canonical encoding for the Enforcement IR (BUILD-ORDER: Mechanical-Enforcement Increment 1).
+ * Canonical encoding for the Enforcement IR.
  *
  * WHY THIS AND NOT `spine/event.ts`'s `canonicalize`: that one is `JSON.stringify(sortDeep(v))`, which is NOT a sound
  * basis for a canonical IDENTITY scheme — JSON conflates 1 and 1.0, admits floats / NaN / -0, escapes Unicode

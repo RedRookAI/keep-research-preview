@@ -1,5 +1,5 @@
 /**
- * WiringLedger (Increment 18.W) — the standing inventory of module WIRING STATUS. The "no islands, wired end
+ * WiringLedger — the standing inventory of module WIRING STATUS. The "no islands, wired end
  * to end" mandate was previously enforced only by manual audit; it drifted (18 built increments accumulated
  * islands). This ledger makes it an ENFORCED invariant: every module known to be off the live composeKeep
  * path is listed here WITH an explicit disposition and rationale, and a companion test fails if the list and

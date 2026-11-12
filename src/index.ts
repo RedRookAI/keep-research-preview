@@ -1,5 +1,5 @@
 /**
- * Keep — Phase 0 substrate (public surface).
+ * Keep public exports.
  *
  * The append-only hash-chained event spine + identity/RBAC/SoD + crypto-shred key
  * store. Everything downstream (memory, control, review, governance) reads this

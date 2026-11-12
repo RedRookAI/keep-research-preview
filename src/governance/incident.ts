@@ -1,5 +1,5 @@
 /**
- * Clock-aware incident-reporting hooks (Phase 5, #38).
+ * Clock-aware incident-reporting hooks.
  *
  * On a triggering event (safety-critical failure, prohibited output, containment
  * activation, serious malfunction), emit a structured incident artifact carrying the

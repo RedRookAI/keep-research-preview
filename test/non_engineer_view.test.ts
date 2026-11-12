@@ -20,27 +20,27 @@ function pkt(over: Partial<DecisionPacket>): DecisionPacket {
 const PERSUASIVE = [/you should approve/i, /we recommend/i, /keep recommends/i, /looks good/i, /safe to approve/i, /i suggest/i, /\badvise\b/i, /go ahead and approve/i, /this is fine/i];
 
 test("S3 DISPOSITION proving: each disposition is stated plainly and is never hidden", () => {
-  assert.match(renderNonEngineerView(pkt({ disposition: "auto-approved" })), /does NOT need a decision/);
-  assert.match(renderNonEngineerView(pkt({ disposition: "human-approval-required", band: "medium", whyAttention: ["touches auth"] })), /needs your decision[\s\S]*will NOT proceed unless you approve/i);
-  assert.match(renderNonEngineerView(pkt({ disposition: "blocked", band: "high" })), /STOPPED this change[\s\S]*will not proceed/i);
+  assert.match(renderNonEngineerView(pkt({ disposition: "auto-approved" })), /auto-approved[\s\S]*spot-check is optional/);
+  assert.match(renderNonEngineerView(pkt({ disposition: "human-approval-required", band: "medium", whyAttention: ["touches auth"] })), /needs your approval before it can proceed/i);
+  assert.match(renderNonEngineerView(pkt({ disposition: "blocked", band: "high" })), /blocked this change[\s\S]*will not proceed/i);
 });
 
-test("S3 NEUTRALITY (I2): non-persuasive, and says outright it is not recommending", () => {
+test("S3 NEUTRALITY (I2): presents approve and decline without recommending either", () => {
   const v = renderNonEngineerView(pkt({ disposition: "human-approval-required", band: "medium", whyAttention: ["changes how passwords are checked"], verifyThis: "Is it okay for existing sessions to be logged out?" }));
   for (const rx of PERSUASIVE) assert.doesNotMatch(v, rx, `should not contain persuasive phrasing: ${rx}`);
-  assert.match(v, /not recommending either way/);
+  assert.match(v, /approve or decline/);
 });
 
 test("S3 anti-overcorrection: routine auto-approved work is OPTIONAL — no 'only you can decide' burden", () => {
   const v = renderNonEngineerView(pkt({ disposition: "auto-approved", band: "low" }));
   assert.match(v, /spot-check is optional/);
-  assert.doesNotMatch(v, /What only you can decide/);
+  assert.doesNotMatch(v, /Your review:/);
 });
 
 test("S3 cognitive-forcing + honest limit: a decision item surfaces the specific check AND the intent-fit limit", () => {
   const v = renderNonEngineerView(pkt({ disposition: "human-approval-required", band: "medium", whyAttention: ["changes how passwords are checked"], verifyThis: "Is it okay for existing sessions to be logged out?" }));
-  assert.match(v, /Check this specifically: Is it okay for existing sessions/);
-  assert.match(v, /Keep can't judge that — only you know what you intended/);
+  assert.match(v, /Check: Is it okay for existing sessions/);
+  assert.match(v, /Confirm that the change matches the outcome you want/);
 });
 
 test("S3 reversibility is stated in plain terms", () => {
@@ -50,8 +50,8 @@ test("S3 reversibility is stated in plain terms", () => {
 
 test("S3 confidence is scoped honestly (about the checks, not intent-fit)", () => {
   const v = renderNonEngineerView(pkt({ disposition: "human-approval-required", band: "medium", confidence: 0.82, whyAttention: ["auth"] }));
-  assert.match(v, /confidence in its own checks: 82%/);
-  assert.match(v, /not about whether this is what you meant/);
+  assert.match(v, /reported confidence in these checks: 82%/);
+  assert.match(v, /Review the change against your goal/);
 });
 
 test("S3 wiring: `keep review <id> --plain` renders the plain-language view end-to-end", async () => {
@@ -63,7 +63,7 @@ test("S3 wiring: `keep review <id> --plain` renders the plain-language view end-
   const out: string[] = [];
   await runCli(["review", "pr-42", "--plain"], { write: (s) => out.push(s), prompt: async () => "skip" }, { app });
   const text = out.join("\n");
-  assert.match(text, /needs your decision/);
-  assert.match(text, /Keep is not recommending either way/);
+  assert.match(text, /needs your approval/);
+  assert.match(text, /approve or decline/);
   assert.doesNotMatch(text, /diff|@@|\+\+\+/, "the plain view does not dump a diff at a non-engineer");
 });

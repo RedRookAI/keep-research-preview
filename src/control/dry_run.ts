@@ -1,5 +1,5 @@
 /**
- * Feature #28 — Dry-run mode (Phase 2, the "R" in RAIL; kill-switch layer 4).
+ * Dry-run mode.
  *
  * A first-class run mode: given a proposed plan (a sequence of actions), produce the
  * FULL plan + a predicted diff/effect + a cost estimate, with ZERO writes. This is the
@@ -8,7 +8,7 @@
  * spine's write path: it only classifies, forecasts, and predicts. writesPerformed is 0
  * by construction.
  *
- * Composes Phase 4 forecasting (#42) for the cost band and Phase 2 action tiering for
+ * Composes forecasting (#42) for the cost band and action tiering for
  * the per-step approval prediction.
  */
 

@@ -1,7 +1,7 @@
 /**
- * Effect DECLARATION model (Mechanical-Enforcement Increment 4 — Closed-World Effect Inventory).
+ * Effect DECLARATION model.
  *
- * The dual of Increment 3's ingress inventory: where that fixed the INBOUND surface (no entrypoint exists unless
+ * The dual of ingress inventory's ingress inventory: where that fixed the INBOUND surface (no entrypoint exists unless
  * declared), this fixes the OUTBOUND surface — every security-relevant observation/mutation belongs to exactly one
  * declared effect FAMILY with exactly one declared KIND and exactly one broker OWNER. A `family` groups the effectful
  * host primitives of one concern (filesystem, network, DNS, subprocess, …); the `owner` is the single module allowed
@@ -9,9 +9,9 @@
  * recoverable / external / destructive). The build-time scanner (tools/effect_sweep.mjs) then rejects any use of a
  * family's primitives OUTSIDE its declared owner.
  *
- * SCOPE (honest seams): this fixes the closed INVENTORY + owner assignment + its binding to the Increment-2 policy.
- * EXECUTION mediation (an effect runs only through the broker) is Increment 9; OS-level impossibility of bypass is
- * Increment 10. Identity is DERIVED from content (canonical.ts), never stored.
+ * Scope: this fixes the closed INVENTORY + owner assignment + its binding to the policy compiler policy.
+ * EXECUTION mediation (an effect runs only through the broker) is effect broker; OS-level impossibility of bypass is
+ * authority boundary. Identity is DERIVED from content (canonical.ts), never stored.
  *
  * Grounding: effect systems; capability-safe module discipline (only the owner holds the raw authority); deny-by-default
  * syscall ownership; Saltzer–Schroeder complete mediation.

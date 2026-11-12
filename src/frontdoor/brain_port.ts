@@ -1,7 +1,7 @@
 /**
- * F0 — Brain port + credential intake (the front door's first step).
+ * Brain port + credential intake (the front door's first step).
  *
- * "Hook in the AI of your choice." The moat is working with EVERYTHING, so the port
+ * The model port
  * is built around the shape that already does: an OpenAI-COMPATIBLE descriptor
  * {baseURL, apiKey, model}. As of Aug 2026 the OpenAI API format is the de-facto
  * universal standard — Anthropic, Gemini, OpenRouter, Groq, NVIDIA NIM, and every

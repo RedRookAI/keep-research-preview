@@ -1,9 +1,9 @@
 /**
- * VettingPromptBuilder + AdaptivePromptLayer (Increment 3.7d) — the composer + tailored vetting.
+ * VettingPromptBuilder + AdaptivePromptLayer — the composer + tailored vetting.
  *
- * SOTA basis (2026-08-04): vetting/verifier prompts are rigid, greppable, hand-written RUBRICS +
+ * Research references (2026-08-04): vetting/verifier prompts are rigid, greppable, hand-written RUBRICS +
  * sequential gate checks — "we never tell validators to think step by step; we hand-write fixed
- * auditable rubrics" (real-pipeline SOTA; SurePrompts: "run high-stakes outputs through llm-as-
+ * auditable rubrics" (real-pipeline research; SurePrompts: "run high-stakes outputs through llm-as-
  * judge rubrics, evaluate slot-by-slot against the brief"). The rubric CONTENT is the invariant
  * (auditable); only the DELIVERY adapts to tier (rich → rubric+brief; lean → rubric decomposed
  * into explicit yes/no gates).
@@ -13,7 +13,6 @@
  * with one model (single-model floor). Metaprompt mode (digitalapplied 2026): a high-effort model
  * can author a production prompt for a cheaper model — supported as a strategy, not required.
  *
- * Zero deps.
  */
 
 import {

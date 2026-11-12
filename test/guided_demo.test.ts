@@ -72,7 +72,7 @@ for (const localAppliance of [false, true]) test(`guided Start → deliberate pr
     const checks = (fixture.app.projectManager!.session(fixture.app.projectManager!.list()[0]!.id).inspect().checkpoint!.artifacts["implement"] as { solve: { proposalEvidence: { checks: { passedTests: string[]; testsPassed: boolean } } } }).solve.proposalEvidence.checks;
     assert.deepEqual(checks.passedTests, SAMPLE_CONTRACT.passedTests); assert.equal(checks.testsPassed, true);
     const proposalDigest = input(review, "proposalDigest");
-    assert.match(review, localAppliance ? /source repository stays unchanged/ : /synthetic source repository/);
+    assert.match(review, localAppliance ? /source repository stays unchanged/ : /demo source repository/);
     const approved = await post("/console/merge", { csrf, projectId, runId, proposalDigest, action: "approve" });
     assert.equal(approved.status, 200); const result = await approved.text();
     assert.match(result, localAppliance ? /Change approved in the demo workspace/ : /Change applied to the demo source/);
@@ -94,7 +94,7 @@ for (const localAppliance of [false, true]) test(`guided Start → deliberate pr
       server = await startGatewayServer(resumed.app, { port: 0, token, reviewerSample: true });
       const resumedPage = await read(projectPath);
       assert.match(resumedPage, /Change approved in the demo workspace/);
-      assert.equal(resumed.generations(), 0); assert.ok(reviewerSampleNotice(resumed.app).includes("source repository unchanged"));
+      assert.equal(resumed.generations(), 0); assert.ok(reviewerSampleNotice(resumed.app).includes("source repository stays unchanged"));
       assert.equal(resumed.app.projectRuntime!.retainedJobs().filter(job => job.id === runId).length, 1);
       assert.equal(readFileSync(join(resumed.source, SAMPLE_FILE), "utf8"), SAMPLE_ORIGINAL);
     }

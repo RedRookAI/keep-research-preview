@@ -1,5 +1,5 @@
 /**
- * Measured MONITOR BOUNDARY descriptor (Mechanical-Enforcement Increment 5).
+ * Measured MONITOR BOUNDARY descriptor.
  *
  * A signed, content-addressed measurement of the exact isolated-monitor image: the read-only rootfs digest, the kernel
  * digest + command line, the seccomp-profile digest, the config digest, and the vsock CID. `verifyBootDescriptor`
@@ -14,7 +14,7 @@
  * A valid descriptor alone does not prove those protections were active on a host.
  *
  * Grounding: measured boot; reference-monitor tamper resistance; SLSA-style signed measurement; content-addressed
- * identity (Increment 1); domain separation.
+ * identity (canonical value model); domain separation.
  */
 import { timingSafeEqual } from "node:crypto";
 import { eirDigest, isWellFormedText, type CanonicalValue } from "../eir/canonical.js";

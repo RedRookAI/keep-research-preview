@@ -1,5 +1,5 @@
 /**
- * Authenticated length-prefixed monitor CHANNEL (Mechanical-Enforcement Increment 5).
+ * Authenticated length-prefixed monitor CHANNEL.
  *
  * The tamper-resistance core of the attested monitor boundary: the wire protocol a confined workload uses to receive
  * authenticated decisions FROM the isolated capability monitor (over virtio-vsock in production — the transport is a
@@ -19,9 +19,9 @@
  * monitor went silent / was killed/paused) — FAIL-STOPS the channel: it latches closed and every later frame is
  * rejected, so no payload is delivered to the broker after a violation.
  *
- * SCOPE (honest seams): the isolation SUBSTRATE (Firecracker image, seccomp, RO mounts, the vsock transport, a hardware
- * quote) is the existing tier + src/tcb/attestation.ts. Authorization SEMANTICS = Increment 6; independent observation
- * = Increment 12; stronger substrate = Increment 16.
+ * Scope: the isolation SUBSTRATE (Firecracker image, seccomp, RO mounts, the vsock transport, a hardware
+ * quote) is the existing tier + src/tcb/attestation.ts. Authorization SEMANTICS = decision kernel; independent observation
+ * = causal witness; stronger substrate = execution substrate.
  *
  * Grounding: reference-monitor tamper resistance; authenticated (signed) channels with sequence numbers + replay
  * windows + deadlines (NIST SP 800-53 AC-3); fail-stop security; asymmetric verify != sign.

@@ -1,15 +1,15 @@
 /**
- * SWE-bench task contract + two-part resolution oracle (Increment 16a).
+ * SWE-bench task contract + two-part resolution oracle.
  *
- * SOTA basis (2026-08-05): the resolution oracle is a TWO-PART contract (Scale SWE-bench Pro; survey
+ * Research references (2026-08-05): the resolution oracle is a TWO-PART contract (Scale SWE-bench Pro; survey
  * arXiv 2606.20683): a task is resolved ONLY IF every fail-to-pass test flips red→green (the fix works)
  * AND every pass-to-pass test stays green (no regression). SWE-bench Verified is saturating and
  * contamination-compromised (OpenAI recommended discontinuing it; ~30% of Pro's public split found
  * broken — arXiv 2603.21454), so the harness is benchmark-agnostic behind a task port and surfaces a
  * contamination/flaky note as a first-class field. A credible 2026 eval reports variance + cost +
- * failure classes, not a single peak number (appliedtechnologyindex 2026). Zero deps.
+ * failure classes, not a single peak number (appliedtechnologyindex 2026).
  *
- * What would change it: the field's benchmark of record shifts → add a TaskSource adapter (the port is
+ * Extension considerations: the field's benchmark of record shifts → add a TaskSource adapter (the port is
  * generic — Verified, Pro, Multilingual, Terminal-Bench 2.0 all fit).
  */
 

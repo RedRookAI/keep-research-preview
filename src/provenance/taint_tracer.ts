@@ -1,5 +1,5 @@
 /**
- * R32 — cross-process taint-tracer (tracer-interface seam + in-env propagation logic).
+ * cross-process taint-tracer (tracer-interface seam + in-env propagation logic).
  *
  * Effect provenance-gating (`effect_provenance.ts`) vetoes an untrusted-derived effect at the gate,
  * but today the trust labels are CALLER-SUPPLIED. A real tracer must (1) LABEL untrusted content at
@@ -18,13 +18,13 @@
  *  - CaMeL / dual-LLM: untrusted data may INFLUENCE a proposal but must not CHOOSE a privileged
  *    action — the gate (privileged) consumes the label and vetoes untrusted-derived effects.
  *
- * BUILT vs SEAM: BUILT + proven in-env is the `Labeled<T>` propagation (seed, map, combine, authorized
+ * Implementation boundary: Implemented is the `Labeled<T>` propagation (seed, map, combine, authorized
  * declassify) + `toProvenance` feeding `effectProvenance`. The real CROSS-PROCESS INTERCEPTION — the
  * `TaintInterceptor` that stamps labels at actual tool/network boundaries and carries them through a
  * real agent's dataflow (runtime instrumentation / a CaMeL-style quarantined executor) — is the SEAM
  * (R32), the OS/runtime-enforcement family of R3/R27/R35.
  *
- * WHAT WOULD CHANGE IT: a permissive LLM-IFC label-propagation (a bounded extraction from untrusted
+ * Extension considerations: a permissive LLM-IFC label-propagation (a bounded extraction from untrusted
  * context allowed where an unconstrained string is not) refines the rule; it never lets an
  * unauthorized declassification clear taint.
  */

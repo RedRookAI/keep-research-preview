@@ -1,7 +1,7 @@
 /**
- * Scheduler + Envelope: the Scheduler (Increment 7c) — operator-toggled scheduled autonomy.
+ * Scheduler + Envelope: the Scheduler — operator-toggled scheduled autonomy.
  *
- * SOTA basis (2026-08-04): machine-directed loops don't block on per-action approval — they accrue
+ * Research references (2026-08-04): machine-directed loops don't block on per-action approval — they accrue
  * proposals and run at a scheduled cadence the operator toggles, under a one-time authorization
  * envelope (over-asking is itself a safety failure — the autonomy-calibration research). Enforcement
  * (not alerts): when the metered gateway hard-stops on a cap, the whole run stops — no further calls
@@ -9,7 +9,7 @@
  * review rather than looping forever (the 4th orchestration table-stake).
  *
  * The human merge/approval gate stays the owner's: the scheduler runs the LOOPS (research/rag/learn)
- * and accrues PROPOSALS; it never auto-merges. Zero deps.
+ * and accrues PROPOSALS; it never auto-merges.
  */
 
 import type { Spine } from "../spine/spine.js";

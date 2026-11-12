@@ -1,7 +1,7 @@
 /**
  * Zero-dependency BM25 lexical ranker.
  *
- * Chosen per 2026 SOTA for exactly Keep's regime — small corpus, short queries, mostly
+ * Chosen per 2026 research for exactly Keep's regime — small corpus, short queries, mostly
  * lexical — where "BM25 matches or outperforms dense models at a fraction of the cost"
  * and, decisively for Keep, "requires no model, computes offline, runs entirely from
  * document content" (MonaVec's reason for BM25 over SPLADE). Its IDF term rewards RARE,

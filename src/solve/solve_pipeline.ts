@@ -72,14 +72,9 @@ export interface SolvePipelineDeps {
   /** Optional spend guard for the repair loop. */
   readonly withinBudget?: (round: number) => boolean;
   /**
-   * Optional acting agent identity + its registry (Core Addition C). Threaded through to
-   * `executeReversibly` so a killed/unknown/forged identity becomes a deny-capable gate input on
-   * the composed path. Absent ⇒ `identityLive` stays undefined ⇒ "not assessed (no veto)", which is
-   * the documented gate contract and is UNCHANGED by this wiring.
-   *
-   * Round 30: before this, the registry was never supplied at the call site, so the kill switch
-   * could not fire even with the envelope enabled — the check evaluated, found nothing injected,
-   * and fell through.
+   * Optional acting agent identity and registry, passed to executeReversibly.
+   * Killed, unknown or forged identities can veto the composed path. When omitted,
+   * identityLive remains undefined and identity is not assessed by this gate.
    */
   readonly identity?: AgentIdentity;
   readonly identityRegistry?: IdentityRegistry;
@@ -93,13 +88,9 @@ export interface SolvePipelineDeps {
    */
   readonly reversibleEnvelope?: boolean;
   /**
-   * ROUND 38 — the operator's allowed write regions, handed to the structural floor.
-   *
-   * The floor already refuses protected paths and jail escapes, but as GLOBAL policy. Nothing
-   * checked that the DECLARED write-set — `plan.edits.map((e) => e.file)`, i.e. model output —
-   * was within an authority the operator had stated. This is that authority.
-   *
-   * Omit ⇒ unconstrained, byte-identical to before. See `FloorPolicy.allowedPaths`.
+   * Operator-allowed write regions consumed by the structural floor.
+   * The declared edit paths must satisfy this scope as well as protected-path rules.
+   * Omission leaves this optional restriction absent. See FloorPolicy.allowedPaths.
    */
   readonly allowedPaths?: readonly string[];
 }
@@ -180,21 +171,8 @@ export class SolvePipeline {
     // R23: hold ONLY a mediated tree — the pipeline structurally cannot write unmediated.
     this.deps = { ...deps, tree: ensureMediated(deps.tree) };
 
-    // BUILD-ORDER 2.1 (Z170) — CONFIG-TIME scope surfacing, at the DECLARATION/threading seam.
-    //
-    // This runs ONCE, at construction — before any run() — which is what makes it the config-time
-    // (admission) channel, distinct from the per-run report inside run(). When the operator has
-    // DECLARED a write-scope that admits everything (`["*"]`) or is malformed (`src/**/*.ts`), the
-    // scope is recorded to the spine as an AUDITABLE CONSCIOUS-GRANT fact — so an over-broad or
-    // mistyped authority is a decision the operator can see at set-time, never a silent authority
-    // (2026: the `*` wildcard is the dominant breach origin AND the default tendency of the model
-    // output this write-set derives from) and never a late surprise (the Z135 abandonment path).
-    //
-    // OBSERVE-ONLY: it stages an audit event, it never refuses, never changes a route, never narrows
-    // the declared scope. An OMITTED scope declared nothing, so it records nothing — front-of-house
-    // is byte-identical. A plain `["*"]` run still proceeds; the only delta is one set-time audit
-    // record, NOT a per-run alert (recording once at declaration is the actionable, conscious-grant
-    // form; a repeated warning on `["*"]` would be the alert-fatigue path the run-time report avoids).
+    // Record broad or malformed operator write-scope declarations once at construction.
+    // This is an audit observation: it does not refuse, change or narrow the declared scope.
     const scope = assessDeclaredScope(deps.allowedPaths);
     if (scope.worthRecording) {
       this.deps.spine.stage({
@@ -308,17 +286,8 @@ export class SolvePipeline {
     const narrator = new ProgressNarrator(issue.id, this.deps.spine);
     const stagesRun: SolveStage[] = [];
 
-    // ROUND 40 — say so when a barrier has been configured into silence.
-    //
-    // Every other report in this pipeline fires on REFUSAL. A barrier that has been switched off
-    // by configuration never refuses, so it is structurally invisible to all of them, and the
-    // audit record of such a run is indistinguishable from a correctly-constrained one. This is
-    // the only channel that reports a control which is NOT doing anything.
-    //
-    // Emitted through the narrator, so it lands in the operator's live feed AND on the
-    // tamper-evident spine — a value on an object nobody reads would not be reporting.
-    // Observe-only: it never changes a route, and a legal-but-wide configuration such as
-    // `["*"]` is deliberately NOT reported (see `inertFloorInputs`).
+    // Report configured-off controls in progress and audit records. This is observation only;
+    // a broad but valid allowlist is handled separately by the scope-declaration record.
     const inert = [
       ...inertFloorInputs(defaultFloorPolicy(issue.repoRef ?? "repo", this.deps.allowedPaths)),
       ...inertBudgetInputs(defaultBudgetPolicy()),
@@ -508,27 +477,15 @@ export class SolvePipeline {
         narrator.done("apply", `Patch not applied — ${why}`);
         return this.gaveUp(issue.id, stagesRun, `patch did not apply: ${why}`, localizationEvidence);
       }
-      // BUILD-ORDER 2.5 (Z126) — this run takes the KEPT strangler-fig default. Record WHY the flag
-      // is still kept as a durable, auditable spine fact (the specific unmet stabilization criterion
-      // + its revisit condition), so a "keep" stays a governed decision and never drifts into a
-      // silent permanent border. Fails closed if the record is ever hollowed out. Observe-only: this
-      // never changes a route or the final tree state (benign work is byte-for-byte unaffected).
+      // Record the compatibility rationale without changing the selected execution path.
       audit("apply", { keptCutoverFlag: reversibleEnvelopeStabilizationFact() });
       // Strangler-fig ON path: route the reversible apply through the composed chain. The intent
       // applies the plan to a fork; the envelope commits the accepted result through the mediated
       // tree under a per-write grant (R23/R24 preserved). A human-hold route defers to the human path.
       const policies: IntegrationPolicies = {
-        // BUILD-ORDER 2.2 (AUTHORIZE-THE-DECLARATION, Z156) — compose the ACTING AGENT's identity
-        // scope into the floor policy as a SECOND authority, right where the operator's
-        // `allowedPaths` is already composed. The floor then authorizes the declared write-set
-        // against the INTERSECTION (allowedPaths ∩ identity.scope) via the SAME `withinScope`
-        // predicate — one mechanism, not a second path-authority that could disagree (round 37
-        // refused that). Omit the identity ⇒ `agentScope` stays absent ⇒ the floor policy is
-        // byte-identical to the pre-2.2 global-only behaviour (front-of-house, no-identity path
-        // unchanged). A legitimately minted/delegated identity's `.scope` is already the attenuated
-        // intersection (the registry attenuates at delegate-time), so this composes attenuation
-        // with the operator allowlist. THREAT BOUNDARY: a CONFUSED agent, not a COMPROMISED one
-        // (R35-narrow) — OS-level attestation against a forged identity object is the R35 seam.
+        // Authorize against the intersection of operator and acting-agent write scopes.
+        // A delegated identity already carries its attenuated scope. Missing identity leaves
+        // that optional restriction absent; this is not OS-level identity attestation.
         floor: {
           ...defaultFloorPolicy(issue.repoRef ?? "repo", admitted?.allowedFiles ?? this.deps.allowedPaths),
           ...(this.deps.identity ? { agentScope: this.deps.identity.scope } : {}),
@@ -542,7 +499,7 @@ export class SolvePipeline {
           kind: "file.edit",
           writeSet: plan.edits.map((e) => e.file),
           targets: plan.edits.map((e) => e.file),
-          // R13 (round 32): COMPUTED, not asserted. This was hardcoded `true`, feeding the
+          // R13: COMPUTED, not asserted. This was hardcoded `true`, feeding the
           // structural floor a constant for one of its NECESSARY reversibility conditions —
           // `inverseConstructible` returns `op.hasInverse === true`, so the floor could never
           // refuse an irreversible op on this path.
@@ -556,7 +513,7 @@ export class SolvePipeline {
           raw: plan.edits.map((e) => e.replace).join("\n"),
         },
         apply: async (fork) => {
-          // R14 (round 33): use the SAME match-or-refuse seam as the direct path.
+          // R14: use the SAME match-or-refuse seam as the direct path.
           // This previously ran `if (cur.includes(search)) write(cur.replace(search, replace))`,
           // and `String.replace` with a string pattern replaces only the FIRST occurrence,
           // silently — so the envelope applied edits `applyEditPlan` REFUSES as ambiguous.
@@ -604,21 +561,7 @@ export class SolvePipeline {
       if (result.path === "envelope" && result.outcome.outcome === "committed") {
         applied = { applied: true, perEdit: plan.edits.map((e) => ({ file: e.file, status: "applied" as const })) };
       } else {
-        // ROUND 34 — THE OPERATOR MUST LEARN WHY.
-        //
-        // This previously collapsed every non-commit to "reversible path did not commit:
-        // human-hold" and labelled it `not-found`, discarding the reasons the gate had
-        // already computed. That was survivable while the envelope was OFF, because these
-        // holds never happened in production. With the envelope ON BY DEFAULT that string
-        // is the FIRST thing an operator sees the first time a safety barrier fires.
-        //
-        // The config-safety research is that a staged rollout with production monitoring is
-        // how a risky default change is normally de-risked — "configuration changes are
-        // first applied to a small subset of traffic, devices, or regions before wider
-        // promotion", with "explicit blast-radius control". A self-hosted, zero-dep, no-
-        // telemetry tool CANNOT run that play: there is no fleet, no traffic split, and no
-        // signal coming back. So the blast-radius budget has to be spent where it can
-        // actually be spent — in the message the operator already reads.
+        // Preserve the gate or envelope refusal reason in the operator-visible result.
         const why =
           result.path === "human-hold"
             ? `held for human review: ${result.reasons.join(", ")}`
@@ -895,13 +838,7 @@ export function buildPrProposal(issue: Issue, plan: EditPlan, testsPassed: boole
     ...plan.edits.map((e) => `- \`${e.file}\`: ${e.intent}`),
     ``,
     testsPassed ? `✅ All tests pass.` : `⚠️ Tests do not all pass — review carefully.`,
-    // ROUND 41 — a control that is switched off belongs beside the merge decision, not only in a
-    // progress feed that scrolls. Written as a plain sentence an operator can act on, because the
-    // PR body is a product surface and a policy identifier would not be read.
-    //
-    // Emitted ONLY when there is something to say — no heading, no "0 issues" line on a clean
-    // run. A section that is usually empty is the section people learn to skip, which is the
-    // habituation failure this round exists to avoid.
+    // Show configured-off controls beside the proposal decision when present.
     ...(inertControls.length > 0
       ? [
           ``,

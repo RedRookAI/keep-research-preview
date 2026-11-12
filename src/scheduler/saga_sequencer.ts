@@ -1,7 +1,7 @@
 /**
  * Scheduler + Envelope: saga sequencer + non-persistable regions + OTel gen_ai emission (7d).
  *
- * These are the four orchestration table-stakes gaps the 2026 SOTA gap-analysis flagged, slotted to
+ * These are the four orchestration table-stakes gaps the 2026 research gap-analysis flagged, slotted to
  * land with the Scheduler:
  *  1. multi-step SAGA sequencer — Keep had single-action compensation (rollback); this chains
  *     forward+compensating actions and unwinds completed steps on partial failure.
@@ -10,7 +10,7 @@
  *  3. OTel gen_ai.* span emission — interop over the existing tracing.ts + cost_model's gen_ai attrs.
  *  4. (dead-letter queue lives in scheduler.ts alongside the run loop.)
  *
- * Reuses ReversibleAction (rollback.ts), TraceRecorder/CostModel (observability). Zero deps.
+ * Reuses ReversibleAction (rollback.ts), TraceRecorder/CostModel (observability).
  */
 
 import type { Spine } from "../spine/spine.js";

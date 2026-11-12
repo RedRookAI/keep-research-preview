@@ -1,5 +1,5 @@
 /**
- * Eval harness (Increment 16b) — run one instance end-to-end.
+ * Eval harness — run one instance end-to-end.
  *
  * Pipeline per instance: build an instance-scoped SolvePipeline (real solve: localize→plan→apply→
  * validate→repair→PR proposal), then execute the fail-to-pass + pass-to-pass tests against the patched
@@ -7,7 +7,7 @@
  * auditable — Keep's differentiator vs a leaderboard boast). Benchmark-agnostic: the synthetic suite
  * runs it here under the replay model; real SWE-bench Verified/Pro adapters run it on configured host behind the
  * same TaskSource port. Latency-to-first-patch + failure class are recorded (variance/cost signals the
- * 2026 SOTA says matter more than peak score). Zero deps.
+ * 2026 research says matter more than peak score).
  */
 
 import type { Spine } from "../spine/spine.js";

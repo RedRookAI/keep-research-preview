@@ -14,7 +14,7 @@
  *   - AUDITABLE: enqueue / veto / approve all stage a spine event.
  *   - LOW-FRICTION: parked items batch into ONE digest (triage-ordered), not one interruption per item.
  *
- * BUILT + proven in-env: the park → veto/approve state machine + the batched digest. SEAM: the live wiring (the
+ * Implemented: the park → veto/approve state machine + the batched digest. SEAM: the live wiring (the
  * autonomy loop enqueues here on a `veto` verdict instead of only returning paused-human; a channel surface renders
  * the digest and takes the one-tap veto) is the next increment. COMPOSE NOTE: `review/batch_digest.ts` is
  * PR-review-coupled (it needs MergeReadiness + EffortSignals per item), so feeding veto items through it would

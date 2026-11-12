@@ -1,17 +1,17 @@
 /**
- * Signed EFFECT MANIFEST + effect-to-policy coverage (Mechanical-Enforcement Increment 4).
+ * Signed EFFECT MANIFEST + effect-to-policy coverage.
  *
- * The sealed, signed, content-addressed inventory of every effect FAMILY and its single broker OWNER. It binds the exact declaration set, the exact Increment-2 policy bundle, and (as honest seams enforced by
+ * The sealed, signed, content-addressed inventory of every effect FAMILY and its single broker OWNER. It binds the exact declaration set, the exact policy compiler policy bundle, and (as honest seams enforced by
  * later increments) the scanned artifact-graph digest + scanner-tool identity. `verifyEffectManifest` re-derives
- * everything and fails closed on any mismatch. Structure mirrors the GO'd ingress manifest (Increment 3).
+ * everything and fails closed on any mismatch. Structure mirrors the GO'd ingress manifest (ingress inventory).
  *
  * EFFECT-TO-POLICY COVERAGE. Every effect the policy references (each `effectType`) is classified into a family; the
  * manifest must DECLARE + OWN that family. So a policy effect with no owned family is fatal — the outbound surface is
- * closed. The consequence KIND is a per-effect property of the policy (Increment 2), not the family. Each family is
- * declared AT MOST ONCE (exactly one broker ownership). Runtime execution mediation is Increment 9.
+ * closed. The consequence KIND is a per-effect property of the policy (policy compiler), not the family. Each family is
+ * declared AT MOST ONCE (exactly one broker ownership). Runtime execution mediation is effect broker.
  *
  * Grounding: capability-safe module discipline; deny-by-default syscall ownership; SLSA-style signed manifest binding;
- * content-addressed identity (Increment 1); domain separation.
+ * content-addressed identity (canonical value model); domain separation.
  */
 import { eirDigest, type CanonicalValue } from "../eir/canonical.js";
 import { stubSign, type Signature, type Signer, type TrustPolicy } from "../bom/bom_signing.js";

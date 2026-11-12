@@ -1,9 +1,9 @@
 /**
- * WebhookVerifier (Increment W0) — the security core of trigger ingress. A webhook endpoint is a HOSTILE
+ * WebhookVerifier — the security core of trigger ingress. A webhook endpoint is a HOSTILE
  * external surface: "an unverified webhook is just an HTTP request from the internet — anyone can send one."
  * This verifies authenticity + integrity + freshness BEFORE Keep acts on a payload, fail-closed.
  *
- * SOTA basis (2026-08-06), unanimous across sources (pontil, Hooque, hooklistener, OpsecForge, Linear guide):
+ * Research references (2026-08-06), unanimous across sources (pontil, Hooque, hooklistener, OpsecForge, Linear guide):
  *  1. Verify HMAC-SHA256 over the RAW request bytes — NEVER the re-serialised JSON. "The single most common
  *     verification bug is signing the parsed-and-reserialised body instead of the exact bytes the sender signed."
  *  2. Constant-time comparison (node:crypto timingSafeEqual) — never `===` on the digest (timing side-channel).
@@ -20,7 +20,7 @@
  *                   `X-Webhook-Timestamp` (unix seconds) binds freshness; `X-Webhook-Id` = id. (Jira's native
  *                   signing is app-specific; operators front Jira with this signed scheme, or use polling.)
  *
- * Zero deps (node:crypto is a builtin). What would change it: a provider changes its header/algorithm → update
+ * Extension considerations: a provider changes its header/algorithm → update
  * that one scheme; the port + the rest of ingress are unaffected.
  */
 

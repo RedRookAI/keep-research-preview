@@ -1,6 +1,6 @@
 /**
- * TriggerIngress (Increment W0) — turns a hostile external tracker event into a deduped, normalized Keep Issue
- * handed to the solve seam, under the standing invariants. The FOUR independent controls the 2026 SOTA requires
+ * TriggerIngress — turns a hostile external tracker event into a deduped, normalized Keep Issue
+ * handed to the solve seam, under the standing invariants. The FOUR independent controls the 2026 research requires
  * are all present and ordered correctly:
  *   1. authenticity/integrity  → WebhookVerifier (HMAC over raw bytes, constant-time)   [verify FIRST]
  *   2. freshness               → timestamp max-age window (in the verifier)
@@ -11,10 +11,10 @@
  * Invariants honored: I1 deterministic-primary (pure verification + dedup, no model in the trust path);
  * I5 N=1 safe-by-default (the handler produces a human-gated review — never an auto-merge); I6 merge gate
  * permanent (ingress never merges); I7 no islands (this WIRES the tracker adapters + normalizer, previously
- * standalone); I8 honesty (the HTTP listener is a thin seam; verify+dedup+route is BUILT + proven here).
+ * standalone); I8 honesty (the HTTP listener is a thin seam; verify+dedup+route is Implemented).
  *
  * The polling fallback shares this module's dedup+dispatch path, so a webhook redelivery and a poll of the same
- * ticket are idempotent through the SAME mechanism. Zero deps.
+ * ticket are idempotent through the SAME mechanism.
  */
 
 import type { Spine } from "../spine/spine.js";

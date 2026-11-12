@@ -1,34 +1,11 @@
 /**
- * guard_registry.ts — the TYPED contract + the three pure DECISIONS a neuter engine composes.
+ * Typed registry and decision functions used by tools/neuter_engine.mjs for mutation checks.
  *
- * WHY THIS EXISTS (BUILD-ORDER 8.7 — dogfood of redrook-ops/mutation-gate.mjs). The loop that BUILDS
- * Keep ships a mechanical "mutation gate": it applies a declared NON-EQUIVALENT mutation to a real
- * safety-enforcement site, re-runs the test that supposedly guards it, and FAILS if the test SURVIVES
- * (stays green) — because a test no fault can fail is not a test (Hamlet 1977). Keep, the PRODUCT, owes
- * a self-hosting user the SAME capability: prove THEIR safety guards are load-bearing, not decoration.
- * tools/neuter_engine.mjs is that engine; THIS module is the typed registry it reads plus the three
- * decision functions it composes — kept here, in src, so each decision is independently unit-tested AND
- * independently neuter-verifiable (the mutation gate proves each one load-bearing by removing it).
- *
- * THREE DECISIONS, each a distinct code path so a neuter of one cannot be mistaken for a neuter of
- * another (the isolation the whole method depends on):
- *   (1) WATCHED classification  — a guard is WATCHED iff its named test actually RAN and went RED under
- *                                 the mutation; a mutation that reddens no test is NOT-WATCHED (the
- *                                 not-load-bearing guard — a safety property silently rotted to décor).
- *   (2) NON-EQUIVALENCE         — a mutation the guarding test could not possibly observe (a
- *                                 whitespace/comment-only edit — the "equivalent mutant" of mutation
- *                                 testing) proves NOTHING; it is REJECTED, never counted as watched.
- *   (3) RESTORE VERIFICATION    — after each neuter the tree MUST be byte-identical again; the engine
- *                                 proves it with src/spine/tree_fingerprint.ts and this fail-closed
- *                                 assertion. Leaving a mutated tree on a crash is the cardinal defect.
- *
- * HONEST LIMIT. Being WATCHED proves a guard's test CATCHES this one declared fault — not that the
- * property is fully specified, and NOT that every enforcement site is enumerated. Enumeration
- * completeness over all effectful entry points is a SEPARATE concern (the method/path reachability
- * gate); this module does not claim it.
- *
- * ZERO-DEP, PURE. No I/O, no dependency — just types and total functions, so the tests pin the
- * decisions directly and the engine is a thin driver over them.
+ * A guard is watched only when its named test ran and failed under the declared mutation. Equivalent
+ * mutations are rejected, and the source tree must match its original fingerprint after restoration.
+ * Catching one declared fault does not establish a complete specification or inventory of enforcement
+ * sites. Method/path reachability and enumeration completeness remain separate concerns.
+ * Reference: mutation testing, Hamlet (1977).
  */
 
 /** A single declared safety guard: a real enforcement site, a non-equivalent neuter of it, and the

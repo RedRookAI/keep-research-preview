@@ -1,5 +1,5 @@
 /**
- * R34 — AI-BOM signing (signer-interface seam + in-env verify-side authenticity logic).
+ * AI-BOM signing (signer-interface seam + in-env verify-side authenticity logic).
  *
  * The AI-BOM (`ai_bom.ts`) is TAMPER-EVIDENT via the hash-chain: recompute the digest and compare. But
  * a bad actor can forge a FRESH well-formed manifest — tamper-evidence proves "not silently altered
@@ -18,13 +18,13 @@
  *    Keep's SPINE is the Rekor analog (the signed digest is staged to the tamper-evident chain).
  *  - Threshold / fleet cosign (R25): DSSE allows multiple signatures; a k-of-n quorum of fleet signers.
  *
- * BUILT vs SEAM: BUILT + proven in-env is the VERIFY side — recompute the digest, verify each signature
+ * Implementation boundary: Implemented is the VERIFY side — recompute the digest, verify each signature
  * against the TRUSTED public keys, require a threshold, and fail safe (absent/tampered/untrusted-key/
  * quorum-not-met → unverifiable → the existing `bomVerified=false` gate veto). The real HSM/KMS/TEE KEY
  * CUSTODY — the private key that never leaves the boundary and the agent cannot reach — is the SEAM
  * (R34), the key-custody family of R25/R37. In-env "signing" is a keyed-hash stub; the sandbox has no HSM.
  *
- * WHAT WOULD CHANGE IT: keyless signing (Sigstore Fulcio ephemeral cert + OIDC) or a real asymmetric
+ * Extension considerations: keyless signing (Sigstore Fulcio ephemeral cert + OIDC) or a real asymmetric
  * KMS key replaces the stub; a transparency-log inclusion proof strengthens auditability. Neither lets
  * a forged manifest or an untrusted-key signature verify.
  */

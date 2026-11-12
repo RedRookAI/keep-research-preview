@@ -1,5 +1,5 @@
 /**
- * BrainLadder (Increment 16.9d) — free-tier-aware graceful degradation for the compute plane (the brain).
+ * BrainLadder — free-tier-aware graceful degradation for the compute plane (the brain).
  *
  * The back-of-the-room operator runs on a rate-limited free tier. A 429 or a brief outage must be treated
  * as BACK OFF + try the next option, not as a crash. This is an ordered ladder of brain "rungs" (e.g.
@@ -7,14 +7,14 @@
  * ladder honoring backoff; on a circuit-open rung it skips; on full exhaustion it returns a GRACEFUL DEFER
  * outcome so the caller can pause the (budget-resumable) ProjectLoop instead of failing.
  *
- * SOTA basis (2026-08-05): layered resilience = circuit breakers + fallback chains + graceful degradation
+ * Research references (2026-08-05): layered resilience = circuit breakers + fallback chains + graceful degradation
  * from zero-dep primitives (zylos 2026; dev.to). The free-tier 429/quota exhaustion is THE named failure;
  * the fix is a gateway fallback chain — "429 is not a crash, it's the gateway telling the agent to back
  * off" (truefoundry 2026). Progressive fallback layers keep ~95% functionality (hendricks 2026). KEY SAFETY
  * RULE: switch brains only when the fallback preserves the SAME interface AND SAFETY ENVELOPE (buildmvpfast
  * 2026) — this ladder chooses WHICH brain; it NEVER relaxes the deterministic floors.
  *
- * Zero deps. Builds on ProviderError (status/permanent) + the KillSwitch circuit breaker.
+ * Builds on ProviderError (status/permanent) + the KillSwitch circuit breaker.
  */
 
 import type { ModelProvider, GenerateRequest, GenerateResult } from "./gateway.js";

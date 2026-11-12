@@ -1,14 +1,14 @@
 /**
  * Path-scope predicate — the ONE place a path is tested against an allowed region.
  *
- * WHY THIS MODULE EXISTS (round 38). Two separate mechanisms needed the same question
+ * WHY THIS MODULE EXISTS. Two separate mechanisms needed the same question
  * answered: the identity model's `inScope` (agent scope, added round 30, canonicalised round
  * 37) and the structural floor's write-set allowlist (added this round). Writing the second
  * one would have produced two path-authority mechanisms that could disagree — the R14 shape,
  * which this project has already paid for once, and which round 37 explicitly refused to
  * create in the other direction. So the predicate moved here and both call it.
  *
- * CANONICALISE, THEN COMPARE — the order is the control, not a filter (round 37). An
+ * CANONICALISE, THEN COMPARE — the order is the control, not a filter. An
  * authorization layer that prefix-matches a raw path while the layer beneath it resolves that
  * path is the standard traversal auth-bypass, with 2026 CVEs across mainstream gateways. The
  * remedy the advisories prescribe is exactly this: "canonicalization followed by a prefix

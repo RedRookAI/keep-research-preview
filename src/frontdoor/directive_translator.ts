@@ -1,5 +1,5 @@
 /**
- * F2 — Directive translator (natural language -> typed config intermediate representation).
+ * Directive translator (natural language -> typed config intermediate representation).
  *
  * Closes the loop from "the human said it" to "the system is configured for it". The
  * 2026 consensus (firewall-config, NLAC, LACE, LMN) is unanimous on the architecture:

@@ -1,7 +1,7 @@
 /**
- * DataGovernance (Increment 4.5c) — the governed compliance inventory (ROPA) + purpose gate.
+ * DataGovernance — the governed compliance inventory (ROPA) + purpose gate.
  *
- * SOTA basis (2026-08-04): encode obligations AGAINST the data inventory so "a single record
+ * Research references (2026-08-04): encode obligations AGAINST the data inventory so "a single record
  * carries its own obligations instead of waiting for a team to remember them — access controls,
  * retention rules, consent status travel WITH the data" (ewsolutions 2026). Forward-dated to the
  * near-future regulatory timeline we're reasonably certain lands: EU AI Act (high-risk 2026-2027),
@@ -10,8 +10,8 @@
  * built for: Records of Processing, data minimization, purpose limitation, lawful basis/consent,
  * right to erasure (+ index propagation), retention, automated-decision opt-out, auditable export.
  *
- * HONEST SCOPE: this provides the technical MECHANISMS + surfaces the questions. It is NOT legal
- * advice; the operator/their counsel owns the legal determinations. Zero deps.
+ * Scope: this provides the technical MECHANISMS + surfaces the questions. It is NOT legal
+ * advice; the operator/their counsel owns the legal determinations.
  */
 
 import type { SensitivityTier } from "./data_classifier.js";

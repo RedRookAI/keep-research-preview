@@ -1,32 +1,8 @@
 /**
- * ProjectRegistry (Increment 3.5a) — the cryptographic-namespacing enforcer.
- *
- * SOTA basis (re-verified 2026-08-14): the winning multi-tenant isolation pattern is
- * tiered defense-in-depth with **per-tenant encryption keys** as the gold standard
- * (Claire AI, Blaxel 2026 — both VERIFIED): "each tenant's data encrypted with their own
- * key; if one key is compromised, only one is affected." Isolation must be DETERMINISTIC
- * and enforced in code below the model — "relying on LLMs for access control is an
- * architectural anti-pattern". Crypto-shred (destroy the per-project key) gives the
- * clean-delete property (Blaxel: "destroying the KEK renders tenant data cryptographically
- * inaccessible").
- *
- * PERSISTENT-SEAM REQUIREMENT (honest, S-11): this in-memory cryptographic namespacing is the
- * APP-LAYER control. It is necessary but NOT sufficient for a persistent backing store: per
- * Blaxel, "for agent workloads where queries are LLM-generated, database-level RLS is
- * mandatory — application-layer filtering can't guarantee every dynamic query includes the
- * correct tenant filter." So the persistent tenant store MUST add DB-level ROW-LEVEL SECURITY
- * (RLS, force-enabled so even the table owner can't bypass) + per-tenant KEK envelope
- * encryption. GLOBAL-SCOPE DISCIPLINE: tenant-identifying content must be PROJECT-scoped, never
- * ingested at GLOBAL scope (global is visible to all tenants) — see globalScopeDisciplineCheck.
- *
- * This registry is the single place that:
- *   - records which projects exist (id, name, lifecycle, timestamps);
- *   - guarantees each project has its own encryption key (via CryptoShredKeyStore);
- *   - hands out a NAMESPACER that binds every derived key to one ProjectId, so a
- *     cross-project access is impossible to express without throwing;
- *   - performs clean offboarding = crypto-shred the project's key.
- *
- * It NEVER asks a model anything. Zero deps beyond the existing keystore.
+ * Project registry with namespace-bound storage and per-project encryption keys.
+ * Every stored item carries its ProjectId; access checks the caller's project or
+ * explicit organization sharing policy. Removing a project destroys its active key
+ * and records the erasure. External key/plaintext copies need separate handling.
  */
 
 import { CryptoShredKeyStore, type Ciphertext } from "../keystore/keystore.js";
@@ -277,10 +253,9 @@ export class ProjectRegistry {
   }
 
   /**
-   * Clean offboarding = crypto-shred the project's key. Data encrypted under it becomes
-   * cryptographically unrecoverable (the SOTA-praised clean-delete property), WITHOUT
-   * needing to locate and scrub every byte. The audit trail (spine) survives via the
-   * keystore's two-phase erasure auditor. Other projects are bit-identical afterward.
+   * Destroy the active project key and record erasure while retaining the audit trail.
+   * Recovery from retained key copies or external plaintext is outside this operation.
+   * Other projects retain their keys and records.
    */
   remove(id: ProjectId): void {
     this.refresh();

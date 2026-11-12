@@ -1,7 +1,7 @@
 /**
  * Budget-difficulty coupling (#40) + static routing/arbitrage (#44, v1 scope).
  *
- * v1 scope (Round 11): STATIC task-based routing — route each task to the cheapest
+ * v1 scope: STATIC task-based routing — route each task to the cheapest
  * model that clears its difficulty class's MEASURED quality bar, within policy.
  * (Dynamic per-node arbitrage is deferred; FrugalGPT shows diminishing returns.)
  *

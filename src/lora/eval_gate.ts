@@ -1,7 +1,7 @@
 /**
- * LoRA tier (Increment 10b) — before/after eval gate + composition check.
+ * LoRA tier — before/after eval gate + composition check.
  *
- * SOTA basis (2026-08-04, re-verified): Shadow Alignment / "LoRA undoes safety" (Lermen) — a few bad
+ * Research references (2026-08-04, re-verified): Shadow Alignment / "LoRA undoes safety" (Lermen) — a few bad
  * examples subvert safety while PRESERVING helpfulness, so a capability eval passing is NOT evidence
  * of safety; the before/after gate must check BOTH a capability suite AND a safety suite, rejecting a
  * >5% regression on EITHER. Catastrophic forgetting persists in LoRA — ">5% drop on unrelated tasks =
@@ -12,7 +12,7 @@
  * composition testing is intractable, the check DEFAULTS TO REJECT when it can't be cleared.
  *
  * The actual benchmark/red-team runs behind an injected EvalHarness seam (a real suite plugs in);
- * this module encodes the GATING LOGIC that consumes its scores. Zero deps.
+ * this module encodes the GATING LOGIC that consumes its scores.
  */
 
 import type { Spine } from "../spine/spine.js";

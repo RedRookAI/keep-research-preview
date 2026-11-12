@@ -1,12 +1,12 @@
 /**
- * Rollback + idempotency (Phase 2) — #27 (Round 11 scope) + Round 8 idempotency.
+ * Rollback and idempotency.
  *
- * HONEST SCOPE (Round 11): rollback covers git + internal-ledger state, plus known
+ * Scope: rollback covers git + internal-ledger state, plus known
  * compensating actions (inverses). External non-idempotent side effects are NOT
  * falsely promised as rollback-able — they are approval-gated up front. Where a
  * compensating action exists, it's registered so "undo" is real, not hoped.
  *
- * Idempotency (Round 8): external mutations carry an idempotency key so at-least-once
+ * Idempotency: external mutations carry an idempotency key so at-least-once
  * delivery (retries after a crash) never double-executes.
  */
 
@@ -93,7 +93,7 @@ export class RollbackLedger {
 }
 
 /**
- * Idempotency store for external mutations (Round 8). An external action must
+ * Idempotency store for external mutations. An external action must
  * present a stable idempotency key; a repeated key returns the prior result
  * instead of re-executing. Non-idempotent-able actions must not use this path —
  * they are approval-gated (see action_tier tier 4).

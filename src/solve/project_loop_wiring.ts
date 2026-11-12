@@ -1,11 +1,11 @@
 /**
- * SolvePipeline → ProjectLoop wiring (Increment 13d).
+ * SolvePipeline → ProjectLoop wiring.
  *
  * Wires the assembled solve machine into the autonomy backbone: the `implement` stage runs the
  * SolvePipeline, `vet_artifact` gates on the solve result's validation (rework on failure — no blind
  * cascade), and `learn` records a BuildOutcome that feeds the existing auto-learning / auto-training
  * loops. This is the step that makes Keep actually go issue → patch → tested PR inside a project run.
- * Zero deps.
+ *
  */
 
 import type { StageExecutors, StageResult, ProjectState } from "../autonomy/project_loop.js";

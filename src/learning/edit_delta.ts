@@ -1,5 +1,5 @@
 /**
- * Edit-delta distillation (Phase 3.5, Feature 5) — human feedback -> lessons.
+ * Edit-delta distillation — human feedback -> lessons.
  *
  * The diff between what Keep PRODUCED and what the human SHIPPED is high-signal: it
  * encodes a real preference the objective build outcome can later confirm. Keep
@@ -7,7 +7,7 @@
  * Rules" / Qodo "attribution" 2026 pattern), and from human DISMISSALS of findings
  * (a dismissal should stop that finding class resurfacing — CodeAnt "Learnings").
  *
- * Objective-anchored: distilled lessons enter Phase 1 memory on PROBATION and must
+ * Objective-anchored: distilled lessons enter memory on PROBATION and must
  * earn graduation via Keep's own verified outcomes — never trusted on the human
  * signal alone (delta-learning degrades when the quality gap is noisy).
  */

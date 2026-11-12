@@ -22,7 +22,7 @@
  *
  * HARD CEILING: none of this touches the irreversible/destructive floor. Those remain
  * structurally human-gated (Article 5, non-overridable). Autonomy levels only ever
- * modulate the REVERSIBLE + external-confidence band. Zero deps.
+ * modulate the REVERSIBLE + external-confidence band.
  */
 
 import type { ActionKind } from "./action_schema.js";

@@ -1,5 +1,5 @@
 /**
- * Sealed INGRESS REGISTRY (Mechanical-Enforcement Increment 3, the runtime kernel).
+ * Sealed INGRESS REGISTRY.
  *
  * A one-way state machine — COLLECTING → SEALED → ACTIVE — that makes the closed-world property load-bearing at
  * runtime:
@@ -8,7 +8,7 @@
  *     CLOSURE), the manifest must verify and cover the policy (E_M = E_P), then a closure-private dispatch table is
  *     built and the registry is frozen. There is NO unseal/reseal (TEMPORAL CLOSURE) — registering after COLLECTING
  *     throws.
- *   - activate(): SEALED → ACTIVE. (Reconciling that the live listeners equal the declared activation set — the
+ *   - activate: SEALED → ACTIVE. (Reconciling that the live listeners equal the declared activation set — the
  *     "activation closure" obligation — is the deferred adapter-layer seam; this increment gates DISPATCH on ACTIVE.)
  *   - dispatch(address, input): ACTIVE only. Unknown address, pre-active dispatch, or an input that fails to decode
  *     against the declared schema fails CLOSED before any handler runs; the handler's output is decoded against the

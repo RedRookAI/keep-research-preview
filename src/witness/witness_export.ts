@@ -1,5 +1,5 @@
 /**
- * ROOT EXPORT OUT OF THE WRITE-SET (Mechanical-Enforcement Increment 12b).
+ * ROOT EXPORT OUT OF THE WRITE-SET.
  *
  * WHAT 12a LEFT OPEN. 12a made a consequential effect fail-closed on a DURABLE, fsync-committed pre-effect intent, and
  * the hash-chain (src/spine) is tamper-EVIDENT. But the witness sink defaults into the agent's OWN data directory — the

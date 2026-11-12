@@ -1,5 +1,5 @@
 /**
- * Theme 3a — Soul renderer + integration (personality shapes voice, never policy).
+ * Soul renderer + integration (personality shapes voice, never policy).
  *
  * renderSoulPrompt turns a SoulConfig into a persona fragment for the conversation
  * driver's prompt — tone/principles/voice only, explicitly framed as "how to SOUND, not

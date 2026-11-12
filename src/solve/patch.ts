@@ -1,7 +1,7 @@
 /**
- * SolvePipeline: the search/replace patch engine (Increment 13a).
+ * SolvePipeline: the search/replace patch engine.
  *
- * SOTA basis (2026-08-05): search/replace edits (find an exact block → replace) are the reliable edit
+ * Research references (2026-08-05): search/replace edits (find an exact block → replace) are the reliable edit
  * format used by the strongest Agentless-derived scaffolds (SWE-RL, SWE-Fixer). Unlike unified-diff
  * line numbers — the #1 patch-application failure mode — an exact-match edit either applies cleanly or
  * is rejected; it never silently applies to the wrong place. This engine enforces that: each edit must
@@ -9,7 +9,7 @@
  *
  * Edits go against a real working tree (an injected FileTree port — a real filesystem on configured host, an
  * in-memory tree in tests). Every applied plan is one reversible RollbackLedger action whose undo
- * restores the exact original file contents. Zero deps.
+ * restores the exact original file contents.
  */
 
 import type { RollbackLedger } from "../control/rollback.js";
@@ -55,8 +55,7 @@ function countOccurrences(haystack: string, needle: string): number {
 }
 
 /**
- * Whitespace-tolerant match (SOTA hardening — CodeStruct 2026: whitespace sensitivity is the #1
- * string-replacement failure; Hermes-agent #32273 ships indent-aware fuzzy fallback). Finds a UNIQUE
+ * Whitespace-tolerant search. Finds a unique
  * region of the file that equals `search` after normalizing each line's leading whitespace and
  * trailing whitespace. Returns the exact original substring to replace + the indent delta to apply to
  * the replacement, or null if there is no match or the match is ambiguous. NEVER guesses: ambiguity or
@@ -131,7 +130,7 @@ export function reindent(replace: string, fileIndent: string, searchIndent: stri
  * reversible action in the ledger whose undo restores every touched file's original content.
  */
 /**
- * R14 (round 33) — THE SHARED MATCH-OR-REFUSE SEAM.
+ * Shared match-or-refuse path.
  *
  * Extracted from `applyEditPlan` so the envelope path and the direct path cannot drift
  * apart again. They HAD drifted: the envelope's closure ran

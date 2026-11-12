@@ -1,5 +1,5 @@
 /**
- * Default floor implementations of the CEGIS ports (Increment 18.5) — zero-dep, NO model. These make skill
+ * Default floor implementations of the CEGIS ports — zero-dep, NO model. These make skill
  * validation runnable at the floor (N=1, one family, no GPU) using only EXECUTION + property-based testing.
  * Richer generators (a second family proposing adversarial cases) plug in at the standard/rich tiers.
  */

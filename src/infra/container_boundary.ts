@@ -1,5 +1,5 @@
 /**
- * BUILD-ORDER 1.3c (BIND-STRONG-TIER-BOUNDARY) — the STRONG-tier boundary that runs the untrusted test
+ * the STRONG-tier boundary that runs the untrusted test
  * PROCESS behind the SAME `IsolatedExecutor`/`BoundaryExecutor` port round 1.3 established, but enforced
  * by a user-space kernel (gVisor `runsc`) or a HARDENED container runtime instead of bare namespaces.
  *
@@ -14,7 +14,7 @@
  * MEASURES what is really present (never assumes), and `selectExecutor` only claims the strong tier when a
  * real boundary backs it.
  *
- * SOTA basis (2026-08-15, quotes/URLs in redrook-ops/.round-artifacts/BIND-STRONG-TIER-BOUNDARY/sota.txt):
+ * References (2026-08-15):
  *  - gVisor `runsc` = a user-space kernel; an OCI runtime that intercepts every syscall (systrap/KVM) and
  *    reimplements ~200 in userspace; used via `docker run --runtime=runsc` or rootless `runsc`.
  *  - "Standard Docker is NOT sufficient for untrusted AI code" (shared kernel → escape = host access). A
@@ -23,7 +23,6 @@
  *    under the partial syscall surface — so a boundary run that cannot COMPLETE surfaces a runnerError
  *    (never a false green) and routes to a weaker-but-honest tier. Degrade honestly.
  *
- * Zero runtime deps (node:child_process only).
  */
 
 import { spawnSync } from "node:child_process";
@@ -130,7 +129,7 @@ function dockerRuntimeRegistered(name: string): boolean {
 }
 
 /**
- * BUILD-ORDER 1.3c — build the hardened `docker`/`podman run` (optionally `--runtime=runsc` for gVisor)
+ * build the hardened `docker`/`podman run` (optionally `--runtime=runsc` for gVisor)
  * spawn plan. PURE (testable without running the runtime), mirroring `planNamespaceSpawn`. The hardening
  * IS the containment contract expressed as runtime flags:
  *   - `--network none`            → network-deny   (skipped ONLY on the `allowNet` opt-in)

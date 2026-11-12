@@ -1,5 +1,5 @@
 /**
- * Identity provider port + registry (Increment X1).
+ * Identity provider port + registry.
  *
  * The port is the seam a real IdP plugs into: an OIDC adapter verifies an ID token's signature against the
  * provider's JWKS (RS256), checks iss/aud/exp/nonce, and returns the verified claims. Swapping that adapter in
@@ -8,14 +8,14 @@
  * `HmacAssertionProvider` is a concrete, dependency-free provider that verifies an HMAC-signed identity assertion.
  * It models the SAME trust relationship — the IdP signs an assertion of "who this is"; the relying party verifies
  * the signature and expiry before trusting it — so the whole login→session→RBAC flow is provable end-to-end here,
- * with a shared secret standing in for the IdP's signing key. What would change it: production federation replaces
+ * with a shared secret standing in for the IdP's signing key. Extension considerations: production federation replaces
  * the shared secret with asymmetric JWKS verification (the OIDC adapter) behind this same port.
  *
  * The registry maps a verified identity to a Keep principal (role). Deny-by-default: an identity with no mapping
  * gets NO access — there is no implicit role.
  *
- * SOTA basis (2026-08-06): verify the identity assertion's signature + expiry before trust (OIDC ID-token
- * verification); least privilege + explicit assignment, no default grant (Microsoft Entra; CSA). Zero deps.
+ * Research references (2026-08-06): verify the identity assertion's signature + expiry before trust (OIDC ID-token
+ * verification); least privilege + explicit assignment, no default grant (Microsoft Entra; CSA).
  */
 
 import { createHmac, timingSafeEqual } from "node:crypto";

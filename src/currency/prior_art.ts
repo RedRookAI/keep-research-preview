@@ -1,8 +1,8 @@
 /**
- * Theme 2 (Currency Layer), Part 3 — priorArtCheck (the anti-reinvention planning step).
+ * priorArtCheck (the anti-reinvention planning step).
  *
  * Before Keep plans to BUILD something, it checks whether it already exists and surfaces
- * an adopt / build / combine recommendation to the human. Grounded in the SOTA
+ * an adopt / build / combine recommendation to the human. Grounded in the research
  * build-vs-adopt axes (maintenance burden, external dependency, licensing, cost) and the
  * "don't reinvent the wheel; build only for core differentiation or sovereign control"
  * default. Free/open options are surfaced first and preferred over paid unless paid is

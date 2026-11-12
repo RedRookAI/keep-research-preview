@@ -1,5 +1,5 @@
 /**
- * ConsequenceForecast (Increment 16.9c-2) — premium, COMPOSITIONAL, multi-hop forward projection.
+ * ConsequenceForecast — premium, COMPOSITIONAL, multi-hop forward projection.
  *
  * The earlier forecast was a 1-hop, per-effect, direction-blind lookup. The dominant real risk is
  * COMPOSITIONAL: an unsafe state is often reachable only by combining effects that are each benign in
@@ -8,13 +8,13 @@
  * alone. It projects MULTI-HOP (bounded depth) and honors SANITIZERS/DOWNGRADERS (a mitigating effect that
  * breaks a source->sink path), which also gives directionality.
  *
- * SOTA basis (2026-08-05): security analysis reduces to graph REACHABILITY source->sink (taint patents
+ * Research references (2026-08-05): security analysis reduces to graph REACHABILITY source->sink (taint patents
  * 9729569 / 8327339; CodeQL/loginsoft 2026). Most real vulns require CROSS-effect composition, "every step
  * benign in isolation" (ChainFuzzer 2603.12614: 302/365 multi-tool). A compositional taint layer needs
  * SANITIZERS (TaintRadar 2607.16456). Project to first/second/THIRD order (Futures Wheel, CHI 2026),
  * bounded for tractability. Uniform consequence-model PROTOCOL with bespoke instances (sandtech 2026).
  *
- * Deterministic + model-free at the floor (fits deterministic-primary + N=1). Zero deps.
+ * Deterministic + model-free at the floor (fits deterministic-primary + N=1).
  */
 
 import type { EffectClass, IntendedEffect, BlastRadius } from "./plan_consequences.js";

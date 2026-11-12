@@ -1,12 +1,12 @@
 /**
- * SovereigntyManifest (Increment 16.9c-1) — a first-class, auditable inventory of Keep's capability
+ * SovereigntyManifest — a first-class, auditable inventory of Keep's capability
  * surface and its relationship to the outside world.
  *
  * The all-in-one goal: ship as free of externals as possible, while ALLOWING an operator to wire in an
  * external tool they trust. This manifest makes that property PROVABLE rather than asserted: every
  * capability declares the port it sits behind, its in-box offline fallback, and whether/what it egresses.
  *
- * SOTA basis (2026-08-05): adopt the AI Bill of Materials pattern — "a structured, auditable inventory of
+ * Research references (2026-08-05): adopt the AI Bill of Materials pattern — "a structured, auditable inventory of
  * all models, datasets, dependencies, and tools" (predictionguard 2026; CycloneDX ML-BOM). "Sovereignty is
  * only as strong as your weakest link" — a local stack that egresses to a telemetry-tracking service has a
  * broken privacy boundary (ml6 2026). "Minimum sufficient sovereignty" — classify each touchpoint, don't
@@ -14,7 +14,7 @@
  *
  * The provable invariant (assertSovereign): NO capability is a HARD external dependency — every one has an
  * in-box offline fallback — and every egress is DECLARED + privacy-preserving (no IP/plan body, no
- * telemetry). This is what lets Keep claim "all-in-one out of the box" honestly. Zero deps.
+ * telemetry). This is what lets Keep claim "all-in-one out of the box" honestly.
  */
 
 import type { Spine } from "../spine/spine.js";

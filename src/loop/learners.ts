@@ -1,12 +1,12 @@
 /**
- * Learners (Increment 18.2, Phase G) — the real IMPROVE-class adaptation axes that turn solve outcomes into
+ * Learners — the real IMPROVE-class adaptation axes that turn solve outcomes into
  * governed self-improvement proposals. Each registers on the SelfImprovementBus (18.1) as an "improve"
  * learner, so it is AUTOMATICALLY DORMANT until the anchor is ready (observing→learning gate) and PAUSED
  * under drift safe-mode (C4) — no per-learner dormancy logic needed. A learner never applies a change itself;
  * it PROPOSES through the MetaHarness bounded loop (18.0), which runs the triad + anchor + multi-set
  * no-regression before anything goes live. Human merge/reject remains the owner's gate.
  *
- * SOTA basis (2026-08-05):
+ * Research references (2026-08-05):
  *  - "First dollar to the HARNESS, not the training run" (GPU-Poor Manifesto): the prompt/heuristic/memory
  *    axes are the highest-ROI, gradient-free floor — exactly these learners.
  *  - GEPA-style reflective prompt evolution (natural-language rationale from concrete failures) — PromptLearner.

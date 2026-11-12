@@ -1,13 +1,13 @@
 /**
- * DecisionPacketAssembler (Increment S1) — fuse everything a reviewer needs into ONE standard packet, rendered
- * identically by the CLI (now) and the web review UI (later). This is the "make the moat legible" surface: the
+ * DecisionPacketAssembler — fuse everything a reviewer needs into ONE standard packet, rendered
+ * by the CLI and web review UI. The
  * point where execution evidence, consequence forecast, semantic-correctness, and reversibility become visible
  * at approval time.
  *
  * It does NOT duplicate existing work — it CONSUMES the DecisionBrief (16.9b), the ForecastVerdict
  * (consequence_forecast), and the PrManifest, and composes them behind one shape + one renderer.
  *
- * SOTA basis (2026-08-05, re-verified this increment — the counterintuitive constraint still holds):
+ * Research references (2026-08-05, re-verified this increment — the counterintuitive constraint still holds):
  *  - "Review the code, not the story": reviewers need an EVIDENCE view grounded in EXECUTED artifacts, not an
  *    author-controlled narrative (arXiv 2606.07683). Narrative rationales make oversight WORSE — deference rises
  *    when the AI explains persuasively (the DecisionBrief's founding constraint). → the packet leads with what
@@ -20,7 +20,7 @@
  *  - Progressive disclosure WITHOUT hiding material facts; match review depth to reversibility + impact (Edilec,
  *    getclaw). → compact by default, `full` expands diff+trace; irreversible/high-band forces the richer view.
  *
- * Zero runtime deps. Pure and deterministic (no model calls) — the packet is assembled from structured verdicts.
+ * Pure and deterministic (no model calls) — the packet is assembled from structured verdicts.
  */
 
 import type { PrManifest } from "../git/pull_request.js";

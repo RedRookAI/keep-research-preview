@@ -1,13 +1,13 @@
 /**
- * TOTAL DECISION KERNEL (Mechanical-Enforcement Increment 6).
+ * TOTAL DECISION KERNEL.
  *
- * The frontier property (one sentence): a single, small, deterministic evaluator is the SOLE producer of an allow/deny
+ * Contract: a single, small, deterministic evaluator is the SOLE producer of an allow/deny
  * decision for an EIR request, and EVERY path through it — a request naming an unknown effect, a guard whose atoms
  * cannot be resolved, a revoked capability, a stale policy epoch, an evaluation that would exceed its bound, or any
  * internal fault — resolves to DENY. There is no code path to allow except a live, in-bound, current-epoch, un-revoked
  * request that a real permit definitely grants and that no deny even possibly fires against.
  *
- * What it is. Given a threshold-signed policy bundle (Increment 2) and a trust policy, the kernel VERIFIES the bundle
+ * What it is. Given a threshold-signed policy bundle (policy compiler) and a trust policy, the kernel VERIFIES the bundle
  * at construction (an unverifiable policy yields no kernel — deny-by-default at the substrate: no policy ⇒ no permit)
  * and then answers `decide(request)` totally:
  *   - deny-overrides combining over the effect's compiled DECISION ROOT;
@@ -27,13 +27,13 @@
  *     `internal-error` denial (the catch backstop) is the coarsest: it commits reset requestedEpoch=0n/budget=0 so the
  *     re-seal cannot itself fault. (`epoch-exhausted` still commits the validated request identity — finer, and safe.)
  *
- * Where it runs. The kernel is pure and deterministic so the SAME bytes execute behind the Increment-5 attested monitor
+ * Where it runs. The kernel is pure and deterministic so the SAME bytes execute behind the monitor boundary attested monitor
  * boundary (the isolated monitor is where the sole decision is made) and in-process for conformance. It consumes an
- * already-verified bundle and an already-typed request context; it does not itself do measured boot (Increment 5) or
- * resolve a request attribute to its actual runtime object (Increment 11 — Resolver-Bound Guards).
+ * already-verified bundle and an already-typed request context; it does not itself do measured boot (monitor boundary) or
+ * resolve a request attribute to its actual runtime object (resolver-bound guards — Resolver-Bound Guards).
  *
- * Defers (honest). Delegable authority / capability minting is Increment 7 (Object-Capability Permits); actual effect
- * DISPATCH once allowed is Increment 9 (Effect Broker Kernel); STATIC cross-atom theory (compile-time interval unsat)
+ * Separate responsibilities. Delegable authority / capability minting is permit module (Object-Capability Permits); actual effect
+ * DISPATCH once allowed is effect broker (Effect Broker Kernel); STATIC cross-atom theory (compile-time interval unsat)
  * is a possible later refinement over predicate.ts, not attempted here — the runtime evaluation that gates the effect
  * is complete and sound.
  *

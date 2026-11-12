@@ -1,7 +1,7 @@
 /**
- * Auto-Learning: the LearningLoop (Increment 6a) — closes observe→distill→promote/retire.
+ * Auto-Learning: the LearningLoop — closes observe→distill→promote/retire.
  *
- * SOTA basis (2026-08-04): gradient-free continual learning is the safe tier — improve by
+ * Research references (2026-08-04): gradient-free continual learning is the safe tier — improve by
  * manipulating memory/context, not weights (JitRL Jan 2026; Letta learning-sdk Feb 2026). The
  * weight-level "rise-then-collapse" collapse (arXiv 2606.21090) is a GRADIENT pathology; by staying
  * gradient-free and promoting/retiring LESSONS, Keep structurally avoids it — but memory drift,
@@ -9,12 +9,11 @@
  * workshop), which the RegressionGuard (6b) covers.
  *
  * This loop does NOT reinvent tier transitions. The MemoryStore already implements the two-gate
- * graduation (candidate→probation→confirmed) and negative-flip demotion via recordOutcome(). The
+ * graduation (candidate→probation→confirmed) and negative-flip demotion via recordOutcome. The
  * LearningLoop's job is to CLOSE the loop: observe verified build outcomes → route them to the right
  * lessons as evidence (distill) → let graduation happen → and measure whether learning actually
  * helps (A/B vs a frozen baseline, via computeImprovement) so the guard can catch a regression.
  *
- * Zero deps.
  */
 
 import type { MemoryStore } from "../memory/store.js";

@@ -1,7 +1,7 @@
 /**
- * INGRESS ADMISSION GATE (Mechanical-Enforcement Increment 8).
+ * INGRESS ADMISSION GATE.
  *
- * The frontier property (one sentence): NO application handler for a declared ingress obtains ANY authority until the
+ * Contract: NO application handler for a declared ingress obtains ANY authority until the
  * request has been ADMITTED — channel-authenticated for THAT ingress, size-bounded, schema-decoded, authorized by the
  * monitor's decision kernel, and issued a monitor-minted, request-bound, single-use root permit — so the only thing a
  * handler can use to cause an effect is a genuine admission-minted permit, and a handler reached OUTSIDE admission holds
@@ -9,15 +9,15 @@
  *
  * The authority boundary is the PERMIT, not function invocation. JavaScript has no membrane that stops application code
  * from calling its own function; the gate does not pretend to. Instead it applies the object-capability rule: authority
- * is conveyed ONLY by an unforgeable reference — here, the request-bound single-use permit (Increment 7) delivered in
+ * is conveyed ONLY by an unforgeable reference — here, the request-bound single-use permit (permit module) delivered in
  * the admission view. A handler invoked directly (or handed a fabricated view) has no genuine permit; the Effect Broker
- * (Increment 9) redeems ONLY genuine permits, so no effect occurs. Thus "no effect without admission" is the mechanical
- * guarantee — completed at Increment 9 — and this gate is the sole ADMISSION minter: it holds a RESTRICTED mint
+ * (effect broker) redeems ONLY genuine permits, so no effect occurs. Thus "no effect without admission" is the mechanical
+ * guarantee — and this gate is the sole ADMISSION minter: it holds a RESTRICTED mint
  * capability (PermitMinter), never the root key, and the workload holds neither, so it can forge no permit.
  *
- * This is the INITIAL AUTHORITY ISSUANCE deferred from Increment 7: a kernel `allow` (Increment 6) is turned into a root
- * permit (Increment 7 `mintRoot`) under an explicit per-ingress ISSUANCE POLICY (a TRUSTED, sealed part of the deployment
- * — not attacker input). It composes the closed-world ingress inventory (Increment 3): the gate is SEALED against the
+ * Initial authority issuance: a kernel `allow` (decision kernel) is turned into a root
+ * permit (permit module `mintRoot`) under an explicit per-ingress ISSUANCE POLICY (a TRUSTED, sealed part of the deployment
+ * — not attacker input). It composes the closed-world ingress inventory (ingress inventory): the gate is SEALED against the
  * signed manifest and admits only the exact declared ingress set (an undeclared address is deny-by-default), decoding
  * every body against the declared input schema.
  *
@@ -35,17 +35,17 @@
  *      address) are always present so a policy guard can bind them; deny short-circuits — the handler is never reached.
  *      The decision is checked to actually concern this subject + effect (fail-closed).
  *   6. MINT: subject, epoch, and the granting guard come from the DECISION; effect/object/rights/audience/validity from
- *      the sealed issuance policy for the DECIDED effect. Validity is capped. (Resolver-bound exact-object is Increment 11.)
+ * the sealed issuance policy for the DECIDED effect. Validity is capped. (Resolver-bound exact-object is resolver-bound guards.)
  *   7. DELIVER: a frozen AdmissionView carrying the permit is handed to the handler. A handler exception is reported as
  *      admitted:true with a handlerError (the request WAS admitted and a permit minted — the caller must not re-admit).
  *
  * Every activation mode routes through `admit` (a timer/scheduled ingress is admitted exactly like a listener), so there
  * is no unadmitted path.
  *
- * Defers (honest): enforcement AT the effect (redeeming the permit) is Increment 9 (Effect Broker Kernel); independent
- * ingress→effect causality is Increment 12 (Causal Witness); resolver-bound exact-object authorization is Increment 11.
+ * Separate responsibilities: enforcement AT the effect (redeeming the permit) is effect broker (Effect Broker Kernel); independent
+ * ingress→effect causality is causal witness (Causal Witness); resolver-bound exact-object authorization is resolver-bound guards.
  * The channel authentication itself, a TRUSTED clock for `now`, and a per-BOOT unique `gateNonce` (the same class of
- * seam as the Increment-5 boot descriptor — the deployment supplies a fresh unique value per instance/restart, which
+ * seam as the monitor boundary boot descriptor — the deployment supplies a fresh unique value per instance/restart, which
  * makes request ids — and thus permit session/nonce — unique across instances) are documented seams supplied by the
  * monitor. Where those seams are honored, request ids do not collide across instances/restarts.
  *

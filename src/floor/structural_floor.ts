@@ -1,5 +1,5 @@
 /**
- * Structural floor (Build Step 2 — the in-TCB decidable predicate core).
+ * Structural floor.
  *
  * A pure, total, MODEL-INDEPENDENT reference monitor over a typed op description. It
  * returns one of two verdicts — `reversible-execute` (the op is provably in the
@@ -7,7 +7,7 @@
  * structural facts. There is NO model, NO learned classifier, NO threshold on a
  * probability. It cannot be argued with, which is the point.
  *
- * GROUNDING (SOTA + historical, 2026-08-08):
+ * GROUNDING (research and historical references, 2026-08-08):
  *  - Anderson's reference monitor + Saltzer-Schroeder (1975): complete mediation,
  *    least privilege, economy of mechanism, and above all FAIL-SAFE DEFAULTS — base
  *    the decision on permission, not exclusion; the default is no access. Here: the
@@ -60,56 +60,13 @@ export interface FloorPolicy {
   readonly workspaceRoot: string;
   /** Protected-resource matchers (config outside the write-set, secrets, spine, backups). */
   readonly protectedMatchers: readonly RegExp[];
-  /**
-   * ROUND 38 — the operator's ALLOWLIST: the regions a declared write-set may name.
-   *
-   * Everything else in this policy is a DENYLIST (`protectedMatchers`) or a jail bound
-   * (`workspaceRoot`). Both are global: identical for every agent, issue and operator. So
-   * nothing expressed "this run may only touch these directories", and — the actual gap —
-   * **nothing authorised the DECLARATION at all.** `WriteGrant` enforces that writes match the
-   * declared write-set, but the declaration is `plan.edits.map((e) => e.file)`, derived from
-   * the model's own edit plan. An agent's authority should be "the intersection of what both
-   * the agent and the requesting user are permitted to do, not what the agent alone can
-   * declare for itself."
-   *
-   * This belongs HERE and nowhere else. `FloorPolicy` is already documented as pre-committed
-   * config that is never model output — which is exactly what an authority must be — and the
-   * floor already screens `writeSet` for containment. Putting it in the identity scope instead
-   * would have created a second path-authority mechanism able to disagree with this one, which
-   * round 37 declined to do in the other direction.
-   *
-   * OMITTED ⇒ NO CONSTRAINT, byte-identical to pre-round-38 behaviour. An empty array is NOT
-   * the same as omitted: `[]` admits nothing, so "unconstrained" must be said explicitly with
-   * `["*"]` rather than arrived at by accident.
-   */
+  /** Operator-allowed write regions. Omission leaves the optional restriction absent;
+   * an empty array permits no writes, while ["*"] permits every contained path. */
   readonly allowedPaths?: readonly string[];
 
-  /**
-   * BUILD-ORDER 2.2 (AUTHORIZE-THE-DECLARATION, Z156) — the ACTING AGENT's identity scope, as a
-   * SECOND authority the declared write-set must satisfy.
-   *
-   * Round 38 gave the OPERATOR a per-run `allowedPaths`, but that allowlist is IDENTICAL for every
-   * agent, issue and operator (global policy). The acting agent already carries a narrow, per-task
-   * `identity.scope` with ATTENUATING delegation (a child scope is the INTERSECTION with its
-   * parent). Yet nothing composed the two: an agent's effective write authority was "what the agent
-   * alone can declare for itself", not "the INTERSECTION of what BOTH the agent and the requesting
-   * operator are permitted to do" — the confused-deputy / capability-attenuation shape.
-   *
-   * When present, a declared write must be within BOTH `allowedPaths` AND `agentScope` — the more
-   * restrictive of the two. Checked with the SAME `withinScope` predicate as `allowedPaths`, so the
-   * two authorities are ONE mechanism that cannot disagree, not a second path-authority mechanism
-   * (round 37 refused exactly that in the other direction). Intersection only ever NARROWS; it can
-   * never widen what either party declared.
-   *
-   * OMITTED ⇒ NO PER-AGENT CONSTRAINT, byte-identical to pre-2.2 global-only behaviour. It is
-   * threaded from `deps.identity.scope` at the one seam where an acting identity is known
-   * (`executeReversibly`); a run that supplies no identity leaves this absent (front-of-house
-   * unchanged). THREAT BOUNDARY (as with `allowedPaths`, R38): this constrains a CONFUSED agent,
-   * not a COMPROMISED one — a legitimately minted/delegated identity's `.scope` is already the
-   * attenuated intersection (the registry attenuates at delegate-time), so presented == authoritative
-   * for the in-process, confused-agent model; OS-level attestation against a forged identity object
-   * is the R35 seam.
-   */
+  /** Acting-agent write scope. Declared writes must satisfy this scope and the
+   * operator allowlist through the same withinScope predicate. Omission leaves
+   * this optional restriction absent. In-process identity objects remain trusted. */
   readonly agentScope?: readonly string[];
 }
 
@@ -164,33 +121,8 @@ export function inertFloorInputs(policy: FloorPolicy): string[] {
   return found;
 }
 
-/**
- * BUILD-ORDER 2.1 (Z170) — CONFIG-TIME assessment of a DECLARED write-scope.
- *
- * MEASURED GAP (.round-artifacts/CONFIG-TIME-SCOPE-VALIDATION/measurement.txt): the operator's
- * declared `allowedPaths` was validated ONLY at RUN time — `inertFloorInputs` (per-run, and silent
- * on a plain `["*"]`) and `unsupportedScopePatterns` (reached only inside `structuralFloor`, per-op).
- * Nothing looked at the scope's SHAPE at the moment it was DECLARED. So a malformed scope surfaced
- * LATE (the first run gating every plan — the Z135 "control is broken, remove it" path) and an
- * all-permitting `["*"]` surfaced NEVER — a silent authority the operator never consciously granted.
- *
- * THIS IS THE ADMISSION-TIME CHANNEL, distinct from the run-time one (2026 policy-as-code posture:
- * "admission needs deterministic evaluation against manifests while runtime needs kernel-level
- * visibility — one tool does not do both well"). It is COMPOSED, not a re-derivation of the floor:
- * it reuses `unsupportedScopePatterns` (malformed) and `selfContradictoryScope` (contradiction), and
- * detects the bare-`"*"`/omitted "admits everything" case.
- *
- * OBSERVE-ONLY, NEVER A REFUSAL. Refusing or repeatedly warning on every `["*"]` is the alert-fatigue
- * pitfall ("least privilege has a pitfall of excessive denial causing breakage") — the very reason the
- * run-time report declines to flag a plain `["*"]`. The difference that makes the config-time surfacing
- * ACTIONABLE rather than noise is TIME + CHANNEL: it is emitted ONCE, at declaration, as an auditable
- * conscious-grant fact — not a per-run alert. The caller records it to the spine (see the SolvePipeline
- * ctor); it changes no route and narrows no scope.
- *
- * HONESTY BOUND: `admitsEverything` states plainly that the scope admits everything WHEN IT DOES; the
- * findings name malformed/contradictory spellings; `declared` is the scope VERBATIM. It never claims a
- * wide scope is safe, and it never rewrites what the operator declared.
- */
+/** Classify declared scope for a one-time configuration audit. The assessment
+ * records broad, contradictory and malformed scope without changing authority. */
 export type DeclaredScopeDisposition =
   | "unconstrained" // omitted or a scope containing a bare "*" — admits everything
   | "self-contradictory" // names regions AND a bare "*" (a special case of unconstrained)
@@ -278,33 +210,14 @@ function writeSetBounded(op: OpDescription, policy: FloorPolicy): boolean {
   });
 }
 
-/**
- * ROUND 38 — is every DECLARED write inside the operator's allowlist?
- *
- * Total, like every other predicate here: omitted allowlist ⇒ vacuously true (unconstrained,
- * today's behaviour). An UNDECLARED write-set is false — unknown resolves to the cautious
- * value, matching `writeSetBounded` rather than inventing a second convention.
- *
- * Returns the offending path so the refusal can NAME it (Z133): an operator who sees only
- * "out of scope" has to guess which file, and a control that cannot be diagnosed gets switched
- * off (Z135).
- */
+/** Return the first undeclared or operator-disallowed write. Omitted policy is unconstrained. */
 function firstPathOutsideAllowedScope(op: OpDescription, policy: FloorPolicy): string | undefined {
   if (policy.allowedPaths === undefined) return undefined; // unconstrained
   if (op.writeSet === undefined) return "<undeclared-write-set>";
   return op.writeSet.find((p) => !withinScope(policy.allowedPaths!, p));
 }
 
-/**
- * BUILD-ORDER 2.2 (Z156) — is every DECLARED write inside the ACTING AGENT's scope?
- *
- * The per-agent twin of `firstPathOutsideAllowedScope`, and deliberately its mirror image: total
- * (omitted agentScope ⇒ vacuously true, today's behaviour), an UNDECLARED write-set is false
- * (unknown ⇒ the cautious value), and it reuses the SAME `withinScope` predicate rather than a
- * second reading of "in scope". Together the two produce the INTERSECTION — a write survives only
- * if it is within the operator allowlist AND the agent scope — with each authority naming its own
- * refusal, so an operator can tell WHICH boundary a write exceeded (Z133).
- */
+/** Return the first undeclared or agent-disallowed write; both scopes must admit each path. */
 function firstPathOutsideAgentScope(op: OpDescription, policy: FloorPolicy): string | undefined {
   if (policy.agentScope === undefined) return undefined; // no acting-agent constraint (byte-identical)
   if (op.writeSet === undefined) return "<undeclared-write-set>";
@@ -346,7 +259,7 @@ export function structuralFloor(op: OpDescription, policy: FloorPolicy): FloorVe
   for (const bad of unsupportedScopePatterns(policy.allowedPaths ?? [])) {
     reasons.push(`unsupported-scope-pattern:${bad} (supported: a path, a directory, or a slashless glob like *.md)`);
   }
-  // BUILD-ORDER 2.2: the SAME loud-error treatment for a malformed AGENT scope. Left silent,
+  // the SAME loud-error treatment for a malformed AGENT scope. Left silent,
   // `src/*.ts` in an identity scope would match nothing via `withinScope`, refuse every write for
   // that agent, and read as "the control is broken" (the Z135 abandonment path) — the exact footgun
   // round 39 fixed for `allowedPaths`. Parity, not a new mechanism.
@@ -360,7 +273,7 @@ export function structuralFloor(op: OpDescription, policy: FloorPolicy): FloorVe
     const hint = outside.includes("/") ? outside.slice(0, outside.indexOf("/")) : outside;
     reasons.push(`write-set-outside-allowed-scope:${outside} (add "${hint}" to allowedPaths to permit it)`);
   }
-  // BUILD-ORDER 2.2 (Z156) — the per-agent conjunct. Effective authority is the INTERSECTION of
+  // the per-agent conjunct. Effective authority is the INTERSECTION of
   // the operator allowlist and the acting agent's scope; a write within `allowedPaths` but outside
   // `agentScope` is refused, NAMING the path and the fact that the agent's own authority — not the
   // operator's — is what excluded it. Distinct reason from `allowed-scope` so the operator learns

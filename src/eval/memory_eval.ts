@@ -1,13 +1,13 @@
 /**
- * MEM-EVAL — a memory-evaluation harness for Keep's real MemoryStore, modelled on the 2026 SOTA benchmarks
+ * MEM-EVAL — a memory-evaluation harness for Keep's real MemoryStore, modelled on the 2026 research benchmarks
  * (LongMemEval, LoCoMo). It does NOT re-implement a memory engine: it drives the real `store` (ingest → retrieve /
  * validAt / closeValidInterval) over a SEEDED, in-repo scenario set and scores the canonical question types:
  *
- *   • single-session-user   — recall a fact stated in one session.
- *   • multi-session         — synthesise facts stated across sessions (multi-hop).
- *   • knowledge-update      — a fact changes over time; the CURRENT answer must win (bitemporal supersession).
- *   • temporal-reasoning    — an as-of query returns the value that was valid THEN (validAt).
- *   • abstention            — a question with no evidence must yield no confident hit (don't fabricate).
+ * • single-session-user — recall a fact stated in one session.
+ * • multi-session       — synthesise facts stated across sessions (multi-hop).
+ * • knowledge-update    — a fact changes over time; the CURRENT answer must win (bitemporal supersession).
+ * • temporal-reasoning  — an as-of query returns the value that was valid THEN (validAt).
+ * • abstention          — a question with no evidence must yield no confident hit (don't fabricate).
  *
  * HONEST: this is a SEEDED PROXY, not the official 500-question LongMemEval — it is a regression signal, labelled as
  * such. It reports per-type scores (never a single aggregate that hides a weak axis), and surfaces the known

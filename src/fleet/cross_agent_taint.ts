@@ -27,7 +27,7 @@
  *  - Conservative join (reuse R32): any tainted-or-unknown hop makes the whole chain untrusted.
  *  - Authority-gated declassification (reuse R32): no agent self-declassifies the cross-agent flow.
  *
- * BUILT vs SEAM: BUILT + proven in-env is the chain logic (cross-boundary propagation, conservative
+ * Implementation boundary: Implemented is the chain logic (cross-boundary propagation, conservative
  * join, sink check, fail-safe, authority-gated declassify) + the compose helper. The real CROSS-PROCESS
  * / CROSS-HOST label propagation — carrying the taint label across actual agent/service boundaries — is
  * the SEAM. Scenario 4's FORBIDDEN-PATH composition is caught structurally; intentional-collusion INTENT

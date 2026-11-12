@@ -1,5 +1,5 @@
 /**
- * R37 — running-binary attestation (attester-interface seam + in-env verifier logic).
+ * running-binary attestation (attester-interface seam + in-env verifier logic).
  *
  * verify-minimal-TCB (`verify_tcb.ts`) hashes the trusted-core SOURCE files: it proves the source on
  * disk is exactly the enumerated minimal set, unaltered. It does NOT prove the code ACTUALLY EXECUTING
@@ -19,14 +19,14 @@
  *  - Binding to R34: the attested measurement digest anchors the AI-BOM's code hash, so "what produced
  *    this decision" is provably "what actually ran," not merely "what was on disk."
  *
- * BUILT vs SEAM: BUILT + proven in-env is the VERIFIER side — appraisal (measurement match), freshness
+ * Implementation boundary: Implemented is the VERIFIER side — appraisal (measurement match), freshness
  * (nonce), signature check, and fail-safe (absent/stale/tampered → deny), plus `attestedTcbIntact`
  * feeding the existing `tcbIntact` gate veto (a tampered running TCB is a tcb-drift-class deny signal).
  * The real TPM/TEE QUOTE over the loaded binary — the unforgeable hardware-signed measurement — is the
  * SEAM (R37), the key-custody family of R25/R34. In-env the "signature" is a keyed hash stub exercising
  * the verifier logic; the sandbox has no TPM/TEE.
  *
- * WHAT WOULD CHANGE IT: DICE layered measurement or a TEE report format extends the evidence; a real AK
+ * Extension considerations: DICE layered measurement or a TEE report format extends the evidence; a real AK
  * signature replaces the stub. Neither lets a tampered measurement or stale nonce verify.
  */
 
@@ -36,7 +36,7 @@ export function sha256Hex(input: string): string {
   return createHash("sha256").update(input, "utf8").digest("hex");
 }
 
-// ── Restoration-authorization signing (BUILD-ORDER 8.44A / 8.44A-FIX — SIGNER VERIFICATION) ────────
+// ── Restoration-authorization signing ────────
 //
 // A restoration attestation authorizes a history FORK: an append-only reversing-entry that supersedes
 // a witnessed head (see spine/witness_reconcile.ts). The authority that matters is "did the key-holder
@@ -76,7 +76,7 @@ export interface RestorationSignedFields {
 /** Deterministic bytes over EVERY authorization-bearing field — change the target seq, the superseded
  *  hash, the restored CONTENT DIGEST, or the nonce and the signature no longer verifies. */
 export function canonicalRestorationBytes(f: RestorationSignedFields): string {
-  // DOMAIN SEPARATION (BUILD-ORDER 8.44A-FIX9, Fable): a fixed, versioned tag makes it STRUCTURALLY impossible for
+  // DOMAIN SEPARATION (FIX9, Fable): a fixed, versioned tag makes it STRUCTURALLY impossible for
   // any other HMAC signer of a (disclosed-seam) shared key to ever be a signing oracle for restoration bytes —
   // rather than relying on the accidental fact that other signers canonicalize with SORTED keys while these use a
   // fixed insertion order. The tag is the first thing signed, so no untagged message can collide with a tagged one.

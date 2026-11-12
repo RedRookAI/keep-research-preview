@@ -6,14 +6,14 @@
  * prompt at harness-construction time. Today `MemoryStore.retrieve` is wired into no prompt path and
  * `AdaptivePromptLayer.durableContext` is caller-supplied. This module is that wire.
  *
- * The design follows the rolling-memory vet (2026 SOTA + Trace Transformation Theory): NOT lossy compaction, but
+ * The design follows the rolling-memory vet (2026 research + Trace Transformation Theory): NOT lossy compaction, but
  * retrieve-then-construct from two persistent tracks — the raw EPISODIC turns (M1, exact detail: the specific
  * number/decision/tool-call) and the distilled SEMANTIC lessons (generalization). Retrieval is NEVER a binary
  * selection: a deterministic weigher tilts the ranking toward episodic for exact-detail queries and toward
  * semantic for general ones, but BOTH tracks always contribute — most queries pull a blend. The assembled slice is
  * REDACTED (egress gate) and TOKEN-BOUNDED (a curated slice beats a full dump — cheaper and less lost-in-the-middle).
  *
- * BUILT + proven in-env: the weighted-blend selection, the token bound, and the egress redaction over injected
+ * Implemented: the weighted-blend selection, the token bound, and the egress redaction over injected
  * episodic + semantic sources. SEAM: the embedding backend behind the semantic retriever (a deployment injects a
  * real embedder) and the keyword scorer's sophistication.
  */

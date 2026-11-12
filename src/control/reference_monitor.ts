@@ -1,5 +1,5 @@
 /**
- * ReferenceMonitor (Increment C1) — the SINGLE, un-bypassable trace-level enforcement point. Keep's safety
+ * ReferenceMonitor — the SINGLE, un-bypassable trace-level enforcement point. Keep's safety
  * checks were scattered across modules (merge-gate, consequence-floor, isolation, meta-harness), each firing
  * at its own action boundary. Two problems that C1 fixes:
  *   1. ACTION-BOUNDARY CHECKS MISS ~50% OF VIOLATIONS (VIGIL arXiv 2606.26524): a per-action check sees one
@@ -9,7 +9,7 @@
  *   2. SCATTERED = un-auditable + island-prone. C1 is the ONE plug-in point every safety module registers its
  *      invariant into as a CONTRACT CLAUSE. One place enforces all of them; nothing can route around it.
  *
- * SOTA basis (2026-08-05): VeriGuard's TWO-STAGE design (verify offline once → cheap runtime check) — here,
+ * Research references (2026-08-05): VeriGuard's TWO-STAGE design (verify offline once → cheap runtime check) — here,
  * invariants are registered once and each runtime step is a single DFA transition (O(1) per invariant per
  * event). Runtime monitoring of PAST-TIME LTL compiles to FINITE-STATE monitors with bounded memory (Havelund
  * & Roșu; Bauer et al. runtime verification) — implemented as zero-dep DFAs, NO SMT/solver dependency. This is
@@ -17,7 +17,7 @@
  *
  * Enforcement: `wouldViolate(candidate)` steps a COPY of every invariant's state with the candidate event and
  * reports any that would go to a violated state — so a caller can DENY the action before it commits.
- * `commit(event)` advances the real state. Zero runtime deps.
+ * `commit(event)` advances the real state.
  */
 
 /** The minimal event shape C1 needs (structurally compatible with the spine's StagedEvent). */

@@ -1,7 +1,7 @@
 /**
- * Auto-RAG: retrieval-need detector + CorpusBuilder (Increment 5a).
+ * Auto-RAG: retrieval-need detector + CorpusBuilder.
  *
- * SOTA basis (2026-08-04): RAG grounds generation in retrieved evidence, but the corpus must be
+ * Research references (2026-08-04): RAG grounds generation in retrieved evidence, but the corpus must be
  * built with governance (sanitized/classified/gated) and preserve time boundaries (Nexumo 2026:
  * "a real document presented as current without respecting time boundaries — the citation exists,
  * the grounding does not"). So the CorpusBuilder does NOT re-implement ingestion — it pipes
@@ -10,7 +10,6 @@
  * drone corpus never bleeds into the novel corpus). Each source keeps its locator + asOf for
  * time-boundary-aware grounding downstream.
  *
- * Zero deps.
  */
 
 import type { ResearchSource } from "./research_loop.js";

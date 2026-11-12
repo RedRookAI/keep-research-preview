@@ -1,14 +1,14 @@
 /**
- * SolvePipeline: issue + result model (Increment 13a).
+ * SolvePipeline: issue + result model.
  *
- * SOTA basis (2026-08-05): the canonical scaffold is Agentless's fixed localize → repair → validate
+ * Research references (2026-08-05): the canonical scaffold is Agentless's fixed localize → repair → validate
  * pipeline (adopted by OpenAI/Meta/DeepSeek). The decisive robustness choice (SWE-RL / Agentless Mini
  * / SWE-Fixer): the repair phase predicts SEARCH/REPLACE edits conditioned on file content, NOT raw
  * unified-diff line numbers — line-number diffs are the #1 patch-application failure mode (PAGENT).
  * So the edit format here is search/replace: find an exact code block, replace it. This applies
  * deterministically and reliably, which is exactly what we need to prove the machine here.
  *
- * The pipeline returns a PR PROPOSAL for the human merge gate — never auto-merges. Zero deps.
+ * The pipeline returns a PR PROPOSAL for the human merge gate — never auto-merges.
  */
 
 import type { ProjectJobActivityTracker } from "../session/project_job_journal.js";
@@ -121,12 +121,8 @@ export interface PatchApplyResult {
   readonly applied: boolean;
   /** Per-edit outcomes (matched/ambiguous/not-found). */
   /**
-   * ROUND 34: `held` added when the envelope became the default. A policy hold is NOT
-   * "not-found" — the file was found and the edit was well-formed; a barrier refused it.
-   * Reporting a hold as not-found was survivable while the envelope was off and holds
-   * never happened in production. Flipping the default makes that mislabel the FIRST
-   * thing an operator sees when a safety hold fires, which is exactly when the report
-   * must be accurate.
+   * A policy hold is distinct from a missing or ambiguous search block.
+   * Keep the refusal reason with the held edit.
    */
   readonly perEdit: readonly { file: string; status: "applied" | "not-found" | "ambiguous" | "held"; reason?: string }[];
   /** A rollback id registered in the RollbackLedger, if anything was applied. */
@@ -193,12 +189,8 @@ export interface SolveResult {
   };
   readonly recovery?: import("./recovery_budget.js").RecoverySnapshot;
   /**
-   * ROUND 41 — safety controls found configured off during this run (round 40's
-   * `inertFloorInputs` / `inertBudgetInputs` output).
-   *
-   * Carried on the result so the merge-authority decision consumes the SAME value the PR body
-   * reports. Recomputing it downstream would create a second threshold, and two thresholds for
-   * one question drift apart — the R14 shape this project has already paid for once.
+   * Configured-off controls reported by inertFloorInputs/inertBudgetInputs.
+   * Carry the same values into proposal text and merge-authority decisions.
    */
   readonly inertControls?: readonly string[];
   /** The stages actually run, in order (for the audit trail). */

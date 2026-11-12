@@ -1,5 +1,5 @@
 /**
- * MEMORY-UPKEEP APPLY ADAPTER — Hardening H1 (the outbound port for Round 3).
+ * MEMORY-UPKEEP APPLY ADAPTER — the memory-upkeep apply adapter.
  *
  * Ports-and-adapters: `upkeep()` is the PURE DOMAIN — it decides `add | dedup | supersede` (+ links, + prune
  * tombstones) and touches no store. This module is the OUTBOUND ADAPTER that applies that decision to the real
@@ -11,10 +11,10 @@
  *   - TRANSACTIONAL SUPERSEDE (atomic in effect): retire-the-stale + add-the-new, via the spine's `retired` tier
  *     (supersede-not-delete — the retired lesson stays present, provenance retained).
  *
- * A sensitive candidate is ALREADY routed through the CI vault by `upkeep()` (Round 3). This adapter has NO vault
+ * A sensitive candidate is ALREADY routed through the CI vault by `upkeep()`. This adapter has NO vault
  * surface at all, so it structurally cannot double-capture.
  *
- * BUILT + proven in-env: the decision→store apply mapping and its idempotence. There is no SEAM of substance — it
+ * Implemented: the decision→store apply mapping and its idempotence. There is no SEAM of substance — it
  * wires two already-built things (the upkeep decision and the memory store).
  */
 

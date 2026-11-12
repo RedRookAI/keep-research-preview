@@ -1,5 +1,5 @@
 /**
- * Plan-vet adapter (Increment 16.8) — the PRE-SOLVE gate, now backed by REAL consequence analysis.
+ * Plan-vet adapter — the PRE-SOLVE gate, now backed by REAL consequence analysis.
  *
  * Replaces the vacuous skeleton gate (16.7) — which fed a hardcoded 4-step plan to LogicVet and always
  * passed regardless of issue content — with the consequence-analysis floor (plan_consequences.ts):

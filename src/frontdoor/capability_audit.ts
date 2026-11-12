@@ -1,16 +1,4 @@
-/**
- * Theme 5c (No-Account Local Defaults), Part 1 — CapabilityAudit.
- *
- * Keep is sovereign/self-hostable and N=1-first: it must WORK on a fresh install with no
- * external accounts, and be honest about what needs what. The 2026 trap (Botmonster) is
- * frameworks that assume "an OpenAI key and a credit card" and make the local path a
- * footnote. Keep inverts that: the no-account path is the default, and this audit tells
- * the operator plainly what works right now vs. what a given capability requires.
- *
- * Each capability declares a RequirementLevel. The audit reports availability against the
- * current environment and, per the locked free-first principle, surfaces a free/local
- * alternative for each gap BEFORE mentioning any paid account. It never nags.
- */
+/** Report capability availability from the current configuration and show local alternatives. */
 
 export type RequirementLevel =
   | "nothing" // works on a bare fresh install, zero setup
@@ -102,15 +90,15 @@ export function auditCapabilities(env: AuditEnv, capabilities: readonly Capabili
 function statusFor(c: Capability, env: AuditEnv): CapabilityStatus {
   switch (c.requires) {
     case "nothing":
-      return { capability: c, state: "available", note: "Works right now — no setup needed." };
+      return { capability: c, state: "available", note: "Available now." };
     case "local-model": {
       if (!env.hasBrain) {
         return { capability: c, state: "unavailable", note: c.freeAlternative ? `Needs a model. ${cap(c.freeAlternative)}` : "Needs a model to be configured." };
       }
       if (c.needsStrongReasoning && env.modelIsWeak) {
-        return { capability: c, state: "available-degraded", note: "Works, but a small local model will do this less reliably — a stronger model improves it." };
+        return { capability: c, state: "available-degraded", note: "Available with limited reasoning. You can choose a stronger model for this task." };
       }
-      return { capability: c, state: "available", note: env.brainIsLocal ? "Works with your local model — fully offline, no account." : "Works with your configured model." };
+      return { capability: c, state: "available", note: env.brainIsLocal ? "Available with your local model." : "Works with your configured model." };
     }
     case "byo-key": {
       if (env.hasApiKey || (env.hasBrain && !env.brainIsLocal)) {
@@ -122,9 +110,9 @@ function statusFor(c: Capability, env: AuditEnv): CapabilityStatus {
       // Which account? Heuristic by id.
       const acct = c.id.includes("git") ? "github" : c.id.includes("chat") || c.id.includes("channel") ? "chat" : c.id;
       if (env.connectedAccounts.has(acct)) {
-        return { capability: c, state: "available", note: "Available — account connected." };
+        return { capability: c, state: "available", note: "Account connected." };
       }
-      return { capability: c, state: "unavailable", note: c.freeAlternative ? `Optional. ${cap(c.freeAlternative)}` : "Optional — needs an external account." };
+      return { capability: c, state: "unavailable", note: c.freeAlternative ? `Optional. ${cap(c.freeAlternative)}` : "Connect an external account to use this." };
     }
   }
 }
@@ -132,12 +120,12 @@ function statusFor(c: Capability, env: AuditEnv): CapabilityStatus {
 function buildSummary(availableNow: number, total: number, env: AuditEnv, worksWithoutAccounts: boolean): string {
   const base = `${availableNow} of ${total} capabilities are available right now`;
   if (!env.hasBrain) {
-    return `${base}. Keep runs with no account and no cloud — to unlock planning and conversation, point it at a local model (Ollama, LM Studio, or Jan). Nothing here requires an external account or signup.`;
+    return `${base}. Connect a local model such as Ollama, LM Studio or Jan to plan and chat without an external account.`;
   }
   const acctNote = worksWithoutAccounts
-    ? "Everything essential works with zero external accounts — hosted repos and chat channels are optional extras, not requirements."
+    ? "Hosted repositories and chat channels are optional. Local workflows can run without external accounts."
     : "";
-  const localNote = env.brainIsLocal ? " Your model is local, so your data never leaves this machine." : "";
+  const localNote = env.brainIsLocal ? " Your configured model runs locally." : "";
   return `${base}.${localNote} ${acctNote}`.trim();
 }
 

@@ -1,7 +1,7 @@
 /**
- * Auto-RAG: retrieval-sufficiency / abstain gate (Increment 5c) — disciplined refusal.
+ * Auto-RAG: retrieval-sufficiency / abstain gate — disciplined refusal.
  *
- * SOTA basis (2026-08-04): the core RAG failure is "fabricated responses despite lacking sufficient
+ * Research references (2026-08-04): the core RAG failure is "fabricated responses despite lacking sufficient
  * supporting evidence" — the fix is to jointly assess retrieval SUFFICIENCY and ABSTAIN (GRACE
  * arXiv 2601.04525; Nexumo 2026: "the goal is disciplined refusal"). Context relevance scores
  * whether the retrieved context is sufficient to answer, INDEPENDENT of the generated answer
@@ -10,7 +10,7 @@
  *
  * This registers into the VerificationCascade as a sound Tier-0, alongside the research-provenance
  * floor (4c) and the LogicVet floor (3.8) — the deterministic floor gates; the model faithfulness
- * gauge only scores. Zero deps.
+ * gauge only scores.
  */
 
 import { checkGroundedness, type RetrievedChunk, type GroundednessOptions } from "./grounded_answer.js";

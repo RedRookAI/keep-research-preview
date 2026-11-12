@@ -10,7 +10,7 @@
  * preference), never PUSH confirmation. Anything an inference reaches toward a SAFETY knob is dropped outright
  * (the clamp is a hard bound, not a tap).
  *
- * Two structural guards make autonomy safe (both BUILT + proven; the ESTIMATOR that produces the raw signal is
+ * Two structural guards make autonomy safe (both Implemented; the ESTIMATOR that produces the raw signal is
  * the SEAM):
  *   - ANTI-THRASH (non-stationarity: drift vs shift). A noisy signal must not oscillate the current view. An
  *     inferred candidate must persist a minimum DWELL of consistent observations AND clear a DEAD-BAND on the

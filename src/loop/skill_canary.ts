@@ -1,10 +1,10 @@
 /**
- * SkillCanary (Increment 18.6, Phase S) — retention + reuse-reward + notify. Completes the skill lifecycle:
+ * SkillCanary — retention + reuse-reward + notify. Completes the skill lifecycle:
  * a CEGIS-validated skill (18.5) does NOT wait in shadow — it goes LIVE immediately as an instant-rollback
  * CANARY, earns full trust through real use, and auto-rolls-back the moment it regresses. Safety comes from
  * REVERSIBILITY + BOUNDED BLAST RADIUS + AUTO-ROLLBACK, not from delay (KEEP_INSTANT_SAFE_ACTIVATION).
  *
- * SOTA basis (2026-08-05):
+ * Research references (2026-08-05):
  *  - Progressive delivery: "Deploy, Observe, Decide, Expand" — ship instantly behind an instant kill-switch,
  *    watch a small blast radius, auto-roll-back on regression (canary/feature-flags 2026). Safety = structure,
  *    not time.
@@ -14,7 +14,7 @@
  *  - KEEP_KNOBS_RESOLVED: K1 canary floor 3 clean uses / ceiling ~10 / INSTANT-DEMOTE on any regression;
  *    K5 alert tiers — SILENT (Log) graduate, quiet TICKET rollback, PAGE only irreversible/ambiguous.
  *
- * Zero runtime deps. Notifier behind a port (digest at the floor; pager integration at the rich tier).
+ * Notifier behind a port (digest at the floor; pager integration at the rich tier).
  */
 
 import { reuseSignal, type OutcomeSignal } from "./self_improvement_bus.js";

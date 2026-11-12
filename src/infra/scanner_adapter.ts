@@ -1,5 +1,5 @@
 /**
- * Scanner adapters (infra) for the Phase 3 scanner port.
+ * Scanner adapters (infra) for the scanner port.
  *
  * (A) BuiltinPatternScanner — a REAL zero-dependency scanner that reads files and
  *     finds genuine issue classes (secrets, eval/exec, shell-concat command

@@ -15,7 +15,7 @@
  * correction is the standard conformal plug-in (k+1)/(n+1) — far less conservative than a Hoeffding slack, and
  * it is the correction that makes the guarantee hold out-of-sample rather than only on the calibration set.
  *
- * BUILT + proven in-env: the calibration PROCEDURE (deterministic, pure, auditable). SEAM: the calibration
+ * Implemented: the calibration PROCEDURE (deterministic, pure, auditable). SEAM: the calibration
  * DATA itself — real (estimate, consequence, outcome) records from production. Add-don't-rewrite sibling of
  * `uncertainty_router`; the constant floor is the DEGENERATE zero-data case (empty records ⇒ fallback).
  */

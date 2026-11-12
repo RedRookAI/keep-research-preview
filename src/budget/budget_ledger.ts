@@ -1,5 +1,5 @@
 /**
- * Budget ledger (Build Step 2, layer 5) — crude, diverse, structural resource invariants
+ * Budget ledger — crude, diverse, structural resource invariants
  * bounding a single reversible attempt.
  *
  * A pure, total, MODEL-INDEPENDENT accounting of several CHEAP, INDEPENDENT structural
@@ -26,7 +26,7 @@
  * budget CONSUMES but does not replace the floor verdict — an attempt proceeds only if the
  * floor says reversible-execute AND the budget is within-budget. It can only ADD caution.
  *
- * WHAT WOULD CHANGE IT: telemetry showing a quantity never trips on real overruns (a dead
+ * Extension considerations: telemetry showing a quantity never trips on real overruns (a dead
  * bound → drop/replace it) or trips constantly on legitimate work (miscalibrated → widen
  * the ceiling). Never make the trip itself model-driven; only the ceilings are tunable.
  */

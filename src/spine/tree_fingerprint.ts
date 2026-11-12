@@ -1,44 +1,8 @@
 /**
- * tree_fingerprint — a content-addressed identity for a WHOLE WORKSPACE (a directory tree), not just
- * an individual state blob. The "same source" anchor: two trees fingerprint identically IFF their
- * governed content is byte-identical, so a supply-chain swap of a file cannot pass as "the tree we
- * attested," and a revert/reproducible-build check can ask "is this the same tree?" soundly.
- *
- * WHY KEEP NEEDS ITS OWN (dogfood of redrook-ops/keep-fingerprint.mjs). Keep today content-addresses
- * only per-file state (coderag/code_graph.ts `sha256Hex`/`contentHash`) and per-blob spine hashes. It
- * has NO identity for a whole tree. The loop already ships a whole-tree fingerprint; this is the
- * KEEP-PRODUCT equivalent, HARDENED from that flat manifest into a genuine recursive, domain-separated
- * Merkle tree.
- *
- * THREE PROPERTIES, none optional, each proven RED by an isolating neuter in the tests:
- *   (1) CONTENT   — a file's bytes are mixed in (via the shared sha256), so any edit moves the hash.
- *   (2) METADATA  — the git-style exec-bit MODE (100644 / 100755 / symlink 120000), the PATH (via the
- *                   NFC-normalized name committed at each directory node), and the KIND (file vs
- *                   symlink) are all committed. A pure-bytes hash is BLIND to an exec-bit flip, a
- *                   rename, and a symlink->file swap — so it cannot be a tamper-evident anchor.
- *   (3) DOMAIN SEPARATION — leaf bytes are prefixed 0x00 and node bytes 0x01 (RFC 6962 §2.1). Without
- *                   this an internal node can be presented as a leaf: a crafted directory's child-hash
- *                   concatenation collides with a single file's data (the Kelsey-Schneier 2004 /
- *                   Certificate-Transparency second-preimage). Domain separation forecloses it.
- *
- * OFFLINE IS THE CONTRACT. The pure-JS walk needs no network and no git. Where a `.git` exists,
- * `git write-tree` is an OPTIONAL cross-check/accelerator (see `gitWriteTreeId`) — an ORACLE the tests
- * assert behavioral parity against, NEVER a dependency of the fingerprint.
- *
- * COMPOSED, ZERO-DEP. All hashing goes through the single `sha256Hex` mechanism exported by
- * coderag/code_graph.ts — there is no second hash primitive and no new dependency.
- *
- * HONEST LIMITS (stated, as keep-fingerprint.mjs states its own):
- *   - EMPTY DIRECTORIES: an empty directory IS committed (as a node with no children), unlike a flat
- *     file manifest which cannot see it.
- *   - UNICODE: paths are NFC-normalized before hashing, so the same tree on macOS (NFD) and Linux
- *     (NFC) fingerprints identically — one improvement over the flat manifest's stated NFC/NFD seam.
- *   - LINE ENDINGS are content: a CRLF checkout is a different fingerprint (correct, but surprising if
- *     git autocrlf is on).
- *   - CASE-INSENSITIVE filesystems can still collapse two paths differing only in case.
- *   - The `.gitignore` support is a pragmatic subset (default excludes + basename / path-prefix
- *     patterns), NOT full gitignore semantics; it is a convenience over the offline walk, not a
- *     security boundary.
+ * Recursive, domain-separated Merkle identity for a workspace tree.
+ * The fingerprint binds file contents, normalized paths, executable modes and
+ * entry kinds. Tree comparison can identify changed governed bytes and metadata;
+ * excluded paths follow the fingerprint policy below.
  */
 
 import { readdirSync, lstatSync, readFileSync, readlinkSync, existsSync, mkdtempSync, rmSync } from "node:fs";

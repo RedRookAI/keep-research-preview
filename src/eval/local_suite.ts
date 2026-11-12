@@ -1,16 +1,10 @@
 /**
- * Local decontaminated eval suite (Increment 4.2) — self-authored, NOVEL bug instances written for this repo, never
- * drawn from GitHub or any public benchmark, and dated after any plausible model cutoff. They therefore pass the
- * decontamination gates by construction (no temporal/solution/known-eval leakage), which lets us produce a REAL
- * resolved-rate here without contamination confounds.
+ * Public, authored bug fixtures for development of the local evaluation harness.
  *
- * This is NOT the official SWE-bench Verified set (that needs the real dataset + a frontier model + Docker-at-scale —
- * the remaining VERIFIED-SEAM). It is a genuine, contamination-controlled micro-suite that exercises the SAME oracle
- * (FAIL_TO_PASS flips + PASS_TO_PASS holds) and the SAME harness that a full run would.
- *
- * Each instance ships the buggy tree, the GOLD-patched tree (for harness validation / oracle runs — never shown to the
- * solver), and node:test files whose test names match the failToPass / passToPass identifiers so per-test TAP parsing
- * can judge resolution exactly.
+ * Each instance contains a defective tree, a reference patched tree for oracle checks and node:test
+ * checks identified by failToPass/passToPass names. The reference patch is withheld from the solver path.
+ * These published fixtures are not held-out tasks and do not establish absence of model-training overlap.
+ * Results are local development results, not an official SWE-bench Verified score.
  */
 
 import type { EvalTask } from "./swebench_task.js";

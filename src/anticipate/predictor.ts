@@ -1,28 +1,9 @@
 /**
- * THE PREDICT STEP (moat-heart #3) — anticipate what the user likely wants next, safely.
+ * Combines candidate patterns, anticipation decisions and a success posterior into suggestions.
  *
- * The moat-heart's understand→ask loop is reactive. The predict step makes Keep anticipatory WITHOUT becoming
- * pushy or unsafe. It is a thin composition of machinery that already exists — it invents no new belief and no new
- * disposition:
- *   - `anticipate` supplies the DISPOSITION (prefer pull over push, gate on consequence, NEVER auto-execute).
- *   - `SuccessPosterior` supplies the calibrated BELIEF, and `decisionSuccess` reads it PESSIMISTICALLY where the
- *     action is consequential (LCB) — so a pattern with little evidence is not trusted (probation by construction).
- *   - `updatePosterior` makes every prediction OVERRIDABLE: an accepted suggestion raises the belief, a declined one
- *     lowers it.
- *
- * The four hard properties (each disproof-backed):
- *   - TRANSPARENT: every prediction carries a legible, non-empty rationale (the user can always see why).
- *   - PROBATIONARY: a new pattern starts at the uniform prior Beta(1,1); its consequential success estimate is the
- *     lower bound, which stays low until outcomes accumulate — never trusted on first sight.
- *   - OVERRIDABLE: a decline updates the posterior down; the pattern must re-earn confidence.
- *   - EXPLORATION-PRESERVING: low-confidence predictions stay suggestions (offer-on-pull / silent), never a forced
- *     single path; the predictor returns a SUGGESTION, never an action, and NEVER auto-executes.
- * A predicted irreversible action is never surfaced or auto-done — it is at most offered for the human to decide,
- * and if acted upon it still routes through the ask-gate / consequence-gate (the envelope is never bypassed here).
- *
- * BUILT + proven in-env: the compose (disposition + probationary belief + transparency + override). SEAM: the
- * candidate patterns are supplied by the caller — grounded upstream in M2 retrieval (recent turns) and recurring
- * goals; deriving "what comes next" from context is the caller's job, kept out of this decision core.
+ * New patterns begin with a Beta(1,1) prior. Consequential suggestions use a lower confidence bound;
+ * acceptance and decline update the posterior. Predictions carry a rationale and never execute actions.
+ * The caller supplies patterns grounded in task context and recurring goals.
  */
 
 import { anticipate, type CandidateNeed, type Disposition } from "./anticipation.js";

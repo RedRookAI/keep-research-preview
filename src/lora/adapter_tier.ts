@@ -1,11 +1,11 @@
 /**
- * LoRA local-adapter tier (Increment 10a) — adapter model + versioning + ENTRY gates.
+ * LoRA local-adapter tier — adapter model + versioning + ENTRY gates.
  *
  * This is the most gated capability in Keep: opt-in, OFF by default, and it NEVER trains weights
  * itself — it ORCHESTRATES and GATES an external sandboxed trainer. Gradient-free learning (item 6)
  * stays the default and the safe floor.
  *
- * SOTA basis (2026-08-04, re-verified): LoRA is NOT automatically safe. "LoRA efficiently undoes
+ * Research references (2026-08-04, re-verified): LoRA is NOT automatically safe. "LoRA efficiently undoes
  * safety training" (Lermen; Shadow Alignment) — a few bad examples subvert alignment while preserving
  * helpfulness, so preserved helpfulness is NOT evidence of safety. NEW 2026 finding (arXiv 2605.30189):
  * LoRA adapters can be reliably BACKDOORED via training-data poisoning at ~4.2% poison ratio while
@@ -16,7 +16,7 @@
  *
  * This module: the adapter model + registry + the ENTRY gates (authorization, sandbox, data
  * provenance/poison screen, verifiable-reward-only). The eval + composition gates are 10b; the deploy
- * orchestrator is 10c. Zero deps.
+ * orchestrator is 10c.
  */
 
 import type { Spine } from "../spine/spine.js";

@@ -1,5 +1,5 @@
 /**
- * INTAKE SAFE-PARSING REGISTRY — Hardening H3 (hardens Round 7's parser SEAM).
+ * INTAKE SAFE-PARSING REGISTRY — parser dispatch and resource bounds.
  *
  * Decompression bombs are a live 2026 surface: non-recursive zip bombs reach 281 TB from 10 MB (4.5 PB with
  * Zip64), and CVE-2025-6176 compresses 80 GiB into 64 KB via Brotli. A system that auto-parses untrusted uploads
@@ -14,7 +14,7 @@
  * parse in that resource-bound gate. It returns a TYPED result — never a throw, never an unbounded parse — so an
  * untrusted upload cannot exhaust the box. Extracted content stays tainted (untrusted).
  *
- * BUILT + proven in-env: the registry dispatch + the resource-bound gate. SEAM: the real per-format codecs (the
+ * Implemented: the registry dispatch + the resource-bound gate. SEAM: the real per-format codecs (the
  * `RegisteredParser`s — voice→text, image→text, zip expansion).
  */
 

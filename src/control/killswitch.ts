@@ -1,5 +1,5 @@
 /**
- * Layered kill-switch (Phase 2, #23) — the real, unsolved market gap.
+ * Layered kill-switch — process, run and system controls.
  *
  * Implements the 2026 four-primitive containment architecture:
  *   1. independent (out-of-process) termination — stop the agent WITHOUT its

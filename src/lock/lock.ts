@@ -1,14 +1,14 @@
 /**
- * DistributedLock port (Phase 0.5) — the coordination seam.
+ * DistributedLock port — the coordination seam.
  *
- * The sealer (Round 8) and leader election require single-writer coordination.
+ * The sealer and leader election require single-writer coordination.
  * This port abstracts it so the implementation is swappable:
  *  - Filesystem (below): atomic cross-process ownership for the durable single-host tier.
  *  - In-process (below): an async mutex only for explicitly ephemeral/test stores.
  *  - Postgres (future impl behind this port): transaction-level
  *    `pg_advisory_xact_lock` — self-cleans on commit/rollback (no leaked locks from
  *    crashed workers) and is safe under PgBouncer transaction pooling. This was the
- *    Aug-2026 SOTA re-verification refinement; the port makes it a drop-in.
+ * Aug-2026 research re-verification refinement; the port makes it a drop-in.
  */
 
 export interface DistributedLock {

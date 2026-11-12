@@ -1,5 +1,5 @@
 /**
- * Theme 2 (Currency Layer), Part 2 — LandscapeCatalog.
+ * LandscapeCatalog.
  *
  * So Keep can say "this already exists — adopt it" instead of reinventing the wheel, it
  * carries a small, DATED catalog of known options by task-type, refreshable from search

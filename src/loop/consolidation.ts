@@ -1,10 +1,10 @@
 /**
- * Consolidation (Increment 18.3, Phase G) — the "sleep" pass that manages the ARTIFACT LIFECYCLE so nothing
+ * Consolidation — the "sleep" pass that manages the ARTIFACT LIFECYCLE so nothing
  * provisional accumulates forever and nothing useful is lost. Learners (18.2) create provisional artifacts
  * (prompt tweaks, lessons, later skills); this closes their lifecycle: PROMOTE the ones that earn trust,
  * PRUNE the ones that had their chance and didn't help, DECAY stale utility, MERGE duplicates.
  *
- * SOTA basis (2026-08-05), all ZERO-DEP:
+ * Research references (2026-08-05), all ZERO-DEP:
  *  - GRADIENT-FREE consolidation by recency + frequency + reuse-utility (A-MemGuard dual-memory; the
  *    forgetting-curve / Ebbinghaus). No training, no embedding model — pure counters + decay.
  *  - PRUNE BY OPPORTUNITY, NOT CALENDAR (KEEP_KNOBS_RESOLVED K6): a provisional artifact is pruned only if it
@@ -15,7 +15,7 @@
  *  - Promotion threshold matches the CANARY floor (K1): positive reuse ≥ 3 clean uses → full trust.
  *
  * The lifecycle registers on the bus as a PROTECT-class observer (records opportunity/reuse from every signal,
- * incl. the observing phase) so the ledger is warm; the consolidate() pass runs on the cadence tick.
+ * incl. the observing phase) so the ledger is warm; the consolidate pass runs on the cadence tick.
  */
 
 import type { Learner, OutcomeSignal } from "./self_improvement_bus.js";

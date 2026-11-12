@@ -1,9 +1,9 @@
 /**
- * NotificationRouter (Increment W2) — decides what actually reaches the human, so Keep surfaces only the
+ * NotificationRouter — decides what actually reaches the human, so Keep surfaces only the
  * dangerous few and NEVER notifies per-PR for routine auto-approved work. This is the anti-rubber-stamping
  * principle made real at the notification boundary.
  *
- * SOTA basis (2026-08-06), unanimous (Courier, incident.io, oneuptime, LogicMonitor, Google SRE):
+ * Research references (2026-08-06), unanimous (Courier, incident.io, oneuptime, LogicMonitor, Google SRE):
  *  - "Action-first, alert-second": the only question is "does this deserve the interruption?" If a human can
  *    take NO action (an already auto-approved PR), it must generate NO alert — "if an alert fires and the
  *    on-call can't take a specific action, it should not exist."
@@ -15,8 +15,8 @@
  *    the risk assessment is miscalibrated — surfaced, but a dangerous alert is NEVER dropped to hit the ceiling.
  *
  * Tiers: urgent (interrupt now) · notify (async, non-interrupting) · digest (batched routine) · suppress (none).
- * The channel is a PORT (email/Slack/webhook/pager are deployment seams); the routing LOGIC is BUILT + proven.
- * Every routing decision is audited. Zero deps.
+ * The channel is a PORT (email/Slack/webhook/pager are deployment seams); the routing LOGIC is Implemented.
+ * Every routing decision is audited.
  */
 
 import type { Spine } from "../spine/spine.js";

@@ -40,13 +40,8 @@ export interface DefaultSolverConfig {
   /** Optional cascade vet gate (repoRef → cleared). */
   readonly vet?: (repoRef: string) => Promise<boolean>;
   /**
-   * Per-agent identity registry (Core Addition C). ROUND 35 — wired here as well as in
-   * KeepPipeline, because this is the OTHER operator entry point (it backs `SolveFn` for
-   * review intake). Leaving it armed on one path and inert on the other would reproduce
-   * exactly the gap round 34 named as Z138: a control a reader reasonably assumes is on.
-   *
-   * Operator-supplied on purpose — the operator holds `kill()`. Omit ⇒ `identityLive`
-   * stays `undefined` ⇒ "not assessed (no veto)", unchanged.
+   * Operator-supplied acting-agent registry, including the operator's kill control.
+   * Omission leaves identityLive undefined, so identity is not assessed by that gate.
    */
   readonly identityRegistry?: IdentityRegistry;
   readonly rootIdentity?: AgentIdentity;

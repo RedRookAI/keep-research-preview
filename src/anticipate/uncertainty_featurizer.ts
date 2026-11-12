@@ -1,5 +1,5 @@
 /**
- * LINGUISTIC-CUE UNCERTAINTY FEATURIZER (moat-heart — the uncertainty side of the ask-gate).
+ * LINGUISTIC-CUE UNCERTAINTY FEATURIZER .
  *
  * The ask-gate decides ask-vs-proceed on uncertainty × consequence. Its uncertainty input today is only the intent
  * router's shape confidence. This module adds a second, content-neutral source: the message's own hedging.
@@ -22,7 +22,7 @@
  *     threshold, default-gentle.
  *   - SERVE, TRANSPARENT: the only use is "ask a better question / be gentler"; the `note` is a legible reason.
  *
- * BUILT + proven in-env: the deterministic message-level cue extraction + additive scoring + self-relative
+ * Implemented: the deterministic message-level cue extraction + additive scoring + self-relative
  * adjustment + soft-OR blend. SEAM: a learned detector could slot behind the same interface; the per-user
  * self-baseline is supplied by the caller (a transparent, user-owned running style measure), never inferred here.
  */

@@ -1,5 +1,5 @@
 /**
- * Witness reconcile (Build Step 1 — the live anchor's decision rule).
+ * Witness reconcile.
  *
  * Given a local chain and the last INDEPENDENTLY-PUBLISHED witness, decide whether
  * the chain is a legitimate forward extension, an AUTHORIZED restore, or TAMPER.
@@ -22,7 +22,7 @@ import type { StagedEvent } from "./event.js";
 import { restorationSignatureValid } from "../tcb/attestation.js";
 
 /**
- * A digest that BINDS the exact restored content (BUILD-ORDER 8.44A-FIX). A restoration authorization
+ * A digest that BINDS the exact restored content (FIX). A restoration authorization
  * must sign over WHAT it restores, not merely the seq it restores TO — otherwise one valid authorization
  * transfers to any fork sharing that seq + superseded witness hash (the cross-family veto, GPT-5.6). This
  * folds every restored block's `{seq, hash}` in order; each block hash already commits to that block's
@@ -49,7 +49,7 @@ export interface RestorationRef {
   readonly restoredToSeq: number;
   readonly priorWitnessedHash: string;
   /**
-   * BINDS the restored content (BUILD-ORDER 8.44A-FIX): the digest of the ACTUAL restored blocks the
+   * BINDS the restored content (FIX): the digest of the ACTUAL restored blocks the
    * authorization was signed over. reconcile re-computes the digest of the SUPPLIED blocks and refuses
    * the authorization unless it matches — so an authorization minted for restore A does NOT verify for a
    * different fork B that merely shares the seq + superseded witness hash. An empty digest never binds.
@@ -57,7 +57,7 @@ export interface RestorationRef {
   readonly contentDigest: string;
   readonly signature: string;
   /**
-   * Anti-replay binding (BUILD-ORDER 8.44A): a per-authorization nonce, signed together with the
+   * Anti-replay binding: a per-authorization nonce, signed together with the
    * rest of the restore. A captured VALID signature carries its own nonce; once that nonce has
    * authorized a restore it cannot authorize a second — so a legitimately-signed authorization
    * cannot be replayed to re-bless a DIFFERENT later fork. An empty nonce never authorizes.
@@ -94,7 +94,7 @@ export interface ReplayGuard {
   seen(nonce: string): boolean;
   remember(nonce: string): void;
   /**
-   * ATOMIC check-and-consume (BUILD-ORDER 8.44A-FIX6, GPT-5.6): consume `nonce` and return true iff it was not
+   * ATOMIC check-and-consume (FIX6, GPT-5.6): consume `nonce` and return true iff it was not
    * already seen. Separate `seen()`+`remember()` leaves a check-use window in which a re-entrant/concurrent caller
    * could honor the same nonce twice; `consumeIfUnseen` closes it in one indivisible step at the accept point.
    */
@@ -139,7 +139,7 @@ export interface RestorationVerifier {
  * - Otherwise (fork or truncation) → TAMPER, UNLESS an attestation references the
  *   witnessed head hash (an authorized, append-only correction) → authorized-restore.
  *
- * HONESTY (BUILD-ORDER 8.44A / 8.44A-FIX): the link (an attestation referencing the superseded witnessed
+ * HONESTY: the link (an attestation referencing the superseded witnessed
  * hash) is necessary but NOT sufficient. A restore is authorized only if a `RestorationVerifier` is
  * supplied AND the attestation BINDS THE SUPPLIED CONTENT (its `contentDigest` reproduces the digest of
  * these `blocks`, and `restoredToSeq` is the head seq of these `blocks`) AND its signature
@@ -152,7 +152,7 @@ export interface RestorationVerifier {
  * run key it is TRUE on-box but binding alone does not defeat a compromised box.
  */
 /**
- * Recursively normalize a value into OWNED, PLAIN, JSON-shaped data (BUILD-ORDER 8.44A-FIX7, GPT-5.6). Reads each
+ * Recursively normalize a value into OWNED, PLAIN, JSON-shaped data (FIX7, GPT-5.6). Reads each
  * own enumerable property EXACTLY ONCE (defeats getter/Proxy check-use) and does NOT honor `toJSON`. REJECTS any
  * non-plain value — Date/Map/Set/SharedArrayBuffer/TypedArray/functions/symbols/bigint/class instances — by throwing,
  * because `structuredClone` preserves such exotics and `Object.freeze` cannot make their internal bytes/state
@@ -198,7 +198,7 @@ export function reconcileWithWitness(
   attestations: readonly RestorationRef[],
   verifier?: RestorationVerifier,
 ): ReconcileVerdict {
-  // SNAPSHOT the attacker-supplied inputs into OWNED PLAIN DATA once, up front (BUILD-ORDER 8.44A-FIX3/FIX4,
+  // SNAPSHOT the attacker-supplied inputs into OWNED PLAIN DATA once, up front (FIX3/FIX4,
   // cross-family findings GPT-5.6): `blocks`/`attestations` are only COMPILE-TIME readonly — a caller could pass
   // getter/Proxy-backed objects whose fields return DIFFERENT values on successive reads, so the value
   // `verifyChain` validated could differ from the one `restoredContentDigest` folds or the signature covers (a
@@ -238,7 +238,7 @@ export function reconcileWithWitness(
   // contentDigest). Fail-closed: no verifier, a content/seq mismatch, an unverifiable signature, or a
   // replayed nonce ⇒ the divergence stays TAMPER. A signature is CHECKED, never merely counted, and it
   // authorizes exactly the content it signed, never a fork that merely shares the seq + witness hash.
-  // INTERNAL VALIDITY IS A PRECONDITION OF ANY RESTORE (BUILD-ORDER 8.44A-FIX2, cross-family veto): the restore
+  // INTERNAL VALIDITY IS A PRECONDITION OF ANY RESTORE (FIX2, cross-family veto): the restore
   // branch runs BECAUSE `verifyAgainstWitness` failed — but that failure conflates "internally-invalid blocks"
   // with "a valid chain that forks from the old witness". Only the latter can ever be an authorized restore.
   // Without this guard, an attacker supplies INTERNALLY-INVALID blocks whose `hash` FIELDS are pasted from a real

@@ -1,5 +1,5 @@
 /**
- * Tracker webhook normalizers (infra, Phase 6 #46).
+ * Tracker webhook normalizers (infra).
  *
  * Real normalizers for Linear, Jira, and GitHub Issues webhook payloads,
  * implementing the TrackerAdapter port. Each maps a tracker's native webhook JSON

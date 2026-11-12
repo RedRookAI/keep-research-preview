@@ -12,7 +12,7 @@
  * models). Overlap is a TUNABLE, not a mandatory default (a Jan-2026 analysis found it
  * added cost without benefit in some setups). Code is split structure-aware.
  *
- * What would change it: a long-context embedding model on the connected env enables
+ * Extension considerations: a long-context embedding model on the connected env enables
  * late/contextual chunking as an upgrade behind the same interface.
  */
 

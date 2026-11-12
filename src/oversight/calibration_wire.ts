@@ -1,28 +1,10 @@
 /**
- * CalibrationWire (Increment F2) — wires OversightCalibration into the live flow so the oversight system
- * LEARNS to stop over-surfacing from REAL post-approval outcomes, with the safe asymmetry the 2026 SOTA
- * prescribes:
+ * Connects review decisions and post-approval outcomes to oversight calibration.
  *
- *  - LOOSENING (reduce escalation for a class) requires HUMAN AUTHORIZATION and is governed + revocable.
- *    Galileo 2026: calibrate escalation empirically against your own production data via CENTRALIZED/GOVERNED
- *    policy, not hardcoded widening. Bantech 2026: promote autonomy only when performance logs show stable
- *    low-false-positive behavior OVER TIME. Zylos/FINRA 2026: "scope creep" is a top named risk — every
- *    widening is authorized, audited (actor/reason/timestamp), and reversible.
- *  - TIGHTENING (increase scrutiny on a class whose revert/fail rate rose) is AUTOMATIC — the safe direction
- *    never waits for a human. AOCM 2026: oversight is a continuous, bidirectional feedback function. A rising
- *    revert rate AUTO-REVOKES any active reduced-escalation policy for that class.
- *
- * The loop, wired end-to-end (the learning part is never operator-invoked):
- *   review decision            → recordDecision()
- *   post-approval outcome       → observeOutcome() → calibration.recommend() → governed proposal to the ledger
- *                                                  └→ if increase-scrutiny: AUTO-REVOKE the class policy (tighten)
- *   human authorizes a candidate → authorizeReduction() → active CalibrationPolicy (governed, revocable)
- *   OversightRouter             → consumes activePolicyGates() → auto-approves that reversible class
- *
- * BUILT (X3.1): GitRevertSignalSource sources this FROM real git history; a hosted-forge webhook is the prod swap. (Formerly:) The real post-approval revert/rework SIGNAL SOURCE (a git revert commit; a reopened/rolled-back ticket) is a
- * VERIFIED-SEAM supplied at deployment; the wire and the whole loop are proven here. The calibration only ever
- * recommends REDUCE for an all-REVERSIBLE, consistently-clean history — irreversible/high-risk classes are
- * never candidates, and the router independently refuses to reduce high-risk/forced-gate PRs. Zero deps.
+ * Reduced escalation requires human authorization and remains revocable. Increased scrutiny can
+ * revoke a reduction automatically. Only consistently clean, reversible histories can be candidates;
+ * the router separately retains high-risk and forced-approval gates.
+ * GitRevertSignalSource supplies local git outcomes; other tracker signals require configured adapters.
  */
 
 import { OversightCalibration, type CalibrationAssessment } from "../pipeline/oversight_calibration.js";

@@ -1,20 +1,10 @@
 /**
- * reachability_port.ts — Keep's thin, typescript-FREE seam onto the compiler-graph island sweep.
+ * Product-side port to the build-time compiler-graph sweep in tools/island_sweep.mjs.
  *
- * WHY A PORT (BUILD-ORDER 8.4). The real reachability engine (tools/island_sweep.mjs) consumes the
- * `typescript` devDep to build a `ts.TypeChecker` program graph. typescript must NEVER be imported
- * from src/, or the shipped product would carry a runtime dependency. So the ts-consuming engine lives
- * in tools/ (build-time) and the product reaches it through THIS port, which speaks only node builtins
- * (child_process + path). src stays zero-runtime-dependency; the product still owns the capability.
- *
- * FAIL-CLOSED IS THE POINT. The cardinal defect in a reachability gate is FAIL-OPEN: a crashed sweep
- * whose empty output reads as "0 islands, all clear". So this port refuses to return a result unless
- * the engine EXITED 0 and stamped its success sentinel. A crash, a non-zero exit, unparseable output,
- * or a missing sentinel THROWS — the caller can never mistake a dead detector for a clean tree.
- *
- * HONEST SEAM. The engine labels dynamic import() / side-effect imports / DI registration
- * NEEDS-A-HUMAN-LOOK; this port surfaces that class verbatim and never collapses it into ISLAND or
- * RUNTIME-REACHABLE.
+ * The engine uses TypeScript outside src; this port invokes it through Node's process interface.
+ * Results require exit status zero and the success sentinel. Crashes, invalid output and missing
+ * sentinels throw. Dynamic imports, side-effect imports and DI registrations retain the engine's
+ * needs-human-review classification instead of being reported as definitively reachable or isolated.
  */
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";

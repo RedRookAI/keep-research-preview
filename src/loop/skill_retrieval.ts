@@ -1,8 +1,8 @@
 /**
- * SkillRetrieval (Increment 18.7, Phase D) — given a task, select and compose the RIGHT skills from the
+ * SkillRetrieval — given a task, select and compose the RIGHT skills from the
  * self-built library. This is what makes the validated+graduated skill library USABLE on new tasks.
  *
- * THE failure mode this defends against (SOTA, 2026-08-05): skill selection exhibits a PHASE TRANSITION —
+ * THE failure mode this defends against (research, 2026-08-05): skill selection exhibits a PHASE TRANSITION —
  * "accuracy remains stable up to a critical library size, then drops SHARPLY" (When Single-Agent with Skills
  * arXiv 2601.04748), driven by SKILL SHADOWING (semantically similar skills competing for selection —
  * "More Skills, Worse Agents" 2605.24050), NOT raw count alone. The mitigations the literature converges on:
@@ -15,7 +15,7 @@
  * Keep's zero-dep realization (no embedding model — front/back-of-house identical): retrieve by relevance-key
  * + STRUCTURED precondition match (the envelope, deterministic), filter to LIVE-and-not-rolled-back (canary
  * state), rerank by (graduated > canary) then reuse-utility (consolidation), return a BOUNDED top-k that keeps
- * the offered set structurally BELOW the phase-transition threshold. Zero runtime deps; state behind ports.
+ * the offered set structurally BELOW the phase-transition threshold. ; state behind ports.
  */
 
 import type { DistilledSkill } from "./skill_distiller.js";

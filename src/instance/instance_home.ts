@@ -1,5 +1,5 @@
 /**
- * Theme 1 (Instance Isolation), Part 2 — InstanceHome + ownership lock.
+ * InstanceHome + ownership lock.
  *
  * Two Keep instances sharing one home fight over the same state/lock files and fail in
  * boot-order-dependent ways (the OpenClaw "failures look random" trap). Fix: each
@@ -9,7 +9,7 @@
  *
  * Stale-lock reclaim: if the lock's PID is no longer alive, the home is reclaimable — a
  * crashed instance never wedges its home forever. The lock is written atomically
- * (temp-then-rename). Zero deps (node:fs/os/path).
+ * (temp-then-rename).
  */
 
 import fs from "node:fs";

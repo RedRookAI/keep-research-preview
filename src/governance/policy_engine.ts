@@ -1,11 +1,11 @@
 /**
- * Policy-as-code engine (Phase 5, #35) — the shared governance engine.
+ * Policy-as-code engine — the shared governance engine.
  *
  * Deterministic DENY/WARN/ALLOW, NOT model-based. The 2026 consensus (MLflow, OPA):
  * "model-based enforcement introduces the exact unpredictability you are trying to
  * govern; a rules engine that produces the same decision" is the right tool. This is
  * OPA/Rego-shaped but zero-dependency; a real OPA/Rego adapter plugs in behind the
- * same evaluate() contract.
+ * same evaluate contract.
  *
  * FAIL-CLOSED: the engine sits in the request path (a SPOF), so ANY evaluation error
  * results in DENY — never fail-open. Every evaluation yields exactly one decision,

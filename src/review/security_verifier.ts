@@ -1,19 +1,9 @@
 /**
- * Security verifier (Phase 3, #17) — orchestrates proven scanners + AI-risk weighting.
+ * Coordinates injected scanner adapters and weights findings for review.
  *
- * Scanner PORT so real scanners inject behind it:
- *  - Semgrep (AST-based, NO compilation) is the zero-config DEFAULT backstop — fast,
- *    works on arbitrary agent PRs, readable rules.
- *  - CodeQL (needs a fully compilable env to build its relational DB) is an
- *    operator-provided HIGHER-DEPTH option. Auto-compiling arbitrary agent PRs is
- *    brittle, so the gate DEGRADES GRACEFULLY (Round 11): it NEVER blocks on a
- *    CodeQL DB-build failure — it falls back to Semgrep + AI-risk weighting and
- *    flags the reduced-depth coverage.
- *
- * Plus: AI-authored code has specific, quantified risks (injection/XSS/secrets/
- * excessive-privilege dominate), so findings get AI-risk weighting; and ranking is
- * EPSS (exploitability) x reachability x CVSS (severity), not severity alone —
- * "reachability turns a scanner's output from a backlog into a short list."
+ * A scanner that requires compilation is skipped when the request is not compilable. Fallback
+ * coverage is reported as reduced depth. Findings can be ranked using exploitability, reachability
+ * and severity inputs. Scanner availability and the supplied ranking inputs need their own evidence.
  */
 
 import type { Finding } from "./finding.js";
@@ -39,7 +29,7 @@ export interface Scanner {
   scan(req: ScanRequest): Promise<ScannerResult>;
 }
 
-/** AI-authored code risk categories that get up-weighted (quantified 2026 risks). */
+/** Finding categories with additional review weight. */
 const AI_RISK_KEYWORDS: readonly { rx: RegExp; weight: number }[] = [
   { rx: /injection|sqli|command inj/i, weight: 1.6 },
   { rx: /xss|cross-site/i, weight: 1.7 },

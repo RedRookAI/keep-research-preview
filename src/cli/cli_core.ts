@@ -1,16 +1,16 @@
 /**
- * The `keep` CLI core (Increment S0) — the runnable surface, back-of-house first.
+ * The `keep` CLI core — the runnable surface, back-of-house first.
  *
  * A thin, zero-dependency client over the composed KeepApp + the pipeline + the spine. It is deliberately
  * split into a testable CORE (this file — pure over an injectable CliIO + CliDeps) and a thin entrypoint
  * (keep.ts) that wires real stdin/stdout and a real pipeline. This mirrors Keep's port discipline: the surface
  * renders and gates on the real engine; it never re-implements policy.
  *
- * SOTA basis (2026-08-05, Round 2 surface research): the engineer surface is terminal-native (OpenCode/Codex/
+ * Research references (2026-08-05): the engineer surface is terminal-native (OpenCode/Codex/
  * Aider/Pi); the winning review pattern is an EXPLICIT diff-review that "forces the human-code-review muscle"
  * (Codex); the durable approval record must be a structured, queryable value, not a screenshot (Edilec). So the
  * review decision is recorded to the SPINE — an auditable, replayable record (the SOC 2 / EU-AI-Act artifact),
- * not a transient prompt. Zero runtime deps (Node built-ins only), which also keeps the surface from rotting in
+ * not a transient prompt. , which also keeps the surface from rotting in
  * a churning ecosystem.
  *
  * The human merge gate is untouched: `solve` proposes and records a review.pending; only a human `review`

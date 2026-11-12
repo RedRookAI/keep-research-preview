@@ -1,13 +1,13 @@
 /**
- * RecordingProvider + ReplayProvider (Increment 12c).
+ * RecordingProvider + ReplayProvider.
  *
- * SOTA basis (2026-08-05): record at the ModelProvider port so surrounding pipeline code genuinely
+ * Research references (2026-08-05): record at the ModelProvider port so surrounding pipeline code genuinely
  * runs (sixty-north 2026). Strict replay throws on a cassette miss — the guarantee that a CI run
  * makes NO live model call (TianPan 2026: deterministic replay). Fallthrough replay records-if-absent
  * (the VCR new_episodes flow) so a cassette builds up on the first real run and replays after.
  *
  * These wrap any ModelProvider; they also support generateStream when the wrapped provider has it, so
- * streaming pipelines are deterministic too (recorded as ordered deltas). Zero deps.
+ * streaming pipelines are deterministic too (recorded as ordered deltas).
  */
 
 import type { ModelProvider, GenerateRequest, GenerateResult, Embedding } from "./gateway.js";

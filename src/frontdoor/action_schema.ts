@@ -1,5 +1,5 @@
 /**
- * F1.5 — Action schema (what the LLM is allowed to PROPOSE).
+ * Action schema (what the LLM is allowed to PROPOSE).
  *
  * The LLM never emits free-form commands; it proposes a typed ProposedAction from a
  * fixed menu. Each action's ActionTier (reversibility x blast-radius, from Phase 2)

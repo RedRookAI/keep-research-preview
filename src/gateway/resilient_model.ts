@@ -1,11 +1,11 @@
 /**
- * ResilientModelProvider (Increment 12e/16.9d-wire) — makes the pipeline's brain resilient by wrapping an ordered
+ * ResilientModelProvider — makes the pipeline's brain resilient by wrapping an ordered
  * ladder of model providers behind the standard ModelProvider port. A rate-limit (429), transient error, or brief
  * outage on one rung backs off and advances to the next; an open circuit skips a sick rung; on full exhaustion it
  * degrades gracefully (a transient, budget-resumable error) instead of crashing. This is the "laptop in Africa on
  * one free-tier key" case: a 429 is a back-off signal, not a dead end.
  *
- * SOTA basis (2026-08-07): a single-provider integration is a single point of failure (repeated 2024–2026 outages);
+ * Research references (2026-08-07): a single-provider integration is a single point of failure (repeated 2024–2026 outages);
  * fail over on availability errors (429/5xx/timeout), honoring Retry-After; free-tier-first ordering never surprises
  * the operator with cost; graceful degradation keeps functionality when capacity returns. CROWN-JEWEL SAFETY RULE: a
  * content-policy refusal must NOT be routed around to another model — that is attempted policy circumvention. In

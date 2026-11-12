@@ -16,7 +16,7 @@
  *   - ambiguous       : not confidently any of the above       -> ask ONE question
  *
  * The rule tier is structural (not model-trusted). The LLM classifier is an injected
- * seam used only when rules are unsure. What would change it: an embedding/prototype
+ * seam used only when rules are unsure. Extension considerations: an embedding/prototype
  * tier slots between rules and LLM behind the same interface once a local embedding
  * backend exists.
  */

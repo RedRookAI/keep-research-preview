@@ -1,7 +1,7 @@
 /**
- * ReferenceSet<T> (Increment 3.6a) — the generic self-refreshing reference-data container.
+ * ReferenceSet<T> — the generic self-refreshing reference-data container.
  *
- * SOTA basis (re-verified 2026-08-04): stale-while-revalidate (SWR) + stale-if-error (SIE), the
+ * Research references (re-verified 2026-08-04): stale-while-revalidate (SWR) + stale-if-error (SIE), the
  * convergent "always fast, always fresh-enough, never fails" pattern (Fastly; oneuptime; medium
  * "SWR done right"; vergecloud). Three states after the fresh period expires:
  *   fresh   → serve directly.
@@ -13,7 +13,7 @@
  * automatic ("pricing as of 2026-08-01, unverified today").
  *
  * The NEVER-FAILS guarantee is structural: a refresh can only UPDATE or be IGNORED; it can never
- * null out or corrupt the set. Proven by test. Zero deps.
+ * null out or corrupt the set. Proven by test.
  */
 
 /** Freshness of the currently-served value. */

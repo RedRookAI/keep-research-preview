@@ -1,5 +1,5 @@
 /**
- * Behavioral confidence estimator (Phase 2, #21/#25).
+ * Behavioral confidence estimator.
  *
  * DECISIVE research caveat: do NOT use the model's self-reported ("verbalized")
  * confidence — RLHF systematically degrades its calibration, rewarding

@@ -1,8 +1,8 @@
 /**
- * MemoryStore (Phase 1) — the trust-tiered, objective-anchored procedural memory.
+ * MemoryStore — the trust-tiered, objective-anchored procedural memory.
  *
  * Ties together: the ingestion gate (sanitize before store), spine-bound provenance
- * (every lesson records its origin event), the two-gate graduation (the moat), and
+ * (every lesson records its origin event), the two-gate graduation , and
  * trust-aware retrieval via the model gateway (the ASI06 read-mediator against
  * query-only poisoning like MINJA — untrusted memory can inform, never authorize).
  *

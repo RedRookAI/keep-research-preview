@@ -1,24 +1,9 @@
 /**
- * F1.8 — Role-based routing ("best model for planning, cheap for execution").
+ * Routes planning-class work to the highest-ranked configured model and allows economical choices
+ * for mechanical roles. A missing strong model marks the planning result as degraded.
  *
- * This is the moat. "Gets better as you use it" only compounds toward EXCELLENCE if
- * the high-stakes reasoning — planning, and the learning loop's own distillation and
- * reflection — is done by the best available brain. Cheap reasoning at those steps
- * poisons the flywheel: shallower plans -> worse outcomes -> thinner lessons ->
- * a library that compounds toward confident mediocrity. So planning ALWAYS routes to
- * the best available brain; only mechanical work economizes.
- *
- * SOTA basis (Aug 2026): role-based (structural) routing is the recommended pattern —
- * "the planner uses a frontier model; tool-call steps use a cheap fast model." It is
- * preferred over per-query classification because role profiles are stable, add zero
- * latency, have ZERO adversarial surface (no classifier to manipulate), are
- * deterministic, and leave a full audit trail. Picking one model for everything is
- * now called "architectural negligence." What would change it: adding a difficulty
- * signal WITHIN the mechanical tier — but planning stays quality-first regardless.
- *
- * CRITICAL (Mindra 2026): "silent degradation to a mismatched model is worse than an
- * explicit failure." So when no strong brain is available, planning runs on the best
- * we have AND records degraded=true — an explicit, audited fact, never silent.
+ * Selection is deterministic from model descriptors and recorded capability signals. Ranking quality
+ * and model fitness depend on those inputs; this router does not establish them independently.
  */
 
 import type { BrainDescriptor } from "./brain_port.js";

@@ -1,16 +1,9 @@
 /**
- * HttpIngress (Increment W0) — a zero-dep node:http listener in front of TriggerIngress. It reads the EXACT raw
- * body bytes (mandatory: HMAC is computed over the bytes the sender signed, never a re-serialised JSON), derives
- * the tracker source from the path (`/webhook/<source>`), and returns:
- *   - 202 Accepted   after verify + accept
- *   - 200 OK         on a duplicate delivery (idempotent ack — retries are safe)
- *   - 401            on rejection (the reason is AUDITED internally, never leaked to the caller — don't help a
- *                    prober distinguish "bad signature" from "unknown source")
- *   - 404 / 413      unknown route / oversized body (a basic DoS guard)
- *
- * The optional IP allowlist is now BUILT (direct-peer, fail-closed; X-Forwarded-For untrusted). Only TLS termination + DNS
- * remain a deployment concern (VERIFIED-SEAM); signatures are the primary control, the allowlist brittle defense-in-depth. The request handling + verification
- * + dedup is BUILT here and proven with a real localhost request.
+ * HTTP listener for TriggerIngress. HMAC verification consumes the exact raw body bytes.
+ * Verified deliveries return202, duplicates200, rejections401 and unknown/oversized
+ * requests404/413. Rejection details remain in the audit record.
+ * An optional direct-peer IP allowlist rejects unlisted peers; forwarded headers are
+ * untrusted. TLS termination and DNS belong to the deployment.
  */
 
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";

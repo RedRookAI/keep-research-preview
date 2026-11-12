@@ -1,19 +1,12 @@
 /**
- * MetaHarness (Increment 18) — the safe self-improvement orchestrator. Keep "gets better with use" by
- * improving its own HARNESS (prompts, heuristics, routing, calibration) — never the model, never the
- * safety floor. This is where Keep exceeds; it is also where MISEVOLUTION lives (a self-improving system
- * optimizing a proxy that quietly degrades its own safety). The design defends against that architecturally.
+ * Coordinates candidate changes to prompts, heuristics, routing and calibration.
  *
- * SOTA basis (2026-08-05): the central unsolved problem is the SELF-AUTHORED VERIFIER — "an authored judge
- * under enough optimization pressure is not a judge, it is a puzzle, and puzzles get solved" (ilands.ai;
- * arXiv 2607.24300). The EXTERNAL ANCHOR PRINCIPLE (ICLR 2026 RSI Workshop, 110 papers; eugenevyborov
- * 2026): the fix is architectural — an immutable external eval signal the improver cannot touch makes
- * gaming structurally impossible. Guardrails (Godel Agent / o-mega 2026): verify every edit against safety
- * invariants first; freeze the core; fixed criteria; compile-time versioned artifacts; halt + rollback on
- * regression. Improve the HARNESS, not the model (Weng 2026 heuristic-learning; agyn.io PostTrainBench).
- *
- * Four architectural invariants: (1) external immutable anchor; (2) frozen safety floor (allowlist); (3)
- * compile-time versioned + reversible; (4) bounded + halt-on-regression. Zero deps (node:crypto builtin).
+ * Restricts changes to the allowed harness surface, compares them against a supplied external anchor,
+ * versions accepted artifacts and halts or rolls back on regression. Anchor independence and meaningful
+ * coverage depend on the supplied evaluation and deployment; a passing comparison is not a general
+ * safety guarantee.
+ * Research references: Darwin Godel Machine (arXiv2505.22954), Meta-Harness (arXiv2603.28052),
+ * Self-Harness (arXiv2606.09498) and research on self-authored verifiers (arXiv2607.24300).
  */
 
 import { createHash } from "node:crypto";

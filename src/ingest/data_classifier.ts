@@ -1,7 +1,7 @@
 /**
- * DataClassifier (Increment 4.5a) — deterministic, zero-dep sensitivity classification.
+ * DataClassifier — deterministic, zero-dep sensitivity classification.
  *
- * SOTA basis (2026-08-04): secure ingestion classifies BEFORE indexing; the decisive layer is
+ * Research references (2026-08-04): secure ingestion classifies BEFORE indexing; the decisive layer is
  * deterministic regex for structured identifiers — "fast, local, auditable, requires no external
  * data processor... the PII firewall before content reaches an LLM" (openredaction; pctechmag).
  * NER (unstructured names/orgs) is a heavier ML seam → a PORT here, not a built-in. Detection is
@@ -9,7 +9,6 @@
  * is HONEST: it flags what it finds, and callers default to safe (regulated) handling when a NER
  * recognizer is absent and uncertainty is possible. No model in the classification path.
  *
- * Zero deps (regex only).
  */
 
 /** Sensitivity tiers, least → most restricted. `regulated` = contains PII/PHI/financial IDs. */

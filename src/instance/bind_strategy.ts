@@ -1,5 +1,5 @@
 /**
- * Theme 1 (Instance Isolation), Part 1 — BindStrategy.
+ * BindStrategy.
  *
  * Keep must NEVER squat a fixed port (the OpenClaw failure: 2nd instance -> EADDRINUSE,
  * supervisor thrash, scanners find AI infra on known ports). This is the transport-bind
@@ -7,15 +7,15 @@
  *
  *   - "unix-socket"        : a unix domain socket at a per-instance path. NO TCP port at
  *                            all; access is gated by filesystem permissions (strictly
- *                            better for local clients — SOTA-recommended). Default.
+ * better for local clients — research-recommended). Default.
  *   - "ephemeral-loopback" : bind 127.0.0.1:0 so the OS assigns a free dynamic port; read
- *                            the REAL port back from server.address() AFTER listening.
+ *                            the REAL port back from server.address AFTER listening.
  *                            We keep this exact listening socket — we never close-and-
  *                            rebind, which is the documented TOCTOU anti-pattern.
  *   - "fixed"              : an explicit operator port, ONLY when opted in (e.g. behind a
  *                            reverse proxy). Never a default.
  *
- * Zero runtime deps (node:net). What would change it: nothing near-term; this is the
+ * Extension considerations: nothing near-term; this is the
  * correct portable floor. systemd socket activation could be an optional Linux upgrade.
  */
 

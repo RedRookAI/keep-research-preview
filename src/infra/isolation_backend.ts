@@ -4,16 +4,15 @@
  * This selects a platform-native backend and reports known availability limits.
  * Spawn planning does not verify namespace mounts or rlimit setup in the child.
  *
- * SOTA basis (2026-08-08):
+ * Research references (2026-08-08):
  *  - Windows has no POSIX signals and no process groups, so `process.kill(-pid)` does not work; the standard tree-kill is
  *    `taskkill /pid <PID> /T /F` (/T = tree, /F = force) — confirmed by tree-kill/pnpm/fkill.
  *  - Node CANNOT use Windows Job Objects without a native addon (pnpm #12406), so a ZERO-DEP Windows backend cannot set a
  *    hard CPU/memory rlimit; that control is honestly declared unavailable and the wall-clock timeout is the backstop.
  *  - macOS ('darwin') and *BSD are POSIX, so the POSIX backend covers them (ulimit + process groups work).
- * What would change it: a small native addon (or a container/microVM backend behind the same IsolatedExecutor port) would
+ * Extension considerations: a small native addon (or a container/microVM backend behind the same IsolatedExecutor port) would
  * restore a hard CPU/memory cap on Windows; the capability flags would flip to true.
  *
- * Zero runtime deps (node:child_process only).
  */
 
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
@@ -36,7 +35,7 @@ export interface PlatformCapabilities {
 }
 
 /**
- * BUILD-ORDER 1.3 — which unprivileged namespaces the host actually grants, detected by a real `unshare` probe.
+ * which unprivileged namespaces the host actually grants, detected by a real `unshare` probe.
  * A namespace that does not apply here is reported false (→ `degraded`), never a false claim (the honest-seam rule).
  */
 export interface NamespaceSupport {
@@ -152,7 +151,7 @@ export interface PlatformIsolation {
 }
 
 /**
- * BUILD-ORDER 1.3 — the FIXED jail script (a constant; command/args arrive as positional argv AFTER `shift 7`, so
+ * the FIXED jail script (a constant; command/args arrive as positional argv AFTER `shift 7`, so
  * shell metacharacters in them are inert — the argument-injection defense the whole isolation floor rests on).
  *
  * When domount=1, this attempts readonly mounts and writable project/allowance
@@ -212,7 +211,7 @@ export function detectNamespaceSupport(force = false): NamespaceSupport {
 }
 
 /**
- * BUILD-ORDER 1.3 — build the `unshare` + fixed-jail-script spawn plan for a POSIX host, applying ONLY the
+ * build the `unshare` + fixed-jail-script spawn plan for a POSIX host, applying ONLY the
  * namespaces the kernel actually grants (detected) and reporting the rest as `degraded` (honest-seam). The rlimits
  * (`ulimit -f/-u/-n` + the existing `-t`) always apply — they need no namespace. `allowNet` skips the net namespace;
  * `allowWritePaths` re-opens declared paths read-write inside the mount jail. Both are opt-IN allowances.
@@ -259,7 +258,7 @@ const POSIX: PlatformIsolation = {
     return { PATH: "/usr/local/bin:/usr/bin:/bin" };
   },
   planSpawn(command, args, cpuLimitSec, jail) {
-    // BUILD-ORDER 1.3 — a namespace+rlimit jail COMPOSED onto this same POSIX wrapper (not a forked second spawn
+    // a namespace+rlimit jail COMPOSED onto this same POSIX wrapper (not a forked second spawn
     // path): the child runs under `unshare` (mount+net+PID, where the kernel grants them) and the fixed jail script
     // remounts the tree read-only, re-opens the project read-write, and applies the rlimits before exec.
     if (jail) return planNamespaceSpawn(command, args, cpuLimitSec, jail);

@@ -1,7 +1,7 @@
 /**
  * PERSONALIZATION as convenience within a SAFETY ENVELOPE (theme 2's payoff over the revision spine).
  *
- * The vetted thesis: the personalization SOTA (learn preferences from interaction; condition generation on a
+ * The vetted thesis: the personalization research (learn preferences from interaction; condition generation on a
  * retrieved persona) is a SAFETY ANTI-PATTERN for an orchestrator — it converges stored-injection ("stored
  * XSS": a stored preference carrying an instruction that fires when read), sycophancy-amplification (the system
  * *preferred* into being less safe), preference-poisoning, and persona-jailbreak, plus classic cold-start /
@@ -22,7 +22,7 @@
  *       scope it applies to and is used ONLY when the current context matches; most-specific wins; no match ⇒
  *       not applied (fail-safe narrow — the structural answer to the over-application failure).
  *
- * BUILT + proven in-env: resolution + scope-match + clamp + validation. SEAM: the preference VALUES (operator
+ * Implemented: resolution + scope-match + clamp + validation. SEAM: the preference VALUES (operator
  * input via the spine). This module reads `RevisionStore.allCurrent("preference")`; it modifies nothing else.
  */
 

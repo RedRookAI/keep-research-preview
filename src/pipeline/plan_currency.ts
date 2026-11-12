@@ -1,12 +1,12 @@
 /**
- * PlanCurrencyCheck (Increment 16.9c-4) — a SOVEREIGN, currency-aware plan/proposal vetting primitive.
+ * PlanCurrencyCheck — a SOVEREIGN, currency-aware plan/proposal vetting primitive.
  *
  * A plan can be logically valid but STALE: based on a superseded best practice, a deprecated API, or an
  * outdated tool. In a fast-moving field this is a distinct failure mode, and the defense is a signal
  * INDEPENDENT of the planning model's own (possibly-stale) knowledge — a live DATE check + a research-
  * backed check. This runs on every plan/proposal and FLAGS staleness (never silently rewrites).
  *
- * SOTA basis (2026-08-05): a plan confidently based on superseded best practice is a NAMED failure mode,
+ * Research references (2026-08-05): a plan confidently based on superseded best practice is a NAMED failure mode,
  * distinct from hallucination — "the model is not hallucinating, it is remembering incorrectly" (Tacnode
  * 2026; the React-18-with-React-16-syntax example). TEMPORAL DECAY: a model assigns the SAME confidence to
  * stale and current knowledge (airuntimesecurity 2026), so the check must be independent of the planning
@@ -17,7 +17,7 @@
  * SOVEREIGN by construction (built on Keep's OWN primitives, not a SaaS staleness tool that would ingest
  * your plans): the deterministic core (date + staleness signals + landscape catalog + our BM25) is fully
  * OFFLINE; the research check is an OPT-IN, privacy-preserving egress (minimal query terms only, never the
- * plan body/IP) that degrades gracefully to the dated caveat. Zero deps.
+ * plan body/IP) that degrades gracefully to the dated caveat.
  */
 
 import type { TemporalContext } from "../currency/temporal_context.js";

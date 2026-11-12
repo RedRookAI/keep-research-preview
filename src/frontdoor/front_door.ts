@@ -1,10 +1,10 @@
 /**
- * FrontDoor (Increment 19) — the non-engineer front door, wired. The whole front-door conversation layer
+ * FrontDoor — the non-engineer front door, wired. The whole front-door conversation layer
  * (onboarding, intent, config-apply, local-first defaults) existed as modules but was an ISLAND: none of it
  * reached composeKeep, so a non-engineer had no wired entry point. 19 wires the DETERMINISTIC onboarding — the
  * always-works floor — into the app, and completes the pending-wire ledger islands whose hub is the front door.
  *
- * SOTA basis (2026-08-05):
+ * Research references (2026-08-05):
  *  - The non-engineer disqualifier is explicit (DronaHQ 2026): "if setup meant writing HTTP requests,
  *    configuring webhooks, handling JSON, or TOUCHING A TERMINAL, it was disqualified from no-code." → the
  *    front door is conversation-first with LOCAL-FIRST DEFAULTS; doing nothing yields a working setup.
@@ -16,7 +16,7 @@
  * Safety: each human directive is captured as a PROBATION memory item (external origin) — it must earn trust
  * before it configures anything. The human merge/approval gate on real changes is untouched.
  *
- * Zero runtime deps. The brain is an injected port; absent/failed → deterministic flow drives.
+ * The brain is an injected port; absent/failed → deterministic flow drives.
  */
 
 import { OnboardingConversation, type Turn } from "./onboarding_conversation.js";

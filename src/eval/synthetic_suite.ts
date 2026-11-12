@@ -1,12 +1,9 @@
 /**
- * Synthetic eval suite (Increment 16b) — proves the harness end-to-end HERE.
+ * Planted-bug fixtures for exercising the evaluation harness with scripted or replayed model responses.
  *
- * A TaskSource of self-contained planted-bug repos, each with REAL fail-to-pass + pass-to-pass tests
- * (actual functions evaluated against the patched file content). SyntheticInstanceRunner wires each
- * task through a real SolvePipeline under a scripted/replay model, then runs the tests against the
- * patched in-memory tree. No Docker, no dataset, no network — the whole harness contract is provable
- * in the sandbox. Real SWE-bench Verified/Pro adapters replace this suite behind the same TaskSource +
- * InstanceRunner ports on configured host. Zero deps.
+ * Runs SolvePipeline against an in-memory tree and checks fail-to-pass and pass-to-pass behavior.
+ * This profile exercises the harness contract; it does not measure general model capability or qualify
+ * an external benchmark dataset. Other TaskSource and InstanceRunner implementations are separate inputs.
  */
 
 import { mkdtempSync } from "node:fs";
@@ -97,31 +94,9 @@ const INSTANCES: SyntheticInstance[] = [
 ];
 
 /**
- * BUILD-ORDER 2.6 (ARM-THE-THIRD-CONSTRUCTION-SITE, Z138) — the arm-vs-refuse DECISION for the
- * eval construction site, recorded as a durable, auditable fact rather than a silent gap.
- *
- * Z138 threads the operator's kill switch + per-agent authority through the two OPERATOR entry
- * points (KeepPipeline round 35, buildDefaultSolver round 35). This — the synthetic suite — is the
- * THIRD site that news a real SolvePipeline (see the `new SolvePipeline({...})` below). It is left
- * DELIBERATELY un-armed, and this record is WHY.
- *
- * MEASURED (see redrook-ops/.round-artifacts/ARM-THE-THIRD-CONSTRUCTION-SITE/measurement.txt):
- * this construction site is a CLOSED, offline, IN-MEMORY measurement fixture — the solve target is
- * an `InMemoryFileTree`, the model is `scriptedModel` (isLocal, no network), "No Docker, no dataset,
- * no network". There is no operator (`new SyntheticInstanceRunner()` takes no registry; no caller
- * supplies one) and no external effect on the governed surface. So a kill switch here is inert-by-
- * construction: a switch only a test could throw, on a path nothing escapes, exercising an
- * intersection (2.2 agentScope) no eval uses. Arming it would be control-theatre — the 2026 SOTA
- * (kill-switch containment) attaches the obligation to effect/escape surfaces, and Saltzer-Schroeder
- * complete mediation guards OBJECTS that on this path do not exist.
- *
- * The EFFECT-BEARING eval runner already carries the seam: swe_eval.ts `RealSolverRunner`, which
- * materializes real on-disk dirs, routes through `buildDefaultSolver` (an already-armed entry
- * point). Only THIS runner news the pipeline bare, because it is the pure in-memory fixture.
- *
- * HONESTY BOUND: this record attests that the kill switch is DELIBERATELY ABSENT here and WHY — it
- * NEVER claims revocation is armed on the eval path. Emitted to the spine on every synthetic solve
- * (see `solve()`), so the exemption is auditable, never silent drift.
+ * The synthetic solver uses an offline scripted model and in-memory file tree.
+ * This fixture records why operator identity/kill-switch inputs are absent;
+ * operator-facing execution paths supply those inputs separately.
  */
 export interface EvalKillSwitchRefusal {
   readonly site: string;
@@ -190,7 +165,7 @@ export class SyntheticInstanceRunner implements InstanceRunner {
   private readonly trees = new Map<string, InMemoryFileTree>();
 
   /**
-   * BUILD-ORDER 2.6 (Z138) — an OPTIONAL operator-visible spine for the kill-switch refusal audit.
+   * an OPTIONAL operator-visible spine for the kill-switch refusal audit.
    * Omit ⇒ the refusal is staged to the fixture's own per-instance spine exactly as before, so
    * `new SyntheticInstanceRunner()` is byte-identical. Supplied ⇒ the refusal fact also lands where
    * the operator can read it. This is an AUDIT sink, NOT an identity/registry — the measured decision
@@ -208,7 +183,7 @@ export class SyntheticInstanceRunner implements InstanceRunner {
     const tree = new InMemoryFileTree({ ...inst.files });
     this.trees.set(task.instanceId, tree);
 
-    // BUILD-ORDER 2.6 (Z138) — this construction site news a real SolvePipeline WITHOUT an operator
+    // this construction site news a real SolvePipeline WITHOUT an operator
     // identity/registry, and that is a DECISION, not an oversight. Emit the fail-closed refusal fact
     // to the spine so the deliberately-absent kill switch is AUDITABLE (never silent drift). Fails
     // closed if the record is ever hollowed out. Observe-only: it never changes the SolveResult, so a

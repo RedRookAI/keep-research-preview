@@ -5,12 +5,12 @@
  * Two layers, both required (NIST AC-3(2) Dual Authorization, mapped in the SL5 AI Security Standard 2026):
  *  1. RBAC — does this principal even hold the permission for this action? (X0)
  *  2. Separation of Duties — dual control: N distinct approvers with author ≠ sole approver in multi-operator mode;
- *     in single-operator (N=1) mode a hardware-key STEP-UP substitutes for the absent second party. (Round 19)
+ * in single-operator (N=1) mode a hardware-key STEP-UP substitutes for the absent second party.
  * Both the grant (via SoD's onApproval → spine) and every denial are audited, so the regulator-required "HITL
  * checkpoint technically enforced through authn/authz/audit" (EU AI Act Art. 14; China agent rules 2026) is met.
  *
- * What would change it: rotating approver duties (anti-collusion) and time-bounded approvals are refinements that
- * layer on without changing this gate's shape. Zero deps.
+ * Extension considerations: rotating approver duties (anti-collusion) and time-bounded approvals are refinements that
+ * layer on without changing this gate's shape.
  */
 
 import type { AuthorizationPort, Principal, Permission } from "./rbac.js";

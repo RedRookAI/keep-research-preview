@@ -1,5 +1,5 @@
 /**
- * PRE-EFFECT WITNESS INTERLOCK (Mechanical-Enforcement Increment 12a).
+ * PRE-EFFECT WITNESS INTERLOCK.
  *
  * THE PROPERTY: a consequential effect is structurally unreachable unless a DURABLE commitment to its execution
  * envelope was sealed FIRST, and the effect's receipt is bound back to that commitment. "Envelope" is scope-honest:
@@ -30,7 +30,7 @@
  * external anchoring. The genuinely-seam residual is HARDWARE-backed forward-secure signing with attested secure
  * erasure in a TEE (S-tee, next capable model). Until B1 lands, keyEpoch is inert (kept for schema stability).
  *
- * SCOPE (conditional guarantee): the interlock gates only the BROKER-MEDIATED effect path. Until Increment 10's
+ * SCOPE (conditional guarantee): the interlock gates only the BROKER-MEDIATED effect path. Until authority boundary's
  * ambient-authority closure is complete (fs/subprocess/env/other-net owners), a buggy/compromised workload can still
  * effect AROUND the broker without touching this interlock — stated, never hidden.
  *

@@ -1,19 +1,10 @@
 /**
- * ANTI-DEPENDENCE / ANTI-TOXIC-VALIDATION GUARDRAILS — Round 2 of the personalization moat (the confidant-trap
- * antidote).
+ * Deterministic guardrails for over-disclosure, harmful affirmation and dependence-inducing interactions.
  *
- * The confidant literature is unambiguous: humanizing personalization LOWERS inhibitions to over-disclose (which
- * manufactures the very PII exposure Round 1's CI vault must contain), induces emotional dependence (Fang 2025
- * RCT), and rewards toxic validation (warmth that reinforces harmful beliefs) plus engagement dark patterns
- * (FOMO/guilt/streaks). So Keep's moat is UTILITY + TRUST, never attachment. Keep is a TOOL, not a friend: warm
- * and competent, but it does not elicit over-disclosure, does not validate harmful beliefs to please, redirects
- * genuine distress to HUMAN support (Keep is not a therapist), ships zero engagement hooks, and never penalizes
- * reduced use.
- *
- * These are deterministic guardrails in the plan-gate critic style (pure functions returning hold-reasons;
- * deny-overrides; NEVER an LLM as its own judge). BUILT + proven in-env: the veto / redirect-once / no-hook LOGIC.
- * SEAM: the classifications that feed them (is the belief harmful? does the response affirm it? is this genuine
- * distress?) — those are estimator signals; the guardrail logic is deterministic.
+ * Returns hold reasons and redirects distress to human support. The caller supplies classifications such
+ * as whether a belief is harmful or a response affirms it; these signals are not established by the rules.
+ * The design avoids engagement hooks or penalties for reduced use.
+ * Reference: Fang et al. (2025) research on emotional dependence in chatbot interaction.
  */
 
 import type { Notification } from "../notify/notification_router.js";

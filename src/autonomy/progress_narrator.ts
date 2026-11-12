@@ -1,19 +1,6 @@
 /**
- * Autonomy Engine — ProgressNarrator (build item 1).
- *
- * The "don't stare at a blank screen" layer. Every loop and stage of the autonomy engine
- * emits progress through this so the operator always sees a sentence or two about what's
- * happening. Per 2026 agent-UX SOTA, the interface is "the accountability layer between
- * user intent and autonomous action" — so narration is STRUCTURED TYPED EVENTS, not raw
- * strings, and the interface renders them at its chosen density (calm headline by default,
- * detail on demand). The event shape mirrors AG-UI's start/content/finish lifecycle so a
- * wire adapter is a clean mapping later, not a rewrite.
- *
- * Honest-by-construction: an event only reports what the CALLING code says is actually
- * happening (a real stage transition, a real tool call). The narrator has no ability to
- * fabricate progress — it is a reporting channel, not a predictor. Every event is
- * spine-logged, so the narration doubles as the auditable trace of what the autonomous
- * engine did (the "safe, auditable autonomy" requirement). Zero deps.
+ * Sequences caller-supplied progress events, sends them to subscribers and records them on the spine.
+ * The caller supplies the headline, detail and any known progress fraction.
  */
 
 import type { Spine } from "../spine/spine.js";
@@ -74,7 +61,7 @@ export class ProgressNarrator {
     };
   }
 
-  /** Emit a progress event. Honest-by-construction: reports only what the caller states. */
+  /** Sequence and record the progress reported by the caller. */
   narrate(input: NarrateInput): ProgressEvent {
     // Guard the fraction to [0,1] if provided; never fabricate one.
     const fraction = input.fraction === undefined ? undefined : Math.max(0, Math.min(1, input.fraction));
@@ -89,7 +76,7 @@ export class ProgressNarrator {
       at: this.now(),
     };
 
-    // Spine-log for the auditable trace (accountability layer).
+    // Record the same headline and detail sent to subscribers.
     this.spine.stage({
       type: "identity.action",
       actor: "narrator",
@@ -100,12 +87,6 @@ export class ProgressNarrator {
         stage: event.stage,
         phase: event.phase,
         headline: event.headline,
-        // ROUND 40: the DETAIL was being dropped here. Every narrated event carries a headline
-        // for the feed and a detail for the specifics, and only the headline reached the spine —
-        // so the tamper-evident record held "A safety control is configured OFF" without saying
-        // WHICH control, and an auditor reading the trace could not reconstruct what was said to
-        // the operator. Same shape as the floor's reasons being discarded by composeGate (Z163):
-        // the information existed and was lost in transit at a layer boundary.
         ...(event.detail !== undefined ? { detail: event.detail } : {}),
       },
     });
@@ -136,12 +117,12 @@ export class ProgressNarrator {
     return this.narrate({ stage, phase: "done", headline, ...(detail !== undefined ? { detail } : {}) });
   }
 
-  /** Convenience: the stage is waiting on the human (gated). Honest, not hidden. */
+  /** Mark a stage as waiting for input or authorization. */
   blocked(stage: string, headline: string, detail?: string): ProgressEvent {
     return this.narrate({ stage, phase: "blocked", headline, ...(detail !== undefined ? { detail } : {}) });
   }
 
-  /** Convenience: the stage failed. Honest framing — never pretend success. */
+  /** Mark a stage as failed. */
   failed(stage: string, headline: string, detail?: string): ProgressEvent {
     return this.narrate({ stage, phase: "failed", headline, ...(detail !== undefined ? { detail } : {}) });
   }

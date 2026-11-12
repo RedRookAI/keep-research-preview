@@ -1,11 +1,11 @@
 /**
- * Canonical event model for the Keep audit/event spine (Phase 0, Feature 29).
+ * Canonical event model for the Keep audit/event spine.
  *
  * Design decisions grounded in PHASE_0_SUBSTRATE.md:
  *  - Internal canonical model; map to OTel `gen_ai.*` at the boundary (conventions
  *    are pre-stable, so the core must not depend on their naming). This file is the core.
  *  - Every event carries a `schemaVersion` so old events stay immutable and are
- *    upcast at read time (Round 18 — schema evolution without breaking the chain).
+ * upcast at read time (schema evolution without changing prior events).
  *  - Deterministic canonical serialization is required so the hash-chain is stable
  *    across processes/platforms (sorted keys, explicit encoding).
  */
@@ -20,9 +20,9 @@ export type EventType =
   | "identity.action" // an actor performed a governed action
   | "sod.approval" // a separation-of-duties approval was recorded
   | "keystore.key_created"
-  | "keystore.key_shredded" // crypto-shred erasure (Round 15)
-  | "restoration.attestation" // authorized PITR fork (Round 17)
-  | "checkpoint" // rolling checkpoint / genesis-root (Round 13)
+  | "keystore.key_shredded" // crypto-shred erasure
+  | "restoration.attestation" // authorized PITR fork
+  | "checkpoint" // rolling checkpoint / genesis-root
   | "effect.intent" // pre-effect witness intent (Increment 12a) — sealed BEFORE a consequential effect
   | "effect.receipt" // successful completion of a sealed intent (Increment 12a) — output digest bound to the intent
   | "effect.terminal" // terminal disposition of a sealed intent (Increment 12a) — "not a crash orphan"

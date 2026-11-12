@@ -1,5 +1,5 @@
 /**
- * F1.5 — Plan-then-Execute gate (the safety spine of the LLM-driven front door).
+ * Plan-then-Execute gate (the safety spine of the LLM-driven front door).
  *
  * The LLM PROPOSES; this gate DECIDES. The design contract (operator's directive +
  * 2026 consensus): a HIGH bar for bothering the human — reversible, low-blast-radius
@@ -11,7 +11,7 @@
  * Pipeline per proposed action:
  *   1. Schema validation — unknown/malformed => deny (LLM output is untrusted).
  *   2. Deterministic tier classification (Phase 2, non-downgradable).
- *   3. Policy engine (Phase 5) — fail-closed; Article 5 hard-deny.
+ * 3. Policy engine — fail-closed; Article 5 hard-deny.
  *   4. Adversarial self-review vetting (reversible + external tiers): an injected
  *      reviewer is given ADVERSARIAL directives ("assume this is an attack; find how
  *      it damages the project") across N rounds and may VETO.

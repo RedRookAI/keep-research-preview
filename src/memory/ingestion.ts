@@ -1,11 +1,7 @@
 /**
- * Ingestion gate (Phase 1) — Round 15 (PII/secret) + Round 20 (license/SCA).
- *
- * OWASP ASI06 layer: input moderation + memory sanitization at the INGESTION
- * boundary, before anything is stored or distilled into a lesson. Two checks:
- *   - Secret/PII detection (entropy + known patterns): reject or redact.
- *   - License/SCA: copyleft (GPL/AGPL/LGPL) content is a stop-the-line flag,
- *     never distilled into a proprietary lesson/skill (anti-laundering).
+ * Ingestion checks before memory storage or skill extraction.
+ * Detected secrets/PII are rejected or redacted. Detected copyleft/license conflicts
+ * flag content for refusal; detection coverage depends on the implemented patterns.
  */
 
 export type IngestionDecision = "accept" | "redact" | "reject";

@@ -1,17 +1,17 @@
 /**
- * Multi-solve monitor (Increment S4) — a live view of every ticket in flight, folded from the spine's real
+ * Multi-solve monitor — a live view of every ticket in flight, folded from the spine's real
  * lifecycle trail (trigger.* → resolve.* → review.*). It is READ-ONLY observability: it shows what Keep is working
  * on, what's stuck, what's costing money, and what needs a human decision — it never acts.
  *
- * SOTA basis (2026-08-06): silent failure defines agent monitoring — a final status code doesn't capture the
+ * Research references (2026-08-06): silent failure defines agent monitoring — a final status code doesn't capture the
  * reasoning path, so trace-level state matters ("dashboards show totals; traces show decisions", Augment Code).
  * Keep's spine IS the trace; this folds it per ticket. Stuck/loop detection surfaces work that has stalled
  * (Raindrop's "Agent Stuck" signal). Cost visibility catches a ticket silently burning 10× via repeated
  * escalations (AI Magicx). And — action-first (Keep's W2 principle) — tickets that NEED a human (awaiting review,
  * deferred, dead-lettered, stuck) are surfaced first; healthy in-flight work is summarized, not itemized, so the
- * operator isn't drowned. Zero deps, pure.
+ * operator isn't drowned. , pure.
  *
- * What would change it: an OpenTelemetry export (Langfuse/Datadog) is a seam — the same folded state can be shipped
+ * Extension considerations: an OpenTelemetry export (Langfuse/Datadog) is a seam — the same folded state can be shipped
  * out; this is the built-in, dependency-free view.
  */
 

@@ -1,5 +1,5 @@
 /**
- * ONBOARDING INTAKE ROUTER — Round 7 of the personalization moat. The onboarding flow: model choice FIRST, then a
+ * ONBOARDING INTAKE ROUTER — The onboarding flow: model choice FIRST, then a
  * bot-led intake that accepts as many input types as possible and saves everything through the safe path.
  *
  * The onboarding conversation is already a deterministic progressive-disclosure cold start (jargon-free,
@@ -7,10 +7,10 @@
  * around it: (1) MODEL CHOICE FIRST — the provider (local / API / Claude-Max / OpenRouter) is selected before any
  * project work, and the n=1-local path needs zero cloud dependency; (2) BROAD INTAKE — many input types, each
  * routed to its parser (the SEAM), then saved THROUGH the CI vault (special-category disclosures are vaulted) and
- * the upkeep loop (dedup/link/supersede), data-minimizing (Round 2). An unsupported type DEGRADES GRACEFULLY to a
+ * the upkeep loop (dedup/link/supersede), data-minimizing. An unsupported type DEGRADES GRACEFULLY to a
  * typed result — never a crash, never a silent accept.
  *
- * BUILT + proven in-env: the model-first ordering, the intake routing, the save-through-vault-and-upkeep, and the
+ * Implemented: the model-first ordering, the intake routing, the save-through-vault-and-upkeep, and the
  * graceful degradation. SEAM: the per-format parsers (voice→text, image→text, zip expansion — the actual codecs).
  */
 

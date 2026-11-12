@@ -1,5 +1,5 @@
 /**
- * BUILD-ORDER 1.5 (BIND-WINDOWS-ISOLATION-BACKEND) — the NON-POSIX (Windows) isolation backend that runs the
+ * the NON-POSIX (Windows) isolation backend that runs the
  * untrusted test PROCESS behind the SAME `IsolatedExecutor`/`BoundaryExecutor` port rounds 1.3 / 1.3c / 1.3b
  * established, but bounded by a Win32 Job Object instead of a Linux namespace/container/microVM.
  *
@@ -28,16 +28,15 @@
  * COMPOSED, not forked: this builds a `boundaryRun` closure that plugs into the EXISTING `BoundaryExecutor`
  * (isolated_executor.ts) — one executor port, not two. Detect-and-select is PLATFORM-HONEST: the Windows floor
  * engages ONLY on `process.platform === "win32"` with real Job Object support; a win32 host with no Job Object
- * routes to WSL2 (back onto the POSIX tiers) or degrades LOUDLY; off-platform it is a VERIFIED-SEAM.
+ * routes to WSL2 (back onto the POSIX tiers) or degrades LOUDLY; off-platform it is a external integration.
  *
- * SOTA basis (2026-08-15, quotes/URLs in redrook-ops/.round-artifacts/BIND-WINDOWS-ISOLATION-BACKEND/sota.txt):
+ * References (2026-08-15):
  *  - JOBOBJECT_EXTENDED_LIMIT_INFORMATION / JobMemoryLimit / ActiveProcessLimit / KILL_ON_JOB_CLOSE (MS Learn);
  *    "For sandboxing scenarios, Job Objects can restrict processes ... running untrusted code safely."
  *  - Windows has no POSIX signals/`ulimit`/`unshare`; the tree-kill is `taskkill /pid <PID> /T /F`. Node cannot
- *    set Job Object limits without a native addon (pnpm #12406) → the Job Object bytes are a VERIFIED-SEAM here.
+ * set Job Object limits without a native addon (pnpm #12406) → the Job Object bytes are a external integration here.
  *  - WFP / `netsh advfirewall` deny-out for egress; WSL2 as the route back onto the POSIX isolation tiers.
  *
- * Zero runtime deps (node:child_process only, via the shared ProcessIsolationAdapter).
  */
 
 import { spawnSync } from "node:child_process";
@@ -194,7 +193,7 @@ export function windowsFallbackRoute(runtime: WindowsRuntimeInfo): "job-object" 
 }
 
 /**
- * BUILD-ORDER 1.5 — build the Job Object limit plan + the confined-cwd argv. PURE (testable without a win32
+ * build the Job Object limit plan + the confined-cwd argv. PURE (testable without a win32
  * host), mirroring `planContainerRun`/`planMicrovmRun`. The Job Object limits ARE the containment contract:
  *   - `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`   (always)              → lifetime containment (+ taskkill /F /T)
  *   - `JOB_OBJECT_LIMIT_ACTIVE_PROCESS` + ActiveProcessLimit       → process-count bound (fork-bomb defense)

@@ -5,7 +5,7 @@
  * fact, the edge is invalidated by writing a t_invalid rather than deleted." Keep implements that by composing the
  * store's `validAt` (as-of slice) + `closeValidInterval` (supersede-not-delete) — NO new persistence engine, NO Neo4j.
  *
- * HONEST SCOPE: this is a DERIVED VIEW, not a second source of truth — the store's lessons remain authoritative, and the
+ * Scope: this is a DERIVED VIEW, not a second source of truth — the store's lessons remain authoritative, and the
  * view inherits the store's post-filter-dilution caveat (as-of retrieval can under-use encoded time — arXiv 2601.07468).
  * Graphiti EXTRACTS edges from free text via an LLM; Keep's view is DETERMINISTIC over already-structured edge lessons —
  * LLM-based entity extraction from unstructured text is a separate, model-dependent seam (named, not faked).

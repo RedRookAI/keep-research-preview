@@ -1,5 +1,5 @@
 /**
- * BUILD-ORDER 1.3b (BIND-MICROVM-TIER-BOUNDARY) — the TOP-tier boundary that runs the untrusted test
+ * the TOP-tier boundary that runs the untrusted test
  * PROCESS behind the SAME `IsolatedExecutor`/`BoundaryExecutor` port round 1.3/1.3c established, but
  * enforced by a dedicated GUEST KERNEL inside a Firecracker (else Cloud Hypervisor) microVM — a HARDWARE
  * boundary (KVM), not a shared-kernel namespace/container.
@@ -22,7 +22,7 @@
  * MEASURES what is really present (a `/dev/kvm` char device + a firecracker/cloud-hypervisor binary), and
  * `selectExecutor` only claims the microvm tier when a real boundary + a built kernel/rootfs back it.
  *
- * SOTA basis (2026-08-15, quotes/URLs in redrook-ops/.round-artifacts/BIND-MICROVM-TIER-BOUNDARY/sota.txt):
+ * References (2026-08-15):
  *  - Firecracker = hardware-enforced microVM; "an untrusted workload talks to its own guest kernel,
  *    separated from the host by CPU virtualization ... escape both the guest kernel AND break out of the VM."
  *  - "Deliberately minimal with only virtio-net, virtio-block, a serial console ... no BIOS, PCI, or USB" —
@@ -31,7 +31,6 @@
  *    exist. A KVM-less host or a run with no rootfs cannot boot → route to a weaker-but-honest tier, never a
  *    false pass. A boundary run that cannot COMPLETE surfaces a runnerError, never a false green.
  *
- * Zero runtime deps (node:child_process / node:fs / node:os / node:path only).
  */
 
 import { execFileSync, spawnSync } from "node:child_process";
@@ -897,7 +896,7 @@ function memMib(bytes: number): number {
 }
 
 /**
- * BUILD-ORDER 1.3b — build the Firecracker VMM machine config + spawn argv. PURE (testable without booting
+ * build the Firecracker VMM machine config + spawn argv. PURE (testable without booting
  * a guest), mirroring `planContainerRun`. The guest hardware IS the containment contract:
  *   - rootfs drive `is_read_only: true`, ONLY the project (+ declared paths) attached as a rw data disk
  *                                 → filesystem-jail (a write outside the data disk hits the ro rootfs)

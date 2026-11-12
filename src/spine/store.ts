@@ -7,7 +7,7 @@
  * without changing spine logic. The filesystem impl below is the zero-dependency
  * tier and honors the plan's "append-to-file substrate" starting point.
  *
- * Two physical stores, matching the two-stage spine (Round 8):
+ * Two physical stores, matching the two-stage spine:
  *  - staging: append-only, concurrent-safe, holds not-yet-sealed events.
  *  - chain:   append-only, sealed hash-chain blocks (leader/sealer writes only).
  */

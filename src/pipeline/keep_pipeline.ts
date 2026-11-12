@@ -1,5 +1,5 @@
 /**
- * KeepPipeline (Increment 16.5) — the end-to-end composition.
+ * KeepPipeline — the end-to-end composition.
  *
  * Assembles the full spine that increments 13–16 built as separate, individually-proven pieces:
  *   issue → graph-localize → solve (localize/plan/apply/validate/repair) → risk-tier → PR proposal.
@@ -7,9 +7,9 @@
  * this closes that gap. An operator calls ONE method — `solveIssueToPR` — and gets a human-reviewable PR
  * with a risk-tiered oversight decision attached. Everything stays swappable behind ports (FileTree,
  * TestRunner, model, git, PR port); GraphLocalizer + oversight are wired as the defaults. Never merges;
- * the human gate is structural (increment 15). Zero deps.
+ * the human gate is structural (increment 15).
  *
- * What would change it: the isolation tier (increment 17) wraps the TestRunner/FileTree the pipeline
+ * Extension considerations: the isolation tier (increment 17) wraps the TestRunner/FileTree the pipeline
  * drives — it plugs in behind the same ports without changing this composition.
  */
 
@@ -121,14 +121,14 @@ export interface KeepPipelineDeps {
   /** Isolation backend that wraps untrusted test execution. Omit → the built ProcessIsolationExecutor floor. */
   readonly isolationExecutor?: IsolatedExecutor;
   /**
-   * BUILD-ORDER 1.3c — detected host isolation capabilities. When provided (and no explicit
+   * detected host isolation capabilities. When provided (and no explicit
    * `isolationExecutor`), the pipeline SELECTS the strongest available executor via `selectExecutor`: if a
    * strong runtime (gVisor/container) is really present it engages the strong `BoundaryExecutor` by
    * default; otherwise the round-1.3 process floor stays the default. Omit → the process floor (unchanged).
    */
   readonly isolationCapabilities?: IsolationCapabilities;
   /**
-   * BUILD-ORDER 1.3c/1.3b — an explicit strong-tier boundary runner + auto-wire config for `selectExecutor`.
+   * an explicit strong-tier boundary runner + auto-wire config for `selectExecutor`.
    * `detectRuntime`/`container` back the gVisor/container tiers; `detectMicrovm`/`microvm` back the TOP
    * microVM tier (engaged only when KVM+firecracker+a built kernel/rootfs are really present).
    */
@@ -138,7 +138,7 @@ export interface KeepPipelineDeps {
     readonly container?: Omit<import("../infra/container_boundary.js").ContainerBoundarySpec, "projectDir">;
     readonly detectMicrovm?: () => import("../infra/microvm_boundary.js").MicrovmRuntimeInfo;
     readonly microvm?: Omit<import("../infra/microvm_boundary.js").MicrovmBoundarySpec, "projectDir">;
-    /** BUILD-ORDER 1.5 — the Windows (non-POSIX) Job Object floor. `platform`/`detectWindows`/`windows` engage
+    /** the Windows (non-POSIX) Job Object floor. `platform`/`detectWindows`/`windows` engage
      * the win32 Job Object backend behind the SAME port; `windowsBoundaryRun` is a host/VERIFIED-SEAM wiring.
      * PLATFORM-HONEST: the Windows floor is selected ONLY when the host platform is win32. */
     readonly platform?: string;
@@ -235,7 +235,7 @@ export interface SolveToPrOptions extends SolvePipelineOptions {
    */
   readonly breakGlass?: BreakGlassGrant;
   /**
-   * BUILD-ORDER 2.4 — a recorded, accountable acknowledgment of THIS run's merge decision. Only meaningful
+   * a recorded, accountable acknowledgment of THIS run's merge decision. Only meaningful
    * for a `human-merge` verdict: on a CONSEQUENTIAL human-merge it satisfies the delivery-receipt (the
    * gated merge may then proceed with EVIDENCE the human engaged); its `decisionId` must match this
    * decision (mergeDecisionId), or it is stale and does not satisfy. Absent ⇒ an un-acknowledged
@@ -243,7 +243,7 @@ export interface SolveToPrOptions extends SolvePipelineOptions {
    */
   readonly mergeReceipt?: ComprehensionReceipt;
   /**
-   * BUILD-ORDER 2.4 — an operator-DECLARED allowance loosening a consequential delivery-receipt to
+   * an operator-DECLARED allowance loosening a consequential delivery-receipt to
    * accept-and-document (proceed + record the un-acknowledged surfacing). Additive: it can only loosen a
    * consequential gate, never tighten reversible work, and it is never a silent default.
    */
@@ -258,7 +258,7 @@ export interface SolveToPrResult {
   /** AM1: the authoritative merge-authority decision (autonomous-merge / human-merge / abandon-retry / block). */
   readonly mergeAuthority?: MergeAuthorityDecision;
   /**
-   * BUILD-ORDER 2.4 — the per-consequence comprehension-receipt decision bound to the human-facing merge
+   * the per-consequence comprehension-receipt decision bound to the human-facing merge
    * seam. `not-required` for anything the machine auto-resolves (front-of-house unchanged); on a human-
    * merge it is `delivery-receipt` (consequential — `mayProceed` false until an acknowledgment bound to
    * this decision is recorded) or `accept-and-document` (reversible — recorded, never blocked). This is a
@@ -313,7 +313,7 @@ export class KeepPipeline {
   private readonly brainCapability: import("../cascade/verification_harness.js").BrainCapability;
   private readonly isolationTier: IsolationTier;
   /**
-   * BUILD-ORDER 1.7 — the ONE run-local attestation channel. The executor EMITS a signed attestation of the
+   * the ONE run-local attestation channel. The executor EMITS a signed attestation of the
    * tier it really ran (via `attestor`); this pipeline VERIFIES it (via `verifier`) before the tier grants an
    * autonomy ceiling. The HMAC key is fresh per pipeline instance and never leaves the process.
    */
@@ -353,7 +353,7 @@ export class KeepPipeline {
     this.patchForecast = new CompositionalForecast("patch-time");
     this.brainCapability = deps.brainCapability ?? "lean";
     this.isolationTier = deps.isolationTier ?? "process";
-    // BUILD-ORDER 1.7 — mint the run-local attestation channel (executor emits, this pipeline verifies).
+    // mint the run-local attestation channel (executor emits, this pipeline verifies).
     const trustedMicrovmPolicyDigest = deps.microvmMeasurementPolicyAuthority
       ? verifiedMicrovmMeasurementPolicyAuthorityDigest(deps.microvmMeasurementPolicyAuthority)
       : undefined;
@@ -369,7 +369,7 @@ export class KeepPipeline {
   }
 
   /**
-   * BIND-DEFAULT-EXECUTION-PATH (BUILD-ORDER 1.1) — the byte-level execution boundary the pipeline binds
+   * BIND-DEFAULT-EXECUTION-PATH — the byte-level execution boundary the pipeline binds
    * BY DEFAULT. Returns the operator's FileTree realpath-jailed to the project dir, so with NO
    * configuration a solve/apply cannot read or write outside the project (a refused write never lands on
    * the filesystem). Composes the isolation executor's own realpath jail (`jailedTree` ⇒
@@ -384,7 +384,7 @@ export class KeepPipeline {
 
   /** Build the SolvePipeline with the wired localizer + ports. */
   /**
-   * BUILD-ORDER 1.3c — WIRING (ledger 298): SELECT the strongest available isolation executor. When the
+   * WIRING (ledger 298): SELECT the strongest available isolation executor. When the
    * operator supplies detected `isolationCapabilities`, `selectExecutor` engages the strong-tier
    * `BoundaryExecutor` where a real runtime (gVisor/container) backs the claim — otherwise the round-1.3
    * process floor. Neutering this to always `new ProcessIsolationExecutor(...)` makes the pipeline STOP
@@ -400,7 +400,7 @@ export class KeepPipeline {
       ...(this.deps.strongBoundary?.container ? { container: this.deps.strongBoundary.container } : {}),
       ...(this.deps.strongBoundary?.detectMicrovm ? { detectMicrovm: this.deps.strongBoundary.detectMicrovm } : {}),
       ...(this.deps.strongBoundary?.microvm ? { microvm: this.deps.strongBoundary.microvm } : {}),
-      // BUILD-ORDER 1.5 — the Windows Job Object floor (win32-gated inside selectExecutor).
+      // the Windows Job Object floor (win32-gated inside selectExecutor).
       ...(this.deps.strongBoundary?.platform ? { platform: this.deps.strongBoundary.platform } : {}),
       ...(this.deps.strongBoundary?.detectWindows ? { detectWindows: this.deps.strongBoundary.detectWindows } : {}),
       ...(this.deps.strongBoundary?.windows ? { windows: this.deps.strongBoundary.windows } : {}),
@@ -607,7 +607,7 @@ export class KeepPipeline {
     // Taking the minimum can only ever lower the ceiling relative to what is enforced, never
     // raise it, so an honest declaration costs nothing and a false one buys nothing.
     //
-    // BUILD-ORDER 1.7 (BIND-EXECUTOR-TIER-ATTESTATION) — Z193: `isoExecutor.tier` was STILL the executor's
+    // Z193: `isoExecutor.tier` was STILL the executor's
     // WORD (a class field). A mislabelled/swapped executor constructing `BoundaryExecutor("microvm", …)`
     // over the process floor bought the `full` ceiling on the label alone — the confused-deputy shape at
     // its last isolation-stack instance. Now the executor EMITS a signed attestation of the tier it really
@@ -618,7 +618,7 @@ export class KeepPipeline {
     const attestation = isoExecutor.attest?.(this.attestor, opts.projectDir ?? ".", Date.now());
     const verification = this.verifier.verify(attestation);
     const effectiveTier = weakerTier(this.isolationTier, verification.verifiedTier);
-    // BUILD-ORDER 2.3 (REVISIT-ISOLATION-GATING) — Z187: the autonomy ceiling is RE-DERIVED from the MEASURED
+    // Z187: the autonomy ceiling is RE-DERIVED from the MEASURED
     // evidence (the 1.7 verifier's `verifiedTier` + `measuredDegradations`), not the tier label via the
     // static table. Re-measured this round: the 1.3 jail / 1.5 Job Object are CAPABILITIES, not the default
     // wiring, so the default process floor's evidence still recomputes to bare `process` → `minimal`
@@ -688,7 +688,7 @@ export class KeepPipeline {
     });
     this.deps.spine.stage({ type: "identity.action", actor: "keep-pipeline", payload: { event: "merge_authority", issueId: issue.id, verdict: mergeAuthority.verdict, reason: mergeAuthority.reason, consequential: mergeAuthority.consequential, verified: mergeAuthority.verified, consequenceBand: mergeRisk.consequenceBand, ts: Date.now() } });
 
-    // ── Comprehension receipt (BUILD-ORDER 2.4, Z176): nothing here proved a human READ the warning.
+    // ── Comprehension receipt: nothing here proved a human READ the warning.
     // Bind a per-CONSEQUENCE receipt to this seam, COMPOSED with the merge decision's OWN consequence
     // classification (mergeAuthority.consequential — not a second consequence probe). The decisionId
     // matches a receipt to THIS decision (a stale/mismatched receipt does not satisfy). This computes a

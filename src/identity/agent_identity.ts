@@ -1,5 +1,5 @@
 /**
- * Per-agent identity + kill switch (Core Addition C).
+ * Per-agent identity + kill switch.
  *
  * Every agent/sub-agent gets an UNFORGEABLE identity — a capability TOKEN, not a claimed name — bound
  * to a narrow scope. All its effects carry that identity; a kill switch revokes an identity so its
@@ -18,13 +18,13 @@
  *    killed identity stays killed; its effects are refused thereafter.
  *  - Attribution (audit names the run, not the bot): every mint/kill records to the spine.
  *
- * BUILT vs SEAM: BUILT is the in-env identity model + registry + kill + fail-safe authorization + the
+ * Implementation boundary: this module provides the in-env identity model + registry + kill + fail-safe authorization + the
  * gate binding (a killed/unknown identity is a deny-capable gate input). A real OS-level enforcement —
  * a process-group / cgroup kill that terminates a revoked agent's PROCESS so it cannot emit effects
  * out of band, and cross-process credential attestation (SPIFFE/SVID-class) — is a SEAM (R35), the
  * same OS-enforcement family as R3/R27.
  *
- * WHAT WOULD CHANGE IT: short-lived expiry (an exp claim) would add time-bounded refusal; proof-of-
+ * Extension considerations: short-lived expiry (an exp claim) would add time-bounded refusal; proof-of-
  * possession (DPoP/X509-SVID) would harden the token against replay. Neither lets a killed or
  * out-of-scope identity proceed.
  */

@@ -1,8 +1,8 @@
 /**
- * TYPED PREDICATE THEORY for guard atoms (Mechanical-Enforcement Increment 6, part A — the Total Decision Kernel's
+ * TYPED PREDICATE THEORY for guard atoms (Mechanical-Enforcement decision kernel, part A — the Total Decision Kernel's
  * atom semantics).
  *
- * Increment 2 (guard_dag.ts) treats a guard atom as an OPAQUE free boolean variable keyed by its predicate string: it
+ * policy compiler (guard_dag.ts) treats a guard atom as an OPAQUE free boolean variable keyed by its predicate string: it
  * decides the PROPOSITIONAL structure (allOf/anyOf/not, shadowing, contradiction) but deliberately never interprets
  * what an atom MEANS. That interpretation is this module's job. A guard atom is a small PREDICATE over a typed request
  * CONTEXT — `net.port == 443`, `net.port in [80, 443]`, `path startsWith "/srv"`, `principal.labels has "prod"` — and
@@ -19,7 +19,7 @@
  * (proving `port==80 ∧ port==443` unsatisfiable at compile time — an interval/label SMT problem) is a possible later
  * refinement and is not attempted; the propositional layer's unsat results remain sound, theory only ever adds more.
  * (2) Binding an attribute to the ACTUAL resolved runtime object (a symlink resolved to its real path, a fd to its
- * real inode, TOCTOU-safe object identity) is Increment 11 (Resolver-Bound Guards); here the context is taken as
+ * real inode, TOCTOU-safe object identity) is resolver-bound guards (Resolver-Bound Guards); here the context is taken as
  * given, already-resolved typed data.
  *
  * Grounding: attribute-based access control (ABAC) predicates; Kleene/Belnap three-valued logic for partial

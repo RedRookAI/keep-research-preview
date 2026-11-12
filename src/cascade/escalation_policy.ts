@@ -1,7 +1,7 @@
 /**
- * ConfidenceEscalationPolicy (Increment 3.9b) — when to climb the cascade.
+ * ConfidenceEscalationPolicy — when to climb the cascade.
  *
- * SOTA basis (2026-08-04):
+ * Research references (2026-08-04):
  *  - Escalate on a confidence/marginality signal (tianpan; NeuralTrust: "escalate only if a
  *    confidence or verification check fails"). Keep reuses its BEHAVIORAL confidence estimator
  *    (control/confidence.ts — not self-reported; GRV anti-spoof) as the marginality signal.
@@ -13,7 +13,6 @@
  *  - Honest caveat (tianpan): cascade latency accumulates; pre-routing is the escape valve, and
  *    every escalation is spine-logged for drift monitoring.
  *
- * Zero deps.
  */
 
 import type { EscalationPolicy, TierResult, VerificationItem } from "./verification_cascade.js";

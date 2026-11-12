@@ -1,16 +1,16 @@
 /**
- * The Spine (Feature 29) — the two-stage append-only, hash-chained event spine.
+ * The Spine — the two-stage append-only, hash-chained event spine.
  *
- * Two-stage (Round 8): workers `stage()` events concurrently; a leader-elected
+ * Two-stage: workers `stage()` events concurrently; a leader-elected
  * `seal()` batches staged events into the hash-chain under the DistributedLock,
  * so tamper-evidence never blocks concurrent ingestion.
  *
  * Primitives included:
- *  - checkpoint() (Round 13): emit a checkpoint block attesting the cumulative root,
+ * - checkpoint: emit a checkpoint block attesting the cumulative root,
  *    so the active chain can be bounded (older blocks offloadable).
- *  - attestRestoration() (Round 17): append a signed restoration-attestation event
+ * - attestRestoration: append a signed restoration-attestation event
  *    declaring an authorized PITR fork that reconciles with an external anchor.
- *  - verify()/replay(): the chain is the source of truth (CQRS); derived state is a
+ *  - verify/replay: the chain is the source of truth (CQRS); derived state is a
  *    projection that can be deterministically rebuilt by replaying events.
  */
 
@@ -128,7 +128,7 @@ export class Spine {
   }
 
   /**
-   * Emit a checkpoint block (Round 13). It seals any pending events plus a
+   * Emit a checkpoint block. It seals any pending events plus a
    * checkpoint marker event attesting the cumulative root, bounding the active
    * chain. Runs under the sealer lock.
    */
@@ -199,7 +199,7 @@ export class Spine {
   }
 
   /**
-   * Append a restoration-attestation (Round 17). After a PITR restore, this
+   * Append a restoration-attestation. After a PITR restore, this
    * operator-signed event declares the authorized fork so it reconciles with the
    * external anchor instead of reading as tampering.
    */
@@ -288,7 +288,7 @@ export class Spine {
 
   /**
    * Replay all sealed events in order, upcast to the current schema version
-   * (Round 18). This is how derived projections (memory, graph) are
+   *. This is how derived projections (memory, graph) are
    * deterministically rebuilt from the source-of-truth chain (CQRS / DR replay).
    */
   replay(): StagedEvent[] {

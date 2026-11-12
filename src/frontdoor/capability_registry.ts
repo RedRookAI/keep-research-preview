@@ -1,24 +1,4 @@
-/**
- * F1.9 — Self-updating capability registry (a swappable ranking source).
- *
- * "Best available for the task" is worthless if "best" is frozen in code — the model
- * landscape changes quarterly (models retire, prices drop, new ones launch; e.g. the
- * Jun 12 2026 Fable/Mythos suspension). So capability knowledge lives behind a PORT
- * that refreshes and knows its own staleness, rather than a hardcoded ranking.
- *
- * Precedence when scoring a brain (highest-trust signal wins):
- *   1. MEASURED quality from Keep's own runs — self-updating from experience, fully
- *      offline, the best signal (a router that learns from what actually worked).
- *   2. An injected/refreshable SNAPSHOT — connected env can update it from a live
- *      benchmark feed; ships with a dated, honestly-stale default.
- *   3. STRUCTURAL inference (kind / context window / cost) — the floor when nothing
- *      better is known.
- *
- * SOTA basis (Aug 2026): "model capability profiles need continuous recalibration...
- * stale tables need manual recalibration every quarter; the integrated version doesn't
- * have that overhead." What would change it: a trusted live feed becomes the top
- * snapshot source on the connected env — but measured-own-runs still wins.
- */
+/** Score configured models using recorded measurements, a dated snapshot and structural fallback. */
 
 import type { BrainDescriptor } from "./brain_port.js";
 import { classifyCapability, type CapabilityTier, type CapabilitySignals } from "./capability_adaptive.js";
@@ -102,8 +82,8 @@ export class CapabilityRegistry {
   /** A plain-language staleness note for the operator/dashboard. */
   stalenessNote(now: Date = new Date()): string {
     return this.isStale(now)
-      ? `My knowledge of which models are best is from ${this.snapshotAsOf} and may be out of date — I'll keep learning which of your models works best from experience, and you can refresh the model list any time.`
-      : `Model rankings current as of ${this.snapshotAsOf}, refined by what actually works on your setup.`;
+      ? `The model ranking snapshot from ${this.snapshotAsOf} is out of date. Refresh the list or compare recent results from your configured models.`
+      : `Model rankings are current as of ${this.snapshotAsOf}, with any recorded results from your setup.`;
   }
 }
 

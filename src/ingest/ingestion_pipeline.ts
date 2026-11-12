@@ -1,7 +1,7 @@
 /**
- * IngestionPipeline + RetrievalBackend (Increment 4.5d) — the secure ingestion flow.
+ * IngestionPipeline + RetrievalBackend — the secure ingestion flow.
  *
- * SOTA basis (2026-08-04): the layered order is validate/sanitize → hash (immutable original) →
+ * Research references (2026-08-04): the layered order is validate/sanitize → hash (immutable original) →
  * classify → handle-by-tag → chunk (semantic boundaries) + per-chunk hash → index → record ROPA.
  * Every stage deterministic + spine-loggable; no LLM in the security/handling path. Deletion
  * propagates to the index (Truto's "state-drift landmine": a vector must never answer using data
@@ -9,7 +9,6 @@
  * dense/vector backend swaps in later WITHOUT changing the security/compliance envelope, and the
  * per-project isolation (session layer 3.5) wraps it unchanged.
  *
- * Zero deps.
  */
 
 import { createHash } from "node:crypto";

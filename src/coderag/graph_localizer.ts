@@ -1,10 +1,10 @@
 /**
- * GraphLocalizer (Increment 14c) — the graph-backed Localizer that SolvePipeline.localize consumes.
+ * GraphLocalizer — the graph-backed Localizer that SolvePipeline.localize consumes.
  *
  * Replaces flat BM25 stage-1 with hybrid retrieval: BM25 + graph-proximity (+ optional embedding as a
  * third RRF list), then an optional LLM re-rank/narrow stage 2. Local-first: the code graph is built
  * on-device and nothing is exfiltrated. Implements the same Localizer port as HierarchicalLocalizer,
- * so it's a drop-in upgrade behind the SolvePipeline. Zero deps.
+ * so it's a drop-in upgrade behind the SolvePipeline.
  */
 
 import type { ModelProvider } from "../gateway/gateway.js";

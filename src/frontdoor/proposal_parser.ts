@@ -1,5 +1,5 @@
 /**
- * F1.7 — Proposal parser (the tool-call layer, in front of the F1.5 decision gate).
+ * Proposal parser (the tool-call layer, in front of the F1.5 decision gate).
  *
  * The LLM's raw output is untrusted and non-deterministic, so we parse+validate it
  * into a typed ProposedAction BEFORE anything acts on it. On any failure we return a

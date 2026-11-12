@@ -1,7 +1,7 @@
 /**
- * PromptStrategy + Model Adaptation seam (Increment 3.7a) — model×complexity → prompt shape.
+ * PromptStrategy + Model Adaptation seam — model×complexity → prompt shape.
  *
- * SOTA basis (re-verified 2026-08-04): "optimal prompting strategies must co-evolve with model
+ * Research references (re-verified 2026-08-04): "optimal prompting strategies must co-evolve with model
  * capabilities" (arXiv 2510.22251 — the Prompting Inversion). The clean rule (Macplanet;
  * karozieminski; OpenAI guidance): **chat models reward detailed scaffolding; reasoning models
  * reward brevity + a clear end goal.** On reasoning models "think step by step", few-shot
@@ -15,7 +15,6 @@
  * level; binary → on/off by complexity; none → no knob, lean on prompt SHAPE instead. The layer
  * NEVER assumes a provider; the single-model floor holds for ANY one model.
  *
- * Zero deps.
  */
 
 import type { CapabilityTier } from "../frontdoor/capability_adaptive.js";

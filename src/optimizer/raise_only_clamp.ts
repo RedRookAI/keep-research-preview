@@ -1,5 +1,5 @@
 /**
- * Raise-only optimizer clamp (Build Step 2, layer 3 — the UNTRUSTED optimizer/router).
+ * Raise-only optimizer clamp.
  *
  * The optimizer may propose routing / ordering / model choices to improve efficiency. It is
  * explicitly UNTRUSTED — its proposal may be arbitrary or adversarial (model-driven, possibly
@@ -29,7 +29,7 @@
  * SCOPE: this clamps VERDICTS. The optimizer never writes effects and never touches the REE
  * directly — its only channel is a proposal that this clamp filters before the gate consumes it.
  *
- * WHAT WOULD CHANGE IT: adding a new verdict axis extends the ratchet (same rule); nothing makes
+ * Extension considerations: adding a new verdict axis extends the ratchet (same rule); nothing makes
  * the clamp permit a loosen. If the optimizer needed to *widen* authority, that is not the
  * optimizer's job — only the trusted floor/gate/budget (or an owner policy change) can.
  */

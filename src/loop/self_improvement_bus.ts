@@ -1,11 +1,11 @@
 /**
- * SelfImprovementBus (Increment 18.1) — the Monitor wire that CLOSES THE LOOP. Before this, every solve was
+ * SelfImprovementBus — the Monitor wire that CLOSES THE LOOP. Before this, every solve was
  * forgotten: LearningLoop/MemoryStore/MetaHarness were reachable only from demos/tests, and the heartbeat
  * tick defaulted to a no-op. 18.1 makes Keep "get better with use" AUTOMATIC: the pipeline emits a structured
  * OutcomeSignal after every solve; the bus fans it to registered learners, records it to the tamper-evident
  * spine, and coordinates the learners so competing adaptations never run concurrently.
  *
- * SOTA basis (2026-08-05):
+ * Research references (2026-08-05):
  *  - MAPE-K (IBM autonomic computing; Adaptive Data Flywheel arXiv 2510.27051): the OutcomeSignal is the
  *    Monitor phase; the shared Knowledge (spine + memory + anchor) is what wires the loops together.
  *  - Sequenced multi-loop coordination (EUREMA): competing concerns (heal vs improve) must not run
@@ -20,7 +20,7 @@
  *    Disagreement" arXiv 2604.28010) — a first-class field on the signal, combined with execution outcomes,
  *    never optimized as a standalone acceptance-rate target (Goodhart guard).
  *
- * Zero runtime deps. Everything behind ports. N=1 first-class (session-count cadence, no daemon assumed).
+ * Everything behind ports. N=1 first-class (session-count cadence, no daemon assumed).
  */
 
 import type { Spine } from "../spine/spine.js";

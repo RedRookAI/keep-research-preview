@@ -1,7 +1,7 @@
 /**
- * Shadow-mode gate (Phase 3.5, Round 16) — proactive pre-live safety.
+ * Shadow-mode gate — proactive pre-live safety.
  *
- * The negative-flip demotion (Phase 1) is REACTIVE — it catches a bad lesson only
+ * The negative-flip demotion  is REACTIVE — it catches a bad lesson only
  * after it has already hurt live PRs. Shadow-mode is PROACTIVE: a newly-graduated
  * lesson runs first against a held-out regression corpus, and is AUTO-REVOKED
  * (demoted back to probation) if applying it would reintroduce any held-out

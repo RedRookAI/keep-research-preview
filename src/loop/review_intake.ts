@@ -1,16 +1,16 @@
 /**
- * Review intake + the closed loop (Increment W3). This is the WIRE that turns Keep's separately-built pieces —
+ * Review intake + the closed loop. This is the WIRE that turns Keep's separately-built pieces —
  * trigger ingress (W0), the solve pipeline, the decision packet (S1), notifications (W2), the review flow — into
  * one end-to-end flow: a real ticket arrives → is solved → a human-gated review is recorded → only the dangerous
  * few notify → the human decides → the outcome feeds calibration (F2).
  *
- * SOTA basis (2026-08-06): human-in-the-loop review "sits between AI recommendation and AI execution" — the loop
+ * Research references (2026-08-06): human-in-the-loop review "sits between AI recommendation and AI execution" — the loop
  * NEVER merges; it produces a review and waits (ampcuscyber, agno, galileo). And a STABLE CORRELATION ID must be
  * threaded end-to-end so "trigger received" ties to "approval granted" as one traceable episode on the audit
  * spine (auth0, prefactor; the decision-episode-GUID pattern). The correlation id here is the trigger episode =
  * the Issue id (`source:ticketId`), recorded on review.pending so trigger → review → decision are one chain.
  *
- * Zero deps. What would change it: a distributed deployment would carry the correlation id as a W3C traceparent
+ * Extension considerations: a distributed deployment would carry the correlation id as a W3C traceparent
  * across process boundaries; the id + the human gate stay the same.
  */
 

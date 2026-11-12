@@ -1,8 +1,8 @@
 /**
- * Auto-Training system: the training-decision policy (Increment 11a).
+ * Auto-Training system: the training-decision policy.
  *
  * The system must RECOGNIZE when training genuinely helps vs when it doesn't — and, per the
- * convergent 2026 SOTA, the honest answer is usually "don't train": fine-tuning is the right call
+ * convergent 2026 research, the honest answer is usually "don't train": fine-tuning is the right call
  * ~10% of the time; the other ~90% is solved by better prompts, retrieval, or self-validation
  * (buildmvpfast/AgamiSoft 2026). The decision is "does the use case NEED it," not "can we afford it"
  * (PEFT made it cheap). The real cost is eval + data curation + lifecycle ownership (3-5x training
@@ -11,7 +11,7 @@
  * data and a verifiable reward clears a bar that accounts for lifecycle cost.
  *
  * The output is a TrainingDecision with a PLAIN-LANGUAGE rationale — the system must be able to
- * explain "why train / why not" to a human who isn't an engineer. Zero deps.
+ * explain "why train / why not" to a human who isn't an engineer.
  */
 
 /** What the system recommends doing about a capability gap. */

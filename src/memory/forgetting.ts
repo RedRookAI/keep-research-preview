@@ -1,5 +1,5 @@
 /**
- * MEM-DECAY — bounded, explainable DELIBERATE-FORGETTING (Priority Decay) over the bitemporal store. The three SOTA
+ * MEM-DECAY — bounded, explainable DELIBERATE-FORGETTING (Priority Decay) over the bitemporal store. The three research
  * forgetting axes are recency, access-frequency, and importance (arXiv 2512.13564: "Time-based, Frequency-based, and
  * Importance-driven Forgetting"). This ranks each memory's RETENTION PRIORITY and marks only low-value, stale, un-
  * accessed, or expired memories as RETIRED — the store's existing lowest tier, a reversible archival state (NOT a

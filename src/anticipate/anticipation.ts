@@ -1,23 +1,10 @@
 /**
- * ANTICIPATION ENGINE — Round 4 of the personalization moat (Horvitz-calibrated proactivity).
+ * Anticipation decisions calibrated to confidence, consequence and interruption cost.
  *
- * Horvitz's mixed-initiative principles (1999): intervene only when calibrated to CONFIDENCE and the COST OF
- * ERRORS; weigh the user's ATTENTION; MINIMIZE the cost of poor guesses; leave the user in control. The 2026
- * refinement is "always-on, not-always-speaking": notice a context shift, infer whether it matters, and choose
- * notify / question / draft / STAY SILENT — after SIMULATING the intervention (vet before surfacing).
- *
- * The research reshaped this round. Naive "predict and do" causes DESKILLING (skill atrophy) and AUTOMATION
- * COMPLACENCY — the rubber-stamp trap ("operators did not assess the recommendation and simply complied") — and
- * anticipatory help BACKFIRES via self-threat (it can feel like the system thinks you're incompetent). So the
- * engine is MINIMUM-INTERVENTION: it automates toil but preserves judgment, NEVER rubber-stamps, and prefers
- * PREPARE-SILENTLY / OFFER-ON-PULL over interrupt-on-push. It surfaces (interrupts) only when utility ≫
- * interruption-cost AND the action is low-consequence AND reversible AND the engine is confident. A CONSEQUENTIAL
- * action is never surfaced and never auto-done — it is at most offered for the human to decide (gate-on-
- * consequence). Sensitive context is read THROUGH Round 1's CI vault, which governs cross-context egress.
- *
- * BUILT + proven in-env: the vet / calibration / consequence-gate / pull-vs-push LOGIC. SEAM: the intent/next-need
- * predictor and the context-shift detector (they supply the candidate's utility, interruption cost, confidence,
- * and consequence class — the perception; the decision is deterministic).
+ * Prefers silent preparation or offers on request. Consequential candidates require a human decision;
+ * sensitive context passes through the contextual-integrity vault. Candidate prediction and context-shift
+ * detection are supplied by the caller; this module makes deterministic disposition decisions.
+ * Reference: Horvitz's mixed-initiative principles (1999).
  */
 
 import { successLCB, type SuccessPosterior } from "../routing/uncertainty_router.js";

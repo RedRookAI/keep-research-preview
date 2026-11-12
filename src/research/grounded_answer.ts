@@ -1,7 +1,7 @@
 /**
- * Auto-RAG: grounded-answer builder + groundedness floor (Increment 5b).
+ * Auto-RAG: grounded-answer builder + groundedness floor.
  *
- * SOTA basis (2026-08-04): the four RAG metrics are DISTINCT and must not be conflated (futureagi
+ * Research references (2026-08-04): the four RAG metrics are DISTINCT and must not be conflated (futureagi
  * 2026): "Groundedness is the gate. Faithfulness is the gauge. Context relevance is the retriever
  * diagnostic. Chunk attribution is the 'did the model read what we gave it?' check." Retrieval
  * quality does NOT guarantee faithfulness — models retrieve relevant passages yet ignore them or
@@ -14,7 +14,6 @@
  * model-faithfulness GAUGE seam (0-1) that only scores/flags. Grounded-but-wrong is a separate
  * layer (LogicVet / judge) — honestly out of scope here.
  *
- * Zero deps.
  */
 
 /** A retrieved chunk (structural subset of the corpus search hit). */
@@ -71,13 +70,7 @@ function lexicalGrounding(sentence: string, chunkText: string): number {
   return overlap / st.size;
 }
 
-/**
- * Normalize text for SOUND verbatim-presence matching: lowercase, straighten typographic quotes,
- * DROP double-quote marks (quote-wrapping drifts between a stored excerpt and the live source; dropping
- * it avoids a false-absent without weakening detection — the WORDS carry the fabrication signal), and
- * collapse whitespace. Deliberately mirrors redrook-ops/sota-citation-check.mjs's normalizer so Keep
- * checks a Citation the SAME way the build-loop checks its own SOTA quotes (dogfood parity).
- */
+/** Lowercase, normalize quotes and collapse whitespace for excerpt-presence matching. */
 export function normalizeForVerbatim(s: string): string {
   return s
     .toLowerCase()

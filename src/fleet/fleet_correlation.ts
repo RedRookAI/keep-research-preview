@@ -20,7 +20,7 @@
  *  - Fail-safe: unknown basis ⇒ treated as correlated (deny) — diversity cannot be proven.
  *  - Transient/reversible: the count is over CONCURRENT (in-flight) effects; it clears as they complete.
  *
- * BUILT vs SEAM: BUILT + proven in-env is the correlation-threshold logic (per-basis concurrent count,
+ * Implementation boundary: Implemented is the correlation-threshold logic (per-basis concurrent count,
  * threshold cap, fail-safe, transient). The real CROSS-HOST CORRELATION OBSERVATION — knowing what basis
  * every agent across every host is acting on — is the SEAM.
  *

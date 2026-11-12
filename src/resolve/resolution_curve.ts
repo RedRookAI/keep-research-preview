@@ -1,5 +1,5 @@
 /**
- * Resolution curve (Increment R5) — the honest economics of the resolution moat, computed from the R1–R4 audit
+ * Resolution curve — the honest economics of candidate resolution, computed from the R1–R4 audit
  * trail already on the spine (resolve.best_of_n / resolve.cascade.*). No parallel bookkeeping; it reads the real
  * events.
  *
@@ -11,11 +11,11 @@
  * — because those still cost money). Reporting resolve-rate without cost rewards systems that just spend more
  * (Microsoft token economics; Claw-SWE-Bench Pareto), so R5 always pairs rate with cost.
  *
- * SOTA basis (2026-08-06): resolution ≠ containment (ecorpit); cost-per-resolved-task over token spend (oplexa,
+ * Research references (2026-08-06): resolution ≠ containment (ecorpit); cost-per-resolved-task over token spend (oplexa,
  * FinOps); pass@k-union (capability) vs intersection (reliability) = the reliability gap (Simmering; τ-bench) —
  * surfaced by the existing computeResolveAtK, referenced not duplicated here; contamination/leak control is
- * required before a resolution NUMBER is trustworthy (Claw-SWE-Bench leak-fix) — hence the VERIFIED-SEAM caveat.
- * Zero deps. What would change it: real contamination-controlled SWE-bench runs on live infra produce the number;
+ * required before a resolution NUMBER is trustworthy (Claw-SWE-Bench leak-fix) — hence the external integration caveat.
+ * Extension considerations: real contamination-controlled SWE-bench runs on live infra produce the number;
  * this computes the mechanism economics on whatever runs it is given.
  */
 

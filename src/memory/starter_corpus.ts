@@ -1,7 +1,7 @@
 /**
- * Research starter corpus seeder (Phase 1, owner addition).
+ * Research starter corpus seeder.
  *
- * Seeds cold-start memory from current SOTA coding-failure research so Keep begins
+ * Seeds cold-start memory from current research coding-failure research so Keep begins
  * with borrowed competence. HONESTY RULE (non-negotiable): seeds are BORROWED and
  * UNVERIFIED — they enter on PROBATION with a citation, and must earn graduation
  * via Keep's OWN verified outcomes, exactly like any candidate. Model-coupled seeds

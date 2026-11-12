@@ -1,5 +1,5 @@
 /**
- * SovereigntyPosture (Increment 16.9d) — sovereignty as an environment-adaptive SPECTRUM.
+ * SovereigntyPosture — sovereignty as an environment-adaptive SPECTRUM.
  *
  * The earlier manifest assumed the brain always has an in-box fallback (LocalProvider). But a back-of-the-
  * room operator (a laptop, an OpenRouter key mostly on the FREE TIER) may not be able to run a local model
@@ -8,12 +8,12 @@
  * EVERY point on it is: the CONTROL PLANE (audit spine + governance + deterministic safety floors) stays
  * LOCAL and never egresses. Only the COMPUTE PLANE (the brain) varies by environment.
  *
- * SOTA basis (2026-08-05): "minimum sufficient sovereignty" — classify the deployment, be honest about its
+ * Research references (2026-08-05): "minimum sufficient sovereignty" — classify the deployment, be honest about its
  * tier, don't force air-gap (AGVN 2026). "You are not pretending the system is whole" — report the honest
  * posture, never a false air-gap claim (buildmvpfast 2026).
  *
  * hosted-dependent (free-tier-only, NO local model) is a FIRST-CLASS supported posture — not a downgrade to
- * be warned away from. Zero deps.
+ * be warned away from.
  */
 
 /** Where the brain (compute plane) runs. Declared per deployment; not assumed. */

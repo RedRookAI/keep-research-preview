@@ -8,11 +8,11 @@
  *    lines and only complete (\n\n-delimited) events are emitted.
  *  - `:` lines are comments/heartbeats and are ignored.
  *  - Normalized buffered text has a configured UTF8 byte cap, checked before each feed is emitted.
- * This is not an aggregate output/memory bound. finish() intentionally accepts an undelimited
+ * This is not an aggregate output/memory bound. finish intentionally accepts an undelimited
  * final block for provider compatibility, unlike strict EventSource framing. The provider owns
  * error/terminal interpretation; this decoder alone cannot establish successful generation.
  *
- * Zero deps. This module is transport-agnostic: it decodes text; the provider maps decoded events to
+ * This module is transport-agnostic: it decodes text; the provider maps decoded events to
  * dialect deltas.
  */
 

@@ -1,13 +1,7 @@
 /**
- * Web review UI — socket seam (Increment S2). A thin Node `http` adapter (built-ins only, zero deps) around the
- * pure handler in review_web.ts. It owns ONLY the things a socket owns: binding, reading the body, generating the
- * per-run token, and computing the Host allowlist from the actually-bound port. All routing/security/rendering is
- * the pure handler's job (and is unit-tested there without a socket).
- *
- * Binds 127.0.0.1 by DEFAULT — never 0.0.0.0 — so a single operator (N=1) is safe out of the box; exposing it
- * further is an explicit, opt-in deployment choice that belongs behind TLS. Real auth (X1) is now BUILT (OidcJwksProvider,
- * real RS256/JWKS); only TLS termination remains a deployment concern. VERIFIED-SEAM: the
- * socket wiring here is exercised by one integration test; the security + rendering guarantees are proven purely.
+ * Node HTTP adapter for the review handler. Owns binding, body reads, per-run tokens
+ * and the Host allowlist; review_web.ts handles routing, authorization and rendering.
+ * Defaults to loopback. Broader exposure needs deployment authentication and TLS.
  */
 
 import { createServer, type IncomingMessage } from "node:http";

@@ -1818,14 +1818,14 @@ button.ghost{background:#262b36}
 #reply{white-space:pre-wrap;margin-top:12px}
 #offer{margin-top:12px;padding:12px;border:1px dashed #3b82f6;border-radius:8px;display:none}
 </style></head><body><main>
-<h1>Keep</h1><p class="sub">Your safe, self-hostable build agent. Bound to your machine.</p>
+<h1>Keep</h1><p class="sub">Plan work, review code changes and carry projects across sessions.</p>
 <div class="panel"><h2>Projects</h2><div id="projects"><div class="none">Loading…</div></div></div>
 <div class="panel" id="vetoPanel" style="display:none"><h2>Awaiting your OK</h2><div id="veto"></div></div>
 <div class="panel"><h2>Message</h2>
 <textarea id="msg" rows="2" placeholder="Ask Keep to do something…"></textarea>
 <div><button id="send">Send</button> <button id="start" class="ghost">Start as project</button></div>
 <div id="reply"></div>
-<section aria-labelledby="projectHeading"><h2 id="projectHeading">Repository work</h2><p id="projectStatus" role="status">Start a repository goal or inspect retained work.</p><button id="refreshProject" class="ghost">Refresh retained work</button> <button id="newProject" class="ghost">Start another project</button><div id="projectJobs"></div><p>Request and job IDs in this page address support recovery. They grant no access. Review exact proposals in the <a href="/console">project console</a>; sign in there separately when required.</p></section>
+<section aria-labelledby="projectHeading"><h2 id="projectHeading">Repository work</h2><p id="projectStatus" role="status">Start a repository goal or inspect retained work.</p><button id="refreshProject" class="ghost">Refresh retained work</button> <button id="newProject" class="ghost">Start another project</button><div id="projectJobs"></div><p>Return to this page to recover your current job. Review and approve changes in the <a href="/console">project console</a>.</p></section>
 <div id="offer"><span id="offerText"></span><div><button id="accept">Accept</button> <button id="decline" class="ghost">Decline</button></div></div>
 </div>
 <script>

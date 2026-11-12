@@ -1,7 +1,7 @@
 /**
- * VerificationCascade — tier abstraction + generic ladder (Increment 3.9a).
+ * VerificationCascade — tier abstraction + generic ladder.
  *
- * SOTA basis (re-verified 2026-08-04): the winning production pattern is the eval-pyramid CASCADE —
+ * Research references (re-verified 2026-08-04): the winning production pattern is the eval-pyramid CASCADE —
  * "floor on every request, classifier on the residual, judge on the survivor sample; every layer
  * runs only on what the cheaper layer below could not decide" (futureagi; tianpan; NeuralTrust).
  * The deterministic floor is cheaper AND more reliable on what it covers (the $40K judge-missed-an-
@@ -17,7 +17,7 @@
  *
  * Invariant (soundness dominates): a fuzzy tier can NEVER un-block a sound Tier-0 block.
  *
- * Zero deps; all tiers behind ports.
+ * ; all tiers behind ports.
  */
 
 /** The thing being verified (a plan, an artifact, a claim, a memory write, ...). */

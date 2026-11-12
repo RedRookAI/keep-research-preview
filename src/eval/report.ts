@@ -1,15 +1,15 @@
 /**
- * Eval report (Increment 16c).
+ * Eval report.
  *
- * SOTA basis (2026-08-05): a credible 2026 eval reports VARIANCE, cost, and failure classes — not a
+ * Research references (2026-08-05): a credible 2026 eval reports VARIANCE, cost, and failure classes — not a
  * single peak number (appliedtechnologyindex 2026: "variance matters more than peak score"; operators
  * should ask for repeated-run results, failure classes, cost per resolved task, latency to first
  * patch). So this computes Resolve@1 AND Resolve@k across repeated runs with variance, cost-per-
  * resolved-task, a failure-class breakdown, and regression-vs-a-frozen-baseline (reusing the existing
  * computeImprovement). Contamination/reliability caveats are surfaced first-class (SWE-bench Verified is
- * contamination-compromised — OpenAI recommended discontinuing it). Zero deps.
+ * contamination-compromised — OpenAI recommended discontinuing it).
  *
- * What would change it: if the field standardizes a richer scorecard (e.g. latency-to-first-useful-
+ * Extension considerations: if the field standardizes a richer scorecard (e.g. latency-to-first-useful-
  * patch percentiles), add fields — the per-instance InstanceRun already carries the raw signals.
  */
 

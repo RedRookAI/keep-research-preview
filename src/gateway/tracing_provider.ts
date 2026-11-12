@@ -1,16 +1,10 @@
 /**
- * TracingModelProvider — model-gateway instrumentation, behind the ModelProvider port.
+ * ModelProvider instrumentation for generation spans and partial cost estimates.
  *
- * Wraps any ModelProvider so every generate() records a span: name gen_ai:<model>, tagged with the ambient trace context
- * (so it nests as a CHILD of the current run/stage span), carrying a cost breakdown computed from token usage × provider
- * pricing, and status llm-error if the call throws (the error is re-thrown after the span is recorded). Missing prices
- * or usage remain explicitly unknown. Embeddings pass through without token-price telemetry. The application/gateway
- * starts the span and captures timing + tokens; the provider itself doesn't extend it.
- *
- * SOTA basis (2026-08-07): OTel GenAI conventions — each LLM call is a child span; cost = usage attributes × provider
- * pricing, stored per span and summed at the root; context propagated across awaits (AsyncLocalStorage), not threaded by
- * hand. A small custom span schema captures ~80% of the value without the full OTel SDK. What would change it: exporting
- * these spans over OTLP to an external collector is a deployment seam; the in-process TraceRecorder is the source of truth.
+ * Each generation span carries ambient trace context, timing, token usage and priced cost where known.
+ * Missing prices or usage remain unknown. Errors are recorded and rethrown; embeddings pass through
+ * without token-price telemetry. Context uses AsyncLocalStorage.
+ * Reference: OpenTelemetry GenAI semantic conventions. The in-process schema is not an OTLP exporter.
  */
 
 import type { ModelProvider, GenerateRequest, GenerateResult, Embedding } from "./gateway.js";

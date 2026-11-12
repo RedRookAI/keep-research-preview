@@ -1,5 +1,5 @@
 /**
- * Theme 3a — SoulConfig (structured persona; SOFT config only).
+ * SoulConfig (structured persona; SOFT config only).
  *
  * The load-bearing 2026 rule (Flowgrammers, clawsouls, Zylos): SEPARATE PERSONALITY
  * FROM POLICY. A soul answers "who is this agent?" — name, tone, stance, decision
@@ -11,7 +11,7 @@
  * A soul is UNTRUSTED input (persona-hijacking is a documented attack): every field is
  * sanitized, and any attempt to smuggle permissions/scope/meta-instructions into the
  * persona is stripped and flagged — a persona can't grant itself powers. Ships a
- * friendly default identity when none is set. Zero deps.
+ * friendly default identity when none is set.
  */
 
 import { sanitizeForPrompt } from "../frontdoor/chunker.js";

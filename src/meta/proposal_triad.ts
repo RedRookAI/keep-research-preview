@@ -1,8 +1,8 @@
 /**
- * ProposalTriad (Increment 18.0) — the mandatory research + logic + consequence gate that EVERY
+ * ProposalTriad — the mandatory research + logic + consequence gate that EVERY
  * self-improvement proposal must clear BEFORE the external-anchor comparison.
  *
- * WHY (SOTA basis, 2026-08-05): harness development is a MULTI-STEP, mechanism-level loop, not a single
+ * WHY (Research references, 2026-08-05): harness development is a MULTI-STEP, mechanism-level loop, not a single
  * accept/reject (Darwin Godel Machine arXiv 2505.22954; Meta-Harness 2603.28052; Self-Harness 2606.09498;
  * Bilevel Autoresearch 2603.23420 artifact-vs-mechanism). "Harness updating is not harness benefit" (2026)
  * → a triad DISENTANGLES real benefit from churn. The triad makes three orthogonal checks a proposal must
@@ -16,7 +16,7 @@
  * A triad FAILURE is a COUNTEREXAMPLE that feeds the refine step of the bounded loop — not a silent reject.
  * The triad itself is a PORT: each check is a pluggable adapter, so the deterministic logic/consequence
  * adapters wrap Keep's existing LogicVet / CompositionalForecast, and the research adapter degrades by tier.
- * Zero runtime deps.
+ *
  */
 
 /** One of the three checks. Deterministic checks return a stable verdict everywhere. */

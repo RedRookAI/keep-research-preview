@@ -5,17 +5,17 @@
  * a BrainCall so that, for a classified task shape, it retrieves the guarded top-k high-utility skills and injects their
  * guidance into the prompt — then tags the call with the applied lesson ids so per-call cost attributes per lesson.
  *
- * SAFETY (SOTA 2026-08-08): agent skills are a supply-chain injection surface — "once installed, repeatedly loaded as
+ * SAFETY (research 2026-08-08): agent skills are a supply-chain injection surface — "once installed, repeatedly loaded as
  * trusted task-specific guidance" (SkillJect, arXiv 2602.14211). OWASP's rule is to separate internal instructions from
  * untrusted data and treat injected context as untrusted. So guidance goes in a DELIMITED, clearly-labeled ADVISORY block:
  * a poisoned skill step cannot escape the block or masquerade as a top-level instruction, and the block explicitly tells
  * the model the guidance is advisory, the user's request + safety rules win, and the normal review gates still apply.
  *
- * HONESTY (SOTA 2026-08-08): "even curated skill prompting is often neutral or harmful" (SWE-Skills-Bench, via S2L
+ * HONESTY (research 2026-08-08): "even curated skill prompting is often neutral or harmful" (SWE-Skills-Bench, via S2L
  * arXiv 2606.16769). So this APPLIES learned skills (and makes per-lesson cost precise); it does NOT claim to improve
  * outcomes. Mitigations are selectivity (only the retrieval guard's reranked top-k high-utility skills) and conciseness
  * (the composed steps only, empty → no injection at all). Whether it helps on a given workload is measurable, not assumed.
- * What would change it: a distill-to-LoRA path (S2L) would move proven skills from runtime text into weights — that's the
+ * Extension considerations: a distill-to-LoRA path (S2L) would move proven skills from runtime text into weights — that's the
  * auto-training tier, not this prompt-injection path.
  */
 

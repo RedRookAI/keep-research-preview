@@ -1,9 +1,9 @@
 /**
- * REDEMPTION LEDGER (Mechanical-Enforcement Increment 7, part B).
+ * REDEMPTION LEDGER.
  *
  * A verified permit conveys authority only up to its redemption budget — and a holder must not be able to MULTIPLY that
  * budget by branching the caveat chain. Redemption is therefore bounded on EVERY CHAIN PREFIX simultaneously, checked
- * and consumed atomically together: verify() returns a `budgets` list {id, cap} — one entry per prefix [c1..ci] of the
+ * and consumed atomically together: verify returns a `budgets` list {id, cap} — one entry per prefix [c1..ci] of the
  * presented permit — where the id is the SUBTREE identity shared by every descendant carrying that prefix (prefix 0's
  * id is the root claims digest) and the cap is the effective redemption ceiling at that node. Redeeming a leaf consumes
  * one from every prefix counter, so:
@@ -20,7 +20,7 @@
  * A permit HOLDER never supplies it. The counting uses captured Map primitives + bigint comparisons only (no array
  * methods, no prototype-dispatched calls on caller data), so — WITHIN the stated inert-data threat model — the subtree
  * ceiling holds. (A same-isolate adversary with code execution can corrupt any in-process structure; that adversary is
- * out of scope, matching the Increment-6 precedent, and is not claimed to be defended here.)
+ * out of scope, matching the decision kernel precedent, and is not claimed to be defended here.)
  *
  * Grounding: replay-resistant token redemption; at-most-once delivery; capability subtree/budget accounting.
  */

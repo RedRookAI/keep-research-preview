@@ -10,9 +10,9 @@
  *    SPEC-DRIFT detection (a required capability not evidenced, or the spec-encoding tests failing). Spec-drift is
  *    anchored to the approved spec + test outcomes — it never asks one agent to judge another.
  *
- * SOTA basis (2026-08-08): learning a reusable rule from an accepted human edit is the Cursor Bugbot "Learned Rules" /
+ * Research references (2026-08-08): learning a reusable rule from an accepted human edit is the Cursor Bugbot "Learned Rules" /
  * Qodo "attribution" pattern; the generalization (pattern signature, not literal text) is what makes it reusable and
- * keeps it from overfitting one diff. What would change it: promoting a captured lesson into an APPLIED skill is the
+ * keeps it from overfitting one diff. Extension considerations: promoting a captured lesson into an APPLIED skill is the
  * existing skill-distiller path — these lessons are captured + retrievable; auto-promotion to skills is that separate loop.
  */
 

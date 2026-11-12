@@ -1,16 +1,16 @@
 /**
- * A2A + signed Agent Cards (Phase 6, #47 bring-your-own-agent).
+ * A2A + signed Agent Cards.
  *
  * Built to the A2A v1.0.x model (Linux Foundation): an Agent Card (a signed JSON
  * "business card" at /.well-known/agent-card.json) advertises an agent's skills;
  * transport is JSON-RPC/HTTP with an async task lifecycle. Keep is the STAR hub —
  * external agents delegate/receive THROUGH Keep, not peer-to-peer (avoids N^2).
  *
- * BYOA agents are HOSTILE/untrusted (port-security): scoped identity (Phase 0), NO
+ * BYOA agents are HOSTILE/untrusted (port-security): scoped identity , NO
  * internal memory shared. The signed Agent Card is the hostile-intake gate — an
  * unsigned or invalid card cannot be promoted past untrusted.
  *
- * Trajectory caveat (Round 2): a BYOA agent runs OUTSIDE Keep's instrumentation, so
+ * Trajectory caveat: a BYOA agent runs OUTSIDE Keep's instrumentation, so
  * its internal steps are not in Keep's learning loop — only its task-level OUTCOMES
  * are captured (objective-anchored, like any external signal).
  */

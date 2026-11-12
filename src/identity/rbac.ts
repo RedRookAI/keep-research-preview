@@ -1,5 +1,5 @@
 /**
- * Open RBAC (Increment X0) — the authorization core that lets a TEAM share a Keep instance, without ever degrading
+ * Open RBAC — the authorization core that lets a TEAM share a Keep instance, without ever degrading
  * the single operator. It is deliberately the open, self-hostable core: a small roles→permissions model behind a
  * port, so an enterprise can swap in ABAC / ReBAC / a policy engine (Cedar, OPA) later (X1) without changing the
  * call sites.
@@ -8,7 +8,7 @@
  * is no login. RBAC only engages when principals are explicitly configured. (On the host, the CLI acts as owner —
  * shell access to the Keep box is ownership; RBAC's job is to govern the shared web surface where many people connect.)
  *
- * SOTA basis (2026-08-06):
+ * Research references (2026-08-06):
  *  - Treat the agent as a FIRST-CLASS identity with a least-privilege role; "never let an agent call
  *    permission-management APIs or approve its own actions" (Microsoft Entra Agent ID; cowork.ink; CSA). Here the
  *    `agent` role has `change.solve` and NOTHING else — it can propose, but structurally cannot approve, decline,
@@ -16,7 +16,7 @@
  *  - Design roles around discrete units of work, least privilege, and per-request enforcement ("never trust,
  *    always verify") — permissions here are discrete actions, checked at each decision point, not once at login.
  *  - RBAC is the foundational boundary; agents strain the stable-subject assumption, so keep it behind a port and
- *    layer relationship/attribute checks later (Zuplo, Avatier, hymalaia). What would change it: a deployment that
+ * layer relationship/attribute checks later (Zuplo, Avatier, hymalaia). Extension considerations: a deployment that
  *    needs per-resource / on-behalf-of scoping swaps the AuthorizationPort for a ReBAC store — call sites unchanged.
  */
 

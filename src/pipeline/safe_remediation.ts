@@ -1,12 +1,12 @@
 /**
- * SafeRemediation (Increment 16.9a) — deterministic self-heal BEFORE routing to a human.
+ * SafeRemediation — deterministic self-heal BEFORE routing to a human.
  *
- * Premise (user, SOTA-validated): humans — especially non-engineers — rubber-stamp approvals, so routing
+ * Premise (user, research-informed): humans — especially non-engineers — rubber-stamp approvals, so routing
  * is often a FALSE safeguard. Safety must live in the deterministic layer. When a patch concern is in the
  * PROVABLY-SAFE class (reversible + bounded + known-failure-mode + complete blast-radius), we auto-narrow
  * and INDEPENDENTLY re-vet instead of routing. Everything irreversible/high-blast still routes or blocks.
  *
- * SOTA basis (2026-08-05): auto-remediate ONLY low-risk, reversible, bounded, deterministic, known-mode
+ * Research references (2026-08-05): auto-remediate ONLY low-risk, reversible, bounded, deterministic, known-mode
  * fixes with full audit + rollback; ALWAYS keep a human on irreversible/high-risk; anything with
  * incomplete blast-radius info routes (Aurora SRE / Tamnoon / SRE School / PolicyCortex 2026). Trust is
  * system-level: a self-heal is safe because the independent re-vet + rollback + audit catch a bad heal,
@@ -23,7 +23,7 @@
  *  - Per-rule shadow mode (evidence-based): a rule in shadow logs its would-be fix WITHOUT applying it.
  *  - Every remediation (applied or shadowed) is audited with a rollback id.
  *
- * Zero deps (node:crypto is a builtin). The human MERGE gate is untouched — self-heal only narrows a
+ * The human MERGE gate is untouched — self-heal only narrows a
  * patch before the existing human gate; it never merges.
  */
 

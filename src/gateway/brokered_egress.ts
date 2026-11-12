@@ -1,10 +1,10 @@
 /**
- * BROKERED EGRESS PROVIDER (Mechanical-Enforcement Increment 10b — Ambient-Authority Closure, the WIRE).
+ * BROKERED EGRESS PROVIDER.
  *
- * The frontier property this facet makes NON-VACUOUS + LOAD-BEARING (one sentence): a REMOTE provider request (the `net`
+ * Contract: a REMOTE provider request (the `net`
  * effect family) reaches the raw transport ONLY as the second half of a real admission→permit→broker→owner transaction —
- * per outbound call the kernel DECIDES (Increment 6) whether egress is permitted, on ALLOW a one-shot `net` permit is
- * MINTED (Increment 7) bound to this subject/session/effect/object/right + the broker-net audience, and the Increment-9
+ * per outbound call the kernel DECIDES (decision kernel) whether egress is permitted, on ALLOW a one-shot `net` permit is
+ * MINTED (permit module) bound to this subject/session/effect/object/right + the broker-net audience, and the effect broker
  * broker REDEEMS it before the sole net OWNER executor performs the transport. A denied decision mints NOTHING; a broker
  * or permit failure yields NO send (no fallback to a direct transport). This is the acceptance test that makes Increment
  * 10's sentence — "the workload physically lacks every effect path NOT EXPOSED BY THE BROKER" — non-vacuous for the closed
@@ -22,13 +22,13 @@
  *  (1) BROKER load-bearing — a broker that will not redeem (wrong audience) → the send fails closed, the owner/transport
  *      is never reached, and there is NO direct fallback; (2) DECISION gate — a denied egress mints NOTHING and never
  *      dispatches (neuter-verified); (3) PERMIT signature — a permit the broker cannot verify (wrong root key = a foreign/
- *      tampered permit) → no transport (expired/replayed single-use is the broker's redeem, proven in the Increment-9
+ * tampered permit) → no transport (expired/replayed single-use is the broker's redeem, proven in the effect broker
  *      suite); (4) real # privacy — the inner transport / permit key / broker are not reachable from the wrapper object
  *      (no `(x as any).inner` bypass); (5) captured isLocal — a post-construction `isLocal` flip cannot re-route a remote
- *      send. The closed-world sweep (Increment 10a) additionally confines the raw `net` primitive to the declared owner.
+ * send. The closed-world sweep (artifact authority gate) additionally confines the raw `net` primitive to the declared owner.
  *      Streaming is dispatched as one authorized send (not retried mid-flight).
  *
- * HONEST SCOPE. This closes ONE production `net` egress family through real issuance+broker+owner. It does NOT yet close:
+ * Scope. This closes ONE production `net` egress family through real issuance+broker+owner. It does NOT yet close:
  * the synchronous witness-log fs writes, solve/apply fs writes, subprocess/env/clock/random families, or other net
  * mechanisms — later increments. The global frontier sentence stays QUALIFIED until every family is closed; the honest
  * 10b claim is that it is non-vacuous and load-bearing FOR `net`. The kernel/permitKey/manifest/ledger/audit are the

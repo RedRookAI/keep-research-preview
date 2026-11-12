@@ -1,7 +1,7 @@
 /**
- * Backup: clean uninstall routine (Increment 9c).
+ * Backup: clean uninstall routine.
  *
- * SOTA basis (2026-08-04): sovereignty / no-lock-in — uninstall must leave the operator's WORK
+ * Research references (2026-08-04): sovereignty / no-lock-in — uninstall must leave the operator's WORK
  * intact and prove what it removed. The Eon 2026 war story (an AI agent deleted production AND its
  * backups) makes step 4 load-bearing: uninstall crypto-shreds KEYS and removes the INSTANCE, but it
  * NEVER deletes the backup target — the operator's work survives the uninstall by construction.
@@ -9,7 +9,7 @@
  * Exact spec order (master plan §6): (1) offer a final backup; (2) remove instance home + registry +
  * runfiles; (3) crypto-shred keys (existing keystore); (4) leave work intact at the backup target;
  * (5) print exactly what was removed. Filesystem/registry removal is behind a RemovalPort so the real
- * instance functions plug in and tests use fakes. Zero deps.
+ * instance functions plug in and tests use fakes.
  */
 
 import type { Spine } from "../spine/spine.js";

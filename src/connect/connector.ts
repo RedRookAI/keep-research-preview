@@ -1,5 +1,5 @@
 /**
- * CONNECTOR-SAFETY FRAMEWORK — Round 6 of the personalization moat. Wire Keep to many external services safely by
+ * CONNECTOR-SAFETY FRAMEWORK — Wire Keep to many external services safely by
  * treating EVERY connector as hostile until proven, composing Keep's existing safety primitives.
  *
  * The core agentic-connector risk is the "lethal trifecta": untrusted input + sensitive-data access + the ability
@@ -19,7 +19,7 @@
  *   - `mayFlowToConnector` — a connector is a CI RECIPIENT: sensitive context flows to it only if the vault's
  *     `mayFlow` permits.
  *
- * BUILT + proven in-env: the allowlist/signature gate, the least-privilege clamp, the trifecta-breaking `mayAct`,
+ * Implemented: the allowlist/signature gate, the least-privilege clamp, the trifecta-breaking `mayAct`,
  * and the CI-recipient gate. SEAM: the crypto (`stubSign` stands in for an HSM signature) and the individual
  * service adapters (Slack/Telegram/Notion/Linear/OpenRouter — the actual API clients).
  */

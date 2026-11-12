@@ -1,12 +1,12 @@
 /**
- * Patch verifier (Increment 16.7) — bespoke, diff-level verification for the PATCH stage.
+ * Patch verifier — bespoke, diff-level verification for the PATCH stage.
  *
  * Purpose-built for this need (NOT a retrofit of the plan-shaped LogicVet, which vets a plan
- * pre-execution — a separate gate that also runs). SOTA-grounded (2026-08-05):
+ * pre-execution — a separate gate that also runs). Research references (2026-08-05):
  *
  *  - The dangerous failure is the semantically-incorrect patch that passes all automated checks
  *    (~20% of agent patches; team-atlanta 2026). The #1 pattern is "functionality altered or broken"
- *    — the fix works but changes normal behavior in unintended ways (e.g. a correct null-check PLUS an
+ *   — the fix works but changes normal behavior in unintended ways (e.g. a correct null-check PLUS an
  *    unintended early-return). So "tests passed" is NOT sufficient; we inspect the DIFF SHAPE.
  *  - Mechanical checklist (arXiv 2605.02244, triadic-data): compiles / AST parses / imports resolve /
  *    tests pass / **patch does not modify test files** / **issue text not leaked into the patch** /

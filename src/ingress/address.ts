@@ -1,9 +1,9 @@
 /**
- * Canonical ingress ADDRESS (Mechanical-Enforcement Increment 3, "named + policy-addressable" leg).
+ * Canonical ingress ADDRESS.
  *
  * Every executable entrypoint has ONE canonical, versioned, kind-qualified address — `keep:ingress:v1:<kind>:<name>`
  * — never a route string, display name, wildcard, alias, or deployment-specific port. The address is the STABLE
- * policy identity: a policy rule's `entryPoints[]` (Increment 2) reference these strings, and the manifest requires
+ * policy identity: a policy rule's `entryPoints[]` (policy compiler) reference these strings, and the manifest requires
  * exact set-equality between the addresses it declares and the entryPoints a compiled policy references (closed-world
  * coverage). Addresses are INJECTIVE: one declaration ⇄ one address.
  *

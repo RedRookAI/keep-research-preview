@@ -1,16 +1,16 @@
 /**
- * DecisionBrief (Increment 16.9b) — a NEUTRAL, non-persuasive structured brief for the residual that
+ * DecisionBrief — a NEUTRAL, non-persuasive structured brief for the residual that
  * still routes to a human after prevent + self-heal.
  *
- * SOTA constraint (this is the counterintuitive, critical one): better/narrative explanations make
+ * research constraint (this is the counterintuitive, critical one): better/narrative explanations make
  * oversight WORSE — "when the AI provided narrative rationales, deference increased by another 5 points;
  * better explainability produced worse oversight" (tianpan.co 2026). So a brief must NOT persuade. The
- * SOTA-correct form is the challenge-and-response checklist: intent, data touched, permissions chain,
+ * review format is the challenge-and-response checklist: intent, data touched, permissions chain,
  * expected blast radius, rollback plan — each a FACT the reviewer positively acknowledges (strata.io
  * 2026), plus the ONE specific thing they must verify. Present facts to verify, not conclusions to accept.
  *
  * Rendered deterministically from the structured verdicts (plan consequences, trajectory drift, patch
- * checks, forward forecast, self-heal outcome) — never free-text opinion. Zero deps.
+ * checks, forward forecast, self-heal outcome) — never free-text opinion.
  */
 
 import type { ConsequenceVerdict, EffectClass } from "./plan_consequences.js";

@@ -1,7 +1,7 @@
 /**
- * Deterministic sound critics (Increment 3.8a) — the author-independent logic gate.
+ * Deterministic sound critics — the author-independent logic gate.
  *
- * SOTA basis (re-verified 2026-08-04): intrinsic self-critique DEGRADES reasoning (Huang ICLR 2024;
+ * Research references (re-verified 2026-08-04): intrinsic self-critique DEGRADES reasoning (Huang ICLR 2024;
  * Kamoi TACL 2024; Stechly; arXiv 2402.08115) — "the self-critiquing loop performs worse than
  * guessing up front." What works is a SOUND EXTERNAL verifier / "a menagerie of partial critics
  * where consensus is verification." And crucially (SAVeR arXiv 2604.08401; preprints.org):
@@ -10,7 +10,6 @@
  * they run with ZERO models, cannot be fooled by fluent prose, and are the load-bearing gate that
  * works even for a single-key operator (AutoPyVerifier arXiv 2604.22937).
  *
- * Zero deps.
  */
 
 /** A step in a plan being vetted. `dependsOn` references other step ids (prerequisites). */

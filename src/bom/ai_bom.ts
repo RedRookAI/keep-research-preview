@@ -1,5 +1,5 @@
 /**
- * Signed AI-BOM (Core Addition B) — a verifiable, tamper-evident manifest of WHAT produced a
+ * Signed AI-BOM — a verifiable, tamper-evident manifest of WHAT produced a
  * decision/run: model identity + version, prompt/policy hashes, tool set, the gate-barrier verdicts,
  * and code/config hashes. It answers "what exactly produced this effect, and can we prove it wasn't
  * tampered with."
@@ -12,7 +12,7 @@
  * tags / pharma chain-of-custody — the manifest travels with the artifact and is checked at each
  * handoff; a missing or failed tag quarantines (fails closed).
  *
- * BUILT vs SEAM: BUILT is the in-env manifest + canonical digest + spine hash-chain tamper-evidence +
+ * Implementation boundary: this module provides the in-env manifest + canonical digest + spine hash-chain tamper-evidence +
  * verification. The real CRYPTOGRAPHIC SIGNING AUTHORITY — a DSSE envelope signed by a key held only
  * by a trusted domain, not reachable by the agent (SLSA L2/L3) — is a SEAM, shared with R25 (key
  * custody). In-env the tamper-evidence is the append-only hash chain (a bad actor can forge a manifest
@@ -21,7 +21,7 @@
  * DENY-CAPABLE: an unverifiable BOM (missing or digest-mismatched) is a deny-capable gate signal — if
  * you cannot prove what produced an effect, you do not auto-proceed. The BOM never LOOSENS anything.
  *
- * WHAT WOULD CHANGE IT: a richer material set (per-file code digests, resolved dependency lockfile)
+ * Extension considerations: a richer material set (per-file code digests, resolved dependency lockfile)
  * extends the manifest; real signing upgrades tamper-evidence to authenticity. Neither lets a
  * mismatched manifest verify.
  */

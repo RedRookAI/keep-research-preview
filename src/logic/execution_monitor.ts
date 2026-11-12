@@ -14,7 +14,7 @@
  * already broken. Fail-safe: a missing observed outcome ⇒ replan (we cannot confirm the step did what the
  * model predicted, so we do not blindly proceed).
  *
- * BUILT vs SEAM: BUILT + proven in-env is the monitor/replan DECISION logic (walk, per-step divergence, halt-
+ * Implementation boundary: Implemented is the monitor/replan DECISION logic (walk, per-step divergence, halt-
  * at-first, observed-state capture, fail-safe). SEAM: the execution WIRING that feeds each step's actual
  * outcome (and the spine recording of divergences). It composes BELOW the plan-gate and BENEATH R11 — it is a
  * plan-level reflect/replan trigger, NOT a kill-switch; it must not duplicate or weaken R11.

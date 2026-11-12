@@ -1,7 +1,7 @@
 /**
- * CI/CD adapter (infra, Phase 6 #48) — Keep as a real GitHub Actions step.
+ * CI/CD adapter (infra) — Keep as a real GitHub Actions step.
  *
- * SOTA (Aug 2026): GitHub Agentic Workflows (Feb 2026, preview) codifies the exact
+ * research (Aug 2026): GitHub Agentic Workflows (Feb 2026, preview) codifies the exact
  * rule Keep already enforces — "pull requests are never merged automatically, and
  * humans must always review and approve." So every CI result keeps
  * humanMergeRequired=true. Two sharpenings folded in from the research:

@@ -1,5 +1,5 @@
 /**
- * Identity/RBAC (Features 31, 37) + Separation of Duties (Round 19).
+ * Identity/RBAC (Features 31, 37) + Separation of Duties.
  *
  * Implements the owner-locked decision: TWO first-class deployment modes.
  *  - Multi-operator: N-of-M approval on the security-critical set; author != approver.
@@ -18,7 +18,7 @@ export interface Identity {
 }
 
 /**
- * The security-critical action set (Round 19). Only these require SoD; routine
+ * The security-critical action set. Only these require SoD; routine
  * actions never do (avoids reviewer fatigue). Extensible.
  */
 export type SecurityCriticalAction =

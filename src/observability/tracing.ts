@@ -1,5 +1,5 @@
 /**
- * Hierarchical tracing + cost attribution (Phase 4, #41 + #39).
+ * Hierarchical tracing + cost attribution.
  *
  * Spans nest via parentId to form the trace TREE — the distributed-tracing model,
  * built on the Phase 0 spine (cost as an attribute on events, hierarchical

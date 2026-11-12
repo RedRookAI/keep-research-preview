@@ -1,5 +1,5 @@
 /**
- * durable_fs — the shared, hardened durable-append + durable-directory primitives (Increment 12a/12b).
+ * durable_fs — the shared, hardened durable-append + durable-directory primitives.
  *
  * ONE implementation of "write this line and make it survive a crash" so FileSpineStore (the chain) and
  * DurableWitnessExport (the exported root) cannot drift. Division of labor: `durableAppend` appends to an ALREADY-

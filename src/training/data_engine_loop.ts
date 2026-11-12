@@ -1,7 +1,7 @@
 /**
- * Auto-Training: the DataEngineLoop (Increment 8c).
+ * Auto-Training: the DataEngineLoop.
  *
- * SOTA basis (2026-08-04): Snorkel-style narrow data engineering — LFs → denoise → targeted eval set,
+ * Research references (2026-08-04): Snorkel-style narrow data engineering — LFs → denoise → targeted eval set,
  * with held-out validation as "the only unbiased measure of true label quality" (MetricGate 2026),
  * and correlated-LF flagging BEFORE trusting labels. Per the plan, the DEFAULT output is gradient-free
  * (eval data + few-shot exemplars + retrieval anchors); weight training is an OPTIONAL far tier,
@@ -9,7 +9,7 @@
  * (confidence floor) + a held-out check.
  *
  * Reuses FailureMode (8a), the labeling/label-model (8b), and produces RegressionCase-shaped eval
- * items (shadow_mode/corpus_curation compatible). Zero deps.
+ * items (shadow_mode/corpus_curation compatible).
  */
 
 import type { Spine } from "../spine/spine.js";

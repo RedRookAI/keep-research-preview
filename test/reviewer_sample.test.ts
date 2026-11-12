@@ -33,7 +33,7 @@ test("local appliance resume retains the same source and refuses changed source 
     assert.equal(existsSync(join(hosted, 'fixture.json')), false, 'hosted default does not acquire local metadata');
     const first = createBrowserProjectFixture(root, { localAppliance: true });
     first.app.projectRuntime!.pauseDispatch();
-    assert.match(reviewerSampleNotice(first.app), /approval retains the reviewed workspace/);
+    assert.match(reviewerSampleNotice(first.app), /Approval retains the reviewed workspace/);
     const resumed = createBrowserProjectFixture(root, { localAppliance: true, resume: true });
     resumed.app.projectRuntime!.pauseDispatch();
     assert.equal(resumed.baseRevision, first.baseRevision);
@@ -81,7 +81,7 @@ test("simulated TLS sample ingress keeps exact Host/Origin, Secure cookie and fi
     assert.equal((await http(servers[0]!, "/console", { headers: { "x-forwarded-host": "a.sample.invalid", "x-forwarded-proto": "https" } })).status, 403, "forwarded headers cannot substitute for Host");
     assert.equal((await call(0, "/", { headers: { host: "foreign.invalid", "x-forwarded-host": "a.sample.invalid" } })).status, 403);
     assert.equal((await call(0, "/")).status, 303);
-    assert.match((await call(0, "/console")).body, /two authored responses/);
+    assert.match((await call(0, "/console")).body, /two scripted responses/);
     const login = async (index: number, token = tokens[index]!, origin = origins[index]!) => call(index, "/console/login", { method: "POST", headers: { origin }, form: { token } });
     assert.equal((await login(0, tokens[0], "https://foreign.invalid")).status, 403);
     assert.equal((await login(0, tokens[0], "null")).status, 403);

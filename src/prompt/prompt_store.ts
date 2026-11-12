@@ -1,7 +1,7 @@
 /**
- * PromptStore + gradient-free improvement loop (Increment 3.7c) — GEPA-style, in-house default.
+ * PromptStore + gradient-free improvement loop — GEPA-style, in-house default.
  *
- * SOTA basis (2026-08-04): GEPA (ICLR 2026 Oral) — gradient-free prompt optimization that reflects
+ * Research references (2026-08-04): GEPA (ICLR 2026 Oral) — gradient-free prompt optimization that reflects
  * over execution traces in NATURAL LANGUAGE ("a reward of 0.43 tells the model less than a sentence
  * describing what failed"), keeps a PARETO frontier of candidates, beats GRPO by 6-19 pts with 35×
  * fewer rollouts. Overfitting guards: trust only a held-out VALIDATION slice, and a LENGTH PENALTY
@@ -14,7 +14,6 @@
  * The optimizer is behind a port: the default is this zero-dep reflect-and-accept loop over Keep's
  * own eval history; a DSPy/GEPA backend is a connected-env swap.
  *
- * Zero deps.
  */
 
 import type { TrustTier } from "../memory/model.js";

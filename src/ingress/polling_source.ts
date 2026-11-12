@@ -1,5 +1,5 @@
 /**
- * PollingSource (Increment W0) — the fallback for environments that cannot RECEIVE webhooks (back-of-house, no
+ * PollingSource — the fallback for environments that cannot RECEIVE webhooks (back-of-house, no
  * public ingress, restricted networks). It PULLS new tracker items on a deterministic tick (no daemon; the host
  * or operator drives the cadence — an N=1 laptop can poll on demand), routing each item through the SAME
  * TriggerIngress dedup+dispatch path. So a poll of a ticket and a webhook redelivery of the same ticket are
@@ -7,7 +7,7 @@
  *
  * Authentication for polling is the API token used by the fetcher (a pull the operator initiates), so there is
  * no payload signature to verify — the trust comes from the authenticated outbound fetch, not an inbound secret.
- * Zero deps.
+ *
  */
 
 import type { TrackerSource, TriggerRouter } from "../ecosystem/integrations.js";

@@ -9,13 +9,13 @@
  * breach (seccomp/landlock denial, non-zero exit, timeout) → the whole process group is SIGKILLed and
  * the attempt rolls back. See KEEP_R27_FORK_JAIL_DESIGN.md for the full kernel spec.
  *
- * This module is the CONTRACT both sides implement. BUILT here: the typed `Jail` interface, the
+ * This module is the CONTRACT both sides implement. Implemented here: the typed `Jail` interface, the
  * envelope-side contract logic (`jailedAttempt`), and an in-memory `StubJail` for conformance tests.
  * SEAM (R27): the real OS jail (`OsJail` in a deployment) that provides the kernel enforcement — the
  * sandbox cannot exercise kernel isolation, so we do NOT fake it; we pin the envelope-side contract
  * (breach ⇒ deny + no commit; captured writes are the SOLE egress) and leave enforcement to the kernel.
  *
- * WHAT WOULD CHANGE IT: a microVM (Firecracker) or user-mode kernel (gVisor) jail is a drop-in `Jail`
+ * Extension considerations: a microVM (Firecracker) or user-mode kernel (gVisor) jail is a drop-in `Jail`
  * with a stronger boundary; a formally-verified microkernel (seL4) shrinks the residual kernel trust.
  * None of these change the contract: a breach never commits, and only captured writes reach the sink.
  */

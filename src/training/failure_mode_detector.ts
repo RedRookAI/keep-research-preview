@@ -1,13 +1,13 @@
 /**
- * Auto-Training: the failure-mode detector (Increment 8a).
+ * Auto-Training: the failure-mode detector.
  *
- * SOTA basis (2026-08-04): Auto-Training is the Snorkel tier — it fires only when a SPECIFIC,
+ * Research references (2026-08-04): Auto-Training is the Snorkel tier — it fires only when a SPECIFIC,
  * MEASURED failure mode RECURS (not bulk). So the detector clusters recurring regression signatures
  * from observed BuildOutcomes and surfaces only modes that cross a recurrence threshold; a one-off
  * regression must NOT trigger narrow data engineering (that would be the "bulk" anti-pattern).
  *
  * Reuses BuildOutcome (corpus_curation) — every regressed build already carries a structural
- * `regressionSignature`. This detector is the trigger that gates the DataEngineLoop (8b/8c). Zero deps.
+ * `regressionSignature`. This detector is the trigger that gates the DataEngineLoop (8b/8c).
  */
 
 import type { BuildOutcome } from "../learning/corpus_curation.js";

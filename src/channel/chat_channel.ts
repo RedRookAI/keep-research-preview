@@ -4,7 +4,7 @@
  * A pure, transport-agnostic core that turns an inbound chat event into the SAME gateway calls the CLI and web page
  * use, and formats the reply as chat text. A Slack/Discord/webhook transport is a THIN adapter that verifies the
  * platform signature, parses its payload into a `ChannelEvent`, calls this core, and posts the reply back — mirroring
- * the gateway's pure-handler/socket split (all routing/formatting proven here without a socket).
+ * the gateway's pure-handler/socket split (routing and formatting can be checked without a socket).
  *
  * Four hard properties (each disproof-backed):
  *   - COMPOSED: every event routes through `handleGatewayRequest`; no message/veto logic is re-implemented here.

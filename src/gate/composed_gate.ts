@@ -1,5 +1,5 @@
 /**
- * Composed gate (Build Step 2, layer 7) — the two-path routing decision.
+ * Composed gate — the two-path routing decision.
  *
  * A pure, total function that fuses the three Step-2 verdicts + owner-presence into ONE
  * route: `auto-proceed` (through the REE) or `human-hold`. The composition rule is
@@ -24,7 +24,7 @@
  * not built in this round. The existing oversight `decideMergeAuthority` is the in-env
  * consumer of the human-hold path.
  *
- * WHAT WOULD CHANGE IT: adding a new deny-capable input (e.g. a provenance check) extends
+ * Extension considerations: adding a new deny-capable input (e.g. a provenance check) extends
  * the veto set; it never adds a permit-override. Widening `autoProceedTiers` is an owner
  * policy choice, bounded to reversible classes. The composition rule itself does not change.
  */

@@ -1,5 +1,5 @@
 /**
- * Mediation invariant (Build Step 1 — hardening the mediation root).
+ * Mediation invariant.
  *
  * THE PROPERTY: "no agent-originated effect reaches outside the system except
  * through a mediated chokepoint that records to the spine."

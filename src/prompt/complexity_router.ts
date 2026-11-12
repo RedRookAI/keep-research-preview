@@ -1,7 +1,7 @@
 /**
- * ComplexityClassifier + FirewallRouter (Increment 3.7b) — the budget lever, done right.
+ * ComplexityClassifier + FirewallRouter — the budget lever, done right.
  *
- * SOTA basis (re-verified 2026-08-04):
+ * Research references (re-verified 2026-08-04):
  *  - Route to "the cheapest model that CLEARS a quality bar for the task type" — NOT the cheapest
  *    model (lushbinary; SurePrompts: "route to the cheapest tier that meets the bar on each task
  *    class"). Cheap-by-default is a real false economy: "push hard prompts to the small model and
@@ -16,7 +16,6 @@
  * firewall instead decides effort-up vs. self-consistency vs. HONEST human handoff (never silently
  * ship a low-confidence result because there's no fallback).
  *
- * Zero deps.
  */
 
 import type { CapabilityTier } from "../frontdoor/capability_adaptive.js";

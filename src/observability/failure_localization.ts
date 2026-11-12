@@ -1,5 +1,5 @@
 /**
- * Failure localization with confirm-by-rerun (Phase 4, #43).
+ * Failure localization with confirm-by-rerun.
  *
  * The sharpest insight from the spec: failure attribution inferred from logs is an
  * UNTESTED HYPOTHESIS unless validated by execution (DoVer/AgentDebugX, 2026). So

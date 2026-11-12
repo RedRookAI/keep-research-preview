@@ -3,7 +3,7 @@
  *
  * A model call deep in a solve is context-free — it doesn't know which run/task/parent-span it belongs to. Threading a
  * context object through every function signature fragments traces (MLflow 2026: manual passing breaks deeply nested
- * async chains). The SOTA fix is an ambient context propagated across await boundaries. Node's AsyncLocalStorage does
+ * async chains). The research fix is an ambient context propagated across await boundaries. Node's AsyncLocalStorage does
  * exactly this with no external dependency, so the TracingModelProvider can associate each model-call span with the
  * current run + parent span, producing the parent-child hierarchy that lets cost/latency be attributed to pipeline steps.
  */

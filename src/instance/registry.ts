@@ -1,5 +1,5 @@
 /**
- * Theme 1 (Instance Isolation), Part 3 — Instance registry + runfile (discovery).
+ * Instance registry + runfile (discovery).
  *
  * When instances pick ephemeral ports/sockets, other tools must discover where each one
  * is — "you invent some signaling" (the documented ephemeral-port discovery gap). The
@@ -10,7 +10,7 @@
  * projects on one configured host box coexist and are discoverable, and starting a new
  * top-level project just mints a fresh id. Updates prune dead entries (PID liveness)
  * and serialize each read/modify/write under a common-host logical lock before atomic rename.
- * Zero deps.
+ *
  */
 
 import fs from "node:fs";

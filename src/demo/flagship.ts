@@ -1,5 +1,5 @@
 /**
- * Flagship demo (Increment 1.3) — the whole spine in ONE runProject call.
+ * Flagship demo — the whole spine in ONE runProject call.
  *
  * A single autonomous run carries the full governed chain end-to-end:
  *   feasibility pre-flight → real solve (localize → plan → apply → validate) → deterministic patch verification →

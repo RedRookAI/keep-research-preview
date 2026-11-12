@@ -1,5 +1,5 @@
 /**
- * Event schema registry + read-time upcasting (Round 18).
+ * Event schema registry + read-time upcasting.
  *
  * The spine is append-only and hash-chained, so historical events can NEVER be
  * mutated to a new schema (that would change their bytes and break the chain).

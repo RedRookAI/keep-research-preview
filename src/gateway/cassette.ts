@@ -1,7 +1,7 @@
 /**
- * Cassette + store for record/replay (Increment 12c).
+ * Cassette + store for record/replay.
  *
- * SOTA basis (2026-08-05): the VCR/cassette pattern is the established standard for deterministic,
+ * Research references (2026-08-05): the VCR/cassette pattern is the established standard for deterministic,
  * zero-cost LLM testing (Docker cagent, LangChain, Agiflow 2026). The decisive refinement (sixty-
  * north/langchain-replay 2026): record the model's DECISIONS at the client/port level, NOT the HTTP
  * bytes — an HTTP-level cassette "freezes the entire agent loop; your tools never execute; the test
@@ -12,7 +12,7 @@
  * Security (cagent/LangChain): cassettes must never leak secrets. Because we record at the port level,
  * a cassette holds only the normalized request (prompt/maxTokens/hints) → result — never API keys or
  * auth headers. Keying is a stable content hash of the normalized request, so replay matches
- * deterministically. Zero deps (node:crypto for the hash).
+ * deterministically.
  */
 
 import { createHash } from "node:crypto";

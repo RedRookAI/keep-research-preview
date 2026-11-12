@@ -1,11 +1,11 @@
 /**
- * Guard-DAG normalization + PROPOSITIONAL analysis over opaque atoms (Mechanical-Enforcement Increment 2, step B).
+ * Guard-DAG normalization + PROPOSITIONAL analysis over opaque atoms.
  *
- * A policy guard is a boolean combination (allOf / anyOf / not) over LEAF ATOMS. Increment 2 treats each atom as an
+ * A policy guard is a boolean combination (allOf / anyOf / not) over LEAF ATOMS. policy compiler treats each atom as an
  * OPAQUE free boolean variable keyed by its predicate string — it does NOT interpret the predicate. Predicate/atom
- * THEORY (what `path.within-root` actually means, typed operators, interval/label solvers) is Increment 6's job
+ * THEORY (what `path.within-root` actually means, typed operators, interval/label solvers) is decision kernel's job
  * (Total Decision Kernel). Keeping that boundary is deliberate: this increment delivers the STRUCTURAL/propositional
- * layer completely, and Increment 6 refines atoms with theory. The two compose — propositional unsat here is a
+ * layer completely, and decision kernel refines atoms with theory. The two compose — propositional unsat here is a
  * genuine (sound) unsat there; theory only ever makes MORE things unsat, never fewer.
  *
  * What this module guarantees:

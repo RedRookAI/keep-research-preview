@@ -1,16 +1,16 @@
 /**
- * PullRequestPort + local PR manifest (Increment 15b).
+ * PullRequestPort + local PR manifest.
  *
- * SOTA basis (2026-08-05): merge is the universal human boundary — every shipping agent routes through
+ * Research references (2026-08-05): merge is the universal human boundary — every shipping agent routes through
  * human approval, and GitHub Agentic Workflows never auto-merge. The critical invariant (aibuilderclub
  * 2026, across 33,596 agent-authored PRs): the gate must NEVER be agent-on-agent — an agent may post
  * checks/worklists but must be structurally incapable of approving or merging. So this port has NO
- * approve() and NO merge() method — by construction, Keep cannot record an approval. Human review
+ * approve and NO merge method — by construction, Keep cannot record an approval. Human review
  * should focus on "the delta between approved INTENT and executed ACTIONS" (GitHub community 2026), so
  * the manifest surfaces intent (the issue) vs executed (the edits + test results) explicitly.
  *
  * LocalPullRequest implements the port against a local bare remote (real, testable here). A hosted
- * GitHubPrAdapter/GitLabPrAdapter implements the same port on configured host. Zero deps.
+ * GitHubPrAdapter/GitLabPrAdapter implements the same port on configured host.
  */
 
 import type { PrProposal } from "../solve/issue_model.js";

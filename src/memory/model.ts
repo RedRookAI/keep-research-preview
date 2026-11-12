@@ -1,17 +1,17 @@
 /**
- * Memory model (Phase 1) — procedural lessons with objective-anchored trust tiers.
+ * Memory model — procedural lessons with objective-anchored trust tiers.
  *
- * Keep's moat: procedural lessons (coding patterns, review conventions, tool-use
+ * Memory content: procedural lessons (coding patterns, review conventions, tool-use
  * habits) that graduate from probation to confirmed ONLY via verified build
  * outcomes — never by assertion. Aligned with OWASP ASI06 (2026): every memory
  * carries provenance (spine-bound), origin, and a trust tier; retrieval is
  * trust-aware; graduation is objective.
  *
  * Trust tiers (the lifecycle the field says most tools lack):
- *   candidate  — just observed/ingested, untrusted, cannot authorize actions
- *   probation  — under evaluation; can inform, still cannot authorize
- *   confirmed  — passed BOTH gates via verified outcomes; trusted
- *   retired    — superseded, decayed, or demoted; excluded from retrieval
+ * candidate — just observed/ingested, untrusted, cannot authorize actions
+ * probation — under evaluation; can inform, still cannot authorize
+ * confirmed — passed BOTH gates via verified outcomes; trusted
+ * retired  — superseded, decayed, or demoted; excluded from retrieval
  */
 
 import { privateRetentionAllowed, type CapturedMemoryRetentionPolicy, type PrivateSourceRetention } from "./retention.js";

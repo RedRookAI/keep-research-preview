@@ -1,11 +1,11 @@
 /**
- * Merge authority (Increment AM1) — the single deterministic decision for "who, if anyone, must approve this merge?"
+ * Merge authority — the single deterministic decision for "who, if anyone, must approve this merge?"
  *
  * The whole point of Keep is to run autonomously UNLESS a change is irreversible, high blast radius, or would
  * seriously screw things up — and to resolve everything else without bothering a human, because at scale "just ask
  * the human" is rubber-stamping (companies) or a dead end (a non-engineer who can't review a diff).
  *
- * SOTA basis (2026-08-06): autonomy is granted in proportion to REVERSIBILITY, not confidence ("the safety is in the
+ * Research references (2026-08-06): autonomy is granted in proportion to REVERSIBILITY, not confidence ("the safety is in the
  * blast radius, not the click"); gate only when consequence is elevated; low confidence ALONE on a reversible,
  * low-blast action must not gate; use human-on-the-loop (act, then auto-revert on regression) for reversible work.
  *
@@ -215,7 +215,7 @@ export function mergeVerificationFromCascade(
   };
 }
 
-// ── Comprehension receipt (BUILD-ORDER 2.4, COMPREHENSION-RECEIPT) — Z176 ──────────────────────────
+// ── Comprehension receipt — Z176 ──────────────────────────
 /**
  * Nothing in the merge seam proves a human READ a warning. Keep produces decision briefs, human-merge
  * reasons, and inert-control / unisolated warnings for a person — but PRODUCTION IS NOT COMPREHENSION,

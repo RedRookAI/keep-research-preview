@@ -1,10 +1,10 @@
 /**
- * MCP-native, both sides (Phase 6, #45) — built to spec 2026-07-28 (final).
+ * MCP-native, both sides — built to spec 2026-07-28 (final).
  *
  * Keep-as-CLIENT: wrap any remote MCP server as a HOSTILE capability adapter behind
  * the capability port. The 2026-07-28 spec is a STATELESS core (each request is
  * self-contained HTTP; no sticky sessions), carries W3C Trace Context in `_meta`
- * (threads into Keep's Phase 4 tracing), and mandates OAuth 2.1 + PKCE for remote
+ * (threads into Keep's tracing), and mandates OAuth 2.1 + PKCE for remote
  * servers. We pin the protocol version and negotiate.
  *
  * Keep-as-SERVER: expose Keep's own capabilities (file a build, query a lesson,

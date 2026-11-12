@@ -18,7 +18,7 @@
  *   - org CEILING: an org adds constraints that TIGHTEN (can forbid a connector, cap autonomy) but NEVER remove
  *     the floor — a choice permitted by every layer is honored.
  *
- * BUILT + proven in-env: nesting / tightening / graceful degradation. SEAM: the org-directory / policy-authoring
+ * Implemented: nesting / tightening / graceful degradation. SEAM: the org-directory / policy-authoring
  * source (where the layers come from).
  */
 

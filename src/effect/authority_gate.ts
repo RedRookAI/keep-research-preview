@@ -1,7 +1,7 @@
 /**
- * ARTIFACT-BOUND CLOSED-WORLD AUTHORITY GATE (Mechanical-Enforcement Increment 10a — Ambient-Authority Closure, truth-maker).
+ * ARTIFACT-BOUND CLOSED-WORLD AUTHORITY GATE.
  *
- * The frontier property this facet makes LOAD-BEARING (one sentence): the gate itself RE-SCANS the DEPLOYED source tree
+ * Contract: the gate itself RE-SCANS the DEPLOYED source tree
  * with the owner map from the VERIFIED signed effect manifest, requires the scan's content digest to equal the manifest's
  * signed `artifactGraphDigest`, and admits an unowned effect callsite only if it is a KNOWN legacy one within a signed,
  * generation-chained, only-SHRINKING waiver — so no NEW or UNWAIVED unowned effect exists in the PRODUCT (waived legacy
@@ -37,7 +37,7 @@
  * debt). The gate PASSES iff: the deployed graph digest matches the signed manifest, every finding-site occurrence count is
  * within the waiver, and every waiver site is within the baseline (counts may only shrink). A ratchet, not a lint.
  *
- * HONEST SCOPE (seam register). This facet closes ARTIFACT-binding + PINNED-ENGINE + SIGNED-owner-map CALLSITE-ownership +
+ * Scope (seam register). This facet closes ARTIFACT-binding + PINNED-ENGINE + SIGNED-owner-map CALLSITE-ownership +
  * exact monotone debt. The graph digest covers the SOURCE-extension file set the walker scans (.ts/.tsx/.mts/.cts/.js/…);
  * NON-SOURCE executable artifacts (native `.node` addons, `.wasm`, data-driven loaders) and a bare `require('./x.node')` /
  * `process.dlopen` of such a target are OUTSIDE the source graph — a FRESH injection still cannot exploit this (adding the
@@ -57,11 +57,11 @@
  * (the `typescript` devDep) do not change between digest and spawn is the same immutable-artifact substrate. It does NOT prove broker-only
  * ROUTING: an owner that LAUNDERS its authority (wraps a raw primitive in an exported helper, or stashes it on a global)
  * has no unowned callsite and passes — that laundering is UNFIXABLE in a shared isolate and is the documented TOPOLOGY
- * residual (the real closure is the workload in its OWN isolate whose sole channel is the Increment-5 vsock to the broker).
+ * residual (the real closure is the workload in its OWN isolate whose sole channel is the monitor boundary vsock to the broker).
  * Owner-CONFINEMENT (no raw-handle exports / import-time effects) is the next facet; the OS substrate is the physical
- * backstop; string-built module ids + cross-file laundering are Increment 15. Named, not hidden.
+ * backstop; string-built module ids + cross-file laundering are dynamic-reference closure. Named, not hidden.
  *
- * Grounding: SLSA/in-toto artifact-to-attestation binding; content-addressed identity (Increment 1); capability-safe
+ * Grounding: SLSA/in-toto artifact-to-attestation binding; content-addressed identity (canonical value model); capability-safe
  * module discipline; the ratchet/allowlist-that-only-shrinks pattern; reference-monitor complete mediation of the source graph.
  */
 import { readFileSync, realpathSync, statSync } from "node:fs";

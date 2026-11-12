@@ -1,7 +1,7 @@
 /**
- * Cost model (Phase 4, Feature 39 foundation).
+ * Cost model.
  *
- * Real cost accounting, not a token counter. Grounded in SOTA (Aug 2026):
+ * Real cost accounting, not a token counter. Grounded in research (Aug 2026):
  *  - Separate CACHED vs FRESH input tokens (cache-heavy work otherwise looks
  *    costlier than it is) — cached tokens are billed at a reduced rate.
  *  - Register per-model pricing rules (USD per million tokens).

@@ -1,5 +1,5 @@
 /**
- * PORTABILITY STORE-I/O ADAPTER — Hardening H2 (the outbound port for Round 8).
+ * PORTABILITY STORE-I/O ADAPTER — the export/import store adapter.
  *
  * Ports-and-adapters: `exportAll`/`importAll` are PURE DOMAIN — they operate on an abstract `DerivedState` and
  * touch no store. This module is the OUTBOUND ADAPTER that assembles `DerivedState` FROM the real stores on export
@@ -13,7 +13,7 @@
  *   - SAFE RE-HYDRATION preserved: imported memories land at PROBATION (never confirmed — no authority laundering),
  *     and R8's CI-scoping still filters another subject's data on assembly.
  *
- * BUILT + proven in-env: the store↔DerivedState assembly/application mapping and its round-trip fidelity. SEAM:
+ * Implemented: the store↔DerivedState assembly/application mapping and its round-trip fidelity. SEAM:
  * the wire format (still) and the memory→subject identity resolver.
  */
 

@@ -1,11 +1,11 @@
 import { CodexProjectProvider, captureCodexProjectDescriptor, codexProjectIdentity } from "./gateway/codex_project_provider.js";
 /**
- * Composition root (Phase 0.5) — the single place ports bind to adapters.
+ * Composition root — binds ports to configured adapters.
  *
  * Principle (from the swappability vetting): every swappable component sits behind
  * a port; DOMAIN code depends only on ports + outcome-keyed signals; only THIS file
  * knows concrete adapters; boot asserts only true invariants and fails soft on
- * absent optional infra. Later phases assume this root exists.
+ * absent optional infrastructure.
  *
  * This wires: the spine (storage + lock ports), the model gateway (provider chosen
  * from policy, licensing-guarded), the learning heartbeat (provider-agnostic), and
@@ -398,8 +398,8 @@ export interface KeepConfig {
   readonly evidenceSigningKey?: Buffer;
   /** Compliance regime version string for evidence packs. */
   readonly regimeVersion?: string;
-  /** OPT-IN far-tier weight training. Absent → no auto-training capability (off by default). Supplies the GPU trainer
-   *  backend + sandbox canary-deploy + eval seams; the decision/permission/deploy-authorization safety logic is always real. */
+  /** Opt-in external training orchestration. Missing backend reports unavailable.
+   * Automatic candidate construction and deployment refuse missing screening/sandbox/replay evidence. */
   readonly autoTraining?: AutoTrainingSeams;
   /** W0: per-source webhook signing secrets (operator-supplied; never hardcoded). Absent → that source is fail-closed. */
   readonly triggerSecrets?: Partial<Record<TrackerSource, string>>;
@@ -785,8 +785,8 @@ export interface KeepApp {
   /** M6: the closed self-improvement loop (recognize→plan→implement→verify). Present only when config.selfImprovement.enabled.
    *  runCycle composes decideTraining + the shadow gate; real training is STAGED (seam S-10), never run here. */
   readonly selfImprovement?: { readonly runCycle: (signals: TrainingSignals, candidate?: { id: string; content: string }) => SelfImprovementOutcome };
-  /** Gated far-tier auto-training (decision → permission → training → deploy). Present only when config.autoTraining is
-   *  supplied — off by default. Safety machinery real; GPU compute is a seam. */
+  /** Opt-in decision, permission and external training calls. Completed backend results are retained,
+   * but automatic candidate construction/deployment is unavailable without training evidence. */
   readonly autoTraining?: AutoTrainingSuite;
 }
 
@@ -2327,8 +2327,8 @@ export function composeKeep(config: KeepConfig): KeepApp {
   // Governed auto-RAG corpus: research sources ingested through the project-scoped governance pipeline; retrieval feeds
   // the RAG grounding floor. Isolation by construction (per-project namespace).
   const corpusSuite = buildCorpusSuite({});
-  // Far-tier auto-training: OFF by default. Only composed when the operator opts in with training seams. decideTraining
-  // is conservative, permission gates non-SOTA-safe training, and deploy needs a fresh per-session human authorization.
+  // Training is opt-in and subject to permission and private-compute authority. Backend completion alone
+  // cannot supply screening, sandbox or replay evidence, so automatic candidate/deployment is refused.
   const autoTraining = config.autoTraining ? buildAutoTrainingSuite(spine, config.autoTraining) : undefined;
   // M6: the closed self-improvement loop — OFF by default; composed only when the operator opts in. Composes
   // runSelfImprovementCycle with a shadow gate over the operator-supplied held-out corpus; never trains silently.

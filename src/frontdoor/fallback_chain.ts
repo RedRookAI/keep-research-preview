@@ -1,5 +1,5 @@
 /**
- * F1.9 — Resilient fallback chain (deterministic, health + policy aware, never hard-fails).
+ * Resilient fallback chain (deterministic, health + policy aware, never hard-fails).
  *
  * Designs for the front AND back of the room: a frontier multi-model stack gets clean
  * failover; the person with a single API key or one local model gets an explicit,
@@ -7,7 +7,7 @@
  * showed single-model apps failing within minutes — so this handles access-revoked and
  * model-not-found, not just outages.
  *
- * Failure taxonomy (2026 SOTA): 429 / 5xx / timeout / access-revoked / quality-check
+ * Failure taxonomy (2026 research): 429 / 5xx / timeout / access-revoked / quality-check
  * failure => FAILOVER-ELIGIBLE (try the next hop). A content-policy REFUSAL is NOT
  * failover-eligible — routing around a refusal is attempted policy circumvention, so
  * the chain stops. A circuit breaker skips brains that are currently unhealthy.

@@ -20,7 +20,7 @@
  *     required). A solo user still has a shared library.
  *   - org CEILING: promotion to a `team` scope is a ratified commons gated by T1 relationship authority.
  *
- * BUILT + proven in-env: authorize + CI-respect + graduated ratification + containment. SEAM: the team-directory /
+ * Implemented: authorize + CI-respect + graduated ratification + containment. SEAM: the team-directory /
  * membership source (the relationship tuples that back T1's `rebacResolver`).
  */
 

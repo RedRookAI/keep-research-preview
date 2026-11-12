@@ -1,7 +1,7 @@
 /**
- * Grounded partial critics + single-model selective verification (Increment 3.8b).
+ * Grounded partial critics + single-model selective verification.
  *
- * SOTA basis (re-verified 2026-08-04): sound external verification works, but LLM critics that
+ * Research references (re-verified 2026-08-04): sound external verification works, but LLM critics that
  * share a model share blind spots — "consensus is NOT faithfulness" (SAVeR arXiv 2604.08401;
  * preprints.org: correlated generator/evaluator errors make self-evaluation non-identifying). So:
  *  - The premise-grounding critic checks each load-bearing claim traces to a REAL source. This is
@@ -13,7 +13,6 @@
  *    sound on fuzzy dimensions — "LLMs lack reliable self-judgment." Sound (deterministic) critics
  *    still gate hard; the fuzzy critics only ever raise `concern`, never authoritative `block`.
  *
- * Zero deps.
  */
 
 import type { Plan, PlanStep, CriticVerdict } from "./deterministic_critics.js";

@@ -6,8 +6,8 @@
  * supplies that real pipeline behind the GovernedCorpus port, and exposes retrieval that returns the exact RetrievedChunk
  * shape the RAG grounding floor grades — so the loop closes: build corpus → retrieve chunks → vetRagAnswer grounds on them.
  *
- * SOTA basis (2026-08-07): a RAG corpus must be built with governance (sanitized/classified/gated), project-isolated
- * (the drone corpus never bleeds into the novel corpus), and time-boundary-aware. What would change it: the current index
+ * Research references (2026-08-07): a RAG corpus must be built with governance (sanitized/classified/gated), project-isolated
+ * (the drone corpus never bleeds into the novel corpus), and time-boundary-aware. Extension considerations: the current index
  * backend does not thread each source's asOf onto its chunks, so time-boundary metadata is preserved at the source level
  * but not yet per-chunk — a follow-on when the retrieval backend carries chunk-level asOf.
  */

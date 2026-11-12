@@ -1,8 +1,8 @@
 /**
- * IsolationTier (Increment 17) — the honest, environment-adaptive isolation ladder for executing AI-
+ * IsolationTier — the honest, environment-adaptive isolation ladder for executing AI-
  * generated code (the solve pipeline runs the project's tests on a patch Keep just wrote — untrusted).
  *
- * Tiers by strength: microvm > gvisor > container > process > none. selectTier() picks the STRONGEST
+ * Tiers by strength: microvm > gvisor > container > process > none. selectTier picks the STRONGEST
  * AVAILABLE from detected capabilities and declares it HONESTLY — a back-of-house laptop with no KVM gets
  * process isolation, truthfully labeled, never a false microVM claim (mirrors the sovereignty posture).
  *
@@ -10,12 +10,12 @@
  * under weak isolation has a larger blast radius on escape, so weaker isolation → a LOWER auto-approve
  * ceiling (more human review). This wires isolation into the oversight/consequence layer.
  *
- * SOTA basis (2026-08-05): isolation hierarchy microVM (dedicated kernel, HW-enforced) > gVisor (user-space
+ * Research references (2026-08-05): isolation hierarchy microVM (dedicated kernel, HW-enforced) > gVisor (user-space
  * kernel) > hardened container > bare process; STANDARD DOCKER IS NOT SUFFICIENT for untrusted AI code
  * (northflank/zylos/bunnyshell/vietanh 2026; ~90% incident reduction, zylos). microVMs need Linux+KVM —
  * cannot run on macOS/Windows/a constrained laptop (bunnyshell 2026) → environment-adaptive honest tier.
  * "Start strong, relax only when the threat model justifies it" (northflank). Isolation strength feeds
- * autonomy: "maintain deterministic safety alongside autonomous flexibility" (vietanh). Zero deps.
+ * autonomy: "maintain deterministic safety alongside autonomous flexibility" (vietanh).
  */
 
 /** Isolation strength tiers (strongest → weakest). */
@@ -114,7 +114,7 @@ export function weakenCeiling(c: AutonomyCeiling): AutonomyCeiling {
 
 /**
  * The MEASURED containment a run's attestation PROVED — the input to the evidence-bound ceiling. Both fields
- * come from the BUILD-ORDER 1.7 verifier's output (`AttestationVerification`): `verifiedTier` is the tier the
+ * come from the verifier's output (`AttestationVerification`): `verifiedTier` is the tier the
  * evidence backs (already capped DOWN from any forged-up claim), and `measuredDegradations` are the honest
  * degradations that evidence carried. This is the ONE thing the ceiling reads — never the raw tier label.
  */
@@ -124,7 +124,7 @@ export interface MeasuredContainment {
 }
 
 /**
- * BUILD-ORDER 2.3 (REVISIT-ISOLATION-GATING) — the autonomy ceiling RE-DERIVED from what the run's
+ * the autonomy ceiling RE-DERIVED from what the run's
  * attestation PROVED, not from the tier LABEL alone (Z187). Round 43 gated only `refuse-risky` because it
  * MEASURED that the default process floor did not confine an in-process runner; 1.3/1.5 built a namespace+
  * rlimit jail and a Job Object, so the harness asked whether the ceiling should now rise. Re-measured THIS

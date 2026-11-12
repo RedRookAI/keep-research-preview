@@ -1,13 +1,13 @@
 /**
- * Session store (Increment X1) — opaque, server-side sessions for the web review UI's multi-user mode.
+ * Session store — opaque, server-side sessions for the web review UI's multi-user mode.
  *
- * SOTA basis (2026-08-06): for SESSION tokens, opaque server-side state beats JWTs because revocation must be
+ * Research references (2026-08-06): for SESSION tokens, opaque server-side state beats JWTs because revocation must be
  * real-time — a JWT can't be un-issued without a revocation list, which negates the point (CIAM Compass; WorkOS).
  * Enforce BOTH a sliding idle timeout and an absolute cap (loginradius, OWASP); rotate the session id on login to
  * prevent fixation; and destroy the server-side record on logout, not just the cookie (JustAppSec). Session ids are
- * 32 random bytes. Each session carries its own CSRF token. Zero deps (node:crypto).
+ * 32 random bytes. Each session carries its own CSRF token.
  *
- * What would change it: a multi-node deployment moves this map behind a shared store (Redis) with the same TTL
+ * Extension considerations: a multi-node deployment moves this map behind a shared store (Redis) with the same TTL
  * semantics; the interface is unchanged.
  */
 

@@ -1,8 +1,8 @@
 /**
- * Plan consequence-analysis floor (Increment 16.8a) — real pre-execution blast-radius analysis.
+ * Plan consequence-analysis floor — real pre-execution blast-radius analysis.
  *
  * Replaces the vacuous skeleton gate (16.7) — which fed a hardcoded 4-step plan to LogicVet and always
- * passed — with an actual consequence taxonomy over the intended effects of THIS issue. SOTA-grounded
+ * passed — with an actual consequence taxonomy over the intended effects of THIS issue. Research references
  * (VETTING_REDESIGN_SPEC, 2026-08-05):
  *  - Consequence taxonomy + blast-radius classification before execution: "if you do not know what an
  *    action can break, you cannot evaluate whether to allow it" (PhantomByte 2026).
@@ -16,7 +16,7 @@
  * This is a SOUND, model-free Tier-0: deterministic classification. Only a sound boundary violation
  * hard-blocks; softer concerns ESCALATE to human (never hard-kill from a fuzzy signal). It is the floor
  * of the plan cascade (16.8b adds the optional independent second-brain tier + human).
- * Zero deps.
+ *
  */
 
 import type { Issue } from "../solve/issue_model.js";

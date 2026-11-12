@@ -1,5 +1,5 @@
 /**
- * The two-gate promotion defense (Phase 1) — poisoning resistance.
+ * The two-gate promotion defense — poisoning resistance.
  *
  * A poisoned belief can pass a FUNCTIONAL check (the code it endorses compiles and
  * the tests pass) while carrying a backdoor — a MemoryGraft-class attack (2025/26).

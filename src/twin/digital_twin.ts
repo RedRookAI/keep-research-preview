@@ -15,13 +15,13 @@
  * does not guarantee the real apply matches (a TOCTOU gap); it only means no surprise was visible at
  * preview time. The twin therefore only ADDS caution (reliably gates surprises); it never certifies.
  *
- * SCOPE — BUILT vs SEAM: BUILT is the in-env twin over the FILE fork (declared-vs-actual write-set +
+ * SCOPE — Implementation boundary: this module provides the in-env twin over the FILE fork (declared-vs-actual write-set +
  * a static undeclared-external-sink screen of the produced content). A full EXTERNAL-effect twin — a
  * real preview of network/DB side effects (what a request would actually do to a remote system) —
  * is a SEAM (it needs a sandboxed replica of the external world). The file twin is exact; the external
  * twin is screened statically here and flagged for the real preview later.
  *
- * WHAT WOULD CHANGE IT: a richer effect model (permissions, deletions, renames) extends the diff; a
+ * Extension considerations: a richer effect model (permissions, deletions, renames) extends the diff; a
  * real external-world replica upgrades the sink screen to a true preview. Neither makes a mismatch
  * pass — the reject direction is fixed.
  */

@@ -1,12 +1,12 @@
 /**
- * HttpProvider (Increment 12a) — a real ModelProvider over HTTP via a WireDialect.
+ * HttpProvider — a real ModelProvider over HTTP via a WireDialect.
  *
- * SOTA basis (2026-08-05): retry semantics are load-bearing (Requesty 2026) — failed requests still
+ * Research references (2026-08-05): retry semantics are load-bearing (Requesty 2026) — failed requests still
  * count toward the rate limit, so blindly retrying fast makes it WORSE; always honor Retry-After, else
  * exponential backoff, cap attempts, and NEVER retry a 400 (malformed = permanent). Standard status
  * codes: 429 rate-limit, 400 bad request, 500/503 server (MyEngineeringPath 2026). Timeout via
  * AbortController. Usage parses into the existing CostModel TokenUsage shape. Streaming is added in 12b
- * (this is the non-streaming core). Zero deps — fetch/AbortController are Node built-ins here.
+ * (this is the non-streaming core). — fetch/AbortController are Node built-ins here.
  */
 
 import type { ModelProvider, GenerateRequest, GenerateResult, Embedding } from "./gateway.js";

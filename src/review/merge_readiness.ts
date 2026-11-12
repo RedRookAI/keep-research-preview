@@ -1,14 +1,9 @@
 /**
- * Merge-readiness (#19) + reviewer-effort (#11) + risk-proportional depth (R14).
+ * Merge-readiness scores and reviewer-effort estimates for triage.
  *
- * Merge-readiness is a STRUCTURED report card across five dimensions (security,
- * reliability, complexity, hygiene, coverage) — the 2026 SOTA shape (DeepSource),
- * not an unstructured comment dump. It NEVER auto-merges; it informs the human, who
- * holds the merge gate.
- *
- * Risk-proportional depth (Round 14): verification effort scales with blast-radius —
- * trivial reversible changes get light review; irreversible/high-blast changes get
- * full heterogeneous review + deep scan. Spend scrutiny where it matters.
+ * Reports security, reliability, complexity, hygiene and coverage. Verification depth follows
+ * blast radius: reversible internal changes get light review; irreversible changes get full review.
+ * These scores inform review and do not authorize a merge.
  */
 
 import type { DisplayedFinding } from "./finding.js";

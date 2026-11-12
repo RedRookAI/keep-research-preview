@@ -1,7 +1,7 @@
 /**
- * Auto-Research: need-detector + provenance model (Increment 4a).
+ * Auto-Research: need-detector + provenance model.
  *
- * SOTA basis (2026-08-04): deep-research citations fail two distinct ways (arXiv 2604.03173;
+ * Research references (2026-08-04): deep-research citations fail two distinct ways (arXiv 2604.03173;
  * 2605.06635; pickaxe 2026): (1) CITATION hallucination — the reference itself doesn't exist
  * (fake DOI/URL/paper; measured 11-57%); (2) STATEMENT hallucination — the source is real but
  * does NOT support the claim ("the link works, the source is real, but the claim often isn't in
@@ -12,7 +12,6 @@
  * BOTH hallucination modes explicitly. This module defines the need-detector + the verifiable
  * types; the loop (4b) produces them and the floor (4c) enforces them.
  *
- * Zero deps.
  */
 
 /** Why a task might need a research pass. */
@@ -51,7 +50,7 @@ export interface Citation {
 }
 
 /**
- * A hashed FETCH RECEIPT — the TODAY-axis primitive (BUILD-ORDER 8.6). A retrieval claim in 2026 is
+ * A hashed FETCH RECEIPT — the TODAY-axis primitive. A retrieval claim in 2026 is
  * credible only if it carries a CONTENT DIGEST + TIMESTAMP, not a bare URL (RFC 9162 CT inclusion
  * proofs, in-toto/SLSA subject-by-digest attestations). This is the minimal, offline-safe form: the
  * `bodySha256` binds the fetched bytes and the `seal` folds the receipt into the spine hashchain at

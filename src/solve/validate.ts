@@ -1,7 +1,7 @@
 /**
- * SolvePipeline: validate (Increment 13c).
+ * SolvePipeline: validate.
  *
- * SOTA basis (2026-08-05): the acceptance gate must be EXTERNAL — only a real test run (or gate)
+ * Research references (2026-08-05): the acceptance gate must be EXTERNAL — only a real test run (or gate)
  * accepts a candidate; a model's self-assessment never can (VeriHarness 2026). Running the repo's
  * existing tests as the oracle gives early, actionable feedback and materially cuts cost/steps
  * ("Old Tests New Tricks" 2026: -23% cost, statistically significant). And the feedback must be
@@ -10,7 +10,7 @@
  * specific failures, and validation is decided by the TestRunner port, not the model.
  *
  * The TestRunner is a port: an in-memory scripted runner here (deterministic), a real process-
- * spawning runner on configured host behind the same interface. Zero deps.
+ * spawning runner on configured host behind the same interface.
  */
 
 import type { ValidationOutcome } from "./issue_model.js";

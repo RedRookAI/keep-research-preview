@@ -1,5 +1,5 @@
 /**
- * M6 — THE CLOSED SELF-IMPROVEMENT LOOP. The individual primitives already exist: `decideTraining` (the SOTA decision
+ * M6 — THE CLOSED SELF-IMPROVEMENT LOOP. The individual primitives already exist: `decideTraining` (the research decision
  * tree), the `SkillDistiller` (self-skill authorship), `ShadowModeGate` (verify-before-promote), and the revert path.
  * What was missing is the autonomous cycle that SEQUENCES them: recognize a measured gap → plan the narrowest fix →
  * implement it behind shadow-mode → verify before promotion. This is that cycle, and nothing more — it composes the

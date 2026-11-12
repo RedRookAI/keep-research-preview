@@ -7,7 +7,7 @@
  * via a relationship graph; a superset of RBAC) → PBAC (a later round). This module adds the resource-scoped
  * check + the ReBAC track + agent delegation.
  *
- * STANDING PRINCIPLE — both-and, never collapse to N=1: ONE interface (`may`), TWO tracks behind it —
+ * STANDING PRINCIPLE — both-and, never collapse to N=1: ONE interface (`may()`), TWO tracks behind it —
  *   - `ownerResolver` (the N=1 FLOOR): the sole owner may do everything; everyone else default-deny. Zero
  *     ceremony; a solo self-hosted instance is fully functional with no org setup.
  *   - `rebacResolver` (the org CEILING): RBAC coarse roles composed with ReBAC relationship tuples
@@ -21,7 +21,7 @@
  *
  * Fail-closed: a missing/unknown envelope element ⇒ default-DENY.
  *
- * BUILT + proven in-env: the `may()` check + the two resolvers + delegation-bounding + default-deny. SEAM: the
+ * Implemented: the `may()` check + the two resolvers + delegation-bounding + default-deny. SEAM: the
  * relationship-tuple store (a deployment uses SpiceDB/OpenFGA) and the OIDC identity provider.
  */
 

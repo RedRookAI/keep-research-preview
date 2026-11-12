@@ -1,7 +1,7 @@
 /**
- * ReferenceRefresher (Increment 3.6c) — the background revalidator.
+ * ReferenceRefresher — the background revalidator.
  *
- * SOTA basis (2026-08-04): background, non-blocking revalidation — "the current caller does not
+ * Research references (2026-08-04): background, non-blocking revalidation — "the current caller does not
  * wait" (microlink); single-flight so N ticks don't stampede one category (medium/vetora); jitter
  * lives in each ReferenceSet's fresh window so categories stagger. This is the scheduled-autonomy
  * loop (item 7) wearing a reference-data hat: on each tick it refreshes only categories past their
@@ -13,7 +13,6 @@
  * throws/returns-junk is contained by the ReferenceSet's stale-if-error — it can only leave data
  * slightly stale, never break Keep.
  *
- * Zero deps.
  */
 
 import type { ReferenceSet, RefreshFn } from "./reference_set.js";

@@ -1,8 +1,8 @@
 /**
- * Signed INGRESS MANIFEST + policy-addressability coverage (Mechanical-Enforcement Increment 3, the binding to Incr 2).
+ * Signed INGRESS MANIFEST + policy-addressability coverage.
  *
  * The manifest is the sealed, signed, content-addressed inventory of every declared ingress. It binds three things
- * cryptographically: the exact declaration set, the exact Increment-2 policy bundle it was compiled against, and (as
+ * cryptographically: the exact declaration set, the exact policy compiler policy bundle it was compiled against, and (as
  * honest SEAMS whose enforcement is owned by later increments) the scanned artifact-graph digest + scanner-tool
  * identity. `verifyManifest` re-derives everything and fails closed on any mismatch.
  *
@@ -13,11 +13,11 @@
  *   - COMPLETENESS (every ingress is policy-addressable): every declared address is referenced by some rule, or a
  *     wildcard ("*") rule exists that addresses all of them.
  * So a stale policy token (points at a non-existent ingress) and an un-addressable ingress (declared but no policy
- * path) are BOTH fatal. This does not evaluate permits or establish principals (Increment 8) — denied-only ingresses
+ * path) are BOTH fatal. This does not evaluate permits or establish principals (admission gate) — denied-only ingresses
  * are valid inventory; it only proves address coverage.
  *
  * Grounding: SLSA/in-toto signed manifest binding; deny-by-default registration; canonical content-addressed identity
- * (Increment 1); domain separation (never reuse the policy-bundle or generic EIR domain).
+ * (canonical value model); domain separation (never reuse the policy-bundle or generic EIR domain).
  */
 import { eirDigest, type CanonicalValue } from "../eir/canonical.js";
 import { stubSign, type Signature, type Signer, type TrustPolicy } from "../bom/bom_signing.js";

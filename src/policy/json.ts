@@ -1,5 +1,5 @@
 /**
- * Strict, dependency-free JSON frontend for the Total Policy Compiler (Mechanical-Enforcement Increment 2).
+ * Strict, dependency-free JSON frontend for the Total Policy Compiler.
  *
  * WHY NOT `JSON.parse`: a total policy compiler must never SILENTLY drop or coerce input — that is a fail-open. The
  * platform parser silently (a) keeps only the LAST of duplicate object keys (so a policy carrying two `"decision"`

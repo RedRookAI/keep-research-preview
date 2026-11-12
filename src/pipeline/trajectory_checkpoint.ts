@@ -1,5 +1,5 @@
 /**
- * Trajectory-drift checkpoint (Increment 16.8b).
+ * Trajectory-drift checkpoint.
  *
  * Second/third-order effects are a TRAJECTORY property, not only a pre-flight one: ~12% of long agent
  * runs carry a propagated error single-step evals never flag, and "each step looked locally reasonable"
@@ -9,7 +9,7 @@
  * the plan did not approve (drift), it escalates to human EVEN IF the patch's own tests pass.
  *
  * This catches the canonical cascade chain: planner approves a small change → executor does more →
- * summariser reports success. Deterministic, model-free; reuses the one consequence taxonomy. Zero deps.
+ * summariser reports success. Deterministic, model-free; reuses the one consequence taxonomy.
  */
 
 import { deriveEffectsFromEdits, type EffectClass, type IntendedEffect } from "./plan_consequences.js";

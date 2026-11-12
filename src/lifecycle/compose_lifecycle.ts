@@ -4,7 +4,7 @@
  * only barrel-exported. The owner's concern — "no one ever has their hard work lost" — is served by exposing
  * backup verification + free-first off-machine options as a first-class capability.
  *
- * BUILT: the pure logic (root-match + chain-integrity verification, the free-first option catalog, the uninstall
+ * Implemented: the pure logic (root-match + chain-integrity verification, the free-first option catalog, the uninstall
  * manifest sequencing, the TCB drift check). SEAM: the ports a deployment injects — the backup target, the removal
  * port (filesystem), the keystore, the snapshot source.
  */
@@ -38,7 +38,7 @@ export interface KeepLifecycle {
   /** Verify a snapshot round-trips through a backup port (the port is the SEAM). */
   verifyBackupRoundTrip(port: BackupPort, snapshotId: string, hasher: Hasher): Promise<RestoreVerification>;
   /**
-   * Build a CONTINUOUS off-box ship driver (BUILD-ORDER 8.5a): on a cadence it ships the latest sealed
+   * Build a CONTINUOUS off-box ship driver: on a cadence it ships the latest sealed
    * snapshot to the injected sink, then re-fetches and re-verifies the copy with the SAME verifyRestore
    * predicate — fail-closed-and-visible (UNHEALTHY on any ship/verify failure). The sink is the SEAM.
    */

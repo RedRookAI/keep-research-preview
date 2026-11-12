@@ -1,15 +1,15 @@
 /**
- * Remote git operations (Increment 15a).
+ * Remote git operations.
  *
- * SOTA basis (2026-08-05): the #1 rule for autonomous-agent git is BRANCH-PER-TASK, never commit to a
+ * Research references (2026-08-05): the #1 rule for autonomous-agent git is BRANCH-PER-TASK, never commit to a
  * shared branch (buildmvpfast 2026: "never let an agent commit to a shared branch, every single
  * time"). The branch prefix is load-bearing — it flags machine-generated work before a reviewer opens
  * the diff and lets branch-protection rules target agent branches. Attribution trailers keep the audit
  * trail explicit ("responsibility stays with the engineer who hit commit" — marketingagent 2026).
  * Read-only ops (fetch/status) are separated from state-changing ops (push) as distinct actions
- * (GitHub community 2026). Tested against a real local bare remote. Zero deps.
+ * (GitHub community 2026). Tested against a real local bare remote.
  *
- * What would change it: nothing structural — the protected-branch refusal + branch-per-task are
+ * Extension considerations: nothing structural — the protected-branch refusal + branch-per-task are
  * permanent invariants; hosted PR adapters are additive (15b).
  */
 

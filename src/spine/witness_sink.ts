@@ -1,5 +1,5 @@
 /**
- * Witness sink (Build Step 1 — making the spine anchor LIVE).
+ * Witness sink.
  *
  * The spine's hash-chain is tamper-EVIDENT, but `verifyChain` alone cannot catch a
  * TRUNCATION (delete recent blocks → still a valid shorter chain) or a FORK
@@ -7,7 +7,7 @@
  * both — but only if a witness was actually PUBLISHED somewhere independent and is
  * later compared. This port is that independent location.
  *
- * DESIGN (SOTA + cross-industry, 2026-08-08):
+ * DESIGN (cross-industry references, 2026-08-08):
  *  - Transparency-log witnessing (CT / RFC 6962 / C2SP tlog-witness): publish each
  *    checkpoint; a new checkpoint is trusted only if it is a consistent FORWARD
  *    EXTENSION of the last one. The deployed answer to split-view/equivocation is
@@ -17,7 +17,7 @@
  *    agree", and above all — make tampering *operationally detectable*.
  *
  * N=1 vs FLEET (two logical alternatives behind ONE port):
- *  - N=1 (in-env, BUILT): a LOCAL append-only file, SEPARATE from the chain, held
+ * - N=1 (local implementation): a LOCAL append-only file, SEPARATE from the chain, held
  *    outside the agent's write-set (R7/R10). This gives DETECTION (compare the chain
  *    to an independently-held witness) — the honest notary-log guarantee. It does NOT
  *    give split-view resistance: a full-host compromise can tamper both. Labeled

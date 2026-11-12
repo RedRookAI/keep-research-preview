@@ -12,7 +12,7 @@
  * hostile descendants cannot escape a process group. Namespace/stronger isolation
  * depends on the explicitly configured backend and its reported enforcement.
  *
- * Provides a kill-switch-compatible terminate() so the Phase 2 KillSwitch can stop a
+ * Provides a kill-switch-compatible terminate so the KillSwitch can stop a
  * running sandboxed process out-of-band.
  */
 

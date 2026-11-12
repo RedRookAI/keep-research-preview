@@ -1,5 +1,5 @@
 /**
- * F1 — Secret-safe message intake (the chat security floor).
+ * Secret-safe message intake (the chat security floor).
  *
  * Non-experts paste API keys and logins straight into chat. The 2026 consensus
  * (TruffleHog, PII-Shield, the Hermes-agent secrets issue) is unambiguous: a secret

@@ -1,5 +1,5 @@
 /**
- * Signed evidence pack + compliance export (Phase 5, #30 + #36).
+ * Signed evidence pack + compliance export.
  *
  * Generates a regime-versioned evidence pack from the governance trail:
  *  - CRYPTOGRAPHICALLY SIGNED + OFFLINE-VERIFIABLE (2026 sharpening — evidence packs

@@ -23,7 +23,7 @@
  *    distributed/consensus ledger or token leases (each agent holds 1/N of the cap, burned locally). That
  *    distributed ledger across hosts is the SEAM; the reservation logic is the in-env-provable core.
  *
- * BUILT vs SEAM: BUILT + proven in-env is the reservation ledger (atomic reserve/commit/release,
+ * Implementation boundary: Implemented is the reservation ledger (atomic reserve/commit/release,
  * aggregate-cap enforcement, fail-closed, reversible-on-abort) + the compose-above-the-gate helper. The
  * real DISTRIBUTED / LEASED ledger across hosts (consensus, sharded leases) is the SEAM. This is the
  * FIRST fleet barrier — scenario 1 only; scenarios 2–5 of R39 remain open.

@@ -1,21 +1,7 @@
 /**
- * F1.7 — Conversation driver (THE KEYSTONE: the whole front door as one loop).
- *
- * This is the orchestration layer, and per the 2026 consensus "production failures
- * stem mostly from orchestration, not model quality" — so this loop's robustness IS
- * the product's reliability. It ties together every front-door piece:
- *
- *   human message
- *     -> SecretSafeIntake (F1)      secrets captured before the brain/spine ever see them
- *     -> BrainCall (F1.8/F1.9 seam) role-routed + fallback-protected + budget-capped
- *     -> parseProposal (F1.7)       validate; retry-with-clarification on malformed output
- *     -> PlanExecuteGate (F1.5)     auto-approve reversible / human-gate destructive
- *     -> deterministic fallback (F1) whenever the brain is unavailable / over-budget /
- *                                    repeatedly malformed, or the profile demands it
- *
- * Degrade, never break: if the LLM path can't produce a valid action, the driver hands
- * the turn to the deterministic OnboardingConversation so onboarding always progresses.
- * Bounded by maxRetries. Never throws.
+ * Routes a message through secret intake, a model reply, proposal parsing and the action gate.
+ * Falls back to the deterministic onboarding dialogue when the model is unavailable or repeatedly
+ * returns unusable output. Model retries are bounded by maxRetries.
  */
 
 import { SecretSafeIntake } from "./secret_intake.js";

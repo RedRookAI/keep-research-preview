@@ -1,7 +1,7 @@
 /**
- * On-device code-structure graph (Increment 14a).
+ * On-device code-structure graph.
  *
- * SOTA basis (2026-08-05): the winning open-source pattern is local-first graph retrieval (RANGER;
+ * Research references (2026-08-05): the winning open-source pattern is local-first graph retrieval (RANGER;
  * LARGER 2026 beats BM25 on four localization benchmarks by anchoring lexical queries into a repo
  * graph). The decisive practicality finding (Citation-Grounded 2026): import/reference edges can be
  * extracted by REGEX from source text alone — no compilation, no AST library, ~27ms — "a pragmatic
@@ -9,9 +9,9 @@
  * actionable-for-repair edge set (SGAgent 2026) is containment, invocation, symbol reference,
  * inheritance, import — NOT dataflow/control-flow (which need heavyweight analysis). So this graph
  * models file↔symbol containment, symbol→symbol reference, file→file import, class inheritance, via
- * regex. On-device, nothing leaves the machine (Keep's sovereignty thesis). Zero deps.
+ * regex. On-device, nothing leaves the machine (Keep's sovereignty thesis).
  *
- * What would change it: a language we can't cheaply regex-parse → fall back to BM25+embedding for it;
+ * Extension considerations: a language we can't cheaply regex-parse → fall back to BM25+embedding for it;
  * a real tree-sitter resolver behind the same builder port for function-level call precision.
  */
 

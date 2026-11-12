@@ -1,5 +1,5 @@
 /**
- * Boot-level merge-gate invariant (Phase 2, Round 19).
+ * Boot-level merge-gate invariant.
  *
  * The human merge/approval gate on destructive/irreversible tiers is enforced at
  * the orchestration BOOT level, beyond RBAC's reach. No role — including superadmin

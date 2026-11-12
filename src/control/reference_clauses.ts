@@ -1,5 +1,5 @@
 /**
- * Default Keep safety clauses (Increment C1) — the real contract clauses registered into the single
+ * Default Keep safety clauses — the real contract clauses registered into the single
  * ReferenceMonitor. Each encodes, as a trace-level temporal invariant, a safety property that previously
  * lived scattered inside an individual module. Registering them here makes the monitor the ONE un-bypassable
  * enforcement point (and begins the islands fix: these modules' invariants now converge on one checker).

@@ -1,7 +1,7 @@
 /**
- * ProviderRouter (Increment 12d) — resolution + cascade + failover over the existing router machinery.
+ * ProviderRouter — resolution + cascade + failover over the existing router machinery.
  *
- * SOTA basis (2026-08-05): production LLM routing combines three strategies — complexity-based
+ * Research references (2026-08-05): production LLM routing combines three strategies — complexity-based
  * (classify → tier), cost-based (cheapest model that clears the quality bar), and cascade (try cheap
  * first, escalate ONLY on a failed check). Keep already has the first two (ComplexityClassifier +
  * FirewallRouter). This layer adds provider RESOLUTION + cascade + failover, and — critically — the
@@ -12,7 +12,7 @@
  * So: rule-first (complexity → tier → cheapest provider), cascade on a provably-failed quality check
  * (bounded + recorded), failover on a transient provider outage (post-retry). Reuses ModelTier +
  * CapabilityTier; records every route + escalation to the spine so cost/budget stay in one place.
- * Zero deps.
+ *
  */
 
 import type { Spine } from "../spine/spine.js";

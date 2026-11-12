@@ -170,7 +170,7 @@ export function sandboxedRunnerFor(
       ...(opts.cpuLimitSec !== undefined ? { cpuLimitSec: opts.cpuLimitSec } : {}),
       ...(opts.maxOutputBytes !== undefined ? { maxOutputBytes: opts.maxOutputBytes } : {}),
       ...(opts.envAllowlist ? { envAllowlist: opts.envAllowlist } : {}),
-      // BUILD-ORDER 1.3 — jail is default-ON; opt-out and opt-in allowances flow through unchanged.
+      // jail is default-ON; opt-out and opt-in allowances flow through unchanged.
       ...(opts.namespaceJail !== undefined ? { namespaceJail: opts.namespaceJail } : {}),
       ...(opts.jailExecutable !== undefined ? { jailExecutable: opts.jailExecutable } : {}),
       ...(opts.readOnlyPaths ? { readOnlyPaths: opts.readOnlyPaths } : {}),

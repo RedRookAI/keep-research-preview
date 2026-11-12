@@ -1,5 +1,5 @@
 /**
- * Baseline metric + aggregate-drift detector (Phase 3.5, Round 12/16).
+ * Baseline metric + aggregate-drift detector.
  *
  * "The learning loop helps" must be MEASURED, not assumed. The improvement metric is
  * the Clean-Resolved rate on a FROZEN held-out eval set, reported as the DELTA vs a

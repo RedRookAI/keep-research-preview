@@ -1,7 +1,7 @@
 /**
- * LogicVet panel + rabbit-hole guard (Increment 3.8d) — the orchestrator.
+ * LogicVet panel + rabbit-hole guard — the orchestrator.
  *
- * SOTA basis (2026-08-04): a panel of grounded partial critics with consensus (arXiv 2402.08115),
+ * Research references (2026-08-04): a panel of grounded partial critics with consensus (arXiv 2402.08115),
  * where SOUND deterministic critics gate and correlated LLM critics only flag (SAVeR arXiv
  * 2604.08401). Rabbit-hole guard = the Self-Verification Dilemma (arXiv 2602.03485): suppress
  * redundant RECHECK (re-verifying already-passed unchanged steps), permit RETHINK (revising a
@@ -12,7 +12,6 @@
  * with zero models; the generative grounding check uses checkHeterogeneous (NEVER throws) so a
  * one-key operator gets full-strength sound vetting + a flag-only generative cross-check.
  *
- * Zero deps.
  */
 
 import {

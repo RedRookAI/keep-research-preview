@@ -1,5 +1,5 @@
 /**
- * effect_scan_port.ts — the typescript-FREE seam onto the closed-world EFFECT scan (Increment 4). Mirrors
+ * effect_scan_port.ts — the typescript-FREE seam onto the closed-world EFFECT scan. Mirrors
  * ingress_scan_port: speaks only node builtins, and refuses any result unless the engine exited 0 with its sentinel
  * (fail-closed — a crashed scan can never be mistaken for "no unowned effects").
  */

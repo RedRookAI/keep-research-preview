@@ -1,14 +1,14 @@
 /**
- * Real git adapter (infra) — makes Phase 2 rollback's git seam executable.
+ * Real git adapter (infra) — makes rollback's git seam executable.
  *
  * Wraps a real git repository via node:child_process (zero runtime deps). Each
  * mutating operation makes a real commit and returns a ReversibleAction whose
- * undo() runs `git revert --no-edit <sha>`.
+ * undo runs `git revert --no-edit <sha>`.
  *
- * Design (SOTA, Aug 2026): revert, NOT reset. Revert creates a new commit that
+ * Design (research, Aug 2026): revert, NOT reset. Revert creates a new commit that
  * reverses the change and PRESERVES history; reset rewrites it. Keep's premise is a
  * tamper-evident, auditable trail, so history-rewriting rollback is disqualified —
- * revert is the only safe default. (What would change it: a purely-local, never-
+ * revert is the only safe default. (Extension considerations: a purely-local, never-
  * shared scratch branch could reset; revert stays the default everywhere else.)
  * Operates in an injectable cwd so it composes with git-worktree isolation.
  *

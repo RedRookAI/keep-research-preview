@@ -1,5 +1,5 @@
 /**
- * SolveOutcomeWire (Increment 18.W) — the adapter that connects the SOLVE PIPELINE to the SELF-IMPROVEMENT
+ * SolveOutcomeWire — the adapter that connects the SOLVE PIPELINE to the SELF-IMPROVEMENT
  * subsystem. Before 18.W, KeepPipeline.solveToPr produced a SolveToPrResult that nobody fed back: the bus
  * (18.1), drift monitor (C4), and reference monitor (C1) were wired into composeKeep but received no REAL
  * signals — only demo/test traffic. 18.W closes that: every real solve is mapped to an OutcomeSignal and
@@ -7,12 +7,12 @@
  *
  * Design: a standalone adapter behind a port, NOT a coupling inside the pipeline. The pipeline stays
  * swappable and knows nothing about learning; the wire translates its output. This is the "no islands"
- * fix done without creating a new coupling island. Zero runtime deps.
+ * fix done without creating a new coupling island.
  *
- * SOTA basis (2026-08-05): the Adaptive Data Flywheel (arXiv 2510.27051) — the Monitor phase must be fed by
+ * Research references (2026-08-05): the Adaptive Data Flywheel (arXiv 2510.27051) — the Monitor phase must be fed by
  * PRODUCTION outcomes, not synthetic ones, or the loop learns nothing real. The merge/reject verdict is
  * supplied LATER (the human reviews asynchronously); 18.W emits the solve-time signal immediately (with
- * mergeVerdict "pending") and exposes recordMergeVerdict() for the human decision when it arrives.
+ * mergeVerdict "pending") and exposes recordMergeVerdict for the human decision when it arrives.
  */
 
 import type { SelfImprovementBus, OutcomeSignal, MergeVerdict, LearningErrorSink, LearningFailure } from "./self_improvement_bus.js";

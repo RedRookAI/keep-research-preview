@@ -1,27 +1,10 @@
 /**
- * PORTABILITY — Round 8 of the personalization moat (the ethical capstone: the portable second brain).
+ * Export, import and erasure operations over derived memory and personalization state.
  *
- * Portability = CREDIBLE EXIT = the durable moat (NOT lock-in), and it is now the direction of law (EU Data Act
- * switching-fee elimination by 2027; AI Act full enforcement 2026). The killer insight from the 2026 AI-memory
- * literature: existing exports return raw logs — "you don't lose the data, you lose the understanding" — so Keep
- * exports the DERIVED state (memories with their tiers/scopes, preferences, inferred profiles, lenses, connector
- * configs, corrections), not transcripts. Credible exit is only real if it re-homes into the user's OWN instance
- * (n=1-local self-host) — cognitive sovereignty.
- *
- * Three research-driven properties shape this:
- *   1. CI-RESPECTING export (GDPR Art 20(4)) — export MY subject-data, never another user's.
- *   2. SAFE RE-HYDRATION — a bundle is UNTRUSTED input (memory-mediated prompt injection, forged provenance,
- *      poisoned memory). Import VERIFIES an integrity digest (tampered ⇒ rejected), checks the version (unknown ⇒
- *      graceful degradation, never a silent misparse), lands imported memories at PROBATION (never confirmed — no
- *      authority laundering), SANITIZES imported personas (parseSoul), and marks imported content tainted.
- *   3. ERASURE = per-entity CRYPTO-SHRED not soft-delete — a flag is not erasure (an admin can still read it); the
- *      SOTA is key destruction (Keep's CryptoShredKeyStore). Erase makes the ciphertext unreadable while the audit
- *      event survives, and returns a verifiable receipt.
- *
- * This layer is the export/import round-trip + erasure LOGIC over abstract derived-state categories (a thin
- * adapter assembles `DerivedState` from the real stores). BUILT + proven in-env: export-completeness, CI-scoping,
- * integrity-verify, safe-re-hydration, and crypto-shred erasure. SEAM: the wire serialization format (the specific
- * bytes) and cross-vendor schema adapters (importing another vendor's bundle).
+ * Exports are subject-scoped. Imports verify the integrity digest and version, put imported memories on
+ * probation, sanitize personas and mark imported content tainted. An integrity digest does not establish
+ * that the imported content is trustworthy. Erasure uses per-entity key destruction and records a receipt.
+ * The wire format and cross-vendor schema adapters are separate integration requirements.
  */
 
 import { sha256Hex } from "../tcb/attestation.js";

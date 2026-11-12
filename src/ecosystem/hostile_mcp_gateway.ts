@@ -1,8 +1,8 @@
 /**
- * HostileMcpGateway (Increment W1) — the gateway EVERY external MCP server sits behind. MCP has "no strict
+ * HostileMcpGateway — the gateway EVERY external MCP server sits behind. MCP has "no strict
  * boundary between data and instructions" (truefoundry) and is "being wired into mission-critical systems faster
  * than anyone is securing it — treat every MCP server as hostile until proven otherwise" (Practical DevSecOps).
- * This is Keep's hostile-intake gauntlet, layered per the 2026 SOTA.
+ * This is Keep's hostile-intake gauntlet, layered per the 2026 research.
  *
  * The attacks it defends (OWASP Agentic 2026 ASI01 Agent Goal Hijack; Invariant Labs; Elastic; CSA):
  *  - TOOL POISONING — malicious instructions hidden in tool metadata/descriptions/results. Defense: external
@@ -15,8 +15,8 @@
  *    ("the friction is the feature"); a reference-monitor egress check blocks exfiltration invariants.
  *  - AUDIT BLIND SPOTS — every approve / reconcile / rug-pull / refuse / gate / invoke is audited to the spine.
  *
- * The live server connection (transport + scoped OAuth 2.1 credential) is supplied at deployment (VERIFIED-SEAM);
- * the gauntlet itself is BUILT + proven here. Zero deps (node:crypto). What would change it: MCP adds enforced
+ * The live server connection (transport + scoped OAuth 2.1 credential) is supplied at deployment (external integration);
+ * the gauntlet itself is Implemented.  Extension considerations: MCP adds enforced
  * signed tool descriptions → treat a valid signature as an additional pin input; the gateway stays.
  */
 

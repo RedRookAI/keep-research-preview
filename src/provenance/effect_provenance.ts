@@ -19,13 +19,13 @@
  *    principal. The agent/model CANNOT self-declassify — an unauthorized declassification is ignored.
  *    This reuses the raise-only discipline: an untrusted party's claim of "trusted" is dropped.
  *
- * SCOPE — BUILT vs SEAM: BUILT is this in-env predicate + the gate veto it feeds. The real
+ * SCOPE — Implementation boundary: this module provides this in-env predicate + the gate veto it feeds. The real
  * cross-process TAINT TRACER — the machinery that automatically labels every tool output, fetched
  * page, and external issue as untrusted and propagates the label through every transformation — is a
  * SEAM (it needs to intercept all data flows, which in-env we cannot). Here, labels are supplied by
  * the caller; the predicate is the trusted decision over them.
  *
- * WHAT WOULD CHANGE IT: a coarser or finer origin taxonomy, or an information-capacity policy (FIDES:
+ * Extension considerations: a coarser or finer origin taxonomy, or an information-capacity policy (FIDES:
  * a 1-bit extraction from untrusted context may be allowed where an unconstrained string is not) —
  * both extend the input labels; neither makes the predicate clear taint without authority.
  */

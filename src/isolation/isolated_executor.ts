@@ -1,14 +1,14 @@
 /**
- * IsolatedExecutor (Increment 17) — the seam that wraps untrusted AI-generated code execution.
+ * IsolatedExecutor — the seam that wraps untrusted AI-generated code execution.
  *
  * The solve pipeline runs the project's tests on a patch Keep wrote. That execution must happen inside the
  * selected isolation tier. This defines the port + a runnable process-isolation FLOOR (the back-of-house
- * default) + declared VERIFIED-SEAM backends (microVM/gVisor/container — same port, need configured host + KVM /
+ * default) + declared external integration backends (microVM/gVisor/container — same port, need configured host + KVM /
  * gVisor / a runtime to run for real).
  *
- * SOTA basis (2026-08-05): scope the filesystem to the PROJECT dir only, never home; resist path traversal
+ * Research references (2026-08-05): scope the filesystem to the PROJECT dir only, never home; resist path traversal
  * (agents bypass path-based matching — bunnyshell 2026). Every isolated execution emits a signed audit
- * artifact (defense-in-depth — northflank/zylos 2026). Zero deps.
+ * artifact (defense-in-depth — northflank/zylos 2026).
  */
 
 import type { Spine } from "../spine/spine.js";
@@ -51,7 +51,7 @@ export interface IsolatedExecutor {
   /** Run the given TestRunner inside the isolation boundary. */
   runIsolated(runner: TestRunner, spec: ExecutionSpec, execution?: ExecutionContext): Promise<IsolatedRunOutcome>;
   /**
-   * BUILD-ORDER 1.7 (BIND-EXECUTOR-TIER-ATTESTATION) — EMIT a signed attestation of the tier this executor
+   * EMIT a signed attestation of the tier this executor
    * really ran, with its MEASURED evidence, using the run's attestor. The oversight router VERIFIES it
    * (signature valid AND evidence recomputes to at least the claimed tier) before the tier grants an
    * autonomy ceiling — so `tier` is no longer trusted as the executor's word (Z193). An executor that does
@@ -174,7 +174,7 @@ export function isPathWithinProject(projectDir: string, candidate: string): bool
  */
 export class ProcessIsolationExecutor implements IsolatedExecutor {
   readonly tier: IsolationTier = "process";
-  /** BUILD-ORDER 1.7 — the process-floor evidence this executor attests to (recomputes to `process`). */
+  /** the process-floor evidence this executor attests to (recomputes to `process`). */
   private readonly evidence: IsolationEvidence;
   private completedEvidence: IsolationEvidence | undefined;
   private activeRun: object | undefined;
@@ -183,7 +183,7 @@ export class ProcessIsolationExecutor implements IsolatedExecutor {
     this.evidence = opts.evidence ?? processFloorEvidence();
   }
 
-  /** BUILD-ORDER 1.7 — emit the signed attestation of the process floor it really runs (evidence → process). */
+  /** emit the signed attestation of the process floor it really runs (evidence → process). */
   attest(attestor: IsolationAttestor, projectDir: string, ts: number): IsolationAttestation | undefined {
     return this.completedEvidence
       ? attestor.attest({ tier: this.tier, evidence: this.completedEvidence, projectDir, ts, mechanism: "hmac-run-key" })
@@ -272,7 +272,7 @@ export function buildEnforcingRunner(
     ...(opts.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : {}),
     ...(opts.cpuLimitSec !== undefined ? { cpuLimitSec: opts.cpuLimitSec } : {}),
     ...(opts.envAllowlist ? { envAllowlist: opts.envAllowlist } : {}),
-    // BUILD-ORDER 1.3 — the kernel namespace jail is default-ON inside SandboxedCommandRunner; opt-in allowances only.
+    // the kernel namespace jail is default-ON inside SandboxedCommandRunner; opt-in allowances only.
     ...(opts.allowNet ? { allowNet: opts.allowNet } : {}),
     ...(opts.allowWritePaths ? { allowWritePaths: opts.allowWritePaths } : {}),
   });
@@ -295,14 +295,14 @@ export class BoundaryExecutor implements IsolatedExecutor {
     private readonly boundaryRun: ((runner: TestRunner, spec: ExecutionSpec, execution?: ExecutionContext) => Promise<TestRunResult>) | undefined,
     private readonly spine?: Spine,
     /**
-     * BUILD-ORDER 1.5 — the boundary MECHANISM label used in the audit detail (defaults to the tier). Two
+     * the boundary MECHANISM label used in the audit detail (defaults to the tier). Two
      * boundaries can share a tier but differ by mechanism — e.g. the Windows Job Object floor is the "process"
      * tier but a distinct backend from the POSIX process floor. The label makes the audit (and the wiring
      * proof) name WHICH backend actually ran, so a Windows-tier claim is checkable, not conflated.
      */
     private readonly label: string = tier,
     /**
-     * BUILD-ORDER 1.7 — the MEASURED evidence backing this tier (from the `detect*` probe on the default
+     * the MEASURED evidence backing this tier (from the `detect*` probe on the default
      * path, or a VERIFIED-SEAM host's report). DEFAULT = the process floor, so a strong-tier claim with NO
      * backing evidence recomputes DOWN to `process` at the verifier: a claim earns its ceiling only when
      * real evidence backs it, never on the constructed `.tier` label alone (the Z193 hole this closes).
@@ -310,7 +310,7 @@ export class BoundaryExecutor implements IsolatedExecutor {
     private readonly evidence: IsolationEvidence = processFloorEvidence(),
   ) {}
 
-  /** BUILD-ORDER 1.7 — emit the signed attestation of the tier + the measured evidence that backs it. */
+  /** emit the signed attestation of the tier + the measured evidence that backs it. */
   attest(attestor: IsolationAttestor, projectDir: string, ts: number): IsolationAttestation | undefined {
     if (this.stoppedRun) return undefined;
     const evidence = TIER_STRENGTH[this.tier] > TIER_STRENGTH.process ? this.completedRunEvidence
@@ -398,7 +398,7 @@ export function isJailed(tree: FileTree): boolean {
 }
 
 /**
- * BIND-DEFAULT-EXECUTION-PATH (BUILD-ORDER 1.1) — the byte-level project jail on the FileTree surface.
+ * BIND-DEFAULT-EXECUTION-PATH — the byte-level project jail on the FileTree surface.
  *
  * Wrap a FileTree so EVERY read/write is realpath-jailed to `projectDir`: a path whose canonical
  * (symlink-resolved) location escapes the project dir is REFUSED before any byte is read or written —
@@ -449,20 +449,9 @@ export function jailedTree(inner: FileTree, projectDir: string): FileTree {
 }
 
 /**
- * Pick the executor for the strongest available tier. Back-of-house → ProcessIsolationExecutor.
- *
- * BUILD-ORDER 1.3c (BIND-STRONG-TIER-BOUNDARY) — TIER-HONESTY. A strong tier (gvisor/container/microvm)
- * is CLAIMED by `caps`, but a claim is not evidence (Z156 confused-deputy: an autonomy-buying tier claim
- * derived from the thing it governs). So the strong `BoundaryExecutor` is returned ONLY when a REAL
- * boundary backs the claim — either an explicitly wired `boundaryRun`, OR a runtime the probe ACTUALLY
- * detects (+ an image to run the tests in). When no real boundary is available, this does NOT claim the
- * tier: it falls to the process floor, labelled honestly (`tier === "process"`), never a false tier
- * claim that would buy a higher autonomy ceiling with nothing enforcing it.
- *
- * BUILD-ORDER 1.3b (BIND-MICROVM-TIER-BOUNDARY) extends the SAME honesty to the TOP tier: the microvm
- * `BoundaryExecutor` engages ONLY when the `/dev/kvm`+firecracker probe backs the claim AND a built guest
- * kernel/rootfs exist; a KVM-less / no-rootfs host routes down to the weaker-but-honest tier — never a
- * false microvm claim buying the `full` ceiling with no HW boundary behind it.
+ * Select an executor backed by the available boundary runner/runtime.
+ * A microVM needs confirmed KVM/Firecracker capability and a guest kernel/rootfs.
+ * Missing stronger prerequisites fall back to the actual supported tier.
  */
 export function selectExecutor(caps: IsolationCapabilities, opts: {
   spine?: Spine;
@@ -476,7 +465,7 @@ export function selectExecutor(caps: IsolationCapabilities, opts: {
   detectMicrovm?: () => MicrovmRuntimeInfo;
   /** Auto-wire config: the guest kernel/rootfs + command the untrusted tests run under, when KVM+VMM present. */
   microvm?: Omit<MicrovmBoundarySpec, "projectDir">;
-  /** BUILD-ORDER 1.5 — the host platform (default: `process.platform`). Injectable so a POSIX in-env run can
+  /** the host platform (default: `process.platform`). Injectable so a POSIX in-env run can
    * exercise the win32 selection path in tests. The Windows floor engages ONLY when this is "win32". */
   platform?: string;
   /** Injectable Windows runtime probe (default: the real measured `detectWindowsJobObjects`). */
@@ -498,11 +487,11 @@ export function selectExecutor(caps: IsolationCapabilities, opts: {
     return executor;
   };
   if (sel.tier === "process" || sel.tier === "none") {
-    // BUILD-ORDER 1.5 — the PLATFORM-NATIVE floor. On win32 a Win32 Job Object backs the process tier (a real
+    // the PLATFORM-NATIVE floor. On win32 a Win32 Job Object backs the process tier (a real
     // resource/lifetime container); off-platform, or on a win32 host with no Job Object (routes to WSL2/degrade),
     // the POSIX process floor stays. PLATFORM-HONESTY: a Windows-backed "process" claim is made ONLY on win32.
     const win = resolveWindowsBoundary(sel.tier, opts);
-    // BUILD-ORDER 1.7 — carry the probe-MEASURED evidence into the executor so its attestation recomputes to
+    // carry the probe-MEASURED evidence into the executor so its attestation recomputes to
     // the tier the Job Object really backs (not the constructed label).
     if (win) return enforceMinimum(selectedBoundary(sel.tier, win.run, "windows-job-object (process tier)", win.evidence));
     return enforceMinimum(new ProcessIsolationExecutor(opts.spine));
@@ -510,7 +499,7 @@ export function selectExecutor(caps: IsolationCapabilities, opts: {
   const strong = resolveStrongBoundary(sel.tier, opts);
   // HONESTY: no real boundary for the claimed strong tier → do NOT claim it; use the process floor, labelled.
   if (!strong) return enforceMinimum(new ProcessIsolationExecutor(opts.spine));
-  // BUILD-ORDER 1.7 — thread the probe-measured evidence so the attestation recomputes to the claimed strong
+  // thread the probe-measured evidence so the attestation recomputes to the claimed strong
   // tier; a probe that did NOT back the tier never reaches here (resolveStrongBoundary returned undefined).
   return enforceMinimum(selectedBoundary(sel.tier, strong.run, sel.tier, strong.evidence));
 }
@@ -530,7 +519,7 @@ function resolveStrongBoundary(tier: IsolationTier, opts: {
   // Explicit host wiring / VERIFIED-SEAM: the operator vouches for the tier by supplying a real boundary
   // runner, so the attestation carries the evidence a host of that tier measures (confused-not-compromised).
   if (opts.boundaryRun) return { run: opts.boundaryRun, evidence: seamEvidenceForTier(tier) };
-  // BUILD-ORDER 1.3b — the microVM (TOP) tier. Engage ONLY when the kvm+VMM probe backs the claim AND a
+  // the microVM (TOP) tier. Engage ONLY when the kvm+VMM probe backs the claim AND a
   // built guest kernel+rootfs exist; otherwise route DOWN (no false microvm claim). Neutering the probe
   // check (or the images check) makes selectExecutor claim `microvm` with no HW boundary → RED.
   if (tier === "microvm") {
@@ -541,7 +530,7 @@ function resolveStrongBoundary(tier: IsolationTier, opts: {
     if (!rt.available || rt.tier !== "microvm") return undefined;
     const spec = { projectDir: ".", ...opts.microvm };
     if (!microvmImagesPresent(spec)) return undefined; // no built kernel/rootfs → route down, never a false pass
-    // BUILD-ORDER 1.7 — the attestation evidence IS the probe measurement (kvm + VMM kind + images present).
+    // the attestation evidence IS the probe measurement (kvm + VMM kind + images present).
     return { run: buildMicrovmBoundaryRun(rt, spec), evidence: { platform: process.platform, runtimeKind: rt.kind, kvmPresent: rt.kvmPresent, imagesPresent: true, jobObjectSupport: false, degraded: [] } };
   }
   if (!opts.container) return undefined;
@@ -552,7 +541,7 @@ function resolveStrongBoundary(tier: IsolationTier, opts: {
 }
 
 /**
- * BUILD-ORDER 1.5 — resolve a REAL Windows Job Object boundary for the process-tier floor, or `undefined` if
+ * resolve a REAL Windows Job Object boundary for the process-tier floor, or `undefined` if
  * none is honestly available (→ the caller uses the POSIX floor, i.e. WSL2/degrade). PLATFORM-HONESTY: the
  * `platform === "win32"` guard is the point the disproof neuters — forcing it to pass off-platform makes
  * `selectExecutor` claim a Windows Job Object isolation that did not run (no Job Object on linux) → RED. The
@@ -569,7 +558,7 @@ function resolveWindowsBoundary(tier: IsolationTier, opts: {
   if (tier !== "process" && tier !== "none") return undefined; // the Job Object floor is a process-tier backend
   const platform = opts.platform ?? process.platform;
   if (platform !== "win32") return undefined; // PLATFORM-HONESTY: engage ONLY on win32 (the neuter point)
-  // BUILD-ORDER 1.7 — the Job Object evidence recomputes to `process` (win32 + jobObjectSupport). Never
+  // the Job Object evidence recomputes to `process` (win32 + jobObjectSupport). Never
   // claims kvm/images, so it can only ever back the process floor, never a stronger tier.
   const jobEvidence = (degraded: readonly string[]): IsolationEvidence => ({ platform, runtimeKind: "windows-job-object", kvmPresent: false, imagesPresent: false, jobObjectSupport: true, degraded });
   if (opts.windowsBoundaryRun) return { run: opts.windowsBoundaryRun, evidence: jobEvidence([]) }; // explicit host wiring / VERIFIED-SEAM stand-in

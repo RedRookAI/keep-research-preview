@@ -1,13 +1,7 @@
 /**
- * SECOND-BRAIN ORCHESTRATION (Hardening H4 glue) — the thin wire that composes the second-brain ingest path.
- *
- * The moat + hardening rounds built the pieces; this helper composes them into one path:
- *   parse (H3 safe-parsing registry) → upkeep decision + CI-vault capture (R3/R1) → land in the REAL MemoryStore
- *   (H1 applyUpkeep).
- *
- * It is the one missing wire the arc left: `routeIntake` (R7) runs the upkeep decision and vault capture but does
- * NOT land memories in the store (it returns the decision). This helper adds the store landing via H1. It is pure
- * orchestration — no new domain logic — and it modifies no domain module.
+ * Compose parsing, memory upkeep and sensitive-context capture, then apply the
+ * accepted upkeep result to MemoryStore. routeIntake returns a decision; this
+ * helper also lands that decision in the store.
  */
 
 import { ParserRegistry } from "../intake/parser_registry.js";

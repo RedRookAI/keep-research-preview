@@ -1,5 +1,5 @@
 /**
- * Corpus curation against the spine (Phase 3.5).
+ * Corpus curation against the spine.
  *
  * The held-out regression corpus and the frozen eval set are CURATED FROM RECORDED
  * BUILD HISTORY on the spine — not supplied by the caller. This depends on build

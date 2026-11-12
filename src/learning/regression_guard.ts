@@ -1,7 +1,7 @@
 /**
- * Auto-Learning: the RegressionGuard (Increment 6b) — self-regression + reward-hacking guard.
+ * Auto-Learning: the RegressionGuard — self-regression + reward-hacking guard.
  *
- * SOTA basis (2026-08-04): the rise-then-collapse failure mode — a metric peaks then collapses,
+ * Research references (2026-08-04): the rise-then-collapse failure mode — a metric peaks then collapses,
  * from within-task over-optimization; KL/EWC constraints do NOT prevent it (arXiv 2606.21090). The
  * recoveries that work are memory-level: track the PEAK and roll forward the peak checkpoint (that
  * paper's CARE/ES). Early-warning signals precede the reward collapse — reward std / output entropy
@@ -13,7 +13,7 @@
  *
  * This guard is gradient-free-appropriate: it watches the LEARNING loop's metric trajectory (lesson
  * promotion quality), not gradients. It reuses RollbackLedger + the spine — it does not reinvent
- * rollback. Zero deps.
+ * rollback.
  */
 
 import type { Spine } from "../spine/spine.js";

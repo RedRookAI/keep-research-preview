@@ -1,8 +1,8 @@
 /**
- * GitRevertSignalSource (Increment 3.1) — retires the calibration "revert/reopened SIGNAL SOURCE" seam.
+ * GitRevertSignalSource — retires the calibration "revert/reopened SIGNAL SOURCE" seam.
  *
  * The oversight calibration loop learns from post-approval outcomes: a merge that later gets reverted is evidence the
- * gate that cleared it was too loose. Until now the outcome signal (clean / reverted) was a VERIFIED-SEAM supplied at
+ * gate that cleared it was too loose. Until now the outcome signal (clean / reverted) was a external integration supplied at
  * deployment. This sources it FOR REAL from local git history: `git revert` writes a commit whose body contains
  * "This reverts commit <full-sha>", so scanning the log maps each merged change to reverted-or-clean with zero deps.
  *
@@ -10,9 +10,9 @@
  * (or a human's `git revert`) produces the revert commits — this source reads them back and feeds calibration, which
  * AUTO-TIGHTENS scrutiny on a class whose revert rate rose (the safe direction).
  *
- * SOTA basis (2026-08-08): revert (not reset) is Keep's rollback primitive, so a reverted merge always leaves a durable,
- * greppable "This reverts commit <sha>" trailer in history — a reliable, tamper-evident signal. What would change it: a
- * hosted forge's merge/revert webhooks could feed the same observeOutcome() at deployment (the prod swap), but the local
+ * Research references (2026-08-08): revert (not reset) is Keep's rollback primitive, so a reverted merge always leaves a durable,
+ * greppable "This reverts commit <sha>" trailer in history — a reliable, tamper-evident signal. Extension considerations: a
+ * hosted forge's merge/revert webhooks could feed the same observeOutcome at deployment (the prod swap), but the local
  * git history is the authoritative source and needs no external service.
  */
 

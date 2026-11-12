@@ -1,5 +1,5 @@
 /**
- * CONTEXTUAL-INTEGRITY SENSITIVE-CONTEXT VAULT — Round 1 of the personalization moat.
+ * CONTEXTUAL-INTEGRITY SENSITIVE-CONTEXT VAULT — context-scoped sensitive data handling.
  *
  * Privacy is not secrecy; it is APPROPRIATE INFORMATION FLOW (Nissenbaum 2004). A disclosure is governed by five
  * parameters — sender, recipient, information-subject, information-type, transmission-principle — and a violation
@@ -20,7 +20,7 @@
  *   - `revealToSubject` — the information-subject can always read their own context (accessible every round,
  *     protected like an env from everyone else); another user reading the same project's vault gets nothing.
  *
- * BUILT + proven in-env: the CI flow-control + user-scoping + reveal. SEAM: the special-category detector and the
+ * Implemented: the CI flow-control + user-scoping + reveal. SEAM: the special-category detector and the
  * persistent store. Deterministic, below the model — flow decisions are never delegated to an LLM.
  */
 

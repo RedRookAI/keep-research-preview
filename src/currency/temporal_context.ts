@@ -1,8 +1,8 @@
 /**
- * Theme 2 (Currency Layer), Part 1 — TemporalContext.
+ * TemporalContext.
  *
  * Every planning call must know today's real date and that its training may be stale —
- * WITHOUT relying on the model to remember (SOTA: local models get NO search override,
+ * WITHOUT relying on the model to remember (research: local models get NO search override,
  * the cutoff is an absolute wall). So the runtime injects this deterministically. This
  * is the permanent, structural version of the operator manually prompting the date
  * every round.
@@ -74,7 +74,7 @@ export function buildTemporalContext(now: Date = new Date(), brainCutoff?: strin
 
 // ── Recency predicates (Theme 2, Part 2 — the SAME clock, reused) ─────────────
 //
-// The tri-formula research gate (BUILD-ORDER 8.6) needs two DISTINCT recency
+// The tri-formula research gate needs two DISTINCT recency
 // verdicts on a source's as-of date, and both must read the SAME date arithmetic
 // the same-day currency flag above reads — no second clock, no second mechanism.
 // A source's age is a fact about its date, so these are pure functions of (asOf,

@@ -1,5 +1,5 @@
 /**
- * Hash-chain core — tamper-evidence for the spine (Feature 29).
+ * Hash-chain core — tamper-evidence for the spine.
  *
  * Each sealed block links to its predecessor by hash. Any mutation of a historical
  * event or block changes that block's hash, which breaks every subsequent link —
@@ -9,7 +9,7 @@
  *   { seq, prevHash, ts, cumulativeRoot, events: [canonicalEventBytes...] }
  *
  * - Genesis block: seq 0, prevHash = 64 zeros.
- * - cumulativeRoot: a running hash folding every prior event (Round 13 checkpoint
+ * - cumulativeRoot: a running hash folding every prior event (checkpoint
  *   primitive) so a checkpoint can attest the whole history compactly and the
  *   active chain can be bounded.
  */

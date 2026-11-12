@@ -1,5 +1,5 @@
 /**
- * Model gateway port (Phase 0.5) — fixes coupling-bugs #2 (embedding path) and
+ * Model gateway port — fixes coupling-bugs #2 (embedding path) and
  * #4 (fitness model routing) from the swappability vetting.
  *
  * Root cause of those bugs: domain code (retrieval, fitness) hardcoded a concrete
@@ -10,11 +10,11 @@
  * Air-gap requirement (coupling-fix #2): a local embedding backend must exist so
  * retrieval/learning work offline.
  *
- * LICENSING POLICY (SOTA, Aug 2026 — verified): the default *local* embedding
+ * LICENSING POLICY (research, Aug 2026 — verified): the default *local* embedding
  * backend MUST be a permissively-licensed model (Apache-2.0 / MIT — e.g. BGE-M3,
  * Qwen3-Embedding). Models under CC-BY-NC (e.g. NV-Embed-v2, jina-embeddings-v3/v4)
  * are NOT usable commercially and must never be the default. This mirrors Keep's
- * own license-SCA discipline (Round 20).
+ * own license-SCA discipline.
  */
 
 /** A vector embedding. */

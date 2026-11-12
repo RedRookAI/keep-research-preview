@@ -1,7 +1,7 @@
 /**
- * HTTP provider wire dialects (Increment 12a).
+ * HTTP provider wire dialects.
  *
- * SOTA basis (2026-08-05): the LLM API wire format has CONVERGED — all major providers use SSE for
+ * Research references (2026-08-05): the LLM API wire format has CONVERGED — all major providers use SSE for
  * streaming with delta events, standard HTTP status codes (429 rate-limit, 400 malformed, 500/503
  * server), and Retry-After headers (MyEngineeringPath/Requesty 2026). The two dominant dialects are
  * OpenAI-compatible (choices[].message.content, [DONE] sentinel, choices[].delta) and
@@ -12,7 +12,7 @@
  *
  * Usage fields map onto the existing CostModel TokenUsage {freshInputTokens, cachedInputTokens,
  * outputTokens} — Anthropic reports cache_read_input_tokens (10x cheaper), which is the cached split.
- * Zero deps.
+ *
  */
 
 import type { TokenUsage } from "../observability/cost_model.js";

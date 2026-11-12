@@ -8,8 +8,8 @@
  *  - cost attribution: roll spend up per task / agent / node / LESSON (the per-lesson grain is enabled by memory
  *    provenance + spine cost — the novel grain).
  *
- * SOTA basis (2026-08-07): log-inferred failure attribution is a HYPOTHESIS, not a conclusion; only execution
- * (confirm-by-rerun) validates it. What would change it: finer instrumentation of the model-gateway + tool layer would
+ * Research references (2026-08-07): log-inferred failure attribution is a HYPOTHESIS, not a conclusion; only execution
+ * (confirm-by-rerun) validates it. Extension considerations: finer instrumentation of the model-gateway + tool layer would
  * give failure localization a real propagation TREE (nested llm/tool/timeout spans) and populate the per-call cost
  * attribution — today the autonomy loop contributes per-stage spans with zero model-cost; that call-level instrumentation
  * is the follow-on that unlocks the propagation analysis and the per-lesson cost grain end-to-end.

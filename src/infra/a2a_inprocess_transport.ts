@@ -1,5 +1,5 @@
 /**
- * In-process A2A transport (infra, Phase 6 #47) — real + testable BYOA lifecycle.
+ * In-process A2A transport (infra) — real + testable BYOA lifecycle.
  *
  * Implements the injected `A2ATransport` with a full A2A task lifecycle
  * (submitted -> working -> completed/failed/input-required), so the bring-your-own-

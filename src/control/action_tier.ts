@@ -1,5 +1,5 @@
 /**
- * Action-tier gate (Phase 2) — the unifying principle.
+ * Action-tier gate — the unifying principle.
  *
  * Gate by reversibility x blast-radius, NEVER uniformly (uniform gating manufactures
  * confirmation fatigue). Every action falls into one of four tiers, and the required
@@ -29,7 +29,7 @@ export interface ActionDescriptor {
   readonly tier: ActionTier;
   /** True if a known inverse/compensating action exists (affects tier-3 handling). */
   readonly hasCompensatingAction?: boolean;
-  /** True if the external action is idempotency-keyable (Round 8). */
+  /** True if the external action is idempotency-keyable. */
   readonly idempotencyKeyable?: boolean;
 }
 

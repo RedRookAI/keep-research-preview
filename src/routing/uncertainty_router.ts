@@ -1,7 +1,7 @@
 /**
  * UNCERTAINTY + CONSEQUENCE + CASCADE-COST hardening for the cost-of-pass router.
  *
- * Red-team of the v1 router found it NAIVE in four ways the routing SOTA (FrugalGPT cascades; the LLM-routing-
+ * Red-team of the v1 router found it NAIVE in four ways the routing research (FrugalGPT cascades; the LLM-routing-
  * as-contextual-bandit literature — MetaLLM/MixLLM/BARP; conformal cascade calibration — UCCI/RouteNLP) treats
  * as solved:
  *   F1  standalone cost-of-pass is the WRONG objective when the system ESCALATES — the real objective is the
@@ -9,7 +9,7 @@
  *       cheapest-per-pass first model can be globally suboptimal.
  *   F2  a DETERMINISTIC POINT-ESTIMATE policy never explores and has no uncertainty — routing is a contextual
  *       bandit; a model with an unlucky early estimate is avoided forever, a lucky one over-used. Cold-start
- *       0.5 is arbitrary. SOTA: a Beta posterior over success + optimism/pessimism under uncertainty.
+ * 0.5 is arbitrary. research: a Beta posterior over success + optimism/pessimism under uncertainty.
  *   F4  the reliability bar didn't scale with CONSEQUENCE — Keep's gate-on-consequence thesis. A wrong answer
  *       that passes vetting on an IRREVERSIBLE task is a safety event, not a retry.
  *   F5  EWMA(alpha) conflated recency with sample size and couldn't express confidence — a Beta-with-decay
@@ -24,7 +24,7 @@
  * and AUDITABLE (confidence bounds, not randomized Thompson sampling — that remains a SEAM, and if used must be
  * seeded and confined to reversible tasks).
  *
- * BUILT + proven in-env: the Beta posterior + update, the consequence-scaled decision estimate + floor, and the
+ * Implemented: the Beta posterior + update, the consequence-scaled decision estimate + floor, and the
  * expected-cascade-cost selection. SEAM: a learned/contextual success-predictor (IRT/embedding) and randomized
  * Thompson exploration behind the same interface; conformal calibration of the floor. Composes as the
  * principled SUPERSET of the v1 `cost_of_pass_router` (point estimate = a degenerate posterior; `minSuccess` =

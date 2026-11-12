@@ -1,7 +1,7 @@
 /**
- * Embedding retrieval stage (Increment 14c).
+ * Embedding retrieval stage.
  *
- * SOTA basis (2026-08-05): dense embeddings specifically help NL→PL bug localization — Keep's exact
+ * Research references (2026-08-05): dense embeddings specifically help NL→PL bug localization — Keep's exact
  * task (issue text is natural language, files are code). "Bug localization tasks that involve NL→PL
  * retrieval showed markedly different behaviour: dense retrieval mostly outperformed sparse" (Practical
  * Code RAG 2026). But dense-only is a black box that breaks on exact symbols (ML Journey 2026), so the
@@ -10,8 +10,8 @@
  * offline, zero-dep), a real small local model (EmbeddingGemma-300M class — runs on modest hardware,
  * good for sovereign/free-tier users) or hosted embeddings on configured host.
  *
- * What would change it: a cross-encoder reranker as a final precision stage (hybrid→rerank gave
- * +17.4% Recall@5 in 2026 benchmarks) behind a Reranker port. Zero deps.
+ * Extension considerations: a cross-encoder reranker as a final precision stage (hybrid→rerank gave
+ * +17.4% Recall@5 in 2026 benchmarks) behind a Reranker port.
  */
 
 import { createHash } from "node:crypto";

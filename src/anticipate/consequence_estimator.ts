@@ -1,10 +1,10 @@
 /**
- * CONSEQUENCE ESTIMATOR (moat-heart #2) — derive what proceeding on an intent would trigger.
+ * Consequence estimator — derive what proceeding on an intent would trigger.
  *
  * The ask-gate (#1) decides ask-vs-proceed on consequence × uncertainty, but it needs a CONSEQUENCE input. The
  * front door shipped that as a keyword seam (a list of irreversible verbs). This module replaces the seam with a
  * real derivation over three axes drawn from the safety literature and the code already on disk:
- *   1. EXTERNALITY  — does proceeding reach the outside world (send / publish / pay / deploy)? External effects
+ * 1. EXTERNALITY — does proceeding reach the outside world (send / publish / pay / deploy)? External effects
  *                     can't be unsent; they tend toward irreversible. (Mirrors the always-gate sensitive paths in
  *                     pr_risk: deploy / payment / auth / crypto / migrations.)
  *   2. RECOVERABILITY — is there an undo path? Local, revert-safe edits are reversible; destroying/overwriting real
@@ -17,7 +17,7 @@
  * signals → `unknown`, which the gate treats between reversible and irreversible (so a genuine unknown errs toward
  * asking when the stakes/uncertainty are high, rather than silently proceeding).
  *
- * IDENTITY-FIRST (BUILD-ORDER 8.44B — CAPABILITY-NOT-PROSE): when the RESOLVED capability/tool identity actually
+ * Capability identity: when the RESOLVED capability/tool identity actually
  * being invoked is known (`input.capability`, the callee — not its description), the effect class is derived from
  * that identity, not from re-parsed prose. Prose is attacker-controlled and unbounded ("gently tidy the remote"
  * hiding a `delete production`); the SET OF TOOLS is finite and enumerable. So a resolved destructive/external

@@ -1,7 +1,7 @@
 /**
- * Citation/provenance floor + faithfulness seam (Increment 4c) — the sound research Tier-0.
+ * Citation/provenance floor + faithfulness seam — the sound research Tier-0.
  *
- * SOTA basis (2026-08-04): enforce provenance STRUCTURALLY, not by prompt — "hallucinated
+ * Research references (2026-08-04): enforce provenance STRUCTURALLY, not by prompt — "hallucinated
  * attributions are filtered automatically, not asked-about-nicely; the contract is in code"
  * (deep-research-agent). Two failure modes checked separately (arXiv 2604.03173; 2605.06635):
  *  - CITATION hallucination (source doesn't exist) → DETERMINISTIC: a citation with no resolvable
@@ -12,7 +12,7 @@
  *    the claim is flagged `unverifiable` (honest) rather than passed.
  *
  * The deterministic checks GATE (sound); the faithfulness seam only downgrades/ flags. This plugs
- * into the VerificationCascade as a Tier-0 floor. Zero deps.
+ * into the VerificationCascade as a Tier-0 floor.
  */
 
 import type { ResearchClaim, ClaimProvenance, ProvenanceStatus, Citation } from "./research_need.js";

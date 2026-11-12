@@ -1,11 +1,11 @@
 /**
- * Candidate selector (Increment R2) — the hybrid selector that picks among candidates which have ALREADY passed
+ * Candidate selector — the hybrid selector that picks among candidates which have ALREADY passed
  * verification. It is applied ONLY to the sound-cleared set, so by construction it can never promote a
  * sound-failing candidate: "selection happens after candidates are verified; it never defines labels and cannot
  * override verifier correctness" (VeRA-H Pro, arXiv 2602.13217). Verification is the floor; this only reorders
  * above it.
  *
- * SOTA basis (2026-08-06):
+ * Research references (2026-08-06):
  *  - Agreement/self-consistency ALONE is not a correctness guarantee — a confident-but-wrong model can collapse
  *    many samples onto the same wrong behavior (SEP, arXiv 2604.06485). So consensus is only ever consulted AMONG
  *    already-verified candidates (verification is the grounding filter).
@@ -16,7 +16,7 @@
  *    safety (smaller blast radius) refines ties but does not overturn the consensus cluster.
  *
  * Static proxy: we cluster by the set of touched files (candidates fixing the same location are "the same
- * approach"). Zero deps, deterministic, explainable. What would change it: with a sandbox, execution pass-profiles
+ * approach"). , deterministic, explainable. Extension considerations: with a sandbox, execution pass-profiles
  * / output-equivalence clustering (CodeT/SemanticVote) replace the static proxy behind this same port; a
  * cross-model panel would decorrelate errors (arXiv 2607.10139).
  */

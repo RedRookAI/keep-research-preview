@@ -1,24 +1,24 @@
 /**
- * Autonomy Engine — GroundedEstimator (build item 3).
+ * Autonomy Engine — GroundedEstimator.
  *
  * The projection mandate, enforced in code: Keep NEVER emits a cost or time projection
  * from model guesswork. AI estimates are systematically wrong ("this'll take months" for
  * an afternoon; "this'll be expensive" for pennies), so every projection here is grounded
  * in measured reality or honestly labelled unknown.
  *
- * Re-verified 2026 SOTA:
+ * Re-verified 2026 research:
  *  - Two-rate pricing: C = in·in_price + out·out_price; input/output differ 3–8× — never
  *    conflate them (arXiv 2606.07846). Rates are fetched THAT DAY, never remembered.
  *  - Output length is the hard part: estimate via EMA/median over HISTORICAL output for
  *    the same task-shape; input tokens are computable exactly.
  *  - "Low-P / high-variance agents should be tagged uncertain and excluded until history
- *    stabilizes" — i.e. the honest "not enough data yet" fallback is the SOTA-endorsed move.
+ * stabilizes" — i.e. the honest "not enough data yet" fallback is the supported by the cited research move.
  *  - Failed runs cost far more (2.77–4×), so fold in a failure-inflation factor.
  *
  * Three grounded inputs: (1) current rates (injected RatesPort) → the existing cost-aware
  * CostModel does the dollar math; (2) Keep's own measured EstimationSample history (the
  * primary anchor); (3) explicit p50/p90 range + failure inflation. Composes with CostModel
- * and (optionally) the temporal layer's can't-verify honesty. Zero deps.
+ * and (optionally) the temporal layer's can't-verify honesty.
  */
 
 import { CostModel, type ModelPricing } from "../observability/cost_model.js";

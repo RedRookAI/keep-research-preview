@@ -1,5 +1,5 @@
 /**
- * Live integration (Build Step 2 close-out) — route the reversible-execution path through the
+ * Live integration — route the reversible-execution path through the
  * composed chain: floor → composed gate → REE envelope (checkpoint → fork → budget → metamorphic
  * accept → commit | rollback). This is the strangler-fig cutover seam: the new path and the old
  * direct-apply path coexist behind a feature flag, exactly one runs (no double-write), and the flag

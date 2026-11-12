@@ -1,5 +1,5 @@
 /**
- * Structural edit differ (Phase 3.5, Feature 5 core).
+ * Structural edit differ.
  *
  * Turns a human edit (what Keep produced vs. what the human shipped) into a
  * GENERALIZED, reusable lesson — not a memorized before/after pair. It tokenizes
@@ -9,7 +9,7 @@
  *
  * Design choice: token-structural, not per-language AST. Keep is polyglot; a
  * language-agnostic structural classifier generalizes across languages where a
- * per-language parser would fragment. (What would change it: if a deployment is
+ * per-language parser would fragment. (Extension considerations: if a deployment is
  * single-language and wants deep semantic edits, a tree-sitter adapter can plug in
  * behind `analyzeEdit` — the signature/lesson contract stays the same.)
  */

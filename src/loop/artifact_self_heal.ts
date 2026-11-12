@@ -1,5 +1,5 @@
 /**
- * ArtifactSelfHeal (Increment C3, Phase D) — the self-heal CEGIS loop for SELF-AUTHORED artifacts. When a
+ * ArtifactSelfHeal — the self-heal CEGIS loop for SELF-AUTHORED artifacts. When a
  * distilled skill or learned lesson REGRESSES in production (drift latch from C4, a canary demotion, a failing
  * contract), Keep attempts a bounded, execution-adjudicated SELF-REPAIR of THAT artifact — never the frozen
  * floor, never irreversible external effects, and never by laundering a bad artifact past validation.
@@ -9,7 +9,7 @@
  *  - repair_loop.ts (13c) is the SOLVE-time re-plan loop.
  *  - C3 heals a SELF-IMPROVEMENT ARTIFACT (skill/lesson) via the CEGIS validator (18.5) + canary (18.6).
  *
- * SOTA basis (2026-08-05):
+ * Research references (2026-08-05):
  *  - "Skill drift is CONTRACT VIOLATION" and the violated contract LOCALIZES the repair — one-round repair
  *    jumps 10%→78% with localization (SKILLGUARD arXiv 2605.10990). → C3 localizes using the failing
  *    precondition/counterexample, not a blind re-derivation.
@@ -21,7 +21,7 @@
  *  - Self-healing application LOGIC is a dangerous frontier (module.today 2026) → conservative: heal only
  *    reversible self-authored artifacts, re-validate, escalate everything else. Human merge gate untouched.
  *
- * Zero runtime deps. The validator + canary + escalation notifier are injected (ports).
+ * The validator + canary + escalation notifier are injected (ports).
  */
 
 import type { DistilledSkill } from "./skill_distiller.js";

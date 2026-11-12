@@ -1,7 +1,6 @@
 /**
- * The thin `keep` entrypoint (Increment S0). Wires real stdin/stdout + a composed KeepApp into the testable
+ * The thin `keep` entrypoint. Wires real stdin/stdout + a composed KeepApp into the testable
  * cli_core. Deliberately minimal: all logic lives in cli_core (tested); this file only builds the real ports.
- * Zero runtime deps (node:readline, node:fs, node:os, node:path are built-ins).
  *
  * Honesty: onboard/status/review/audit are fully live here (they need only the app + spine). A3 resolves and wires
  * provider/repository/workspace into the installed composition root. Installed `solve` starts the same project

@@ -1,7 +1,7 @@
 /**
- * Auto-Training: labeling functions + denoising label model (Increment 8b).
+ * Auto-Training: labeling functions + denoising label model.
  *
- * SOTA basis (2026-08-04): the Snorkel weak-supervision paradigm (Ratner et al.; re-validated for the
+ * Research references (2026-08-04): the Snorkel weak-supervision paradigm (Ratner et al.; re-validated for the
  * LLM era — CARE arXiv 2603.00039; MetricGate 2026). A labeling function outputs a label OR abstains
  * (-1). A LABEL MODEL denoises the LF outputs WITHOUT ground truth by estimating each LF's accuracy
  * and down-weighting the unreliable ones — beating majority vote by 2-4pts when accuracies are
@@ -9,7 +9,7 @@
  * conditionally independent; highly correlated LFs (e.g. regex variants of one rule) violate this and
  * produce OVERCONFIDENT weights — the pairwise-agreement matrix is the standard diagnostic, and
  * redundancy must be flagged/removed BEFORE trusting the labels. LFs must also meet minimum
- * coverage/accuracy floors (Snorkel Drybell). This module encodes all of that. Zero deps.
+ * coverage/accuracy floors (Snorkel Drybell). This module encodes all of that.
  */
 
 /** The abstain sentinel (Snorkel convention). */

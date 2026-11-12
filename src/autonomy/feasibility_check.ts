@@ -3,7 +3,7 @@
  *
  * The gap a stress-test exposed: asked to "build a drone that carries 10x its weight,"
  * the system charged ahead as if it could — when Keep produces software, documents, and
- * analysis, not physical hardware. Per 2026 SOTA (arXiv 2605.28532 "Do Agents Know What
+ * analysis, not physical hardware. Per 2026 research (arXiv 2605.28532 "Do Agents Know What
  * They Can't Do?"; Mirsky's L3 autonomy — "recognize when a situation exceeds competence
  * and proactively transfer control"), the fix is EARLY feasibility detection + honest
  * reframing, not "false continuation." Overpromising is the #1 trust-killer.

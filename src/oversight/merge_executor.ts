@@ -1,10 +1,10 @@
 /**
- * Autonomous merge executor (Increment AM2) — the governed path that actually LANDS an autonomous-merge change,
+ * Autonomous merge executor — the governed path that actually LANDS an autonomous-merge change,
  * with a human-on-the-loop safety net. It is the ONLY component that can merge, and by construction it refuses to
  * merge anything the merge-authority decision (AM1) did not clear as `autonomous-merge`. Everything consequential
  * (irreversible / high-blast / sensitive) was already routed to `human-merge` by AM1 and can never reach here.
  *
- * SOTA basis (2026-08-06): autonomous merge for strictly-defined low-risk changes is a recognized level ("L2 —
+ * Research references (2026-08-06): autonomous merge for strictly-defined low-risk changes is a recognized level ("L2 —
  * auto-merge low risk … clearly localized fixes in an allowlisted path, all checks must pass"; debugg.ai/zylos). The
  * safety is the lane, not the click: "AI can act only inside pre-approved, observable, REVERSIBLE lanes — if you
  * cannot describe the blast radius and the rollback path in one paragraph, the lane isn't ready" (firstaimovers).
@@ -12,7 +12,7 @@
  * seconds (harness); a kill switch can pause the whole automated path (firstaimovers). Auto-merge is NOT auto-deploy
  * — this lands the change in the repo and reverts on regression; deployment stays downstream and separately gated.
  *
- * What would change it: L3 (canary-gated) would add a post-merge canary + metric-driven rollback before full
+ * Extension considerations: L3 (canary-gated) would add a post-merge canary + metric-driven rollback before full
  * inclusion; here the post-merge oracle is the project's own test suite re-run against the merged base.
  */
 

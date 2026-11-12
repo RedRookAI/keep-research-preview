@@ -1,5 +1,5 @@
 /**
- * Canonical WIRE SCHEMA for ingress ABIs (Mechanical-Enforcement Increment 3, "typed" leg).
+ * Canonical WIRE SCHEMA for ingress ABIs.
  *
  * "Typed" in "no executable entrypoint exists unless it is named, TYPED, and policy-addressable" must be a canonical,
  * runtime-checkable, content-addressable ABI — NOT erased TypeScript annotations (which vanish at runtime and cannot
@@ -9,7 +9,7 @@
  *
  * The algebra is deliberately minimal + total: null, bool, int (bigint — floats are ambiguous, per canonical.ts),
  * str (NFC well-formed), bytes, enum (closed value set), list, record (named optional/required fields). It composes
- * the Increment-1 canonical encoder for determinism + identity; it interprets NO field meanings (that is the handler's
+ * the canonical value model canonical encoder for determinism + identity; it interprets NO field meanings (that is the handler's
  * job). Extending the algebra is a reviewed, digest-breaking change — never silent.
  *
  * Grounding: canonical wire schemas with digest-bound ABI identity (vs erased types); RFC 8949 deterministic CBOR;

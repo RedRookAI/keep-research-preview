@@ -1,12 +1,12 @@
 /**
- * F1.6 — Capability-adaptive tiering (works for everyone, adapts to what's there).
+ * Capability-adaptive tiering (works for everyone, adapts to what's there).
  *
- * The moat: the same product serves a frontier multi-model stack AND the person with
+ * Configuration scope: the same product serves a frontier multi-model stack AND the person with
  * one cheap/local model on an old laptop. The capability/cost gap between those is
  * ~100x (Aug 2026: DeepSeek V4 ~$0.44/M vs GPT-5.5-pro $30/$180), so adapting to the
  * available brain isn't a nicety — it's what makes the product usable at all.
  *
- * SOTA basis: task-complexity tiering is the established pattern — simple tasks
+ * Research references: task-complexity tiering is the established pattern — simple tasks
  * (classification, extraction, slot-filling, constrained generation) run well even on
  * 1-3B models, while ambiguous hard reasoning needs frontier. Onboarding is MOSTLY the
  * simple kind, which is why a weak model can still drive it. The real risk is the

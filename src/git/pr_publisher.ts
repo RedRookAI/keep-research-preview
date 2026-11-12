@@ -1,11 +1,11 @@
 /**
- * PrPublisher (Increment 15b) — orchestrates solve → branch → commit → push → PR manifest.
+ * PrPublisher — orchestrates solve → branch → commit → push → PR manifest.
  *
  * Ties the SolvePipeline's PrProposal to the real git remote + PR port. Enforces the human gate end to
  * end: a keep/ task branch (never a shared branch), an attributed commit, a push that refuses
  * protected branches, and a PR manifest that surfaces intent-vs-executed + checks — and never merges.
  * Returns the push ReversibleAction so a rejected PR reverts cleanly and main is never touched.
- * Zero deps.
+ *
  */
 
 import type { ReversibleAction } from "../control/rollback.js";

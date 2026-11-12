@@ -1,12 +1,12 @@
 /**
- * R2 (BA-2) — EVAL RUN DRIVER. The one thing standing between the built-and-proven instrument (loader + two-part
+ * R2 (BA-2) — EVAL RUN DRIVER. The one thing standing between the evaluation components (loader + two-part
  * oracle + report) and a run is a driver that SEQUENCES them. This is that driver — and nothing more: it parses +
  * decontaminates real SWE-bench records into the existing `EvalTask` contract, runs the ADMITTED tasks through an
  * INJECTED `InstanceRunner`, aggregates with `computeReport`, and surfaces the honest denominator (malformed +
  * decontamination ledger). It composes `loadSwebenchTasks` + `runSuite` + `computeReport`; it invents no loader,
  * oracle, or aggregator.
  *
- * HONEST SCOPE: the runner is INJECTED. A synthetic/local runner gives a self-test today (n=1); an official
+ * Scope: the runner is INJECTED. A synthetic/local runner gives a self-test today (n=1); an official
  * SWE-bench Verified number needs the real repo-materializing runner (seam S-1: clone repo@base_commit, apply
  * test_patch, sandbox), which this driver deliberately does NOT fabricate. The injected-runner caveat is carried
  * into the report so no number produced here is mistaken for an official score.

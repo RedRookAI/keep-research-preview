@@ -1,5 +1,5 @@
 /**
- * THE ADAPT STEP (moat-heart #4) — localized deterministic repair BEFORE reaching for the LLM.
+ * Plan adaptation — localized deterministic repair BEFORE reaching for the LLM.
  *
  * The execution monitor already detects when a step's actual outcome diverges from its prediction and emits a
  * REPLAN signal; the repair loop already regenerates via the LLM on failing tests, bounded and rollback-guarded.
@@ -17,7 +17,7 @@
  *     through the gate for confirmation (the envelope is never crossed by a silent repair).
  *   - BOUNDED: a repair budget caps local retries so adapt can never loop.
  *
- * BUILT + proven in-env: the classify → deterministic-fix → gate/escalate decision. SEAM: the failure CLASSIFIER
+ * Implemented: the classify → deterministic-fix → gate/escalate decision. SEAM: the failure CLASSIFIER
  * (mapping a raw runtime error to a FailureKind) is supplied by the caller (the monitor/runner), and the live
  * wiring that runs adapt before the monitor's replan is the next increment. Composes ConsequenceClass; zero deps.
  */

@@ -1,8 +1,8 @@
 /**
- * Oversight routing (Increment 15.5b).
+ * Oversight routing.
  *
  * Maps a PR's risk band + the operator's autonomy level to one of the THREE existing dispositions
- * (auto-approved / human-approval-required / blocked). SOTA three-tier model (Hitchhiker's Guide 2026):
+ * (auto-approved / human-approval-required / blocked). research three-tier model (Hitchhiker's Guide 2026):
  * Tier 1 auto-approve (low risk, reversible — logged, no interrupt), Tier 2 notify (medium — async,
  * cancellable), Tier 3 require-approval (high — blocking). Key safety rules honored:
  *  - rule-forced gate always wins (auth/crypto/migrations → human review regardless of confidence),
@@ -12,7 +12,7 @@
  *    removes the merge gate (that stays the human's, permanently — increment 15 invariant).
  *
  * "Auto-approved" means "the human need not look at this one right now" — NOT merged. Keep still never
- * merges. Zero deps.
+ * merges.
  */
 
 import type { AutonomyLevel } from "../frontdoor/autonomy_profile.js";

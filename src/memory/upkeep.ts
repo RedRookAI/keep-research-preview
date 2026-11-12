@@ -1,21 +1,9 @@
 /**
- * AUTONOMOUS MEMORY UPKEEP — Round 3 of the personalization moat (the self-maintaining second brain).
+ * Deterministic deduplication, linking, supersession and pruning decisions over abstract memory items.
  *
- * The augmentation/PKM history (Memex → Zettelkasten → Obsidian → Building a Second Brain) has one recurring
- * lesson: *"the thing that kills every personal knowledge system isn't the architecture — it's the upkeep."*
- * Humans cannot sustain the capture / dedup / link / supersede / prune. That is exactly what AI changes — the AI
- * does the upkeep — and it is Keep's core moat mechanism.
- *
- * But a second brain shapes cognition (Clark & Chalmers: "we shape our tools, and thereafter our tools shape us"),
- * so upkeep must ENHANCE, not degrade: it is reversible (supersede-not-delete), inspectable (every decision is
- * legible — what was deduped/linked/superseded/pruned and why), provenance-preserving, and data-minimizing
- * (Round 2). Any special-category capture routes through Round 1's CI vault.
- *
- * This layer is a DETERMINISTIC DECISION FUNCTION over abstract memory items — it decides dedup/link/supersede/
- * prune and returns an inspectable result; the caller applies it to the spine (a thin adapter maps `Lesson`s to
- * `UpkeepItem`s). It does NOT mutate the memory store. BUILT + proven in-env: the dedup/link/supersede/prune LOGIC.
- * SEAM: the similarity function (default = normalized equality; a deployment injects embedding similarity) and the
- * upstream extraction.
+ * Returns inspectable decisions without mutating the store. The caller applies them through an adapter.
+ * Sensitive capture uses the contextual-integrity vault; supersession preserves prior records.
+ * Similarity defaults to normalized equality and can be supplied by the deployment.
  */
 
 import { SensitiveContextVault, classifySpecialCategory } from "../privacy/contextual_integrity.js";
@@ -70,12 +58,12 @@ export interface UpkeepOptions {
  *     (supersede-not-delete — the caller retires it, provenance retained), do not duplicate.
  *   - ADD: no same-topic item ⇒ a new item.
  *   - LINK: existing items in the same scope on a DIFFERENT topic are related ⇒ linked.
- *   - SENSITIVE: a special-category disclosure routes through the CI vault (Round 1).
+ *   - SENSITIVE: a special-category disclosure routes through the CI vault.
  */
 export function upkeep(existing: readonly UpkeepItem[], candidate: Candidate, opts?: UpkeepOptions): UpkeepResult {
   const similar = opts?.similar ?? normalizedEqual;
 
-  // Route a special-category disclosure through the CI vault (Round 1) before anything else.
+  // Route a special-category disclosure through the CI vault before anything else.
   let sensitive = false;
   if (opts?.vault !== undefined && candidate.subject !== undefined && classifySpecialCategory(candidate.content) !== undefined) {
     opts.vault.capture(candidate.subject, candidate.content);

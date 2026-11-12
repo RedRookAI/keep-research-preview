@@ -1,14 +1,14 @@
 /**
- * Ingress DECLARATION model (Mechanical-Enforcement Increment 3).
+ * Ingress DECLARATION model.
  *
- * A declaration is the signed, content-addressed ABI of ONE executable entrypoint: its canonical address (Increment-3
+ * A declaration is the signed, content-addressed ABI of ONE executable entrypoint: its canonical address (ingress inventory
  * `address.ts`), ABI version, and input/output/error wire schemas (`schema.ts`), plus cardinality. Identity is DERIVED
  * from the canonical content — a declaration cannot lie about its own id, and the manifest binds the exact set.
  *
- * SCOPE (honest seams): the declaration is ABI METADATA only. The concrete handler CODE is bound in-process by the
- * registry at collection time; binding a handler-artifact DIGEST + measured boundary is Increment 5 (attested monitor
+ * Scope: the declaration is ABI METADATA only. The concrete handler CODE is bound in-process by the
+ * registry at collection time; binding a handler-artifact DIGEST + measured boundary is monitor boundary (attested monitor
  * boundary). Runtime activation-witness reconciliation (that the live listeners equal the declared set) is the adapter
- * layer. Principal establishment + permits are Increment 8. This increment fixes the INVENTORY + its ABI + identity.
+ * layer. Principal establishment + permits are admission gate. This increment fixes the INVENTORY + its ABI + identity.
  */
 import { eirDigest, type CanonicalValue } from "../eir/canonical.js";
 import { parseAddress, type IngressKind } from "./address.js";

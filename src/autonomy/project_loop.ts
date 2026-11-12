@@ -1,10 +1,10 @@
 /**
- * Autonomy Engine — ProjectLoop backbone (build item 2).
+ * Autonomy Engine — ProjectLoop backbone.
  *
  * The universal pipeline every project runs through, regardless of what it is (romance
  * novel, academic paper, app): research → plan → vet → ticket → implement → vet → done.
  *
- * SOTA-grounded (2026 orchestration consensus):
+ * Research references (2026 orchestration consensus):
  *  - "The model never decides whether to keep going; the RUNTIME does." The runtime holds
  *    the hard limits (a quantum/step budget) and forces termination — the antidote to
  *    runaway loops. Stages are DETERMINISTIC control flow; the model only supplies the
@@ -17,7 +17,7 @@
  *
  * The stage executors are injected seams: this backbone SEQUENCES and GOVERNS; the actual
  * research/plan/implement work is pluggable (the auto-loops fill them in later). Every
- * transition narrates (ProgressNarrator) and checkpoints (spine). Zero deps.
+ * transition narrates (ProgressNarrator) and checkpoints (spine).
  */
 
 import type { Spine } from "../spine/spine.js";

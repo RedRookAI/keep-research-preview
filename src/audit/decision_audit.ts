@@ -1,5 +1,5 @@
 /**
- * Local-audit + OTLP export (Core Addition D) — make every gate decision observable.
+ * Local-audit + OTLP export — make every gate decision observable.
  *
  * A pure, total function DERIVES a structured audit record from a gate decision (the eight barrier
  * verdicts + the route + the deciding reasons) and shapes it as an OTLP LogRecord. It is DERIVED, not
@@ -19,7 +19,7 @@
  *    the OTLP stream is the telemetry (operator-facing, exportable). You want both — this derives the
  *    telemetry from the same decision and can also anchor a compact line in the spine.
  *
- * WHAT WOULD CHANGE IT: richer OTel semantic-convention attributes, or a resource/scope block, extend
+ * Extension considerations: richer OTel semantic-convention attributes, or a resource/scope block, extend
  * the record; a real exporter upgrades best-effort export to delivered telemetry. Neither lets the audit
  * change a route — it observes only.
  */

@@ -1,5 +1,5 @@
 /**
- * AdapterProposalBridge (Increment 18.8) — connects the self-improvement loop's model-adapter axis to the
+ * AdapterProposalBridge — connects the self-improvement loop's model-adapter axis to the
  * existing LoRA tier (10a entry gates / 10b eval+composition / 10c deploy). Those modules were built and tested
  * but were ISLANDS: nothing wired a "model-adapter" proposal to checkEntryGates + compositionCheck + deploy,
  * and none of it reached composeKeep. This bridge makes weight-level adaptation a REAL, gated axis.
@@ -8,7 +8,7 @@
  * bridge is not constructed, so N=1 / free-tier / no-GPU is COMPLETELY unaffected — gradient-free learning
  * (prompts/memory/skills) stays the default and the floor.
  *
- * SOTA basis (2026-08-05, re-verified — one finding CHANGED the emphasis):
+ * Research references (2026-08-05, re-verified — one finding CHANGED the emphasis):
  *  - Colluding LoRA (ICLR 2026, arXiv 2603.12681): adapters each benign IN ISOLATION can dismantle safety WHEN
  *    COMPOSED; "multi-adapter collusion bypasses review that evaluates adapters in isolation." The CSA fix:
  *    behavioral red-team of the FULLY ASSEMBLED (all adapters merged) model before any new combination ships,
@@ -21,7 +21,7 @@
  *  - RLVR only safety-preserving with genuinely verifiable rewards (unit-tests/compiler/exact-match) → the
  *    entry gate rejects soft-reward adapters (isVerifiableReward).
  *
- * Zero runtime deps. All heavy lifting delegates to the existing LoRA functions + injected harness/registry.
+ * All heavy lifting delegates to the existing LoRA functions + injected harness/registry.
  */
 
 import type { Spine } from "../spine/spine.js";

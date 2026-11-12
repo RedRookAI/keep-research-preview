@@ -1,5 +1,5 @@
 /**
- * Probabilistic cost forecasting + hard breaker (Phase 4, #42).
+ * Probabilistic cost forecasting + hard breaker.
  *
  * The industry's broken promise is the per-task POINT estimate. Research: models
  * can't predict their own token usage, and an identical agentic task varies up to

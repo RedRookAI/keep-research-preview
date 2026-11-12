@@ -5,7 +5,7 @@
  * wrapped as a sound floor. Above it sits the shared, capability-adaptive harness: an optional single-brain verifier,
  * then a heterogeneous second brain, then human — escalated only when the floor cannot decide (ConfidenceEscalationPolicy).
  *
- * SOTA basis (2026): the production pattern is a cascade — run the deterministic floor first, escalate to a judge only
+ * Research references (2026): the production pattern is a cascade — run the deterministic floor first, escalate to a judge only
  * on borderline cases; "deterministic evaluators are the floor for safety, model judges the ceiling for intelligence."
  * The crown-jewel property is SOUNDNESS DOMINANCE: a sound floor verdict is authoritative and a probabilistic model tier
  * can never overturn it ("you can't audit a grader that hallucinates"). This factory composes exactly that, adding

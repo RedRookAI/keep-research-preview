@@ -1,5 +1,5 @@
 /**
- * VerificationHarness (Increment 16.8c) — the model-harness seam that assembles a VerificationCascade
+ * VerificationHarness — the model-harness seam that assembles a VerificationCascade
  * tuned to the operator's brain capability, serving BOTH the front of the room (a frontier model) and the
  * back (a free-tier model, or no model at all).
  *
@@ -10,7 +10,7 @@
  *     heterogeneous second model is actually wired; cost-adaptive (a decisive floor spends no model call).
  *   - no brain: floor + human only (still safe — the floor always runs).
  *
- * SOTA basis (2026-08-05): adaptive, regime-aware verification tuned to verifier capability, escalating
+ * Research references (2026-08-05): adaptive, regime-aware verification tuned to verifier capability, escalating
  * only marginal cases (emergentmind 2026; CascadeDebate ACL 2026). VERIFICATION ASYMMETRY — even a weak/
  * free-tier model can verify usefully, verification is a distinct capability (arXiv 2509.17995). BLIND-SPOT
  * CEILING — a verifier cascade has a failure floor that verifier scaling alone can't overcome and
@@ -18,7 +18,7 @@
  * and the second brain must be heterogeneous (arXiv 2607.13918). COST-ADAPTIVE — skip the model tier when
  * the strong floor already answers (arXiv 2606.30919), which protects the free-tier budget.
  *
- * Zero deps. Assembles the existing cascade + tier adapters; enforces heterogeneity on Tier-2.
+ * Assembles the existing cascade + tier adapters; enforces heterogeneity on Tier-2.
  */
 
 import { VerificationCascade, type VerificationTier, type EscalationPolicy } from "./verification_cascade.js";

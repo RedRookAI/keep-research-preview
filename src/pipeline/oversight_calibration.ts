@@ -1,5 +1,5 @@
 /**
- * OversightCalibration (Increment 16.9b, CORRECTED) — calibrates human escalation to RISK and OUTCOMES,
+ * OversightCalibration — calibrates human escalation to RISK and OUTCOMES,
  * minimizing low-value approvals for the (especially solo) operator.
  *
  * SUPERSEDES the earlier RubberStampMonitor "high approve-rate -> tighten -> route more to human" logic,
@@ -7,7 +7,7 @@
  * to reviewer overload by ADDING low-value load — "a liability generator" producing "false assurance"
  * (waxell 2026). Burdening a solo user with MORE rubber-stamps is the failure mode, not the fix.
  *
- * Corrected principles (SOTA 2026-08-05):
+ * Corrected principles (research 2026-08-05):
  *  - ESCALATE BY RISK, NOT APPROVE-RATE: irreversibility, magnitude/blast, low confidence, and ANOMALY
  *    (is this change unlike the established safe pattern?). The reversible/low-magnitude long tail rarely
  *    escalates (waxell: "map by reversibility first; reversible low-magnitude rarely needs to escalate").

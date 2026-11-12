@@ -1,11 +1,11 @@
 /**
  * Setup-phase composition — the first-run/onboarding surface for a non-engineer on a fresh, possibly account-less
  * install. Assembles three built-ahead pieces from primitives so the composition root has one call to make:
- *   • BrainResolver (F0)  — default to a LOCAL model; else accept a bring-your-own key (stored crypto-shredded).
- *   • capability audit    — an honest "what works right now" report that surfaces free/local paths FIRST.
+ * • BrainResolver (F0) — default to a LOCAL model; else accept a bring-your-own key (stored crypto-shredded).
+ * • capability audit  — an honest "what works right now" report that surfaces free/local paths FIRST.
  *   • applyDirective (F2) — translate → validate → gate → apply a config directive, never widening scope unapproved.
  *
- * SOTA basis (2026): the ecosystem default is "assume an OpenAI key + a credit card; local is a footnote" — Keep
+ * Research references (2026): the ecosystem default is "assume an OpenAI key + a credit card; local is a footnote" — Keep
  * inverts that (local-first, key optional, free path surfaced first), which is the privacy/sovereignty posture the
  * self-hosted-agent guidance converges on. The hybrid pattern (local for routine, a stronger model for the hard
  * minority) is exactly what the capability audit's needsStrongReasoning flag + the cost-cascade router express.

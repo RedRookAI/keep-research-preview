@@ -21,7 +21,7 @@ test('${SAMPLE_CHECK_NAMES[1]}',()=>{const state=createState();recordDelivery(st
 test('${SAMPLE_CHECK_NAMES[2]}',()=>{const state=createState();recordDelivery(state,'delivery-a');assert.equal(recordDelivery(state,'delivery-b'),2);assert.equal(state.count,2);});
 `;
 export const SAMPLE_GOAL_TEST = "const {pathToFileURL}=await import('node:url');const {join}=await import('node:path');const {createState,recordDelivery}=await import(pathToFileURL(join(process.cwd(),'" + SAMPLE_FILE + "')));const state=createState();recordDelivery(state,'event-17');recordDelivery(state,'event-17');assert.equal(state.count,1);recordDelivery(state,'event-18');assert.equal(state.count,2);recordDelivery(state,'event-17');assert.equal(state.count,2);";
-export const SAMPLE_NOTICE = "Scripted demo · two authored responses · real edits and checks · no AI account or paid calls.";
+export const SAMPLE_NOTICE = "This demo uses two scripted responses. Keep edits the workspace and runs the checks.";
 export const SAMPLE_SUBMISSION_KEY = "keep.reviewer.sample.v1";
 const fixtures = new WeakMap<KeepApp, { readonly localWorkspaceOnly?: true }>();
 /** Called only by the controlled sample composition factory, not a request handler. */
@@ -29,7 +29,7 @@ export function registerReviewerSample(app: KeepApp, options: { readonly localWo
 export function isReviewerSample(app: KeepApp): boolean { return fixtures.has(app); }
 export function reviewerSampleNotice(app: KeepApp): string {
   return fixtures.get(app)?.localWorkspaceOnly
-    ? SAMPLE_NOTICE + ' Proposal approval retains the reviewed workspace; this sample leaves the source repository unchanged.'
+    ? SAMPLE_NOTICE + ' Approval retains the reviewed workspace. The source repository stays unchanged.'
     : SAMPLE_NOTICE;
 }
 

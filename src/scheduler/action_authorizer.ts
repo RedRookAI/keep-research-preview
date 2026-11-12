@@ -21,9 +21,9 @@
  *   - CAP-BOUNDED: a local action whose spend would breach the cap is BLOCKED, never executed over budget.
  *   - COMPOSED: reuses the budget predicate + the consequence class; nothing reinvented.
  *
- * BUILT + proven in-env: the taxonomy + the authorize decision. SEAM: the `canAfford` predicate is backed by
+ * Implemented: the taxonomy + the authorize decision. SEAM: the `canAfford` predicate is backed by
  * `BudgetLedger.willBreach` at deploy (injected here for testability); the live wiring at the action-dispatch point
- * is the next increment. Zero deps.
+ * is the next increment.
  */
 
 import type { ConsequenceClass } from "../routing/uncertainty_router.js";

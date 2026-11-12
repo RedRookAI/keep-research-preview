@@ -1,15 +1,15 @@
 /**
- * Enforcement IR — closed node model + content-derived identity (Mechanical-Enforcement Increment 1).
+ * Enforcement IR — closed node model + content-derived identity.
  *
  * ONE deterministic, non-ambiguous representation for the foundational security objects: a PRINCIPAL, an EFFECT,
  * a GUARD, and an OBLIGATION binding them. Two structurally-equal nodes get the SAME id; any semantic change gets a
  * DIFFERENT id. Identity is DERIVED from the canonical encoding of the node's content (never a stored field, never
  * source text) — so an obligation cannot lie about its own id, and a later increment cannot silently retarget one.
  *
- * SCOPE (Increment 1, honest): this fixes the VALUE MODEL + IDENTITY + STRICT VALIDATION. It deliberately DEFERS —
- * the full decision lattice / predicate semantics to Increment 6 (Total Decision Kernel); permit scope + delegation
- * to Increment 7 (Object-Capability Permits); actual-object resolution to Increment 11 (Resolver-Bound Guards);
- * policy production to Increment 2 (Total Policy Compiler). A guard's `predicate` and an effect's `resourceSelector`
+ * SCOPE (canonical value model, honest): this fixes the VALUE MODEL + IDENTITY + STRICT VALIDATION. It deliberately DEFERS —
+ * the full decision lattice / predicate semantics to decision kernel (Total Decision Kernel); permit scope + delegation
+ * to permit module (Object-Capability Permits); actual-object resolution to resolver-bound guards (Resolver-Bound Guards);
+ * policy production to policy compiler (Total Policy Compiler). A guard's `predicate` and an effect's `resourceSelector`
  * are canonical STRINGS here — placeholders those increments replace with structured, evaluable forms. Nothing here
  * claims to EVALUATE a policy; it claims only that every object has one canonical form + id, checkably.
  *

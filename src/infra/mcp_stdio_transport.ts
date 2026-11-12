@@ -1,5 +1,5 @@
 /**
- * Stdio MCP transport (infra, Phase 6 #45) — a REAL working transport.
+ * Stdio MCP transport (infra) — a REAL working transport.
  *
  * Implements the injected `McpTransport` over a child process speaking
  * line-delimited JSON-RPC 2.0 (the MCP stdio transport). It spawns the server

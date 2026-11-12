@@ -1,7 +1,7 @@
 /**
- * ContentSanitizer (Increment 4.5e) — ingest-time defense against indirect prompt injection.
+ * ContentSanitizer — ingest-time defense against indirect prompt injection.
  *
- * SOTA basis (2026-08-04): ingested company records are UNTRUSTED content. When later retrieved
+ * Research references (2026-08-04): ingested company records are UNTRUSTED content. When later retrieved
  * and fed to a model (Auto-RAG), embedded instructions become an indirect-prompt-injection vector
  * — "the attack is entirely in the retrieved data; the user's query is completely benign" (OWASP;
  * arXiv 2601.10923 / 2603.07379). As few as 5 poisoned docs → 90% attack success (arXiv 2603.07379).
@@ -16,10 +16,9 @@
  * is defused. Every neutralization is recorded (attribution) so it's auditable and reversible in
  * spirit (the original is still recoverable via the pipeline's contentHash + reconstruct path).
  *
- * HONEST: this REDUCES risk; per SOTA there is "no known complete solution" to indirect injection.
+ * HONEST: this REDUCES risk; per research there is "no known complete solution" to indirect injection.
  * Defense-in-depth (this + instruction hierarchy + output screening + human gate) is the posture.
  *
- * Zero deps.
  */
 
 /** What the sanitizer did to a piece of content (attribution / audit). */

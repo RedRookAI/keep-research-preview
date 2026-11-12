@@ -1,7 +1,7 @@
 /**
- * UNFORGEABLE OBJECT-CAPABILITY PERMITS (Mechanical-Enforcement Increment 7).
+ * UNFORGEABLE OBJECT-CAPABILITY PERMITS.
  *
- * The frontier property (one sentence): authority to act on a specific object is conveyed ONLY by an unforgeable,
+ * Contract: authority to act on a specific object is conveyed ONLY by an unforgeable,
  * object-bound, single-use permit whose every field is cryptographically bound, whose attenuation can only ever REMOVE
  * authority, and whose total redemptions across an entire delegation subtree are capped by the root — so a holder can
  * neither forge a permit it was not given, amplify one it holds, detach a restriction, move it to another session or
@@ -22,16 +22,16 @@
  * What a permit binds: issuer, subject + session (non-transferable — both are checked against the redeemer), the
  * authorizing effect + the EXACT object id, the granted rights, the authorizing guard digest, the policy epoch
  * (monotonic revocation — a permit is valid only AT its epoch), a validity interval, a unique nonce, a max-redemption
- * count, and an audience. Single-use is enforced by the ledger (permit/ledger.ts) with a PER-PREFIX budget: verify()
+ * count, and an audience. Single-use is enforced by the ledger (permit/ledger.ts) with a PER-PREFIX budget: verify
  * emits one {id, cap} per chain prefix (the root claims digest is prefix 0; each interior prefix id is shared by every
- * descendant carrying it; cap is the running-min maxRedemptions), and redeem() consumes one from EVERY prefix, so every
+ * descendant carrying it; cap is the running-min maxRedemptions), and redeem consumes one from EVERY prefix, so every
  * node's whole-subtree total is bounded by that node's cap — a holder of a delegated cap-N permit cannot exceed N by
  * branching it into siblings, and the root bounds the whole tree to its `maxRedemptions`.
  *
- * Defers (honest): INITIAL authority issuance — deriving a root permit's claims from a kernel decision and the policy
- * that governs what may be minted — is Increment 8 (Ingress Admission Gate); the permit-CONSUMING effect dispatch is
- * Increment 9 (Effect Broker Kernel); binding `objectId` to the ACTUAL resolved runtime object (TOCTOU-safe identity,
- * not a caller-supplied id) is Increment 11 (Resolver-Bound Guards). This increment delivers the permit ALGEBRA +
+ * Separate responsibilities: INITIAL authority issuance — deriving a root permit's claims from a kernel decision and the policy
+ * that governs what may be minted — is admission gate (Ingress Admission Gate); the permit-CONSUMING effect dispatch is
+ * effect broker (Effect Broker Kernel); binding `objectId` to the ACTUAL resolved runtime object (TOCTOU-safe identity,
+ * not a caller-supplied id) is resolver-bound guards (Resolver-Bound Guards). This increment delivers the permit ALGEBRA +
  * verification completely and fails closed on everything else.
  *
  * Grounding: object-capability security (unforgeable references, no ambient authority); Macaroon caveat chains (HMAC-

@@ -101,7 +101,7 @@ test("console cancellation targets one queued job and preserves another project'
     assert.equal(result.status, 200);
     const resultPage = await result.text();
     assert.match(resultPage, /Cancellation request recorded/);
-    assert.match(resultPage, /does not prove/);
+    assert.match(resultPage, /Local or remote work may still be running/);
     assert.equal(await aSettled, "cancelled");
     assert.equal(runtime.job(a.jobId)?.state, "stopped");
     assert.equal(runtime.job(b.jobId)?.state, "queued");

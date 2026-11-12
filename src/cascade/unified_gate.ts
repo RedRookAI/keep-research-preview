@@ -1,5 +1,5 @@
 /**
- * UnifiedVettingGate (Increment 16.8c) — the single cascade-based path that BOTH plan vetting and patch
+ * UnifiedVettingGate — the single cascade-based path that BOTH plan vetting and patch
  * vetting route through. Completes the vetting arc: instead of two separate gate implementations, each
  * gate supplies its own DETERMINISTIC Tier-0 floor adapter, and everything above (single-brain → hetero-
  * geneous second-brain → human) is the SHARED, capability-adaptive VerificationHarness.
@@ -8,7 +8,7 @@
  * identical and always-on for every operator; only the model tiers adapt to the brain (rich up front,
  * lean/none at the back). Soundness dominates — a sound floor verdict is authoritative.
  *
- * Zero deps. Assembles the VerificationHarness; the floor adapters wrap the existing analyzeConsequences
+ * Assembles the VerificationHarness; the floor adapters wrap the existing analyzeConsequences
  * (plans) and verifyPatch (patches) so there is ONE cascade and ONE audit shape for both gates.
  */
 

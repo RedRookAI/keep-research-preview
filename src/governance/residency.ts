@@ -1,5 +1,5 @@
 /**
- * Data-residency + egress allowlist (Phase 5, #34) — makes residency/air-gap REAL.
+ * Data-residency + egress allowlist — makes residency/air-gap REAL.
  *
  * Two enforced controls, both hard-DENY:
  *  - Residency: a request may only be processed in an allowed region; a destination

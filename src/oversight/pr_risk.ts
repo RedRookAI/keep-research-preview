@@ -1,7 +1,7 @@
 /**
- * PR risk assessment (Increment 15.5a).
+ * PR risk assessment.
  *
- * SOTA basis (2026-08-05): risk-tiered oversight is the dominant paradigm — classify by risk,
+ * Research references (2026-08-05): risk-tiered oversight is the dominant paradigm — classify by risk,
  * auto-approve the safe majority, focus human attention on the dangerous few (Changkun 2026). Gate on
  * REVERSIBILITY, BLAST RADIUS, DATA SENSITIVITY, CONFIDENCE, and CHANGE SIZE (Arthur 2026), not on
  * "is it a PR." Certain change types ALWAYS gate regardless of confidence (MetaCTO rule+confidence

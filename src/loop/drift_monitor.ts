@@ -1,12 +1,12 @@
 /**
- * DriftMonitor (Increment C4, promoted into Phase M) — the ONLY defense against SLOW, COMPOUNDING
+ * DriftMonitor — the ONLY defense against SLOW, COMPOUNDING
  * MISEVOLUTION. Self-improvement compounds: "small wins accelerate fast, but so do small errors"
  * (Traversaal 2026). A single bad change is caught by halt-on-regression + rollback; a slow behavioral
  * drift that "degrades decision quality over time, invisible to traditional monitoring" (elixirdata 2026) is
  * caught only by a behavioral-anchor drift check. Monitoring must be live BEFORE any self-improvement axis
  * (NIST AI RMF / EU AI Act: test "regularly while in operation") — hence Phase M.
  *
- * SOTA basis (2026-08-05), all ZERO-DEP, NO embedding model (front/back-of-house identical):
+ * Research references (2026-08-05), all ZERO-DEP, NO embedding model (front/back-of-house identical):
  *  - PSI (Population Stability Index) = symmetrized-KL over BINNED distributions; rule of thumb <0.1 stable /
  *    0.1-0.2 watch / >0.2 act (Syrin, Metric Hub, Tacnode 2026). Computed on CATEGORICAL trace features Keep
  *    already logs (taskShape, mergeVerdict, vetVerdict, isolationTier) — pure histogram math.
@@ -16,7 +16,7 @@
  *  - Drift → SAFE-MODE: pause improve-class adaptation + route to review (Olmec shadow-AI 2026), NOT just a
  *    log. Heal/protect continue (drift must not block a fix).
  *
- * Reads OutcomeSignal (18.1). Registers on the bus as a "protect"-class learner; its inSafeMode() is the gate
+ * Reads OutcomeSignal (18.1). Registers on the bus as a "protect"-class learner; its inSafeMode is the gate
  * the bus consults before dispatching "improve"-class learners.
  */
 

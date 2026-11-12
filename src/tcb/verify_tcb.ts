@@ -1,5 +1,5 @@
 /**
- * verify-minimal-TCB (Core Addition A) — check that the trusted computing base is EXACTLY the
+ * verify-minimal-TCB — check that the trusted computing base is EXACTLY the
  * enumerated, minimal set and has not drifted.
  *
  * The TCB is "the minimal set of components that must function correctly to uphold the security
@@ -21,13 +21,13 @@
  *  - Supply-chain integrity: "no unexpected import into the trusted core" — a new dependency expands
  *    the TCB, so allowed-deps are enumerated and a new one is drift.
  *
- * BUILT vs SEAM: BUILT is the in-env manifest + hash-pinned drift detection (the measured-boot analog,
+ * Implementation boundary: this module provides the in-env manifest + hash-pinned drift detection (the measured-boot analog,
  * over the source modules) + a spine-recorded self-check. The real EXTERNAL ATTESTATION of the RUNNING
  * binary — a TPM/TEE-signed measurement of the loaded code plus a remote verifier challenge (SGX/DICE/
  * TPM-quote class) — is a SEAM (R37), the same hardware-RoT / key-custody family as R25/R34. In-env we
  * measure the source, not the in-memory binary, and there is no signed remote attestation.
  *
- * WHAT WOULD CHANGE IT: adding a barrier to the TCB is a deliberate manifest change (re-pin), not a
+ * Extension considerations: adding a barrier to the TCB is a deliberate manifest change (re-pin), not a
  * silent drift; a real TEE quote upgrades measurement to attested. Neither lets a drift verify.
  */
 
