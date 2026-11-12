@@ -183,17 +183,25 @@ CONSOLE_PAGE_STATE_SCRIPT = '''return {
 
 APPROVAL_BOUNDARY_PROBE = r'''
 import assert from 'node:assert/strict';
-import {mkdtempSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
-import {dirname,join} from 'node:path';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
+import {join} from 'node:path';
 import {execFileSync} from 'node:child_process';
-import {createBrowserProjectFixture,SAMPLE_GOAL} from '/opt/keep/runtime/dist/src/demo/browser_project_fixture.js';
-import {handleGatewayRequest} from '/opt/keep/runtime/dist/src/gateway/http_gateway.js';
-import {verifyProposalExport} from '/opt/keep/runtime/dist/src/audit/proposal_export.js';
+import {sampleNodeToolchain} from '/opt/keep/runtime/tools/reviewer_node_toolchain.mjs';
+const node=sampleNodeToolchain();
+process.umask(0o077);
 const root=mkdtempSync('/home/keep/approval-boundary-');
+for(const name of ['home','tmp']) mkdirSync(join(root,name),{mode:0o700});
+for(const key of Object.keys(process.env)) delete process.env[key];
+Object.assign(process.env,{PATH:node.bin+':/usr/bin:/bin',HOME:join(root,'home'),TMPDIR:join(root,'tmp'),
+  GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_TERMINAL_PROMPT:'0'});
+process.chdir(root);
+const {createBrowserProjectFixture,SAMPLE_GOAL}=await import('/opt/keep/runtime/dist/src/demo/browser_project_fixture.js');
+const {handleGatewayRequest}=await import('/opt/keep/runtime/dist/src/gateway/http_gateway.js');
+const {verifyProposalExport}=await import('/opt/keep/runtime/dist/src/audit/proposal_export.js');
 let settled=false;
 try {
   const fixture=createBrowserProjectFixture(root,{localAppliance:true,requiredJail:{
-    executable:'/opt/keep/bubblewrap/0.13.0/bwrap',nodeToolchain:dirname(dirname(process.execPath))}});
+    executable:'/opt/keep/bubblewrap/0.13.0/bwrap',nodeToolchain:node.root}});
   const token='appliance-boundary-fixture-only';
   const request=async(method,path,body={},query={})=>{
     const response=await handleGatewayRequest(fixture.app,{method,path,query,
@@ -205,8 +213,9 @@ try {
   assert.ok(started.wait?.decisionId);
   const prepared=await request('POST','/project/resume',{runId:started.runId,
     approval:{decisionId:started.wait.decisionId,approved:true}});
-  assert.match(prepared.proposalDigest,/^[a-f0-9]{64}$/);
   const reviewed=await request('GET','/project',{}, {runId:started.runId});
+  assert.match(prepared.proposalDigest,/^[a-f0-9]{64}$/,'Boundary fixture preparation: '+
+    JSON.stringify({prepared,reviewed,jobs:fixture.app.projectRuntime.retainedJobs().map(({state,label})=>({state,label}))}).slice(0,6000));
   assert.equal(reviewed.proposal.checks.testsPassed,true);
   assert.equal(reviewed.proposal.checks.passedTests.length,4);
   const workspace=join(fixture.workspaces,'project');
