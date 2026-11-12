@@ -4,7 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { request } from "node:http";
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync, readFileSync, statSync, existsSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, statSync, existsSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { composeKeep } from "../src/compose.js";
@@ -22,6 +22,29 @@ function http(server: GatewayServerHandle, path: string, options: { method?: str
   });
 }
 const input = (html: string, name: string): string => new RegExp(`name="${name}" value="([^"]+)"`, "u").exec(html)![1]!;
+
+test("local appliance resume retains the same source and refuses changed source without resetting it", () => {
+  const root = mkdtempSync(join(tmpdir(), "keep-appliance-resume-"));
+  const hosted = mkdtempSync(join(tmpdir(), "keep-hosted-unchanged-"));
+  try {
+    const ordinary = createBrowserProjectFixture(hosted);
+    ordinary.app.projectRuntime!.pauseDispatch();
+    assert.equal(existsSync(join(hosted, 'fixture.json')), false, 'hosted default does not acquire local metadata');
+    const first = createBrowserProjectFixture(root, { localAppliance: true });
+    first.app.projectRuntime!.pauseDispatch();
+    const resumed = createBrowserProjectFixture(root, { localAppliance: true, resume: true });
+    resumed.app.projectRuntime!.pauseDispatch();
+    assert.equal(resumed.baseRevision, first.baseRevision);
+    assert.equal(resumed.source, first.source);
+    assert.equal(resumed.generations(), 0);
+    writeFileSync(join(first.source, 'calc.mjs'), 'owner changed this\n');
+    assert.throws(() => createBrowserProjectFixture(root, { localAppliance: true, resume: true }), /sample source changed/);
+    assert.equal(readFileSync(join(first.source, 'calc.mjs'), 'utf8'), 'owner changed this\n');
+    assert.throws(() => createBrowserProjectFixture(root, { resume: true }), /must be explicit/);
+  } finally {
+    rmSync(root, { recursive: true, force: true }); rmSync(hosted, { recursive: true, force: true });
+  }
+});
 
 test("public personal browser origin rejects invalid origins, nonloopback and ambiguous identity modes before listen", async () => {
   const root = mkdtempSync(join(tmpdir(), "keep-public-options-"));
@@ -46,7 +69,7 @@ test("public personal browser origin rejects invalid origins, nonloopback and am
 
 test("simulated TLS sample ingress keeps exact Host/Origin, Secure cookie and fixed one-submission authority across isolated instances", async () => {
   const roots = [mkdtempSync(join(tmpdir(), "keep-sample-a-")), mkdtempSync(join(tmpdir(), "keep-sample-b-"))];
-  const fixtures = roots.map(createBrowserProjectFixture);
+  const fixtures = roots.map(root => createBrowserProjectFixture(root));
   fixtures.forEach(f => f.app.projectRuntime!.pauseDispatch());
   const origins = ["https://a.sample.invalid", "https://b.sample.invalid"], tokens = ["a-private-invitation-fixture", "b-private-invitation-fixture"];
   const servers: GatewayServerHandle[] = [];
