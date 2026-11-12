@@ -1,6 +1,6 @@
 {
   "name": "keep",
-  "version": "0.0.23-preview.1",
+  "version": "0.0.24-preview.1",
   "description": "Self-hosted platform for AI work, persistent knowledge, reusable skills and governed execution",
   "main": "dist/src/index.js",
   "scripts": {
@@ -146,7 +146,9 @@
     "docs/maintenance-2026-11-11.4.md",
     "acceptance/browser_project.mjs",
     "acceptance/browser_project_fixture.mjs",
-    "docs/browser-project.md"
+    "docs/browser-project.md",
+    "tools/reviewer_sample.mjs",
+    "docs/reviewer-sample.md"
   ],
   "exports": {
     ".": "./dist/src/index.js",

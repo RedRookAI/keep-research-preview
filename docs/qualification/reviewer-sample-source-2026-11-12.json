@@ -1,0 +1,53 @@
+{
+  "status": "PASS",
+  "scripted": true,
+  "enforcedSample": true,
+  "paidCalls": 0,
+  "browser": "151.0.7922.34",
+  "node": "v22.23.4",
+  "sourceRevision": "b712d6d3fb0e9b5742fda039bd94bfa0ee55e35c",
+  "stages": [
+    "browser-form-submitted",
+    "real-workspace-diff-and-two-unchanged-checks",
+    "submission-recovery-no-new-job",
+    "exact-proposal-veto-and-browser-export"
+  ],
+  "projectId": "prj_2ec6c3f3399a07bca8bbcb7ae2423fee",
+  "runId": "a77a7ad8-4840-4f53-8eae-59782c805874",
+  "proposalDigest": "88fdcb370d84f5296c2172a3332aac7d110274260ea58d42a9328b20459bbc8c",
+  "fixtureBaseRevision": "eb6f7a73d170fea3ee12557a8e4bb45156ea56df",
+  "retainedJobCount": 2,
+  "originalSubmissionJobId": "a77a7ad8-4840-4f53-8eae-59782c805874",
+  "generations": 2,
+  "checks": {
+    "detail": "all tests passed; vetting cleared",
+    "failures": [],
+    "passedCount": 2,
+    "passedTests": [
+      "arithmetic",
+      "goal: requested outcome"
+    ],
+    "testsPassed": true,
+    "vettingCleared": true
+  },
+  "sourceUnchanged": true,
+  "exported": true,
+  "schema": "keep.reviewer-sample-source-qualification/v1",
+  "date": "2026-11-12",
+  "sourceChecks": {
+    "distinctPassed": 50,
+    "affectedPassed": 47,
+    "restrictedClientPassed": 3,
+    "finalAffectedSubsetPassed": 12,
+    "failed": 0,
+    "skipped": 0,
+    "tls": "Loopback HTTP with simulated trusted TLS termination headers; not public HTTPS qualification."
+  },
+  "integration": {
+    "testedWorkerSource": "b712d6d3fb0e9b5742fda039bd94bfa0ee55e35c",
+    "sourceVersion": "0.0.24-preview.1",
+    "latestDownloadVersion": "0.0.21-preview.1",
+    "additionalChanges": "Aligned version metadata and CI coverage; corrected sign-in copy for a remote personal instance. Security/runtime logic is unchanged from worker checks; actual deployment remains separately qualified."
+  },
+  "limits": "Developer-administered authored two-response browser fixture. No public URL, cloud deployment, model account, new installed archive or whole-product qualification follows from this source receipt."
+}
