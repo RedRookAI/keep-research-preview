@@ -381,7 +381,13 @@ class SampleSignin(HTMLParser):
 def sample(path, data, action):
     refuse_pending(data)
     verify_overlay(path, data)
-    result = guest(path, data, ['keep-reviewer', action, str(data['port'])], capture_output=True, text=True)
+    try:
+        result = guest(path, data, ['keep-reviewer', action, str(data['port'])], capture_output=True, text=True)
+    except subprocess.CalledProcessError as error:
+        # Fixed sample-control stderr identifies the refusal. Captured stdout can
+        # carry invitation/state data and must never enter the public diagnostic.
+        prefix = 'Guest sample control ' + action + ' failed (exit ' + str(error.returncode) + '): '
+        raise RuntimeError(prefix + (error.stderr or '<stderr unavailable>')[:8192]) from None
     value = json.loads(result.stdout)
     if action == 'start':
         tunnel(path, data)

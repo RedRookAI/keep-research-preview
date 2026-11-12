@@ -8,6 +8,7 @@ import shlex
 from pathlib import Path
 import socket
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -74,6 +75,27 @@ class HostControls(unittest.TestCase):
         for name, altered in cases.items():
             with self.subTest(name=name), self.assertRaisesRegex(RuntimeError, 'did not identify'):
                 self.check_sample_page(altered)
+
+    def test_failed_sample_control_retains_bounded_real_stderr_and_excludes_stdout(self):
+        secret = 'private invitation stdout sentinel'
+        diagnostic = 'Sample control refused: exact controlled failure: ' + 'x' * 9000
+        data = {'port': 7788, 'tunnel': {'retained': True}}
+
+        def guest(path, state, argv, **options):
+            self.assertEqual(argv, ['keep-reviewer', 'stop', '7788'])
+            self.assertEqual(options, {'capture_output': True, 'text': True})
+            script = 'import sys;sys.stdout.write(' + repr(secret) + ');sys.stderr.write(' + repr(diagnostic) + ');raise SystemExit(7)'
+            return app.command([sys.executable, '-c', script], **options)
+
+        with patch.object(app, 'refuse_pending'), patch.object(app, 'verify_overlay'), \
+             patch.object(app, 'guest', side_effect=guest), patch.object(app, 'terminate') as terminate:
+            with self.assertRaises(RuntimeError) as captured:
+                app.sample(self.root, data, 'stop')
+            terminate.assert_not_called()
+        prefix = 'Guest sample control stop failed (exit 7): '
+        self.assertEqual(str(captured.exception), prefix + diagnostic[:8192])
+        self.assertNotIn(secret, str(captured.exception))
+        self.assertEqual(data, {'port': 7788, 'tunnel': {'retained': True}})
 
     def test_private_instance_paths_with_spaces_are_preserved(self):
         path = self.root / 'my private instance'
