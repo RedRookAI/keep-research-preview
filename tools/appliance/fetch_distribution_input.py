@@ -17,7 +17,9 @@ PURPOSES = {'qualified-consumer', 'captured-distribution'}
 
 def api(path, binary=False):
     request = urllib.request.Request('https://api.github.com/repos/' + REPOSITORY + path,
-        headers={'Accept': 'application/octet-stream' if binary else 'application/vnd.github+json', 'User-Agent': 'Keep-source-companion'})
+        # Actions' ZIP endpoint requires the API JSON media type even though its
+        # redirected response is binary. Release-asset negotiation differs.
+        headers={'Accept': 'application/vnd.github+json', 'User-Agent': 'Keep-source-companion'})
     request.add_unredirected_header('Authorization', 'Bearer ' + os.environ['GITHUB_TOKEN'])
     with urllib.request.urlopen(request, timeout=600) as response:
         return response.read() if binary else json.load(response)

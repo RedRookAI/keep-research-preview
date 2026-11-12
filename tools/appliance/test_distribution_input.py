@@ -7,12 +7,21 @@ from pathlib import Path
 import tempfile
 import unittest
 import zipfile
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('distribution_input', Path(__file__).with_name('fetch_distribution_input.py'))
 fetch = importlib.util.module_from_spec(spec); spec.loader.exec_module(fetch)
 
 
 class DistributionCustody(unittest.TestCase):
+    def test_actions_zip_uses_api_media_type_and_keeps_auth_off_redirects(self):
+        with patch.dict(fetch.os.environ, {'GITHUB_TOKEN': 'synthetic-stage-only'}), patch.object(fetch.urllib.request, 'urlopen', return_value=io.BytesIO(b'PK synthetic ZIP')) as opened:
+            self.assertEqual(fetch.api('/actions/artifacts/1/zip', binary=True), b'PK synthetic ZIP')
+        request = opened.call_args.args[0]
+        self.assertEqual(request.get_header('Accept'), 'application/vnd.github+json')
+        self.assertNotIn('Authorization', request.headers)
+        self.assertEqual(request.unredirected_hdrs['Authorization'], 'Bearer synthetic-stage-only')
+
     def test_complete_capture_allows_source_collection_without_claiming_consumer_pass(self):
         files = self.fixture(); del files['consumer.json']
         proof = {'schema': 'keep.appliance.guest-proof/v1', 'passed': True, 'source': 'a' * 40, 'modelCalls': 0, 'uid': 1000, 'arch': 'x64'}
