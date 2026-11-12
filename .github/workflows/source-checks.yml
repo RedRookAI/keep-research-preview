@@ -1,27 +1,73 @@
-name: Source checks
-
+name: Preparation host compatibility
+run-name: Actual source preparation and restricted-host diagnosis
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
-  source:
-    name: TypeScript, notices and focused tests
-    runs-on: ubuntu-24.04
+  preparation:
+    name: ${{ matrix.os }} — ${{ matrix.expectation }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            expectation: success
+          - os: ubuntu-24.04
+            expectation: preflight-refusal
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Check out exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: e53867c1c2add998b9d382f26fc6c7aa97b3b2b7
           persist-credentials: false
-      - name: Select supported Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+          path: source
+      - name: Select declared Node runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version-file: package.json
+          node-version: 22.23.4
           package-manager-cache: false
-      - name: Run the partial source profile
-        run: node tools/run_ci_checks.mjs
+      - name: Create private build and consumer homes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" != 0
+          KEEP_VERIFY_ROOT=$(mktemp -d "$HOME/keep-source-preparation-XXXXXXXX")
+          mkdir "$KEEP_VERIFY_ROOT/bootstrap-home" "$KEEP_VERIFY_ROOT/build-home" "$KEEP_VERIFY_ROOT/build-cache"
+          echo "KEEP_VERIFY_ROOT=$KEEP_VERIFY_ROOT" >> "$GITHUB_ENV"
+          cd "$GITHUB_WORKSPACE/source"
+          test "$(git rev-parse HEAD)" = e53867c1c2add998b9d382f26fc6c7aa97b3b2b7
+          env -i PATH="$PATH" HOME="$KEEP_VERIFY_ROOT/build-home" npm_config_cache="$KEEP_VERIFY_ROOT/build-cache" npm ci --ignore-scripts --no-audit --no-fund
+          env -i PATH="$PATH" HOME="$KEEP_VERIFY_ROOT/build-home" node node_modules/typescript/bin/tsc -p tsconfig.json
+      - name: Build declared namespace prerequisite from public source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$KEEP_VERIFY_ROOT"
+          curl --fail --location --silent --show-error "https://raw.githubusercontent.com/RedRookAI/keep-research-preview/83a67b04fa03e6fd1a1564b6b93cc1c3f19deb24/tools/bubblewrap/Dockerfile" --output Dockerfile
+          printf '%s\n' 'a317b76c36d96871effb743645147046c8f2dd00d9fa7eac29ea4f8cc994306f  Dockerfile' | sha256sum --check
+          if ! docker build --tag keep-independent-helper --file Dockerfile . > helper-build.log 2>&1; then tail -80 helper-build.log; exit 1; fi
+          helper_container=$(docker create keep-independent-helper)
+          trap 'docker rm "$helper_container" >/dev/null' EXIT
+          docker cp "$helper_container:/opt/keep/bubblewrap/0.13.0/bwrap" bwrap
+          docker cp "$helper_container:/build/build-packages.txt" build-packages.txt
+          sha256sum bwrap
+          printf '%s\n' 'e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f  bwrap' | sha256sum --check
+          stat -c '%a %u:%g %n' / /opt /var /var/lib
+          sudo install -d -m 0755 "/var/lib/keep-independent-$GITHUB_RUN_ID"
+          sudo install -m 0755 bwrap "/var/lib/keep-independent-$GITHUB_RUN_ID/bwrap"
+      - name: Exercise actual preparation or expected host refusal
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$KEEP_VERIFY_ROOT"
+          curl --fail --location --silent --show-error "https://raw.githubusercontent.com/RedRookAI/keep-research-preview/$GITHUB_SHA/docs/qualification/source-preparation.mjs" --output source-preparation.mjs
+          printf '%s\n' '0265cb2f33d4621abc77279a5297173340f5dd38849a1401f05b66720c498577  source-preparation.mjs' | sha256sum --check
+          for policy in /proc/sys/kernel/apparmor_restrict_unprivileged_userns /proc/sys/kernel/unprivileged_userns_clone; do
+            if test -r "$policy"; then printf '%s=' "$policy"; cat "$policy"; fi
+          done
+          node_path=$(command -v node)
+          node_root=$("$node_path" -p 'require("node:path").dirname(require("node:path").dirname(process.execPath))')
+          env -i PATH="$PATH" HOME="$KEEP_VERIFY_ROOT/bootstrap-home" "$node_path" source-preparation.mjs "$GITHUB_WORKSPACE/source" "$node_root" "/var/lib/keep-independent-$GITHUB_RUN_ID/bwrap" "$KEEP_VERIFY_ROOT/consumer" "${{ matrix.expectation }}"
