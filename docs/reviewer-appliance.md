@@ -54,7 +54,7 @@ Restart retains the same jobs, decisions and exports. Inspect interrupted work b
 
 ## Distribution records
 
-The manifest identifies the source revision and component hashes. The guest runtime's `source-support.tar.gz` contains the matching Keep and host-tool source. Guest support includes installed source versions, Built-Using fields, notices, component identities and file checksums. The bundle also carries the pinned Bubblewrap source and build recipe.
+The manifest identifies the guest runtime, host assembly and component hashes. The guest runtime's `source-support.tar.gz` contains its matching source. `HOST_SOURCE.tar.gz` contains the source for the bundled host tools and qualifier. Guest support includes installed source versions, Built-Using fields, notices, component identities and file checksums. The bundle also carries the pinned Bubblewrap source and build recipe.
 
 The published Debian source companion contains all 289 required source/version pairs, including the Debian patches in the guest inventory. The release qualification records the exact image and clean-consumer observations.
 

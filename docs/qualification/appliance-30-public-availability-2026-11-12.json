@@ -1,0 +1,109 @@
+{
+  "schema": "keep.appliance.public-availability/v1",
+  "checkedUtc": "2026-11-12T17:26:11.113889+00:00",
+  "releaseId": 443271706,
+  "releaseUrl": "https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.4",
+  "anonymous": true,
+  "largeFilesFullHashVerifiedInCi": true,
+  "largeFilesDownloadedAgain": false,
+  "assets": [
+    {
+      "name": "consumer-qualification.json",
+      "httpStatus": 200,
+      "bytes": 2285,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "debian-sources-0001.tar",
+      "httpStatus": 206,
+      "bytes": 867338240,
+      "fullSha256VerifiedAnonymously": false,
+      "range": "bytes 0-0/867338240"
+    },
+    {
+      "name": "distribution-input.json",
+      "httpStatus": 200,
+      "bytes": 1256,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "guest-distribution-support.tar.gz",
+      "httpStatus": 206,
+      "bytes": 46564362,
+      "fullSha256VerifiedAnonymously": false,
+      "range": "bytes 0-0/46564362"
+    },
+    {
+      "name": "guest-dpkg-status",
+      "httpStatus": 200,
+      "bytes": 330730,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "guest-packages.tsv",
+      "httpStatus": 200,
+      "bytes": 15989,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "KEEP-RELEASE-SHA256SUMS",
+      "httpStatus": 200,
+      "bytes": 1164,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "keep-reviewer-0.0.30-preview.1-linux-x64-887e21a8de05-43267331155-repack.tar.xz",
+      "httpStatus": 206,
+      "bytes": 589174388,
+      "fullSha256VerifiedAnonymously": false,
+      "range": "bytes 0-0/589174388"
+    },
+    {
+      "name": "keep-reviewer-0.0.30-preview.1-linux-x64-887e21a8de05-43267331155-repack.tar.xz.candidate.json",
+      "httpStatus": 200,
+      "bytes": 644,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "keep-reviewer-0.0.30-preview.1-linux-x64-887e21a8de05-43267331155-repack.tar.xz.sha256",
+      "httpStatus": 200,
+      "bytes": 146,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "SHA256SUMS",
+      "httpStatus": 200,
+      "bytes": 533,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "source-index.json",
+      "httpStatus": 200,
+      "bytes": 768764,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    }
+  ],
+  "links": [
+    {
+      "url": "https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.4",
+      "status": 200
+    },
+    {
+      "url": "https://github.com/RedRookAI/keep-research-preview",
+      "status": 200
+    },
+    {
+      "url": "https://keep-demo.redrook.ai/console",
+      "status": 200
+    }
+  ]
+}

@@ -16,6 +16,14 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/docs/reviewer-appli
 
 The browser sample uses authored responses with real edits, executable checks and proposal decisions. Fresh live-account generation and other host platforms remain outside the qualified reviewer profile.
 
+Archive: `keep-reviewer-0.0.30-preview.1-linux-x64-887e21a8de05-43267331155-repack.tar.xz`. Bytes: 589174388. SHA256: `2e2088a2ec2463d535964ec35931f9460cf59ff56acf1e9419f4f507f0b11e4a`.
+
+Guest runtime source: `265c942e738955a1c2067ac42f0d38ba6f2d6886`. Host assembly source: `887e21a8de054b413017bd2edd6be52c4dd41d35`. Guest image SHA256: `ba6d34668955e656820929a455837e7b56b8f8a1faa85c5b0bc66589ae4ac3cf`.
+
+Qualification record:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-30-2026-11-12.md
+
 ## Historical releases
 
 <details>

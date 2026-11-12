@@ -1,0 +1,62 @@
+{
+  "schema": "keep.appliance.source-transfer-reconciliation/v1",
+  "passed": true,
+  "source": "887e21a8de054b413017bd2edd6be52c4dd41d35",
+  "runtimeSource": "265c942e738955a1c2067ac42f0d38ba6f2d6886",
+  "imageSha256": "ba6d34668955e656820929a455837e7b56b8f8a1faa85c5b0bc66589ae4ac3cf",
+  "releaseId": 443271706,
+  "tag": "keep-reviewer-2026-11-12.4",
+  "draft": true,
+  "sourceWorkflowRun": 43268684622,
+  "sourceWorkflowConclusion": "failure",
+  "workflowFailure": "Final upload of consumer-qualification.json collided with concurrently uploaded identical bytes; source acquisition, closure and all required source uploads completed.",
+  "reconciliation": "One readback verified every required release asset size and GitHub SHA256 digest against the complete source index, retained source checksums and exact successful consumer receipt.",
+  "consumerWorkflowRun": 43267331155,
+  "consumerWorkflowConclusion": "success",
+  "requiredPairs": 289,
+  "availablePairs": 289,
+  "missingPairs": 0,
+  "binaryRecords": 332,
+  "assets": {
+    "debian-sources-0001.tar": {
+      "sha256": "d26529691a1d131119f1f36e99bf0c91e794d0730cc5e5884b2692733594bf07",
+      "bytes": 867338240,
+      "id": 740381649
+    },
+    "guest-dpkg-status": {
+      "sha256": "d951e0c25092367010a58637b254a7ae959f2809c9177edb704957ffbe7d3d0c",
+      "bytes": 330730,
+      "id": 740381343
+    },
+    "guest-packages.tsv": {
+      "sha256": "4b3501e589ff15592851cb130baafc09cd1c539d320b81178a88841d0a60645e",
+      "bytes": 15989,
+      "id": 740381418
+    },
+    "guest-distribution-support.tar.gz": {
+      "sha256": "90aa529ab7d51c1099690fe8d378c23b34a5db11005dc851d6c54a8b11f72feb",
+      "bytes": 46564362,
+      "id": 740381484
+    },
+    "source-index.json": {
+      "sha256": "9589d3d79eedbc9273a19fcd9ef891c2eeead67b5c4accc66e64f2d135913425",
+      "bytes": 768764,
+      "id": 740381192
+    },
+    "SHA256SUMS": {
+      "sha256": "cd6908557d034a93899f063e256df3c0720cb00c058360d90adf7fdf69e629d1",
+      "bytes": 533,
+      "id": 740384724
+    },
+    "distribution-input.json": {
+      "sha256": "fd52fd9aa5854e5e3c66397336c72f51e52aa72188238877a09eb7cee2222b8c",
+      "bytes": 1256,
+      "id": 740381277
+    },
+    "consumer-qualification.json": {
+      "sha256": "a869e92c51c0410e603211683e0bfa28e19e4205124473e25c3c8b3f76e390bb",
+      "bytes": 2285,
+      "id": 740381888
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "schema": "keep.appliance.clean-consumer/v1",
+  "passed": true,
+  "source": "887e21a8de054b413017bd2edd6be52c4dd41d35",
+  "runtimeSource": "265c942e738955a1c2067ac42f0d38ba6f2d6886",
+  "imageSha256": "ba6d34668955e656820929a455837e7b56b8f8a1faa85c5b0bc66589ae4ac3cf",
+  "checkoutAvailable": false,
+  "hostNodeNpmRustUsed": false,
+  "browserDriver": "ChromeDriver 156.0.8078.80 (fb096c0011f9d50f0a264a9376420cdea9c421e3-refs/branch-heads/8078@{#1705})",
+  "browser": "Google Chrome 156.0.8078.79",
+  "stages": [
+    {
+      "decision": "veto",
+      "projectId": "prj_4a11f49e587ff77d79501ceb47a60d14",
+      "runId": "d832e2f3-edac-400f-9742-5214b9a714db",
+      "digest": "3cd7eccb33b5af8a6cb17dd0c3d377a894a0f4bfe8edda196d45ce7051992e72",
+      "actualBrowser": true,
+      "requiredJailChecks": true,
+      "sourceUnchanged": true,
+      "restartRetained": true
+    },
+    {
+      "decision": "approve",
+      "projectId": "prj_2e4a16e48a2ab590b4e2204ba706d133",
+      "runId": "63039486-8808-4b65-a7d6-a61d8b5d7834",
+      "digest": "3cd7eccb33b5af8a6cb17dd0c3d377a894a0f4bfe8edda196d45ce7051992e72",
+      "actualBrowser": true,
+      "requiredJailChecks": true,
+      "sourceUnchanged": true,
+      "restartRetained": true
+    }
+  ],
+  "freshCloneIdentities": [
+    {
+      "machineId": "b91f3906105f46aba2a990fa91fb7463",
+      "hostKey": "SHA256:+GEUgDtpOSZvy0sU0VTXpVLlld2Nhgw61S37bbOm2rE",
+      "tokenSha256": "85ce723b3a4cc02dbf65cbbd5f023f08c2be13c83a7253710ee7e37ddb201f35",
+      "publicKeySha256": "d470c1dba17b2f989380fe753e0f6a98f492cd02b28677342006146852ad3353"
+    },
+    {
+      "machineId": "64417bb64d4c4994ba4365d4d851c996",
+      "hostKey": "SHA256:GC//Ktk+ENYuozeziDQ8NM5seQQAh0o+yPGQqvrIQ6k",
+      "tokenSha256": "515491423b757457104745f17bb2b24e40c36172ce79f04436777fcc386a0517",
+      "publicKeySha256": "8acb121b3ae89d2d5b92718f92b15ef5df93f2b081f19d5cb1f1349d74a15798"
+    }
+  ],
+  "approvalBoundary": {
+    "schema": "keep.appliance.approval-boundary/v1",
+    "passed": true,
+    "status": "failed",
+    "checks": 4,
+    "authoredResponses": 2,
+    "requiredJail": true,
+    "headUnchanged": true,
+    "sourceUnchanged": true,
+    "unreviewedFileUnstaged": true,
+    "proposalExportUnchanged": true,
+    "unresolvedJobs": 0
+  },
+  "paidCalls": 0
+}

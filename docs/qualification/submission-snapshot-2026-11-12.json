@@ -2,23 +2,22 @@
   "schema": "keep.submission-snapshot/v1",
   "observedDate": "2026-11-12",
   "source": {
-    "version": "0.0.29-preview.1",
-    "testedCodeCommit": "535099cf4aaf653a4de806fefd1174690c71326e",
-    "sourceOnlyChanges": [
-      "Trace costs preserve known/unknown coverage in rollups, API and exports",
-      "Automatic training candidate/deployment refuses missing provenance and execution evidence",
-      "Current compatibility metadata and accurate public contracts",
-      "Goal check label and reviewer documentation"
+    "version": "0.0.30-preview.1",
+    "testedCodeCommit": "8f4f4da5d55781e4b8f5bb7417957fabb4079165",
+    "changes": [
+      "Proposal approval rejects unreviewed untracked, ignored or staged files before committing",
+      "Staged and committed diffs must equal the retained proposal on initial approval and recovery",
+      "Source comments and displayed review wording updated"
     ],
-    "copyEdit": "Public guides, displayed UI language and source comments cleaned; execution/authority contracts preserved."
+    "copyEdit": "Public guides and source comments cleaned; execution and authority contracts preserved."
   },
   "sourceChecks": {
-    "run": 43247169896,
-    "url": "https://github.com/RedRookAI/keep-research-preview/actions/runs/43247169896",
+    "run": 43261867359,
+    "url": "https://github.com/RedRookAI/keep-research-preview/actions/runs/43261867359",
     "node": "22.23.5",
     "profile": "partial-unprivileged",
-    "tests": 347,
-    "passed": 347,
+    "tests": 355,
+    "passed": 355,
     "failed": 0,
     "skipped": 0,
     "cancelled": 0,
@@ -27,43 +26,49 @@
     "installedArtifactQualified": false
   },
   "hosted": {
-    "url": "https://keep-b.redrook.ai/console",
-    "version": "0.0.25-preview.1",
-    "source": "8e8eeaaad17f8a7e0aa239edfd4284eb7162a672",
+    "url": "https://keep-demo.redrook.ai/console",
+    "version": "0.0.30-preview.1",
+    "source": "8f4f4da5d55781e4b8f5bb7417957fabb4079165",
+    "node": "22.23.5",
     "credentialRequired": true,
-    "credentialDelivery": "Supplied separately by the operator; no credential is published here.",
-    "newSourceChangesInstalled": false,
+    "credentialDelivery": "Supplied separately; credentials are not published.",
+    "newSourceChangesInstalled": true,
     "workflowObservation": {
-      "browser": "Chromium151.0.7922.34",
+      "browser": "Chromium 151.0.7922.34",
       "certificateChecked": true,
       "authoredResponses": 2,
       "realWorkspaceDiff": true,
       "passingChecks": 4,
-      "decision": "veto",
+      "decision": "approve",
       "evidenceDownloadVerified": true,
-      "sourceUnchangedAfterVeto": true,
+      "sourceMerge": "landed",
+      "workspace": "merged",
+      "reviewedDiffSha256": "3cd7eccb33b5af8a6cb17dd0c3d377a894a0f4bfe8edda196d45ce7051992e72",
+      "committedDiffMatchesReviewedProposal": true,
+      "sourceAndWorkspaceSameCommit": true,
       "settledStopExitCode": 0,
       "unresolvedJobs": 0,
-      "observedAt": "2026-11-12T14:41:42.836Z"
+      "paidCalls": 0,
+      "observedAt": "2026-11-12T16:53:04.727Z"
     },
-    "freshReviewerInvitation": {
+    "reviewerInvitationAtHandoff": {
       "loginVerified": true,
       "startDemoVisible": true,
       "projects": 0,
       "taskUnused": true,
       "automaticReset": false,
-      "observedAt": "2026-11-12T14:44:01.876Z"
+      "observedAt": "2026-11-12T16:57:49.998Z"
     },
-    "existingOwnerInvitationPreserved": true
+    "existingOwnerAndPanelInvitationsPreserved": true
   },
   "appliance": {
-    "version": "0.0.29-preview.1",
-    "release": "https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3",
-    "runtimeSource": "253fbca62133bef33ecc7d0c4b2192541cb55918",
-    "assemblySource": "73fabd7a98971335153590193ac9235140d5fbe3",
-    "sha256": "b4a0208da9ff6e713a624b0eca034ba4d6d70090f8a88f6c456474f44fc0ec51",
-    "newSourceChangesInstalled": false,
-    "existingQualification": "https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-29-2026-11-12.md",
+    "version": "0.0.30-preview.1",
+    "release": "https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.4",
+    "runtimeSource": "265c942e738955a1c2067ac42f0d38ba6f2d6886",
+    "assemblySource": "887e21a8de054b413017bd2edd6be52c4dd41d35",
+    "sha256": "2e2088a2ec2463d535964ec35931f9460cf59ff56acf1e9419f4f507f0b11e4a",
+    "newSourceChangesInstalled": true,
+    "existingQualification": "https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-30-2026-11-12.md",
     "hostPrerequisites": [
       "Linux x64",
       "Python3.8+",
@@ -71,13 +76,17 @@
       "QEMU tools",
       "Existing KVM access",
       "8GiB free at first startup after extraction"
-    ]
+    ],
+    "archive": "keep-reviewer-0.0.30-preview.1-linux-x64-887e21a8de05-43267331155-repack.tar.xz",
+    "imageSha256": "ba6d34668955e656820929a455837e7b56b8f8a1faa85c5b0bc66589ae4ac3cf",
+    "consumerRun": 43267331155,
+    "consumerPassed": true
   },
   "genuineGenerationCase": "https://github.com/RedRookAI/keep-research-preview/blob/main/docs/genuine-codex-walkthrough.md",
   "limits": [
-    "Browser workflow uses authored responses while executing real edits, checks and proposal decisions.",
-    "The genuine Codex result is a historical integration case, not newly generated for this observation.",
-    "Fresh live-account generation and full product/cross-platform qualification remain unestablished.",
-    "The documentation-only handoff commit carries the same tested code; no image or runtime was rebuilt."
+    "The browser sample uses authored responses while executing real edits, checks and proposal decisions.",
+    "The genuine Codex result is a historical integration case.",
+    "Fresh live-account generation and other host platforms remain unqualified.",
+    "Source CI covers the declared partial profile; installed appliance qualification is recorded separately."
   ]
 }
