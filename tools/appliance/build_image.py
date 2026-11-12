@@ -23,6 +23,7 @@ RELEASE = 'https://github.com/RedRookAI/keep-research-preview/releases/download/
 ARCHIVE_SHA = '7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca'
 NODE_SHA = '1805bcd35e6815559bd2eb97db438d3fdb0eb3a5e6a977b7c1badca76337e9ce'
 HELPER_SHA = 'e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f'
+HELPER_SOURCE_SHA = '4734237473c0e5d695e4e9034a34e43b2dbf5164655bd13fa59ae376b2b7a765'
 ENGINE_SHA = 'fdd9a1a3e86fc2213e4c0bd9c9b278080f38d756a5256e3217092a30e48d98c1'
 
 
@@ -113,15 +114,18 @@ def main():
     container = run(['docker', 'create', 'kc111-helper:' + os.environ['GITHUB_RUN_ID']], capture_output=True, text=True).stdout.strip()
     try:
         run(['docker', 'cp', container + ':/opt/keep/bubblewrap/0.13.0/bwrap', str(payload / 'bwrap')])
+        run(['docker', 'cp', container + ':/build/bubblewrap-0.13.0.tar.xz', str(payload / 'bubblewrap-0.13.0.tar.xz')])
         run(['docker', 'cp', container + ':/build/build-packages.txt', str(bundle / 'helper-build-packages.txt')])
     finally: run(['docker', 'rm', container])
     if sha(payload / 'bwrap') != HELPER_SHA: raise RuntimeError('Helper identity changed')
+    if sha(payload / 'bubblewrap-0.13.0.tar.xz') != HELPER_SOURCE_SHA: raise RuntimeError('Helper corresponding-source identity changed')
+    shutil.copy2(payload / 'bubblewrap-0.13.0.tar.xz', bundle / 'bubblewrap-0.13.0.tar.xz')
     shutil.copy2(ROOT / 'tools/appliance/guest-control.py', payload / 'guest-control.py')
     # Public build provenance only. No authorized key or account is supplied to the build guest.
     components = {'schema': 'keep.appliance.image-build/v1', 'source': source, 'version': version,
                   'baseUrl': BASE_URL + '/' + BASE_NAME, 'baseSha512': BASE_SHA,
                   'archiveBaselineSha256': ARCHIVE_SHA, 'nodeArchiveSha256': NODE_SHA,
-                  'helperSha256': HELPER_SHA, 'engineSha256': ENGINE_SHA,
+                  'helperSha256': HELPER_SHA, 'helperSourceSha256': HELPER_SOURCE_SHA, 'engineSha256': ENGINE_SHA,
                   'nativeSourceTree': metadata['source']['nativeTree'], 'nativeArtifacts': metadata['nativeRelease']['artifacts']}
     (payload / 'image-build.json').write_text(json.dumps(components, indent=2) + '\n')
     receipt_path = work / 'guest-receipt.json'
@@ -140,11 +144,12 @@ def main():
     threading.Thread(target=server.serve_forever, daemon=True).start()
     port = server.server_port
     provision = '#!/bin/bash\nset -euo pipefail\numask 022\nmkdir -p /opt/keep/runtime /opt/keep/bubblewrap/0.13.0 /opt/keep/downloads\ncd /opt/keep/downloads\n'
-    for name in ('runtime.tgz', 'node.tar.xz', 'bwrap', 'guest-control.py', 'image-build.json'):
+    for name in ('runtime.tgz', 'node.tar.xz', 'bwrap', 'bubblewrap-0.13.0.tar.xz', 'guest-control.py', 'image-build.json'):
         provision += f"curl --fail --silent --show-error http://10.0.2.2:{port}/{name} -o {name}\nprintf '%s\\n' '{sha(payload / name)}  {name}' | sha256sum -c -\n"
     provision += '''tar -xzf runtime.tgz -C /opt/keep/runtime
 tar -xJf node.tar.xz -C /opt/keep
 install -m 0755 bwrap /opt/keep/bubblewrap/0.13.0/bwrap
+install -m 0644 bubblewrap-0.13.0.tar.xz /opt/keep/bubblewrap/0.13.0/bubblewrap-0.13.0.tar.xz
 install -m 0755 guest-control.py /usr/local/bin/keep-reviewer
 install -m 0644 image-build.json /opt/keep/image-build.json
 printf '%s\\n' '#!/bin/sh' 'exec /opt/keep/node-v22.23.4-linux-x64/bin/node /opt/keep/runtime/dist/src/main.js "$@"' > /usr/local/bin/keep
