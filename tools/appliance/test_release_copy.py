@@ -152,6 +152,15 @@ class ReleaseCopy(unittest.TestCase):
                 with self.assertRaises(RuntimeError): self.run_copy(plan, provider, [])
                 self.assertEqual(provider.uploads, [])
 
+    def test_source_capture_assembly_is_separate_from_frozen_guest_source(self):
+        plan, payloads = fixture()
+        index = json.loads(payloads['source-index.json'])
+        index.update(source='e' * 40, runtimeSource=plan['imageSource'])
+        app.source_closure(plan, index, payloads['SHA256SUMS'].decode())
+        index['runtimeSource'] = '0' * 40
+        with self.assertRaisesRegex(RuntimeError, 'another image'):
+            app.source_closure(plan, index, payloads['SHA256SUMS'].decode())
+
     def test_exact_existing_asset_is_reused_without_overwrite(self):
         plan, payloads = fixture(); provider = FakeGitHub(plan, payloads)
         provider.destination.append(metadata({**plan['assets'][0], 'id': 700}))

@@ -98,7 +98,8 @@ def destination_matches(actual, plan, wanted):
 
 def source_closure(plan, index, checksums):
     require(index['schema'] == 'keep.appliance.debian-source-companion/v1' and
-            index['source'] == plan['imageSource'] and index['imageSha256'] == plan['imageSha256'] and
+            re.fullmatch('[0-9a-f]{40}', index['source']) and
+            index.get('runtimeSource', index['source']) == plan['imageSource'] and index['imageSha256'] == plan['imageSha256'] and
             index['complete'] is True and index['planOnly'] is False and not index['missing'],
             'Source companion is incomplete or belongs to another image')
     names = list(SOURCE_FILES) + [filename(a['file']) for a in index['assets']]
