@@ -9,12 +9,15 @@ env:
   KC111_ASSET_ID: "738051360"
   KC111_ASSET_SHA256: 72ce45c6aa370f4d55d00d94ce1e2c53295635e793bc28a2f7738bd03e5629de
   KC111_ASSET_BYTES: "491691468"
+  KC111_IMAGE_SHA256: a2017da939df38625934679c0364a369b9b9e24b5dd637bd3b7d2b0f414d6850
   KC111_ASSET_NAME: keep-reviewer-0.0.26-preview.1-linux-x64-88c1a1eb6030-43153320417.tar.xz
 jobs:
   consumer:
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
+      # GitHub draft visibility requires push access. Only the staging step
+      # receives this job token; the product runs below under env -i.
+      contents: write
     steps:
       # No checkout or developer cache. Keep the artifact's source independent
       # from this later, separately identified qualification workflow revision.
@@ -47,8 +50,10 @@ jobs:
           with tarfile.open(root/name) as archive:archive.extractall(root,filter='data')
           bundles=[p for p in root.iterdir() if p.is_dir()]
           assert len(bundles)==1
+          manifest=json.loads((bundles[0]/'manifest.json').read_text())
+          assert manifest['source']==os.environ['KC111_EXPECTED_SOURCE'] and manifest['files']['keep.qcow2']==os.environ['KC111_IMAGE_SHA256']
           pathlib.Path('bundle-path').write_text(str(bundles[0].resolve())+'\n')
-          print('KC111_CONSUMER_TRANSPORT_JSON='+json.dumps({'assetId':meta['id'],'archiveSha256':h.hexdigest(),'source':os.environ['KC111_EXPECTED_SOURCE'],'workflowSource':os.environ['GITHUB_SHA'],'checkoutAvailable':False}),flush=True)
+          print('KC111_CONSUMER_TRANSPORT_JSON='+json.dumps({'assetId':meta['id'],'archiveSha256':h.hexdigest(),'source':os.environ['KC111_EXPECTED_SOURCE'],'workflowSource':os.environ['GITHUB_SHA'],'checkoutAvailable':False,'stagingJobContentsPermission':'write'}),flush=True)
           PY
       - name: Clean imported consumer with no platform credential environment
         run: |
@@ -58,7 +63,14 @@ jobs:
           runner_gid=$(id -g)
           groups=$(printf '%s\n' "$(id -G | tr ' ' ',')",$(stat -c %g /dev/kvm) | tr ',' '\n' | sort -un | paste -sd, -)
           bundle=$(cat bundle-path)
-          sudo setpriv --reuid "$runner_uid" --regid "$runner_gid" --groups "$groups" -- env -i PATH="$PATH" HOME="$HOME" CHROMEWEBDRIVER="${CHROMEWEBDRIVER:-}" KC111_EXPECTED_SOURCE="$KC111_EXPECTED_SOURCE" python3 "$bundle/qualify.py" "$bundle" "$GITHUB_WORKSPACE/consumer-evidence"
+          sudo setpriv --reuid "$runner_uid" --regid "$runner_gid" --groups "$groups" -- env -i PATH="$PATH" HOME="$HOME" CHROMEWEBDRIVER="${CHROMEWEBDRIVER:-}" KC111_EXPECTED_SOURCE="$KC111_EXPECTED_SOURCE" python3 - "$bundle" "$GITHUB_WORKSPACE/consumer-evidence" <<'PY'
+          import os,sys,runpy,pathlib,json
+          assert set(os.environ)<={'PATH','HOME','CHROMEWEBDRIVER','KC111_EXPECTED_SOURCE','LC_CTYPE'}
+          bundle=pathlib.Path(sys.argv[1]);output=sys.argv[2]
+          print('KC111_PRODUCT_ENVIRONMENT_JSON='+json.dumps({'githubCredentialPresent':False,'environmentKeys':sorted(os.environ),'checkoutAvailable':False}),flush=True)
+          sys.argv=[str(bundle/'qualify.py'),str(bundle),output]
+          runpy.run_path(str(bundle/'qualify.py'),run_name='__main__')
+          PY
       - name: Retain small proof and actual distribution inputs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
