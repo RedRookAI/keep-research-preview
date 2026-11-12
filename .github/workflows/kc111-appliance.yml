@@ -1,0 +1,131 @@
+name: KC111 appliance source and candidate
+on:
+  push:
+    branches: [work/kc111-appliance-2026-11-12]
+permissions:
+  contents: read
+env:
+  # Root supplies this exact existing draft after source/configuration review.
+  KC111_DRAFT_RELEASE_ID: ROOT_PENDING
+  KC111_DRAFT_RELEASE_TAG: ROOT_PENDING
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22.23.4
+          package-manager-cache: false
+      - name: Read existing browser prerequisites
+        run: |
+          python3 - <<'PY'
+          import os,shutil,subprocess,json,platform
+          record={'schema':'keep.appliance.ci-capabilities/v1','runId':os.environ['GITHUB_RUN_ID'],'source':os.environ['GITHUB_SHA'],'kernel':platform.release(),'tools':{},'chromeDriverDirectory':os.environ.get('CHROMEWEBDRIVER')}
+          for tool in ['google-chrome','chromium','chromedriver','qemu-system-x86_64','qemu-img','python3','ssh','docker']:
+            path=shutil.which(tool)
+            record['tools'][tool]={'path':path}
+            if path and tool in ['google-chrome','chromium','chromedriver','python3']:
+              result=subprocess.run([path,'--version'],capture_output=True,text=True,timeout=10)
+              record['tools'][tool]['version']=(result.stdout+result.stderr).splitlines()[:2]
+          print('KC111_CAPABILITIES_JSON='+json.dumps(record))
+          PY
+      - name: Locked emit and affected checks
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node node_modules/typescript/bin/tsc -p tsconfig.json
+          node tools/release_notices.mjs --check
+          node --test --test-concurrency=1 dist/test/reviewer_sample.test.js
+          python3 tools/appliance/test_launcher.py
+          python3 tools/appliance/test_dispatch.py
+  build:
+    if: contains(github.event.head_commit.message, '[kc111-build-approved]')
+    needs: source
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      asset_id: ${{ steps.transfer.outputs.asset_id }}
+      asset_sha256: ${{ steps.transfer.outputs.asset_sha256 }}
+      asset_name: ${{ steps.transfer.outputs.asset_name }}
+      source: ${{ steps.transfer.outputs.source }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22.23.4
+          package-manager-cache: false
+      - name: Validate reviewed destination before setup
+        run: python3 -c 'import os; assert os.environ["KC111_DRAFT_RELEASE_ID"].isdigit(); assert os.environ["KC111_DRAFT_RELEASE_TAG"] != "ROOT_PENDING"'
+      - name: Locked current TypeScript build
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node node_modules/typescript/bin/tsc -p tsconfig.json
+      - name: Build approved image as nonroot with process-only KVM group
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends qemu-system-x86 qemu-utils
+          runner_uid=$(id -u)
+          runner_gid=$(id -g)
+          groups=$(printf '%s\n' "$(id -G | tr ' ' ',')",$(stat -c %g /dev/kvm) | tr ',' '\n' | sort -un | paste -sd, -)
+          sudo setpriv --reuid "$runner_uid" --regid "$runner_gid" --groups "$groups" -- env -i PATH="$PATH" HOME="$HOME" GITHUB_ACTIONS=true GITHUB_SHA="$GITHUB_SHA" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" python3 tools/appliance/build_image.py
+      - name: Transfer exact candidate to reviewed draft
+        id: transfer
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/appliance/upload_candidate.py
+  consumer:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      # Deliberately no checkout or developer dependency cache.
+      - name: Download exact owned candidate asset and verify before extraction
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          KC111_ASSET_ID: ${{ needs.build.outputs.asset_id }}
+          KC111_ASSET_SHA256: ${{ needs.build.outputs.asset_sha256 }}
+          KC111_ASSET_NAME: ${{ needs.build.outputs.asset_name }}
+        run: |
+          python3 - <<'PY'
+          import os,hashlib,urllib.request,tarfile,pathlib
+          root=pathlib.Path('candidate with spaces');root.mkdir(mode=0o700)
+          name=os.environ['KC111_ASSET_NAME']
+          assert pathlib.Path(name).name==name
+          req=urllib.request.Request('https://api.github.com/repos/RedRookAI/keep-research-preview/releases/assets/'+str(int(os.environ['KC111_ASSET_ID'])),headers={'Accept':'application/octet-stream','User-Agent':'Keep-clean-consumer'})
+          req.add_unredirected_header('Authorization','Bearer '+os.environ['GITHUB_TOKEN'])
+          h=hashlib.sha256()
+          with urllib.request.urlopen(req,timeout=600) as response,(root/name).open('xb') as out:
+            while True:
+              block=response.read(1024*1024)
+              if not block:break
+              h.update(block);out.write(block)
+          assert h.hexdigest()==os.environ['KC111_ASSET_SHA256'],'download differs from frozen candidate'
+          with tarfile.open(root/name) as archive:archive.extractall(root,filter='data')
+          bundles=[p for p in root.iterdir() if p.is_dir()]
+          assert len(bundles)==1
+          pathlib.Path('bundle-path').write_text(str(bundles[0].resolve())+'\n')
+          print('KC111_CONSUMER_ARCHIVE_SHA256='+h.hexdigest())
+          PY
+      - name: Clean actual consumer using shipped controls and existing browser
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends qemu-system-x86 qemu-utils
+          runner_uid=$(id -u)
+          runner_gid=$(id -g)
+          groups=$(printf '%s\n' "$(id -G | tr ' ' ',')",$(stat -c %g /dev/kvm) | tr ',' '\n' | sort -un | paste -sd, -)
+          bundle=$(cat bundle-path)
+          sudo setpriv --reuid "$runner_uid" --regid "$runner_gid" --groups "$groups" -- env -i PATH="$PATH" HOME="$HOME" CHROMEWEBDRIVER="${CHROMEWEBDRIVER:-}" python3 "$bundle/qualify.py" "$bundle" "$GITHUB_WORKSPACE/consumer-evidence"
+      - name: Retain small proof receipts and screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kc111-consumer-evidence
+          path: consumer-evidence/
+          if-no-files-found: warn
+          retention-days: 1
