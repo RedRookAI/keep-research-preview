@@ -124,6 +124,10 @@ def main():
             proof = json.loads(control(state, 'run', '--', '/opt/keep/node-v22.23.4-linux-x64/bin/node', '/opt/keep/runtime/tools/appliance/guest-proof.mjs'))
             assert proof['passed'] is True and proof['source'] == manifest['source']
             (output / ('guest-proof-' + str(index) + '.json')).write_text(json.dumps(proof, indent=2) + '\n')
+            if index == 1:
+                packages = control(state, 'run', '--', 'dpkg-query', '-W',
+                    '--showformat=${binary:Package}\t${Version}\t${source:Package}\t${source:Version}\n')
+                (output / 'guest-packages.tsv').write_text(packages + '\n')
             # A fresh clone's authorized key must be exactly this import's public key.
             guest_key = control(state, 'run', '--', 'cat', '/home/keep/.ssh/authorized_keys').strip()
             public_key = (state / 'owner-key.pub').read_text().strip()

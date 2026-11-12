@@ -1,13 +1,13 @@
 name: KC111 appliance source and candidate
 on:
   push:
-    branches: [work/kc111-appliance-2026-11-12]
+    branches: [work/kc111-appliance-2026-11-12, work/kc111-candidate-2026-11-12-4ct]
 permissions:
   contents: read
 env:
   # Root supplies this exact existing draft after source/configuration review.
-  KC111_DRAFT_RELEASE_ID: ROOT_PENDING
-  KC111_DRAFT_RELEASE_TAG: ROOT_PENDING
+  KC111_DRAFT_RELEASE_ID: "442420387"
+  KC111_DRAFT_RELEASE_TAG: keep-reviewer-2026-11-12
 jobs:
   source:
     runs-on: ubuntu-24.04

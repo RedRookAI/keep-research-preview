@@ -38,14 +38,14 @@ if (!childMode) {
   const server = await startGatewayServer(fixture.app, { host: '127.0.0.1', port, token, publicBrowserOrigin: origin, reviewerSample: true });
   process.stdout.write(JSON.stringify({ event: 'sample-ready', privateOrigin: server.origin, publicBrowserOrigin: origin,
     root, tokenFile, source: fixture.source, workspaces: fixture.workspaces, baseRevision: fixture.baseRevision,
-    scripted: true, paidCalls: 0, access: 'one operator-assigned invitation instance', execution: 'existing best-effort process profile' }) + '\n');
+    scripted: true, paidCalls: 0, generations: fixture.generations(), access: 'one operator-assigned invitation instance', execution: 'existing best-effort process profile' }) + '\n');
   let closing = false;
   const stop = async () => {
     if (closing) return; closing = true;
     fixture.app.projectRuntime.pauseDispatch();
     await server.close();
     const jobs = fixture.app.projectRuntime.retainedJobs();
-    process.stdout.write(JSON.stringify({ event: 'sample-stopped', root, stateRetained: true,
+    process.stdout.write(JSON.stringify({ event: 'sample-stopped', root, stateRetained: true, generations: fixture.generations(),
       unresolved: jobs.filter(job => ['queued', 'running', 'reconciliation-required'].includes(job.state)).map(job => ({ id: job.id, state: job.state })) }) + '\n');
     // Normal process exit leaves the durable running lease for explicit reconciliation.
     // Never signal a replacement run, clean the instance, or rewrite an uncertain outcome.
