@@ -1,6 +1,6 @@
 # Keep research preview
 
-Start with the [guided browser demo](guided-demo.md) or [installation guide](quickstart.md). The current reviewer appliance is **0.0.29-preview.1**; the separate direct Node archive is **0.0.21-preview.1**. The historical **0.0.19-preview.1** combined archive includes the generation-only Codex engine and restricted OpenClaw plugin described below.
+Start with the [guided browser demo](guided-demo.md) or [installation guide](quickstart.md). The current reviewer appliance is **0.0.30-preview.1**; the separate direct Node archive is **0.0.21-preview.1**. The historical **0.0.19-preview.1** combined archive includes the generation-only Codex engine and restricted OpenClaw plugin described below.
 
 That .19 observation used Node 22.23.3 for Keep and Node 24.22.0 for OpenClaw 2026.10.5. Select a patched runtime using the current [dependency guidance](dependency-status.md). The direct archive route needs Git for repository work and runs without npm installation or Rust/C compilers.
 

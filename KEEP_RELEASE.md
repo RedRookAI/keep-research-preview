@@ -1,4 +1,29 @@
-# Keep 0.0.29-preview.1 — self-contained Linux x64 reviewer appliance
+# Keep 0.0.30-preview.1 — Linux x64 reviewer appliance
+
+Version 0.0.30 fixes proposal approval so unreviewed files cannot be included in a merge. Keep checks the staged diff and candidate commit against the retained proposal before merge or publication. It also updates source comments and the browser wording.
+
+Download the appliance archive and its matching checksum from this release:
+
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.4
+
+The release contains the exact candidate descriptor, consumer receipt, installed inventory, notices, source companion and checksums. Its manifest identifies the source revision, guest image and bundled components.
+
+Use Linux x64 with Python 3.8+, OpenSSH, QEMU tools and existing read/write KVM access. The Debian 13 guest supplies Node 22.23.5, the required sandbox helper and the generation engine. Profile: pc-q35-8.2, 2 vCPU, 2 GiB RAM, 8 GiB virtual disk. First start requires at least 8 GiB of free host storage after extraction.
+
+Start/stop guide:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/reviewer-appliance.md
+
+The browser sample uses authored responses with real edits, executable checks and proposal decisions. Fresh live-account generation and other host platforms remain outside the qualified reviewer profile.
+
+## Historical releases
+
+<details>
+<summary>Earlier archives, checksums and observations</summary>
+
+## Historical 0.0.29-preview.1 reviewer appliance
+
+This archive predates the exact-proposal correction in 0.0.30. Its original identities and observations are retained below.
 
 Download:
 
@@ -23,11 +48,6 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/
 All 289 required source/version pairs were acquired. The release includes the source archive, installed inventory, notices/support and source-index.json. KEEP-RELEASE-SHA256SUMS covers the selected release assets; SHA256SUMS covers the source companion. The source companion and public assets were checked against their complete hashes.
 
 Fresh live-account generation, current OpenClaw-to-Keep handover, independent operator acceptance and full-platform completion remain open. ARM64 and other host profiles are unqualified for this appliance. The earlier combined archive retains its historical qualification below.
-
-## Historical releases
-
-<details>
-<summary>Earlier archives, checksums and observations</summary>
 
 ## Historical 0.0.21-preview.1 combined archive
 

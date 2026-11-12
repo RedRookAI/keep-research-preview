@@ -22,6 +22,10 @@ Metering details:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/monetary-accounting.md
 
+## Proposal approval correction
+
+Versions before 0.0.30-preview.1 could commit an untracked workspace file that was absent from the reviewed proposal. Version 0.0.30 rejects those files and verifies the staged diff and candidate commit before merge or publication. Use the current hosted demo or 0.0.30 appliance for this workflow.
+
 ## Opt-in required project boundary (experimental)
 
 The command runner's `namespaceJail: "required"` mode uses a measured Bubblewrap launcher and kernel namespaces. It refuses unsupported setup. The qualified binary profile is Linux x64 with the expected merged `/usr` layout and exact executable hash.

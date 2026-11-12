@@ -5,19 +5,19 @@ Updated November 12, 2026.
 ## Available now
 
 - Browser walkthrough: prepare a webhook fix, inspect the diff and four checks, approve or veto, and export evidence. The task uses authored responses and real edits/checks.
-- Linux x64 appliance: bundled runtime, required sandbox helper and generation engine. The exact archive passed the browser workflow, both decisions and stop/restart on fresh CI.
+- Linux x64 appliance: bundled runtime, required sandbox helper and generation engine. The release receipt records browser decisions, evidence export and restart results for the exact archive.
 - Genuine Codex case: a historical Unicode-regex repair with its patch, predefined checker and retained execution record.
 - Source: project execution/recovery, memory, research, skills, provider routing, scoped authority and client interfaces. The README describes each area.
 
 Reviewer entry:
 
-https://keep-b.redrook.ai/console
+https://keep-demo.redrook.ai/console
 
 Download and start guide:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/reviewer-appliance.md
 
-The development source is 0.0.29-preview.1. The hosted walkthrough remains 0.0.25-preview.1; the 0.0.29-preview.1 appliance retains its own frozen runtime/assembly sources. Exact identities and observations:
+The source, hosted walkthrough and appliance use 0.0.30-preview.1. Approval checks the staged and committed changes against the reviewed proposal. Exact identities and observations:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/submission-snapshot-2026-11-12.json
 

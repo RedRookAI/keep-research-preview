@@ -1,6 +1,6 @@
 # Use the Linux x64 reviewer appliance
 
-The **0.0.29-preview.1** appliance supplies Keep, Node, Git, the sandbox helper and the generation engine in a Debian 13 guest. Its webhook sample uses two authored responses to produce an edit, four checks and a proposal you can approve or veto. It needs no model account.
+The **0.0.30-preview.1** appliance supplies Keep, Node, Git, the sandbox helper and the generation engine in a Debian 13 guest. Its webhook sample uses two authored responses to produce an edit, four checks and a proposal you can approve or veto. It needs no model account.
 
 ## Host requirements and download
 
@@ -8,13 +8,11 @@ Use Linux x64 with Python 3.8+, OpenSSH, `qemu-system-x86_64`, `qemu-img` and ex
 
 Allow space for the download, roughly 2 GB base image and each instance's writable overlay. First start requires **8 GiB of free host storage after extraction**, in addition to the bundle already on disk. Host Node/npm/Rust are unnecessary; the launcher leaves host tools and policy unchanged.
 
-https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.4
 
-Archive: `keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repack.tar.xz`.
+Download the appliance archive and its matching `.sha256` file from that release. The bundle contains a separate `SHA256SUMS` file for its extracted contents.
 
-SHA256: `b4a0208da9ff6e713a624b0eca034ba4d6d70090f8a88f6c456474f44fc0ec51`.
-
-The exact archive passed approval, veto, four checks, export and stop/restart on a fresh CI host. The release includes matching sources and checksums; the build recipe is under `tools/appliance`.
+The release includes the exact consumer receipt, matching sources and checksums. Version 0.0.30 checks both staged and committed changes against the reviewed proposal before merge. The build recipe is under `tools/appliance`.
 
 ## Start your instance
 
@@ -41,7 +39,7 @@ On a remote host, add an SSH tunnel from your browser's computer using that same
 
 For the hosted walkthrough, use your assigned invitation and its separately supplied credential:
 
-https://keep-b.redrook.ai/console
+https://keep-demo.redrook.ai/console
 
 Choose **Start demo**, then **Prepare the fix**. Inspect the webhook diff and four checks, approve or veto the proposal, then choose **Download evidence**.
 
@@ -56,7 +54,7 @@ Restart retains the same jobs, decisions and exports. Inspect interrupted work b
 
 ## Distribution records
 
-The manifest identifies guest-runtime and host-assembly sources separately. `HOST_SOURCE.tar.gz` contains the assembly source. Guest support includes installed source versions, Built-Using fields, notices, component identities and file checksums. The bundle also carries the pinned Bubblewrap source and build recipe.
+The manifest identifies the source revision and component hashes. The guest runtime's `source-support.tar.gz` contains the matching Keep and host-tool source. Guest support includes installed source versions, Built-Using fields, notices, component identities and file checksums. The bundle also carries the pinned Bubblewrap source and build recipe.
 
 The published Debian source companion contains all 289 required source/version pairs, including the Debian patches in the guest inventory. The release qualification records the exact image and clean-consumer observations.
 

@@ -10,7 +10,7 @@ For repository work, Keep edits a separate workspace, runs executable checks and
 
 Open the browser demo with the invitation credential supplied separately. Choose **Start demo**, then **Prepare the fix**. Keep repairs a webhook handler that counts repeated deliveries twice. Review the diff and four checks, approve or veto the proposal, then download the evidence.
 
-https://keep-b.redrook.ai/console
+https://keep-demo.redrook.ai/console
 
 The prepared task uses two authored responses with real workspace edits and executable checks. It needs no AI account. Each invitation retains one task and its decision.
 
@@ -51,19 +51,19 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/
 
 ## Run locally
 
-The self-contained **0.0.29-preview.1 Linux x64 appliance** includes Node, the sandbox helper and generation engine. Its browser workflow passed approval, veto, four checks, evidence export and stop/restart on fresh CI.
+The self-contained **0.0.30-preview.1 Linux x64 appliance** includes Node, the sandbox helper and generation engine. The release receipt identifies the archive checked for approval, veto, evidence export and stop/restart.
 
 The host needs Python 3.8+, OpenSSH, QEMU tools, existing KVM access and at least 8 GiB free at first startup after extraction. Read the start guide before downloading.
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/reviewer-appliance.md
 
-https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.4
 
 | Snapshot | Version |
 |---|---|
 | Development source | 0.0.30-preview.1 |
-| Hosted demo | 0.0.25-preview.1, source 8e8eeaa |
-| Appliance | 0.0.29-preview.1, runtime 253fbca / assembly 73fabd7 |
+| Hosted demo | 0.0.30-preview.1, source 8f4f4da |
+| Appliance | 0.0.30-preview.1; exact source and image hashes in its manifest |
 
 The hosted demo and appliance retain their frozen code. Fresh live-account generation on the appliance remains untested. The release record contains exact hashes and the historical direct-install archives.
 

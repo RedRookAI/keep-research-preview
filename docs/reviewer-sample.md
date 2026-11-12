@@ -4,7 +4,7 @@ The sample gives one assigned reviewer a separate instance and a prepared webhoo
 
 The current assigned reviewer sign-in is:
 
-https://keep-b.redrook.ai/console
+https://keep-demo.redrook.ai/console
 
 The operator supplies its credential separately. The [guided demo](guided-demo.md) records the public HTTPS result; [personal account setup](codex-project.md) is separate.
 

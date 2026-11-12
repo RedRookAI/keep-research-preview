@@ -2,17 +2,17 @@
 
 Open your assigned browser invitation and enter its separately supplied credential:
 
-https://keep-b.redrook.ai/console
+https://keep-demo.redrook.ai/console
 
 Choose **Start demo**, then **Prepare the fix**. Review the diff and four checks, approve or veto the proposal, and download the evidence. The sample uses authored responses and needs no AI account. [Full walkthrough](guided-demo.md).
 
 ## Self-contained reviewer appliance
 
-The **0.0.29-preview.1** appliance supplies Keep, Node and the required sandbox in a Linux x64 VM. Your host needs QEMU/KVM with existing KVM access, Python 3.8+ and OpenSSH. It passed both browser decisions, checks, export and stop/restart on a fresh CI machine.
+The **0.0.30-preview.1** appliance supplies Keep, Node and the required sandbox in a Linux x64 VM. Your host needs QEMU/KVM with existing KVM access, Python 3.8+ and OpenSSH. Its release receipt records the browser decisions, checks, export and restart observations.
 
 Download and checksums:
 
-https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.4
 
 Follow the [appliance guide](reviewer-appliance.md) for storage requirements, startup and shutdown. Personal repository/account setup remains outside the completed account-free consumer result.
 
@@ -58,7 +58,7 @@ Required-jail operations also need the measured Bubblewrap 0.13.0 helper in a pr
 
 ## Build from source
 
-Current development source and the frozen reviewer appliance both carry **0.0.29-preview.1**. Their source commits differ; the [release record](../KEEP_RELEASE.md) identifies the appliance's guest/runtime and assembly inputs. The earlier combined archive is **0.0.21-preview.1**.
+Current development source and the frozen reviewer appliance both carry **0.0.30-preview.1**. Their source commits differ; the [release record](../KEEP_RELEASE.md) identifies the appliance's guest/runtime and assembly inputs. The earlier combined archive is **0.0.21-preview.1**.
 
 Use isolated Linux x64 resources with Node.js 22.23.5 or later on Node 22, npm, Git, Rust 1.97.1 with its musl target, and host C build tools. The build verifies installed pinned tools. [Contributing](../WORKFLOW.md) lists build and partial-source checks.
 
