@@ -5,6 +5,7 @@ import contextlib
 import fcntl
 import hashlib
 import http.server
+from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
@@ -342,6 +343,41 @@ def tunnel(path, data):
     dispatch_owned(path, data, 'tunnel', args, path / 'tunnel.log', cwd=path)
 
 
+class SampleSignin(HTMLParser):
+    """Read the public sign-in contract without depending on display labels."""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.forms = []
+        self.has_token_login = False
+        self.text = []
+        self.nontext = 0
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag in ('script', 'style'):
+            self.nontext += 1
+        elif tag == 'form':
+            self.forms.append(attrs.get('method', '').lower() == 'post' and
+                              attrs.get('action') == '/console/login')
+        elif tag == 'input' and self.forms and self.forms[-1]:
+            if attrs.get('name') == 'token' and attrs.get('type', '').lower() == 'password':
+                self.has_token_login = True
+
+    def handle_endtag(self, tag):
+        if tag in ('script', 'style'):
+            self.nontext = max(0, self.nontext - 1)
+        elif tag == 'form' and self.forms:
+            self.forms.pop()
+
+    def handle_data(self, data):
+        if not self.nontext:
+            self.text.append(data)
+
+    def matches(self, notice):
+        return bool(notice and self.has_token_login and
+                    ' '.join(notice.split()) in ' '.join(''.join(self.text).split()))
+
+
 def sample(path, data, action):
     refuse_pending(data)
     verify_overlay(path, data)
@@ -356,7 +392,10 @@ def sample(path, data, action):
             try:
                 with urllib.request.urlopen(url, timeout=3) as response:
                     body = response.read().decode()
-                if 'Instance credential' not in body or notice not in body:
+                signin = SampleSignin()
+                signin.feed(body)
+                signin.close()
+                if not signin.matches(notice):
                     fail('Forwarded endpoint did not identify the sample console')
                 break
             except OSError:

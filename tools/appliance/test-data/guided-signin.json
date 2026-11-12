@@ -1,0 +1,14 @@
+{
+  "schema": "keep.actual-signin-fixture/v1",
+  "url": "https://keep-b.redrook.ai/console",
+  "checkedUtc": "2026-11-12T06:00:24.675007+00:00",
+  "sha256": "60250c0ddd8d0ccd23daae95af25b47ab8b1684e271df6df932f6f51905f9846",
+  "rendererBlob": "27f41b0450ac0a78b9a49275d0888e9083e8a9ed",
+  "rendererSameInSources": [
+    "8e8eeaaad17f8a7e0aa239edfd4284eb7162a672",
+    "fbd88f7c0190da905b49809290dfa496af290e10"
+  ],
+  "unauthenticatedGetOnly": true,
+  "sampleStarted": false,
+  "credentialsInBody": false
+}

@@ -1,5 +1,6 @@
 """Cheap host refusal/ownership checks; no image, installation or VM boot."""
 import importlib.util
+import hashlib
 import io
 import json
 import os
@@ -26,18 +27,53 @@ class HostControls(unittest.TestCase):
     def tearDown(self):
         self.temporary.cleanup()
 
-    def test_sample_readiness_uses_shipped_notice_and_refuses_older_console(self):
+    def check_sample_page(self, body):
         notice = 'Scripted demo · two authored responses · real edits and checks · no AI account or paid calls.'
         (self.root / 'manifest.json').write_text(json.dumps({'sampleContract': {'notice': notice}}))
-        data = {'port': 7788}
         with patch.object(app, 'BUNDLE', self.root), patch.object(app, 'refuse_pending'), \
              patch.object(app, 'verify_overlay'), patch.object(app, 'tunnel'), \
-             patch.object(app, 'guest', return_value=SimpleNamespace(stdout='{"status":"running"}')):
-            with patch.object(app.urllib.request, 'urlopen', return_value=io.BytesIO(('Instance credential ' + notice).encode())):
-                self.assertEqual(app.sample(self.root, data, 'start')['checkedBrowserOrigin'], 'http://127.0.0.1:7788/console')
-            with patch.object(app.urllib.request, 'urlopen', return_value=io.BytesIO(b'Instance credential two scripted responses')):
-                with self.assertRaisesRegex(RuntimeError, 'did not identify'):
-                    app.sample(self.root, data, 'start')
+             patch.object(app, 'guest', return_value=SimpleNamespace(stdout='{"status":"running"}')), \
+             patch.object(app.urllib.request, 'urlopen', return_value=io.BytesIO(body.encode())):
+            return app.sample(self.root, {'port': 7788}, 'start')
+
+    def test_sample_readiness_accepts_retained_actual_guided_signin(self):
+        fixture = Path(__file__).with_name('test-data') / 'guided-signin.html'
+        metadata = json.loads(fixture.with_suffix('.json').read_text())
+        self.assertEqual(hashlib.sha256(fixture.read_bytes()).hexdigest(), metadata['sha256'])
+        self.assertEqual(metadata['rendererBlob'], '27f41b0450ac0a78b9a49275d0888e9083e8a9ed')
+        self.assertIn('fbd88f7c0190da905b49809290dfa496af290e10', metadata['rendererSameInSources'])
+        self.assertTrue(metadata['unauthenticatedGetOnly'])
+        self.assertFalse(metadata['sampleStarted'])
+        self.assertFalse(metadata['credentialsInBody'])
+        body = fixture.read_text()
+        self.assertIn('Invitation credential', body)
+        self.assertNotIn('Instance credential', body)
+        result = self.check_sample_page(body)
+        self.assertEqual(result['checkedBrowserOrigin'], 'http://127.0.0.1:7788/console')
+
+    def test_sample_readiness_accepts_decoded_notice_and_label_changes(self):
+        body = (Path(__file__).with_name('test-data') / 'guided-signin.html').read_text()
+        body = body.replace('·', '&#183;').replace('Invitation credential', 'Reviewer access')
+        self.assertEqual(self.check_sample_page(body)['status'], 'running')
+
+    def test_sample_readiness_refuses_wrong_notice_and_nonlogin_pages(self):
+        body = (Path(__file__).with_name('test-data') / 'guided-signin.html').read_text()
+        notice = 'Scripted demo · two authored responses · real edits and checks · no AI account or paid calls.'
+        cases = {
+            'wrong notice': body.replace('two authored responses', 'three authored responses'),
+            'personal signin': body.replace(notice, '').replace('Invitation credential', 'Instance credential'),
+            'wrong action': body.replace('action="/console/login"', 'action="/console/logout"'),
+            'non-post form': body.replace('method="post"', 'method="get"'),
+            'non-password input': body.replace('type="password"', 'type="text"'),
+            'wrong credential field': body.replace('name="token"', 'name="other"'),
+            'token outside login form': body.replace('<input', '</form><input'),
+            'old fake bare-text positive': 'Instance credential ' + notice,
+            'notice only in script': body.replace('<p class="notice">' + notice + '</p>',
+                                                 '<script>' + notice + '</script>'),
+        }
+        for name, altered in cases.items():
+            with self.subTest(name=name), self.assertRaisesRegex(RuntimeError, 'did not identify'):
+                self.check_sample_page(altered)
 
     def test_private_instance_paths_with_spaces_are_preserved(self):
         path = self.root / 'my private instance'
