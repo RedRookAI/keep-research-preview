@@ -10,7 +10,7 @@ Archive: `keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repa
 
 Guest image SHA256: `0ec8468c91ebf2afabeb88c149e8d48fc85e1485211c6c8849085b52900f1897`. Runtime source: `253fbca62133bef33ecc7d0c4b2192541cb55918`. Host assembly source: `73fabd7a98971335153590193ac9235140d5fbe3`. The release tag adds external qualification documentation without rebuilding those bytes.
 
-Use Linux x64 with Python 3.8+, OpenSSH, qemu-system-x86_64, qemu-img and existing read/write KVM access. The Debian 13 guest supplies Node 22.23.5, the required sandbox helper and measured generation engine. Profile: pc-q35-8.2, 2 vCPU, 2 GiB RAM, 8 GiB virtual disk. Allow disk space for the archive, 1979252736-byte base image and growing instance overlays. No host Node/npm/Rust is used.
+Use Linux x64 with Python 3.8+, OpenSSH, qemu-system-x86_64, qemu-img and existing read/write KVM access. The Debian 13 guest supplies Node 22.23.5, the required sandbox helper and measured generation engine. Profile: pc-q35-8.2, 2 vCPU, 2 GiB RAM, 8 GiB virtual disk. Allow disk space for the archive, 1979252736-byte base image and growing instance overlays. First start additionally requires at least 8 GiB of free host storage after extraction. No host Node/npm/Rust is used.
 
 Start/stop guide:
 
