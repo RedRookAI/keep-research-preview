@@ -1,0 +1,73 @@
+name: KC111 frozen appliance clean consumer
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  # This retry consumes the existing immutable image; it never builds or publishes.
+  KC111_EXPECTED_SOURCE: 88c1a1eb603071d77525c8792631900f2d12e21a
+  KC111_ASSET_ID: "738051360"
+  KC111_ASSET_SHA256: 72ce45c6aa370f4d55d00d94ce1e2c53295635e793bc28a2f7738bd03e5629de
+  KC111_ASSET_NAME: keep-reviewer-0.0.26-preview.1-linux-x64-88c1a1eb6030-43153320417.tar.xz
+jobs:
+  consumer:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      # No checkout or developer cache. Keep the artifact's source independent
+      # from this later, separately identified qualification workflow revision.
+      - name: Download exact frozen asset with explicit API headers and failure details
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import os,hashlib,urllib.request,urllib.error,tarfile,pathlib,json
+          root=pathlib.Path('candidate with spaces');root.mkdir(mode=0o700)
+          name=os.environ['KC111_ASSET_NAME']
+          assert pathlib.Path(name).name==name
+          endpoint='https://api.github.com/repos/RedRookAI/keep-research-preview/releases/assets/'+str(int(os.environ['KC111_ASSET_ID']))
+          def request(accept):
+            req=urllib.request.Request(endpoint,headers={'Accept':accept,'User-Agent':'Keep-exact-clean-consumer/1','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-cache'})
+            req.add_unredirected_header('Authorization','Bearer '+os.environ['GITHUB_TOKEN'])
+            try:return urllib.request.urlopen(req,timeout=600)
+            except urllib.error.HTTPError as error:
+              print('KC111_DOWNLOAD_FAILURE_JSON='+json.dumps({'status':error.code,'response':error.read(8192).decode(errors='replace'),'acceptedPermissions':error.headers.get('X-Accepted-GitHub-Permissions'),'requestId':error.headers.get('X-GitHub-Request-Id')}),flush=True)
+              raise
+          with request('application/vnd.github+json') as response:meta=json.load(response)
+          assert meta['id']==int(os.environ['KC111_ASSET_ID']) and meta['name']==name and meta['digest']=='sha256:'+os.environ['KC111_ASSET_SHA256']
+          h=hashlib.sha256()
+          with request('application/octet-stream') as response,(root/name).open('xb') as out:
+            while True:
+              block=response.read(1024*1024)
+              if not block:break
+              h.update(block);out.write(block)
+          assert h.hexdigest()==os.environ['KC111_ASSET_SHA256']
+          with tarfile.open(root/name) as archive:archive.extractall(root,filter='data')
+          bundles=[p for p in root.iterdir() if p.is_dir()]
+          assert len(bundles)==1
+          pathlib.Path('bundle-path').write_text(str(bundles[0].resolve())+'\n')
+          print('KC111_CONSUMER_TRANSPORT_JSON='+json.dumps({'assetId':meta['id'],'archiveSha256':h.hexdigest(),'source':os.environ['KC111_EXPECTED_SOURCE'],'workflowSource':os.environ['GITHUB_SHA'],'checkoutAvailable':False}),flush=True)
+          PY
+      - name: Clean imported consumer with no platform credential environment
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends qemu-system-x86 qemu-utils
+          runner_uid=$(id -u)
+          runner_gid=$(id -g)
+          groups=$(printf '%s\n' "$(id -G | tr ' ' ',')",$(stat -c %g /dev/kvm) | tr ',' '\n' | sort -un | paste -sd, -)
+          bundle=$(cat bundle-path)
+          sudo setpriv --reuid "$runner_uid" --regid "$runner_gid" --groups "$groups" -- env -i PATH="$PATH" HOME="$HOME" CHROMEWEBDRIVER="${CHROMEWEBDRIVER:-}" KC111_EXPECTED_SOURCE="$KC111_EXPECTED_SOURCE" python3 "$bundle/qualify.py" "$bundle" "$GITHUB_WORKSPACE/consumer-evidence"
+      - name: Retain small proof and actual distribution inputs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: kc111-consumer-evidence
+          path: |
+            consumer-evidence/*.json
+            consumer-evidence/*.png
+            consumer-evidence/guest-packages.tsv
+            consumer-evidence/guest-dpkg-status
+            consumer-evidence/guest-distribution-support.tar.gz
+          if-no-files-found: warn
+          retention-days: 1
