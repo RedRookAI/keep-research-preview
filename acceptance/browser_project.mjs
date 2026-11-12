@@ -68,11 +68,13 @@ try {
   assert.deepEqual(checks.passedTests, ['arithmetic', 'goal: requested outcome']);
   stages.push('real-workspace-diff-and-two-unchanged-checks');
   await page.screenshot({ path: join(root, '02-checked-proposal.png'), fullPage: true });
+  const retainedBefore = fixture.app.projectRuntime.retainedJobs(new Set([projectId])).map(job => job.id).sort();
+  assert.ok(retainedBefore.includes(runId), 'original submission job is retained');
   // The same retained form recovers the accepted job, including after navigating away.
   await page.goto(formUrl); await page.getByLabel('Repository goal').fill(SAMPLE_GOAL);
   await page.getByRole('button', { name: 'Submit goal', exact: true }).click();
   assert.equal(page.url(), projectUrl); assert.equal(fixture.app.projectManager.list().length, 1);
-  assert.equal(fixture.app.projectRuntime.retainedJobs(new Set([projectId])).length, 1); assert.equal(fixture.generations(), 2);
+  assert.deepEqual(fixture.app.projectRuntime.retainedJobs(new Set([projectId])).map(job => job.id).sort(), retainedBefore, 'recovery creates no additional job; explicit step resume has its own job'); assert.equal(fixture.generations(), 2);
   stages.push('same-key-browser-recovery-one-job');
   await page.getByRole('button', { name: 'Veto proposal', exact: true }).click();
   assert.match(await page.locator('main').innerText(), /refused|veto/i);
@@ -93,7 +95,7 @@ try {
   await page.screenshot({ path: join(root, '03-vetoed-export.png'), fullPage: true });
   writeFileSync(join(root, 'result.json'), JSON.stringify({ status: 'PASS', scripted: true, paidCalls: 0, browser: browser.version(), node: process.version,
     sourceRevision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), stages, projectId, runId, proposalDigest: digest,
-    fixtureBaseRevision: fixture.baseRevision, generations: fixture.generations(), checks, sourceUnchanged: true, exported: true }, null, 2));
+    fixtureBaseRevision: fixture.baseRevision, retainedJobCount: retainedBefore.length, originalSubmissionJobId: runId, generations: fixture.generations(), checks, sourceUnchanged: true, exported: true }, null, 2));
   process.stdout.write(JSON.stringify({ status: 'PASS', stages, generations: fixture.generations(), projectId, runId }) + '\n');
 } catch (error) {
   if (page) { await page.screenshot({ path: join(root, 'failure.png'), fullPage: true }).catch(() => {}); writeFileSync(join(root, 'failure.html'), await page.content().catch(() => 'unavailable')); }
