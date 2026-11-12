@@ -1,63 +1,44 @@
 /**
- * PRE-EFFECT WITNESS INTERLOCK.
+ * Seal a content-bound intent before a broker-mediated effect and bind its receipt to that intent.
+ * Adapters bind a resolved object; plain executors bind declared authorized arguments. The latter
+ * binding leaves exact wire-byte verification to the executor. Intents, receipts, terminal outcomes
+ * and replay disclosures use the existing spine chain.
  *
- * THE PROPERTY: a consequential effect is structurally unreachable unless a DURABLE commitment to its execution
- * envelope was sealed FIRST, and the effect's receipt is bound back to that commitment. "Envelope" is scope-honest:
- * for an Incr-11 ADAPTER family it is the RESOLVED object (exact-object binding); for a plain EXECUTOR it is the
- * DECLARED authorized args (semantic-invocation binding — NOT the exact wire bytes). This is Anderson-1972's fourth
- * reference-monitor requirement (audit to a separate domain) + Clark-Wilson's "no effect without a logged, well-formed
- * transaction" + the WAL log-then-act rule, made LOAD-BEARING on the broker's live effect path.
+ * The broker checks the acknowledgement against the canonical intent digest before execution.
+ * A durable SpineStore is required: FileSpineStore with fsync:true flushes sealed blocks before
+ * acknowledging them. Crash survival depends on the filesystem and storage honoring fsync.
+ * This follows the write-ahead-log rule and Clark-Wilson's logged-transaction model.
  *
- * DURABILITY is real and delivered here, not deferred: the ack is returned only after the intent is sealed into the
- * chain AND that write is fsync-flushed to stable storage — provided the injected SpineStore is durable (use
- * `FileSpineStore(dir, { fsync: true })`; the in-memory store is for logic tests only). Crash-survival then rests on
- * the OS/filesystem fsync contract (a named substrate seam — a lying drive / network FS weakens it), never on this
- * library. What 12b adds is INDEPENDENCE (exporting the chain root out of the producer's write-set + a standalone
- * external-root verifier), NOT durability.
- *
- * HONEST SEAM — READ THIS. This is IN-PROCESS, SAME-TRUST-DOMAIN. A compromised Keep can forge the effect AND the
- * witness together: this layer is tamper-EVIDENT, NOT tamper-PROOF, NOT omission-resistant, NOT independent. What
- * 12a delivers that is real: (1) FAIL-CLOSED COUPLING — no first execution without a durably-sealed, content-bound
- * intent whose ack the broker re-validates; (2) a RECEIPT bound to that intent so a replay cannot disclose an
- * unwitnessed result. What makes the evidence chain actually checkable by a third party — exporting the chain ROOT
- * out of the producer's write-set and a standalone verifier that REQUIRES an independently-held root — is Increment
- * 12b. True independence (a witness QUORUM / separate host / TEE, and a separate-role ACK) are named seams C-4/C-5;
- * this module never claims them. The forward-secure key ratchet was deliberately CUT (no secure key erasure in Node,
- * and the key must persist across restarts on the same disk — an external root pins the past without any secret);
- * `keyEpoch` is a placeholder field. SELF-AUDIT 2026-08-18 correction: today it names custody of a key that does not
- * exist (the spine chain is unkeyed, exported roots unsigned). node:crypto ed25519 is PRESENT here, so real signing of
- * chain heads/roots is BUILDABLE (WIRE-BATCH B1/U5) — that makes keyEpoch real and delivers forward integrity via
- * external anchoring. The genuinely-seam residual is HARDWARE-backed forward-secure signing with attested secure
- * erasure in a TEE (S-tee, next capable model). Until B1 lands, keyEpoch is inert (kept for schema stability).
- *
- * SCOPE (conditional guarantee): the interlock gates only the BROKER-MEDIATED effect path. Until authority boundary's
- * ambient-authority closure is complete (fs/subprocess/env/other-net owners), a buggy/compromised workload can still
- * effect AROUND the broker without touching this interlock — stated, never hidden.
- *
- * COMPOSE-DON'T-DUPLICATE: this builds NO new hash chain. The reference `SpineDurableWitness` records intents /
- * terminals / replay-disclosures as events on the EXISTING spine chain (src/spine) and derives its ack from the
- * spine's own `ChainWitness`. The INTENT's content id (the authoritative binding the broker re-validates) is an
- * `eirDigest` over the full canonical intent (bigint-safe); the spine event payload carries JSON-safe projections.
+ * The witness and effect run in the same trust domain. A compromised producer can rewrite or omit
+ * both. Independent checking requires an externally retained root and separate access controls.
+ * The chain is unkeyed and keyEpoch is retained only for schema compatibility; it does not identify
+ * a signing key. This interlock covers broker-mediated effects. Ambient filesystem, subprocess or
+ * network operations outside the broker need separate mediation and isolation.
  */
 
 import { eirDigest, type CanonicalValue } from "../eir/canonical.js";
 import type { Spine } from "../spine/spine.js";
 
-/** A typed happens-before edge to an existing content-addressed artifact or chain entry (Lamport: causality is an
- *  edge set, not timestamps). The verifier reconstructs the causal DAG from these; each edge names WHAT it proves. */
+/**
+ * A typed causal edge to an existing content-addressed artifact or chain entry.
+ * The verifier reconstructs ordering from these references, following Lamport's happens-before model.
+ */
 export type CausalRef =
   | { readonly kind: "spine-entry"; readonly chainId: string; readonly seq: bigint; readonly entryHash: string }
   | { readonly kind: "decision"; readonly digest: string }
   | { readonly kind: "permit"; readonly permitId: string; readonly guardDigest: string };
 
-/** How tightly the witnessed `executionDigest` binds the real effect (seam-honest naming, per the design attack):
- *  - "exact-object": an Incr-11 ADAPTER family — bound to the RESOLVED object identity (prepared.canonicalId).
- *  - "semantic-invocation": a plain EXECUTOR family — bound to the DECLARED authorized args, NOT the exact wire
- *    bytes (HTTP body / argv / RPC frame); exact-byte binding for those is a named seam. */
+/**
+ * How executionDigest binds an effect:
+ * - exact-object: the adapter's resolved object identity (prepared.canonicalId).
+ * - semantic-invocation: the executor's declared authorized arguments; exact wire bytes remain
+ *   the executor's responsibility.
+ */
 export type ExecutionBindingKind = "exact-object" | "semantic-invocation";
 
-/** The pre-effect intent: the execution ENVELOPE about to happen (exact-object for an adapter, semantic-invocation
- *  for an executor — see ExecutionBindingKind), plus its causal predecessors. */
+/**
+ * The intended execution and its causal predecessors, with the binding described above.
+ */
 export interface WitnessIntent {
   readonly idemKey: string;            // the broker's full-operation idempotency identity
   readonly attemptId: string;          // unique per attempt (broker nonce + seq) — distinguishes retries of one idemKey
@@ -65,25 +46,29 @@ export interface WitnessIntent {
   readonly epoch: bigint;
   readonly family: string;
   readonly operation: string;
-  readonly objectId: string;           // the RESOLVED object (adapter) / authorized object (executor)
+  readonly objectId: string;           // Resolved adapter object or authorized executor object.
   readonly executionDigest: string;    // binds the prepared envelope / semantic invocation
   readonly bindingKind: ExecutionBindingKind;
-  readonly keyEpoch: bigint;           // INERT placeholder until B1/U5 ed25519 signing lands (see header self-audit note)
+  readonly keyEpoch: bigint;           // Inert compatibility field; no signing key is associated with it.
   readonly causalParents: readonly CausalRef[];
 }
-/** The successful completion of a sealed intent: the effect ran and produced `outputDigest`. Together with
- *  WitnessTerminal it makes the chain COMPLETE — an intent event followed by NEITHER a receipt NOR a terminal is the
- *  ONLY shape that reads as a crash (the WAL orphan), so ordinary denials never raise a false "may-have-fired" alarm. */
+/**
+ * A completed effect bound to its sealed intent and output. An intent without a receipt or
+ * terminal remains unresolved, including after a process crash.
+ */
 export interface WitnessReceipt { readonly intentEntryHash: string; readonly outputDigest: string; }
-/** A terminal disposition of a sealed intent (abort/execute-error) — "NOT a crash orphan". */
+/** Explicit abort or execution-error disposition for a sealed intent. */
 export interface WitnessTerminal { readonly intentEntryHash: string; readonly disposition: "aborted" | "error"; readonly reason: string; }
-/** A served idempotent replay is an INFORMATION effect: it is witnessed (parent = the original intent) fail-closed
- *  BEFORE the cached output is disclosed. */
+/**
+ * Record a replay disclosure against its original intent before releasing the cached output.
+ */
 export interface ReplayDisclosure { readonly intentEntryHash: string; readonly idemKey: string; }
 
-/** The acknowledgement a durable witness returns after sealing an intent. The broker RE-VALIDATES that `entryHash`
- *  equals the intent content id IT computed and that `executionDigest` echoes what it sent — so a stale/unrelated ack
- *  can never open the gate. `seq`/`root`/`headHash` pin the chain position (12b exports these out of the write-set). */
+/**
+ * Acknowledgement returned after sealing an intent. The broker compares entryHash with its own
+ * intent digest and executionDigest with the submitted execution. seq, root and headHash identify
+ * the chain position for later verification.
+ */
 export interface WitnessAck {
   readonly chainId: string;
   readonly seq: bigint;
@@ -93,11 +78,11 @@ export interface WitnessAck {
   readonly executionDigest: string;    // echoes intent.executionDigest
 }
 
-/** The pre-effect witness the broker consults. `sealIntent` MUST durably commit before returning an ack (the reference
- *  sink is fsync-durable when backed by `FileSpineStore(dir, {fsync:true})`); it THROWS if it cannot — the broker treats a throw / missing / mismatched ack
- *  as FAIL-CLOSED (no effect). `sealTerminal` / `observeReplay` are post-authorization records; `observeReplay` is
- *  fail-closed BEFORE a replay discloses. All are async so a real out-of-process / quorum sink (timeout, network,
- *  cancellation) fits behind the SAME interface — no method may "continue anyway" on failure. */
+/**
+ * Witness port used by the broker. sealIntent must durably commit before returning; a failure or
+ * mismatched acknowledgement prevents execution. observeReplay must complete before disclosing
+ * cached output. Implementations must honor cancellation and report failures to the caller.
+ */
 export interface DurableWitness {
   sealIntent(i: WitnessIntent, signal?: AbortSignal): Promise<WitnessAck>;
   sealReceipt(r: WitnessReceipt, signal?: AbortSignal): Promise<void>;
@@ -105,8 +90,10 @@ export interface DurableWitness {
   observeReplay(r: ReplayDisclosure, signal?: AbortSignal): Promise<void>;
 }
 
-/** The AUTHORITATIVE binding: the content id of an intent, computed with eirDigest (RFC-8949 CBOR, bigint-safe). The
- *  broker recomputes this itself and requires the ack's `entryHash` to equal it — the ack is not trusted on its word. */
+/**
+ * Canonical intent digest using bigint-safe RFC 8949 CBOR. The broker recomputes this digest
+ * and requires the acknowledgement's entryHash to match.
+ */
 export function intentEntryHash(i: WitnessIntent): string {
   return eirDigest("keep.witness.intent/v1", intentCanonical(i));
 }
@@ -126,7 +113,7 @@ function intentCanonical(i: WitnessIntent): CanonicalValue {
   };
 }
 
-/** Honor a caller AbortSignal: a pre/mid-seal abort throws so the broker denies pre-effect (see class SIGNAL note). */
+/** Refuse a cancelled seal so the broker cannot dispatch its effect. */
 function throwIfAborted(signal?: AbortSignal): void {
   let aborted = false; try { aborted = signal?.aborted === true; } catch { aborted = true; } // hostile getter ⇒ treat as aborted
   if (aborted) throw new Error("witness seal aborted by caller signal");
@@ -142,18 +129,14 @@ function jsonSafe(v: unknown): unknown {
 }
 
 /**
- * The reference DurableWitness, backed by the EXISTING spine chain (composition, not a new log). Each seal stages a
- * typed event and seals it into the hash-chain, then derives the ack from the spine's head witness. The ack is
- * returned ONLY after the intent is sealed into the chain; crash-survival requires a durable store —
- * `FileSpineStore(dir, { fsync: true })` fsync-flushes each block before the seal returns.
+ * DurableWitness backed by the spine chain. Each method stages a typed record and seals it.
+ * sealIntent returns the resulting chain position only after the store confirms the seal.
+ * FileSpineStore with fsync:true supplies the required durable write.
  *
- * SIGNAL: `sealIntent` honors the caller AbortSignal (a pre/mid-seal abort throws → the broker denies pre-effect). The
- * broker does NOT independently race the witness await — racing-and-abandoning a seal that then commits would create a
- * false crash orphan — so a witness that IGNORES the signal and hangs can strand dispatch. That is the same trusted-
- * component seam class as a hung executor/store: an out-of-process/quorum sink MUST honor the signal (named, not hidden).
- *
- * SEAM: this witness sink lives (today) in the agent's own write-set → DETECTION, not independence. 12b exports the
- * root out of the write-set; a quorum/separate host is C-4/C-5.
+ * Cancellation is checked before and after sealing. The broker awaits the witness rather than
+ * abandoning a pending seal, which could later commit without a recorded terminal outcome.
+ * A sink that ignores cancellation can stall dispatch. External implementations must preserve
+ * this contract. Independent retention of the chain root is configured separately.
  */
 export class SpineDurableWitness implements DurableWitness {
   readonly #spine: Spine;
@@ -173,7 +156,7 @@ export class SpineDurableWitness implements DurableWitness {
       ...(jsonSafe(intentCanonical(i)) as Record<string, unknown>),
     } });
     const w = await this.#seal();
-    throwIfAborted(signal); // re-check AFTER the seal: a post-commit abort throws → the broker's commit-then-throw path seals an aborted terminal (no false crash orphan)
+    throwIfAborted(signal); // A post-commit abort enters the broker's aborted-terminal path.
     return { chainId: this.#chainId, seq: w.seq, root: w.root, headHash: w.headHash, entryHash, executionDigest: i.executionDigest };
   }
 
@@ -193,12 +176,13 @@ export class SpineDurableWitness implements DurableWitness {
     throwIfAborted(signal);
     this.#spine.stage({ type: "effect.replay-disclosure", actor: this.#actor, payload: { kind: "effect.replay-disclosure", intentEntryHash: r.intentEntryHash, idemKey: r.idemKey } });
     await this.#seal();
-    throwIfAborted(signal); // re-check AFTER the seal: a post-seal abort denies the replay disclosure (broker fail-closes)
+    throwIfAborted(signal); // A post-seal abort prevents disclosure of the cached result.
   }
 
-  /** Seal pending events into the chain and return the head witness. A seal that yields no reachable head (empty
-   *  chain — impossible right after a stage, but total) THROWS so the broker fails closed rather than trusting a
-   *  witness-less ack. */
+  /**
+   * Seal pending records and return the resulting head. Refuse an acknowledgement without a
+   * reachable chain head.
+   */
   async #seal(): Promise<{ seq: bigint; root: string; headHash: string }> {
     await this.#spine.seal();
     const head = this.#spine.witnessHead();

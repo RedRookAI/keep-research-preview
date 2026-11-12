@@ -1,19 +1,11 @@
 /**
- * ROOT EXPORT OUT OF THE WRITE-SET.
+ * Export chain roots outside the agent's data directory and verify against the highest retained root.
+ * Paths are resolved through symlinks before their location is accepted. An external root can expose
+ * changes to a chain when an attacker can modify only the data directory.
  *
- * WHAT 12a LEFT OPEN. 12a made a consequential effect fail-closed on a DURABLE, fsync-committed pre-effect intent, and
- * the hash-chain (src/spine) is tamper-EVIDENT. But the witness sink defaults into the agent's OWN data directory — the
- * same write-set. The sharpest disproof (from the dual design-attack): "your verifier verifies whatever the producer's
- * disk says; nothing hands a root to anyone else, so every guarantee reduces to 'the producer is internally consistent'."
- *
- * WHAT 12b BUILDS — and the HONESTY BOUNDARY (do not let the name overclaim). The mechanical property this module
- * establishes is OUT-OF-WRITE-SET: the exported root lives OUTSIDE the agent's dataDir (canonicalized against symlinks),
- * so a compromise confined to the dataDir cannot rewrite both the chain and the root. That is NECESSARY but NOT
- * SUFFICIENT for independence: the SAME PROCESS still holds write permission to the export file, so a compromise of the
- * agent process itself can still rewrite it. TRUE INDEPENDENCE begins only when a SEPARATE PRINCIPAL / append-only
- * receiver retains the root (and a WITNESS QUORUM turns split-view DETECTION into PREVENTION) — those are NAMED SEAMS
- * C-4/C-5, never faked here. So: `outOfWriteSet` is the honest label; the standalone verifier says it matched a
- * "caller-supplied external reference", and independence of that reference is the operator's PRECONDITION to establish.
+ * The producer process still has write access to the export. Independent retention requires a
+ * separate principal or an append-only receiver with its own access controls. This module checks
+ * agreement with the supplied reference; the operator establishes that reference's independence.
  */
 
 import { readFileSync, existsSync, writeFileSync, realpathSync, lstatSync } from "node:fs";
@@ -39,9 +31,10 @@ export function isValidWitness(w: unknown): w is ChainWitness {
     && typeof o.headHash === "string" && HEX64.test(o.headHash);
 }
 
-/** Canonicalize a path against symlinks: realpath the DEEPEST EXISTING ANCESTOR, then re-append the not-yet-existing
- *  tail. So `/link/witness` (where /link → /data) resolves to `/data/witness`, defeating a symlink that would otherwise
- *  hide a same-write-set destination behind a lexically-outside path. */
+/**
+ * Resolve the deepest existing ancestor through symlinks, then append the missing path components.
+ * This keeps an alias such as /outside -> /data from hiding a destination inside the data directory.
+ */
 function canonicalPath(p: string): string {
   let cur = resolve(p);
   const tail: string[] = [];
@@ -51,11 +44,8 @@ function canonicalPath(p: string): string {
 }
 
 /**
- * Classify a witness destination relative to the agent's data directory — OUT-OF-WRITE-SET iff the canonicalized
- * witness path is NOT inside (and is not) the canonicalized dataDir. Symlink-resolved (not merely string `resolve`),
- * so a `/outside → /dataDir` alias cannot masquerade as out-of-write-set. This is a NECESSARY condition, not
- * independence (see the module header): the producer process still owns the file — a separate principal / quorum is the
- * independence seam.
+ * Check whether the canonical witness path is outside the canonical data directory.
+ * Filesystem separation alone leaves the producer's write authority unchanged.
  */
 export function classifyExportLocation(witnessPath: string, dataDir: string): ExportLocation {
   if (typeof witnessPath !== "string" || witnessPath.length === 0) return { outOfWriteSet: false, reason: "witness path is empty" };
@@ -70,42 +60,36 @@ export function classifyExportLocation(witnessPath: string, dataDir: string): Ex
   return { outOfWriteSet: true, reason: `witness destination (${w}) is outside the dataDir (${d})` };
 }
 
-/** Throw (fail-closed) unless the destination is out-of-write-set. Use when the operator REQUIRES it. */
+/** Refuse a destination inside the data directory when external storage is required. */
 export function assertOutOfWriteSet(witnessPath: string, dataDir: string): void {
   const v = classifyExportLocation(witnessPath, dataDir);
-  if (!v.outOfWriteSet) throw new WitnessExportError(`an out-of-write-set witness was required but ${v.reason}. Point it at a path outside the agent's dataDir (a SEPARATE PRINCIPAL / append-only receiver / quorum is required for true independence — seam C-4/C-5).`);
+  if (!v.outOfWriteSet) throw new WitnessExportError(`an out-of-write-set witness was required but ${v.reason}. Use a path outside the agent's dataDir. Independent retention requires a separate principal or append-only receiver.`);
 }
 
 /**
- * A durable (fsync) file-backed WitnessSink whose destination is REQUIRED (by default) to be outside the agent's
- * write-set. Each publish is fsync-flushed (shared durable_fs — short-write loop + durable directory entry) so an
- * exported root survives the crash of the actor it indicts. Content is validated JSONL of ChainWitness records.
+ * File-backed witness export with fsync on each published record. By default, the destination
+ * must be outside the data directory. Records use validated ChainWitness JSONL.
  */
 export class DurableWitnessExport implements WitnessSink {
   readonly #path: string;
   readonly location: ExportLocation;
   /**
-   * @param dir      export directory (SHOULD be outside dataDir)
+   * @param dir      export directory, outside dataDir by default
    * @param dataDir  the agent's data directory (to classify out-of-write-set)
    * @param opts.requireOutOfWriteSet  throw if `dir` is inside dataDir (default true)
-   * @param opts.filename  BASENAME only (path separators / ".." rejected — no traversal out of `dir`)
+   * @param opts.filename  bare filename; path separators and ".." are rejected
    */
   constructor(dir: string, dataDir: string, opts?: { requireOutOfWriteSet?: boolean; filename?: string }) {
     const require = opts?.requireOutOfWriteSet !== false;
     const filename = opts?.filename ?? "witness-export.jsonl";
     if (filename !== basename(filename) || filename === "" || filename === "." || filename === "..") throw new WitnessExportError(`witness export filename must be a bare basename (no path traversal): got "${filename}"`);
     const absDir = resolve(dir); // fix relative dirs (a relative `dir` must not read as an escape below)
-    // Gate BEFORE creation (lexical + existing-ancestor realpath).
+    // Check the resolved existing ancestry before creating the directory.
     this.location = classifyExportLocation(absDir, dataDir);
     if (require && !this.location.outOfWriteSet) throw new WitnessExportError(`DurableWitnessExport requires an out-of-write-set destination but ${this.location.reason}`);
-    // Create the dir durably, then CANONICALIZE it (it now exists → symlinks resolve) and RE-ASSERT + PIN the canonical
-    // path: all subsequent creation/publish use the symlink-RESOLVED path, so a later retarget of the ORIGINAL `dir`
-    // symlink cannot redirect future witnesses back inside the write-set. SEAM: a component of the CANONICAL path being
-    // replaced AFTER construction is a residual TOCTOU. NOTE (self-audit 2026-08-18 correction): the LEAF-swap case is
-    // closable with a one-flag O_NOFOLLOW open on the append fd — BUILDABLE here, scheduled as WIRE-BATCH B5, NOT a
-    // substrate seam. Only a full directory-COMPONENT-replacement defense (openat2/RESOLVE_BENEATH) is a genuine
-    // zero-dep Node limit. (A write-set-confined attacker who re-binds the path is, separately, excluded by the
-    // separate-principal independence tier.) Named, not hidden.
+    // Resolve and pin the newly created directory. Retargeting the original alias then leaves
+    // this path unchanged. Replacing a canonical directory component after validation remains
+    // a check/use race; the export directory requires trusted filesystem custody.
     ensureDurableDir(NODE_IO, absDir);
     const canonicalDir = canonicalPath(absDir);
     const reasserted = classifyExportLocation(canonicalDir, dataDir);
@@ -113,14 +97,10 @@ export class DurableWitnessExport implements WitnessSink {
     this.location = reasserted;
     this.#path = join(canonicalDir, filename);
     if (dirname(this.#path) !== canonicalDir) throw new WitnessExportError(`witness export path escaped its directory: ${this.#path}`);
-    // If a leaf ALREADY exists it must be a REGULAR file — NOT a symlink (durableAppend's "a" open would FOLLOW it,
-    // writing INSIDE the write-set while we report outOfWriteSet:true; note a DANGLING symlink's "a" open would even
-    // CREATE its target) and not a device/fifo/etc; and the REAL leaf must be out-of-write-set. Validation uses
-    // `lstatSync` (which does NOT follow the link, so a dangling symlink is still caught — `existsSync` would return
-    // false for it) with ONLY ENOENT meaning "absent". We validate BEFORE create AND again after an EEXIST (a leaf
-    // introduced between the two). Residual: a leaf swapped in AFTER the final validation is the named component-
-    // replacement TOCTOU seam (needs openat/O_NOFOLLOW substrate = the separate-principal seam); a HARD link into
-    // dataDir needs write access to this out-of-write-set dir, i.e. the separate principal the threat model excludes.
+    // Require an existing leaf to be a regular file outside the data directory. lstat also
+    // catches dangling symlinks. Recheck after a competing create reports EEXIST.
+    // Later leaf replacement or a hard link remains possible for a writer with directory
+    // access; these checks require that access to remain trusted through publication.
     const validateLeaf = (): void => {
       let st;
       try { st = lstatSync(this.#path); } catch (e) { if ((e as { code?: string } | null)?.code === "ENOENT") return; throw e; }
@@ -129,11 +109,10 @@ export class DurableWitnessExport implements WitnessSink {
       if (require) { const c = classifyExportLocation(realpathSync(this.#path), dataDir); if (!c.outOfWriteSet) throw new WitnessExportError(`existing witness export leaf resolves INTO the write-set: ${c.reason}`); }
     };
     validateLeaf();
-    // EXCLUSIVE create ("wx"): never TRUNCATE an existing export. EEXIST = the file already exists — RE-VALIDATE it
-    // (it may have been introduced, e.g. as a symlink, between the check and the create).
+    // Exclusive creation preserves existing records; validate any concurrently created leaf.
     try { writeFileSync(this.#path, "", { flag: "wx" }); }
     catch (e) { if ((e as { code?: string } | null)?.code !== "EEXIST") throw e; validateLeaf(); }
-    fsyncDir(NODE_IO, canonicalDir); // fsync the dir entry on BOTH create AND re-open — a first-time cross-process race loser must not publish before the entry is durable
+    fsyncDir(NODE_IO, canonicalDir); // Persist the directory entry even when another process created it.
   }
 
   publish(w: ChainWitness): void {
@@ -141,11 +120,11 @@ export class DurableWitnessExport implements WitnessSink {
     durableAppend(NODE_IO, this.#path, JSON.stringify({ seq: w.seq, cumulativeRoot: w.cumulativeRoot, headHash: w.headHash }) + "\n");
   }
 
-  /** Read published roots. Tolerates ONLY a torn UNTERMINATED TRAILING fragment (a crash mid-publish leaves a partial
-   *  last line with no newline) so a normal crash never triggers a false tamper. A complete-but-malformed line, or ANY
-   *  malformed NON-trailing line, is CORRUPTION and THROWS — surfaced loud (boot reconcile degrades to an auditable
-   *  "unreadable" tamper event, compose.ts) rather than silently DROPPED, which would let a rewrite of the highest
-   *  witness downgrade consumers to an older root and defeat anti-rollback. */
+  /**
+   * Read published roots, tolerating a torn final record without a newline after a crash.
+   * Complete malformed records and malformed interior records throw. Silently discarding them
+   * could replace the latest reference with an older root.
+   */
   history(): readonly ChainWitness[] {
     if (!existsSync(this.#path)) return [];
     const text = readFileSync(this.#path, "utf8");
@@ -155,13 +134,12 @@ export class DurableWitnessExport implements WitnessSink {
     for (let i = 0; i < lines.length; i++) {
       const raw = lines[i]!;
       const isLast = i === lines.length - 1;
-      // The ONLY legitimately-empty element is the terminator artifact: a terminated file's split yields a trailing "".
+      // Splitting a newline-terminated file produces one trailing empty element.
       if (isLast && terminated && raw === "") continue;
-      // The ONLY forgivable damage is an UNTERMINATED final fragment (a crash mid-publish).
+      // A crash may leave an incomplete final record without its newline.
       const tornTrailing = isLast && !terminated;
       const t = raw.trim();
-      // A blank/whitespace line that is NOT the terminator artifact and NOT a torn fragment is CORRUPTION — a highest
-      // record blanked to whitespace must NOT be silently dropped (which would downgrade consumers to an older root).
+      // A blank interior record is corruption; skipping it could hide the highest retained root.
       if (t.length === 0) { if (tornTrailing) continue; throw new WitnessExportError(`corrupt witness export at line ${i + 1} (blank record)`); }
       let parsed: unknown;
       try { parsed = JSON.parse(t); } catch { if (tornTrailing) continue; throw new WitnessExportError(`corrupt witness export at line ${i + 1} (unparseable)`); }
@@ -171,9 +149,10 @@ export class DurableWitnessExport implements WitnessSink {
     return out;
   }
 
-  /** The highest-seq published root, CONFLICT-AWARE: two roots at the same max seq with different digests is an external
-   *  fork → THROW (fail-closed; boot reconcile surfaces it). undefined only if nothing valid was published. Not the last
-   *  line — a lower-seq line appended after a higher one must not downgrade a consumer. */
+  /**
+   * Return the root with the highest sequence, regardless of append order. Conflicting digests at
+   * that sequence throw. Return undefined when the export contains no valid records.
+   */
   latest(): ChainWitness | undefined {
     const h = this.history();
     if (h.length === 0) return undefined;
@@ -183,16 +162,17 @@ export class DurableWitnessExport implements WitnessSink {
   }
 }
 
-/** The highest exported root, with conflict detection: two records at the SAME max seq but DIFFERENT roots is itself
- *  proof of a fork in the external history → tamper. All records must be well-formed. */
+/**
+ * Select the highest valid exported root. Conflicting digests at the maximum sequence identify
+ * a fork in the retained history.
+ */
 export type Hwm =
   | { readonly kind: "ok"; readonly witness: ChainWitness }
   | { readonly kind: "invalid"; readonly reason: string }
   | { readonly kind: "conflict"; readonly reason: string };
 export function highestWitness(exported: readonly ChainWitness[]): Hwm {
-  // TWO-PASS so the result is ORDER-INDEPENDENT: first the max seq (all records must be well-formed), then a conflict
-  // check among ONLY the records AT that max seq. A fork BELOW the high-water-mark does not affect anti-rollback (we
-  // verify the local chain against the HWM), so conflict-at-the-HWM is the load-bearing invariant.
+  // Find the maximum sequence first, then compare every root at that sequence. The consumer
+  // verifies against this high-water mark, so append order cannot lower its reference.
   let maxSeq = -1;
   for (const w of exported) { if (!isValidWitness(w)) return { kind: "invalid", reason: `malformed exported root: ${JSON.stringify(w)}` }; if (w.seq > maxSeq) maxSeq = w.seq; }
   if (maxSeq < 0) return { kind: "invalid", reason: "no exported roots" };
@@ -207,9 +187,8 @@ export function highestWitness(exported: readonly ChainWitness[]): Hwm {
 }
 
 /**
- * Verify a local chain against the HIGHEST exported root (anti-rollback + fork/truncation) held OUTSIDE the write-set.
- * Empty/invalid/conflicting export → not ok (never a false "consistent"); else delegates to the spine's
- * verifyAgainstWitness against the high-water-mark.
+ * Verify a local chain against the highest exported root. Empty, invalid or conflicting exports
+ * are rejected. The spine verifier detects divergence or truncation against that retained reference.
  */
 export function verifyAgainstExport(localBlocks: readonly SealedBlock[], exported: readonly ChainWitness[]): WitnessCheck {
   if (exported.length === 0) return { ok: false, kind: "internal", reason: "no exported root (unwitnessed) — cannot claim verified against an external reference" };
@@ -219,13 +198,15 @@ export function verifyAgainstExport(localBlocks: readonly SealedBlock[], exporte
 }
 
 export type VerifyOutcome =
-  | { readonly kind: "verified"; readonly seq: number }         // internally valid AND matches the external root
-  | { readonly kind: "internally-consistent" }                  // internally valid but NO external root supplied — NOT a verification
+  | { readonly kind: "verified"; readonly seq: number }         // internally valid and matches the external root
+  | { readonly kind: "internally-consistent" }                  // internally valid; no external reference supplied
   | { readonly kind: "rollback"; readonly reason: string }      // chain does not reach the exported high-water-mark
   | { readonly kind: "tamper"; readonly reason: string };       // internal tamper, fork vs the external root, or a malformed/forked export
 
-/** Re-derive and classify a chain — the SHARED logic the standalone verifier and any in-process consumer both use, so
- *  the third-party check can never drift from the built-in one. Keys off the STRUCTURED WitnessCheck.kind, not prose. */
+/**
+ * Shared chain classification for the standalone verifier and in-process consumers.
+ * The result uses the structured WitnessCheck.kind rather than diagnostic text.
+ */
 export function classifyChain(localBlocks: readonly SealedBlock[], exported: readonly ChainWitness[] | undefined): VerifyOutcome {
   const internal = verifyChain(localBlocks);
   if (!internal.ok) return { kind: "tamper", reason: `internal chain invalid: ${internal.reason ?? "unknown"}` };

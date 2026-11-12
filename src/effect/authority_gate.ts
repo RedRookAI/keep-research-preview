@@ -1,68 +1,26 @@
 /**
- * ARTIFACT-BOUND CLOSED-WORLD AUTHORITY GATE.
+ * Bind an effect-ownership scan to a signed source manifest and a shrinking legacy waiver.
+ * The gate verifies the manifest, derives its owner map, checks the scanner runtime identity and
+ * runs the scan against the supplied root. The observed graph digest must match artifactGraphDigest.
  *
- * Contract: the gate itself RE-SCANS the DEPLOYED source tree
- * with the owner map from the VERIFIED signed effect manifest, requires the scan's content digest to equal the manifest's
- * signed `artifactGraphDigest`, and admits an unowned effect callsite only if it is a KNOWN legacy one within a signed,
- * generation-chained, only-SHRINKING waiver — so no NEW or UNWAIVED unowned effect exists in the PRODUCT (waived legacy
- * findings intentionally pass; not merely in fixtures), a
- * clean-tree scan cannot be laundered onto a swapped tree AT SIGNING TIME (sign-clean-deploy-dirty is dead; runtime tree
- * mutation is the immutable-artifact substrate seam — see TOCTOU), the OWNER MAP that suppresses findings
- * is the SIGNED one (a poisoned `--owner` cannot hide an effect), and the legacy debt can only be paid down. This repairs
- * the audit's producer-side OVERCLAIM: today the manifest SIGNS `artifactGraphDigest`/`scannerToolDigest` as 64-hex
- * placeholders while the sweep runs only over fixtures with a caller-supplied owner map, so the signature asserts a product
- * property that has NEVER been checked.
+ * A waiver records allowed occurrences by file, family and construct. Its generation and predecessor
+ * bind it to the prior release, and each occurrence count must stay within that baseline. The trusted
+ * boundWaiverDigest and previousReleaseHead prevent substituting an older, larger allowance.
  *
- * Why the gate must DRIVE the scan (the disproofs it closes): (1) a caller-supplied scan could be a STALE scan of a clean
- * tree while a dirty tree is deployed, or a fabricated `{graphDigest, findings:[]}`; (2) a caller-supplied owner map could
- * designate the leaking file as its own family's owner and suppress the finding while the content digest is unchanged; (3)
- * a caller-supplied scanner ENGINE could emit a clean result without scanning. So the gate takes only the deployed ROOT,
- * verifies the manifest, derives the owner map from the SIGNED declarations, verifies the PINNED engine's bytes against the
- * manifest's `scannerToolDigest` (no caller override), runs it itself, and binds the result. Keep is an agent that PATCHES
- * ITS OWN REPO — a prompt-injected patch adding a bare `fetch()` changes the graph digest → the manifest no longer verifies
- * against the running tree → fail-closed. The self-solver is a sign-clean-deploy-dirty machine; this is its interlock.
+ * The binding covers the source files scanned by the walker. Native addons, WebAssembly and other
+ * non-source loader targets need separate artifact protection. The gate trusts the pinned scanner's
+ * semantics, configured keys and release-state bindings. Its reference signature verifier uses the
+ * shared-key stub from bom_signing.ts; asymmetric verification and protected key custody are separate
+ * implementation work.
  *
- * TOCTOU / IMMUTABILITY (stated precisely — not overclaimed): the binding proves the tree AT SCAN TIME equals the signed
- * one; keeping it from changing BETWEEN the boot scan and workload execution requires an IMMUTABLE deployed artifact (a
- * read-only mount / content-addressed store / sealed image) — the substrate seam. On a mutable filesystem a swap after the
- * read is inherent and out of a pure-TS gate's reach; the gate runs as late as possible (boot, over the immutable artifact).
- * So "sign-clean-deploy-dirty is dead" is unconditional; "runtime tree mutation is dead" is conditional on that substrate.
+ * The host must bind root to the actual workload and keep both the workload and scanner runtime
+ * immutable between verification and use. Scanner dependency and executable bytes are measured;
+ * the native loader and shared-library closure remain part of the trusted host. A valid ownership
+ * scan also leaves authority passed through exported helpers or globals outside its routing checks.
+ * Complete mediation requires confinement of those handles and a separate workload boundary.
  *
- * MONOTONE-SHRINKING, GENERATION-CHAINED SIGNED WAIVER (how it goes live over the real, debt-laden tree without a big-bang
- * migration): the real src tree has many pre-existing raw effect callsites. A signed WAIVER enumerates the KNOWN legacy
- * findings WITH A COUNT per (file, family, construct) site — so a SECOND callsite of the same construct in the same file is
- * a NEW occurrence that exceeds the waived count and fails. The current waiver is PINNED by `boundWaiverDigest` (a trusted
- * release binding — like the monitor's clock), and it names its `predecessorDigest` + `generation`, so the baseline it
- * shrank from is exactly the one it points at (a larger historical baseline cannot be substituted to re-enable paid-down
- * debt). The gate PASSES iff: the deployed graph digest matches the signed manifest, every finding-site occurrence count is
- * within the waiver, and every waiver site is within the baseline (counts may only shrink). A ratchet, not a lint.
- *
- * Scope (seam register). This facet closes ARTIFACT-binding + PINNED-ENGINE + SIGNED-owner-map CALLSITE-ownership +
- * exact monotone debt. The graph digest covers the SOURCE-extension file set the walker scans (.ts/.tsx/.mts/.cts/.js/…);
- * NON-SOURCE executable artifacts (native `.node` addons, `.wasm`, data-driven loaders) and a bare `require('./x.node')` /
- * `process.dlopen` of such a target are OUTSIDE the source graph — a FRESH injection still cannot exploit this (adding the
- * loader callsite mutates a SOURCE file → digest mismatch), but a pre-existing signed loader whose non-source TARGET is
- * swapped relies on the immutable-artifact / OS-substrate backstop (below). It TRUSTS: the scanner engine's SEMANTICS (its
- * BYTES are verified BY THIS GATE against the manifest's `scannerToolDigest`, so a swapped engine is caught — but a
- * soundness bug WITHIN the pinned engine is trusted, the same as any verifier TCB), the waiver-signing key material (the
- * same stub-HMAC SEAM as the effect manifest and BOM — a real
- * deployment uses an asymmetric/HSM signer), `boundWaiverDigest` (the trusted release binding, as `now`/epoch are the
- * trusted monitor's), `previousReleaseHead` (the deployment's monotonic release-state head — SAME trust class as
- * boundWaiverDigest), and an IMMUTABLE deployed artifact for the runtime-mutation half of the binding. Two further
- * SUBSTRATE/BOOT bindings are trusted (a pure-TS gate cannot authenticate them — NAMED, not hidden): (i) ROOT-TO-WORKLOAD —
- * that `root` IS the immutable tree the workload actually executes from is the boot binding (boot mounts the sealed image RO
- * and invokes the gate with that same root); the gate proves properties OF `root`, not that the OS loaded the workload from
- * it. (ii) SCANNER RUNTIME IMMUTABILITY — the gate digests the engine entry bytes then spawns it (a check->use window) with
- * a sanitized child env (NODE_OPTIONS/loader hooks stripped, --disable-proto); that the engine file + its dependency closure
- * (the `typescript` devDep) do not change between digest and spawn is the same immutable-artifact substrate. It does NOT prove broker-only
- * ROUTING: an owner that LAUNDERS its authority (wraps a raw primitive in an exported helper, or stashes it on a global)
- * has no unowned callsite and passes — that laundering is UNFIXABLE in a shared isolate and is the documented TOPOLOGY
- * residual (the real closure is the workload in its OWN isolate whose sole channel is the monitor boundary vsock to the broker).
- * Owner-CONFINEMENT (no raw-handle exports / import-time effects) is the next facet; the OS substrate is the physical
- * backstop; string-built module ids + cross-file laundering are dynamic-reference closure. Named, not hidden.
- *
- * Grounding: SLSA/in-toto artifact-to-attestation binding; content-addressed identity (canonical value model); capability-safe
- * module discipline; the ratchet/allowlist-that-only-shrinks pattern; reference-monitor complete mediation of the source graph.
+ * The design uses artifact-to-attestation binding from SLSA/in-toto, content-addressed identity and
+ * an allowlist whose accepted counts can only decrease.
  */
 import { readFileSync, realpathSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -76,8 +34,10 @@ import { scanEffects, type EffectScanResult } from "./effect_scan_port.js";
 import type { SignedBundle } from "../policy/compiler.js";
 
 const HEX64 = /^[0-9a-f]{64}$/;
-/** The PINNED scanner engine — the same default path scanEffects() spawns; NOT caller-overridable (a caller-supplied
- * engine could fabricate a clean result). Its bytes are digested and checked against the manifest's scannerToolDigest. */
+/**
+ * Default scanner entry path. The gate checks its execution closure against the manifest's
+ * scannerToolDigest before accepting scan results.
+ */
 export const defaultEnginePath = (): string => realpathSync(join(process.cwd(), "tools", "effect_sweep.mjs"));
 function pathOnReadOnlyMount(path: string): boolean {
   if (process.platform !== "linux") return false;
@@ -102,8 +62,10 @@ export function scannerRuntimeDigest(enginePath = defaultEnginePath()): string {
 export class AuthorityGateError extends Error { constructor(m: string) { super(`authority gate: ${m}`); this.name = "AuthorityGateError"; } }
 function safeMsg(e: unknown): string { try { const s = String((e as { message?: unknown })?.message ?? e); return s.length > 200 ? s.slice(0, 200) : s; } catch { return "unknown"; } }
 
-/** A KNOWN-legacy unowned-effect SITE, temporarily permitted while the debt is paid down. `count` is the max permitted
- * occurrences of this (file, family, construct) — a further occurrence is a NEW site and fails. */
+/**
+ * A permitted legacy unowned-effect site. count bounds occurrences of this file/family/construct;
+ * an additional occurrence exceeds the waiver.
+ */
 export interface WaiverEntry { readonly file: string; readonly family: string; readonly construct: string; readonly count: number; readonly reason: string; }
 export interface WaiverPayload { readonly version: 1; readonly generation: number; readonly predecessorDigest: string; readonly entries: readonly WaiverEntry[]; }
 export interface SignedWaiver { readonly payload: WaiverPayload; readonly payloadDigest: string; readonly signatures: readonly Signature[]; }
@@ -154,7 +116,7 @@ export function compileWaiver(chain: { generation: number; predecessorDigest: st
 const exactKeys = (o: unknown, allowed: readonly string[]): boolean =>
   o !== null && typeof o === "object" && !Array.isArray(o) && (() => { const k = Object.keys(o).sort(); const a = [...allowed].sort(); return k.length === a.length && k.every((x, i) => x === a[i]); })();
 
-/** Capture a caller-supplied waiver into an OWNED, validated snapshot (TOCTOU-safe); throws AuthorityGateError. */
+/** Validate and copy a waiver so later caller mutations cannot change the checked snapshot. */
 export function captureSignedWaiver(signed: unknown): SignedWaiver {
   if (signed === null || typeof signed !== "object") throw new AuthorityGateError("waiver must be an object");
   const s = signed as Record<string, unknown>;
@@ -200,11 +162,9 @@ function verifyWaiverSigned(signed: unknown, trust: TrustPolicy): SignedWaiver |
 const countMap = (entries: readonly WaiverEntry[]): Map<string, number> => { const m = new Map<string, number>(); for (const e of entries) m.set(siteKey(e), e.count); return m; };
 
 /**
- * THE GATE. Re-scan the DEPLOYED tree, bind it to the signed manifest, and verify the closed-world closure is within a
- * monotone, generation-chained waiver. TOTAL + fail-closed: any malformed input, unverifiable manifest/waiver/baseline,
- * scanner failure, digest mismatch, over-count finding, or grown waiver ⇒ {valid:false, reason}. Passing means: the
- * deployed source graph == the signed one, its owner map is the SIGNED one, and no unowned effect callsite exists except a
- * KNOWN legacy one whose per-site count has not grown vs the baseline.
+ * Scan the supplied source tree and check its manifest binding and generation-linked waiver.
+ * Malformed inputs, verification failures, scanner errors, digest mismatches, excess findings and
+ * growing waivers return valid:false. Acceptance covers the scanned source and declared owner map.
  */
 export function verifyAuthorityClosure(opts: {
   root: string;                                              // the DEPLOYED src dir the gate RE-scans itself

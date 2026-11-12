@@ -61,7 +61,7 @@ https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-20
 
 | Snapshot | Version |
 |---|---|
-| Development source | 0.0.29-preview.1 |
+| Development source | 0.0.30-preview.1 |
 | Hosted demo | 0.0.25-preview.1, source 8e8eeaa |
 | Appliance | 0.0.29-preview.1, runtime 253fbca / assembly 73fabd7 |
 

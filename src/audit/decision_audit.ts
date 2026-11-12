@@ -1,27 +1,12 @@
 /**
- * Local-audit + OTLP export — make every gate decision observable.
+ * Derive local audit records and OTLP log records from existing gate decisions.
+ * The audit copies the route, barrier results and reasons without recomputing the gate. A local sink
+ * receives the record first; optional synchronous export failures are reported through exportDropped.
+ * The injected sink and exporter control their own latency, and a local sink error propagates.
  *
- * A pure, total function DERIVES a structured audit record from a gate decision (the eight barrier
- * verdicts + the route + the deciding reasons) and shapes it as an OTLP LogRecord. It is DERIVED, not
- * re-judged: the audit reflects the decision that was made; it never recomputes the gate. It is
- * LOCAL-FIRST: the record is written to a local append-only sink that works with no network; the real
- * OTLP collector/exporter endpoint is a SEAM (export is best-effort, a dropped export is itself
- * recorded, and audit NEVER blocks or alters a decision).
- *
- * DISCIPLINE (research, 2026-08-09):
- *  - OTLP log data model: TimeUnixNano, SeverityNumber (smaller = less severe; INFO=9, WARN=13) +
- *    SeverityText, Body (AnyValue), Attributes (per-occurrence key-values), TraceId + SpanId (correlate
- *    the record to a trace), EventName (a named log record is an Event). OTel defines the data model
- *    locally and EXPORT to a collector is a separate pipeline stage — hence local-first + a collector SEAM.
- *  - Every authorization decision is observable: log allow/deny WITH the deciding reason (the security-
- *    audit rule). A hold is WARN severity and carries its reasons.
- *  - Tamper-evident audit vs observability: the spine is the integrity log (what happened, un-alterable);
- *    the OTLP stream is the telemetry (operator-facing, exportable). You want both — this derives the
- *    telemetry from the same decision and can also anchor a compact line in the spine.
- *
- * Extension considerations: richer OTel semantic-convention attributes, or a resource/scope block, extend
- * the record; a real exporter upgrades best-effort export to delivered telemetry. Neither lets the audit
- * change a route — it observes only.
+ * OTLP severity follows the OpenTelemetry log model: INFO=9 for proceeding and WARN=13 for a hold.
+ * Provenance records, content hashes and witness helpers below retain the reported evidence and
+ * its trust limits. Independent storage and signing-key custody require separate configuration.
  */
 
 import type { GateInputs, GateRoute } from "../gate/composed_gate.js";
@@ -79,12 +64,12 @@ export class InMemoryAuditSink implements AuditSink {
   }
 }
 
-/** An optional best-effort OTLP exporter (the collector wire is the SEAM). */
+/** Optional synchronous OTLP exporter; the caller records export failures. */
 export interface OtlpExporter {
   export(otlp: OtlpLogRecord): void; // may throw / be unavailable — caller must not let that block
 }
 
-/** DERIVE the audit record from the decision. Copies verbatim — does NOT re-run the gate. */
+/** Copy the observed route, reasons and barrier inputs into an audit record. */
 export function auditDecision(inputs: GateInputs, decision: GateRoute, now = Date.now()): DecisionAuditRecord {
   return {
     timestamp: now,
@@ -142,8 +127,8 @@ export interface AuditOutcome {
 }
 
 /**
- * Emit the decision audit: derive → shape → write locally (always) → best-effort export (optional).
- * Never throws, never blocks, never alters the decision. A dropped export is recorded on the record.
+ * Write a derived record to the local sink, then attempt optional export.
+ * Exporter errors set exportDropped; local sink errors propagate. The decision itself is unchanged.
  */
 export function emitDecisionAudit(
   inputs: GateInputs,
@@ -163,26 +148,20 @@ export function emitDecisionAudit(
       exportDropped = true; // the gap is recorded; the decision is NOT blocked
     }
   } else {
-    exportDropped = true; // no exporter wired yet (the collector SEAM) — local record stands
+    exportDropped = true; // The local record is retained when no exporter is configured.
   }
   return { record, otlp, exportDropped };
 }
 
 /**
- * VERIFY-PROVENANCE — a composed, auditable verification-provenance record: the full trust story of a fix in ONE
- * serializable artifact. This is the software-layer "action evidence package" (arXiv 2608.00801) for a verification —
- * it answers "what verified this change, from which signals, and what did the gate decide?" (Zylos 2026). Like the rest
- * of this module it is DERIVED and REPORT-ONLY: it reflects verdicts already produced and NEVER recomputes, alters, or
- * weakens any gate. HONEST: a signal that was not computed is marked "not-assessed" — NEVER fabricated as a pass; the
- * summary reflects the WORST signal (a flaky / low-confidence / held result is never summarized as clean). Deterministic
- * + JSON-serializable (same inputs → same record) for third-party reconstruction (isimplifyme's four demands:
- * completeness, point-in-time, attribution, integrity). Cryptographic signing / tamper-evidence / hardware attestation
- * are NAMED SEAMS ("software attestation is necessary but not sufficient", arXiv 2608.00801). ZERO-DEP.
+ * Combine existing verification verdicts into a serializable record. Uncomputed signals remain
+ * not-assessed. The overall result follows the explicit precedence for missing deterministic checks,
+ * failure, human hold and flagged evidence. This function reports those inputs without changing gates.
  */
 
 export interface VerificationProvenanceInput {
   readonly subjectId: string;
-  /** The hard, AUTHORITATIVE deterministic oracle result. undefined ⇒ not assessed (cannot attest). */
+  /** Deterministic oracle result; undefined means not assessed. */
   readonly deterministicPass?: boolean;
   readonly stable?: StableResolutionVerdict;
   readonly crossFamily?: CrossFamilyVerdict;
@@ -203,7 +182,7 @@ export interface VerificationProvenance {
   readonly summary: string;
 }
 
-/** Compose the produced verdicts into ONE report-only provenance record. Pure — never mutates its inputs. */
+/** Combine supplied verdicts without mutating the inputs or changing their decisions. */
 export function verificationProvenance(input: VerificationProvenanceInput): VerificationProvenance {
   const deterministic: "pass" | "fail" | "not-assessed" =
     input.deterministicPass === undefined ? "not-assessed" : input.deterministicPass ? "pass" : "fail";
@@ -226,7 +205,7 @@ export function verificationProvenance(input: VerificationProvenanceInput): Veri
     ? { assessed: false }
     : { assessed: true, route: input.gate.route, reasons: input.gate.reasons };
 
-  // OVERALL reflects the WORST signal (precedence: incomplete < failed < held < flagged < clean, worst wins).
+  // Precedence: unassessed deterministic check, failure, human hold, flagged evidence, then clean.
   let overall: ProvenanceOverall;
   if (deterministic === "not-assessed") overall = "incomplete";
   else if (deterministic === "fail") overall = "failed";
@@ -245,25 +224,16 @@ export function verificationProvenance(input: VerificationProvenanceInput): Veri
 }
 
 /**
- * PROVENANCE-SEAL — a tamper-EVIDENT integrity seal + hash-chain over the verification-provenance record (Level 2
- * "hash-chained" integrity; Auditable Agents, arXiv 2604.05485). A content hash over the record's CANONICAL form
- * (sorted keys — reusing spine `canonicalize`) binds its content; an optional `prevHash` chain link makes a sequence
- * append-only, so any edit to a sealed record — or a break/reorder in the chain — is detectable by re-hashing (the goal
- * is to make tampering DETECTABLE, not impossible; c-sharpcorner/VCT 2026).
- *
- * HONEST SCOPE: this is INTEGRITY / tamper-evidence — it detects EDITS. It is NOT authenticity: the hash does not prove
- * WHO wrote the record. Cryptographic SIGNING (an organisational key / Sigstore-grade attestation) and an external
- * tail-hash WITNESS/anchor are NAMED SEAMS ("substitute a signing key without altering the mechanism… not yet
- * implemented", arXiv 2606.26924). The seal never claims authenticity. Reuses the spine hash primitive; ZERO-DEP
- * (node:crypto is a builtin, the same one the spine hash-chain uses). Verification is TOTAL — a missing/malformed seal
- * or a hash mismatch always reports invalid/tampered, never silently valid.
+ * Hash a provenance record's canonical form with an optional link to the preceding seal.
+ * Verification detects content or chain changes relative to the retained hashes. A producer able
+ * to replace the records and hashes can construct another valid chain. Authentication and independent
+ * history checks require the separate signing and witness mechanisms.
  */
 
 /**
- * The identity ATTESTING a sealed record — the agent/runtime that produced it (SEAL-ATTRIBUTION). Carries the agent id
- * (NEVER the secret token) + optional version + liveness. `liveness` is RECORDED honestly (a killed/unknown attester is
- * recorded as such, NEVER elevated to live). This is ATTRIBUTION, not non-repudiation: without a signature the attester
- * is a SELF-ASSERTED claim — binding it into the hash only prevents it being SILENTLY SWAPPED.
+ * Reported identity of the runtime that produced a record. It contains an identifier, optional
+ * version and liveness state, with no secret token. Binding this claim into a hash detects changes
+ * relative to that hash; authenticated attribution requires separate evidence.
  */
 export interface AttestingIdentity {
   readonly agentId: string;
@@ -279,17 +249,17 @@ export function attesterFrom(agentId: string, registry: { isKilled(id: string): 
 
 export interface SealedProvenance {
   readonly record: VerificationProvenance;
-  /** The attesting agent identity (id + version + liveness), bound INTO the hash. undefined ⇒ unattributed. */
+  /** Reported agent identity bound into the hash; omitted when unattributed. */
   readonly attester?: AttestingIdentity;
   /** Prior seal's hash (ZERO_HASH at genesis) — the chain link. */
   readonly prevHash: string;
   /** SHA-256 over canonicalize({ record, [attester], prevHash }) — the attester is covered when present. */
   readonly hash: string;
-  /** HONEST label: integrity/tamper-evidence only — NOT authenticity. */
+  /** Content-integrity classification; signer identity is checked separately. */
   readonly integrity: "tamper-evident";
-  /** Never claims authorship — signing is a named seam. */
+  /** The base seal is unsigned; signSeal adds a separate signature record. */
   readonly signed: false;
-  /** HONEST: the attester is a SELF-ASSERTED claim (no signature) — attribution binding, NOT non-repudiation. */
+  /** The base seal retains the producer's reported identity as a self-asserted claim. */
   readonly attribution: "self-asserted";
 }
 
@@ -347,29 +317,21 @@ export function verifyProvenanceChain(chain: readonly SealedProvenance[]): Chain
 }
 
 /**
- * SEAL-SIGNING — a pluggable signing PORT over the sealed hash, upgrading self-asserted attribution toward
- * non-repudiation when a key is present. Composes the existing BOM `Signer`/`stubSign` primitive: a DETACHED signature
- * over `seal.hash` (Sigstore/Red Hat 2026: sign the artifact HASH, store the signature detached). The signer is INJECTED,
- * never bundled — the DEFAULT seal stays unsigned/`signed:false`/self-asserted; a signature ADDS a guarantee, it does not
- * replace the deterministic hash.
- *
- * HONEST guarantee ladder (DevSecOps School 2026: "non-repudiation depends on key management"): the reference provider is
- * a KEYED HASH (shared secret) → `keyed-integrity` (a holder of the shared key produced it) — NOT true non-repudiation,
- * because both parties hold the secret. TRUE non-repudiation needs an ASYMMETRIC signer (private-sign / public-verify) or
- * keyless Sigstore/Fulcio-OIDC — those, plus a Rekor-style transparency-log + RFC-3161 timestamp, are NAMED SEAMS. The
- * signed seal records the provider's declared guarantee; it never overclaims. Verification is TOTAL: the seal must be
- * intact FIRST, then the signature must verify over `seal.hash` against a TRUSTED key. ZERO-DEP (node:crypto builtin).
+ * Attach a signature to a sealed content hash, leaving the base seal unchanged.
+ * The reference signer and verifier use the BOM keyed-hash primitive and share a secret. The
+ * returned guarantee field carries the provider's declaration; verification does not establish
+ * asymmetric key separation or key custody. Those require a matching production implementation.
  */
 
 export type SealGuarantee = "keyed-integrity" | "non-repudiation";
 
-/** A signing provider for seals: the underlying signer + its HONEST declared guarantee level. Injected, never bundled. */
+/** Injected signer and its declared guarantee level. */
 export interface SealSigner {
   readonly signer: Signer;
   readonly guarantee: SealGuarantee;
 }
 
-/** The reference keyed-hash signer (reuses BOM `stubSign`). HONEST: shared-secret ⇒ `keyed-integrity`, NOT non-repudiation. */
+/** Shared-secret reference signer reporting keyed-integrity. */
 export function keyedSealSigner(privateKey: string, keyid: string): SealSigner {
   return { signer: { sign: (digest: string): Signature => stubSign(privateKey, keyid, digest) }, guarantee: "keyed-integrity" };
 }
@@ -378,7 +340,7 @@ export interface SignedSeal {
   readonly seal: SealedProvenance;
   /** Detached signature over `seal.hash` (reuses BOM `Signature` = { keyid, sig }). */
   readonly signature: Signature;
-  /** The provider's declared guarantee — never overclaimed (keyed reference = "keyed-integrity"). */
+  /** Provider-declared guarantee; the reference signer reports keyed-integrity. */
   readonly guarantee: SealGuarantee;
 }
 
@@ -392,8 +354,8 @@ export type SealSignatureVerdict =
   | { readonly valid: false; readonly reason: string };
 
 /**
- * Verify a signed seal. TOTAL + fail-safe: the seal must itself be intact (tamper-evidence) FIRST, THEN the signature
- * must verify over `seal.hash` against a TRUSTED key. A bad/absent/untrusted signature never upgrades trust.
+ * Check the content seal, then compare its signature with the configured trusted-key result.
+ * The reference verification uses stubSign; a valid result retains the supplied guarantee label.
  */
 export function verifySignedSeal(signed: SignedSeal | null | undefined, trustedKeys: ReadonlyMap<string, string>): SealSignatureVerdict {
   if (!signed || typeof signed !== "object") return { valid: false, reason: "missing signed seal" };
@@ -409,24 +371,17 @@ export function verifySignedSeal(signed: SignedSeal | null | undefined, trustedK
 }
 
 /**
- * SEAL-WITNESS — anchor a sealed (optionally signed) provenance record into the spine's existing append-only,
- * hash-chained log. Staging a witness event carrying the seal hash (+ signature keyid, if signed) lets the spine's
- * tamper-evident chain TIMESTAMP + ORDER the seal: an entry attests "this seal existed by this point" (Sigstore 2026:
- * an append-only entry "attests that a piece of data existed prior to a certain time"). An inclusion check confirms the
- * seal is a committed leaf in the chain AND that the chain still verifies (a later re-date breaks the chain).
- *
- * HONEST SCOPE: this is a LOCAL-SPINE ordering/timestamp witness — backdating-resistance WITHIN the local chain. It is
- * NOT a public/trustless transparency log: it requires trusting the local operator and is vulnerable to a split-view
- * without EXTERNAL third-party witnesses (su3.io 2026). An external witness / Rekor-style mirror is the NAMED SEAM —
- * the spine's own `makeWitness`/`verifyAgainstWitness` (published to an independent sink) is that seam's primitive. The
- * witness records EXISTENCE-BY-A-POINT; it does NOT re-prove the signature (that is `verifySignedSeal`). ZERO-DEP.
+ * Record a seal hash and optional key identifier in the local spine chain. Once sealed, the event
+ * supplies local ordering and a recorded timestamp. Its integrity depends on the retained chain and
+ * trusted operator; independent observers are needed to detect conflicting views. Signature
+ * verification remains the responsibility of verifySignedSeal.
  */
 
 export interface SealWitness {
   readonly sealHash: string;
   readonly keyid?: string;
   readonly eventId: string;
-  /** HONEST: local spine ordering/timestamp — NOT a public transparency log. */
+  /** Ordering and timestamp recorded by the local spine. */
   readonly scope: "local-spine";
 }
 
@@ -447,9 +402,8 @@ export type InclusionVerdict =
   | { readonly witnessed: false; readonly reason: string };
 
 /**
- * Check inclusion: the seal hash is a COMMITTED witness leaf in the spine's tamper-evident chain AND the chain verifies.
- * Absent ⇒ un-witnessed (never assumed present). Only committed (sealed) events count — a merely-pending stage is not yet
- * chain-protected.
+ * Find a committed witness event and report whether the current spine chain verifies.
+ * Pending events do not count as committed witnesses.
  */
 export function checkSealInclusion(spine: Spine, sealHash: string): InclusionVerdict {
   const committed = spine.replay();
@@ -460,23 +414,17 @@ export function checkSealInclusion(spine: Spine, sealHash: string): InclusionVer
 }
 
 /**
- * WITNESS-MIRROR — reconcile the local seal-witness chain against an INDEPENDENT external sink, closing (partway) the
- * split-view seam. It reconciles the current local chain against the PRIOR witness the external sink published, then
- * advances the sink only if they agree. A silently-rewritten or truncated local chain diverges from the external record
- * and is reported TAMPER (equivocation detection needs an observer "other than the untrusted server" — arXiv 2011.04551).
- *
- * HONEST SCOPE: this raises the bar from local-only to EXTERNALLY-ANCHORED — a SINGLE external witness proves the log is
- * append-only and catches a rewrite/truncation (transparency.dev 2026). But it is ONE witness: full split-view defense
- * needs an M-of-N witness QUORUM (≥2f+1 cosigning; Jovanovic; Sigstore/ArmoredWitness) — that quorum, and a public
- * transparency network, are NAMED SEAMS. The mirror DETECTS divergence; it does not by itself prove which view is
- * canonical without the quorum. Reuses the spine's emitWitness/reconcileAgainst; no new witness protocol. ZERO-DEP.
+ * Compare the local chain with the external sink's previously retained root before advancing it.
+ * Divergence preserves the prior reference and is reported to the caller. The result depends on
+ * independent custody of that reference. A single observer does not supply a witness quorum or
+ * resolve conflicting views across observers.
  */
 
 export interface SealReconcileResult {
   /** true iff the local chain agrees with (or is an authorized restore of) the external record. */
   readonly reconciled: boolean;
   readonly status: "agreed" | "authorized-restore" | "diverged" | "unreconciled" | "unreadable";
-  /** HONEST: a single external observer — NOT an M-of-N public transparency network (the quorum is a named seam). */
+  /** One external observer; quorum agreement is outside this result. */
   readonly witnessScope: "single-external";
   readonly reason: string;
 }
@@ -487,9 +435,8 @@ export interface SealReconcileResult {
  * prior external record it bootstraps and reports `unreconciled` — never assumed to agree.
  */
 export function reconcileSealWitness(spine: Spine, sink: WitnessSink, opts: { readOnly?: boolean } = {}): SealReconcileResult {
-  // readOnly (L20a boot reconcile): DETECT only — do NOT advance the sink. Without it, publishing a witness
-  // on every clean boot grows the file unboundedly and re-parses it O(n) per boot; the sink is advanced by
-  // seal()/checkpoint() (L4) instead. == null also treats a `null` witness line as "no prior witness".
+  // Read-only boot reconciliation leaves publication to seal()/checkpoint(), avoiding a new
+  // record on each boot. A null or undefined prior value means no retained witness.
   const emit = (): void => { if (!opts.readOnly) spine.emitWitness(sink); };
   const prior = sink.latest();
   if (prior == null) {
@@ -510,13 +457,10 @@ export function reconcileSealWitness(spine: Spine, sink: WitnessSink, opts: { re
 }
 
 /**
- * TRUST-REPORT — a composed, honest end-to-end assurance report over the evidence chain. It walks whatever evidence is
- * actually present for a fix (deterministic verdict → seal → attestation → signature → spine witness → external reconcile)
- * and reports ONE overall ASSURANCE LEVEL bounded by the WEAKEST present layer ("posture is only as good as its weakest
- * dependency" — NeuralTrust 2026; trust is non-compositional — iternal.ai 2026). A missing/failed layer CAPS the level
- * and is listed as a GAP; present-but-weak guarantees (keyed-integrity, single-external) are named as upgrade SEAMS and
- * never overclaimed (evidence-present ≠ guarantee-provided — Help Net 2026). REPORT-ONLY: it composes existing verdicts,
- * changes no gate, and is deterministic. ZERO-DEP.
+ * Report the supplied verification, seal, identity, signature and witness evidence.
+ * The level stops at the first missing layer. These labels describe evidence coverage; the function
+ * does not validate the supplied booleans or change an execution gate. Shared-key signatures and
+ * single-observer reconciliation retain their narrower trust limits.
  */
 
 export interface TrustEvidence {
@@ -541,9 +485,9 @@ export interface TrustReport {
   readonly level: AssuranceLevel;
   readonly levelIndex: number; // 0..6
   readonly layers: readonly { readonly name: string; readonly present: boolean; readonly note: string }[];
-  /** Missing/failed ladder layers that CAP the level (weakest-link). Empty for a complete chain. */
+  /** First missing or failed layer that limits the reported level. */
   readonly gaps: readonly string[];
-  /** Named upgrade seams beyond what's achieved — the honest horizon (never claimed as satisfied). */
+  /** Additional capabilities beyond the reported evidence. */
   readonly seams: readonly string[];
   readonly summary: string;
 }
@@ -562,7 +506,7 @@ export function trustReport(e: TrustEvidence): TrustReport {
     { name: "external reconcile", ok: e.reconciled === true, gap: "not reconciled against an external witness" },
   ];
 
-  // Weakest-link: the achieved level is the highest UNBROKEN rung from the base.
+  // Stop the reported level at the first missing layer.
   let idx = 0;
   for (const r of rungs) { if (r.ok) idx++; else break; }
   const level = LEVELS[idx]!;
@@ -570,7 +514,7 @@ export function trustReport(e: TrustEvidence): TrustReport {
   const layers = rungs.map((r) => ({ name: r.name, present: r.ok, note: r.ok ? "present + verified" : "absent / not verified" }));
   const gaps = idx < rungs.length ? [`${rungs[idx]!.name}: ${rungs[idx]!.gap} (caps assurance at ${level})`] : [];
 
-  // Upgrade seams — the honest horizon. Present-but-weak guarantees are named, never counted as stronger.
+  // Retain the limits of shared-key signatures and single-observer reconciliation.
   const seams: string[] = [];
   if (e.signatureValid === true && e.signatureGuarantee === "keyed-integrity") {
     seams.push("signature is keyed-integrity (shared secret) — asymmetric/keyless (Sigstore) signing would provide true non-repudiation");
@@ -578,7 +522,7 @@ export function trustReport(e: TrustEvidence): TrustReport {
   if (e.reconciled === true && (e.reconcileScope ?? "single-external") === "single-external") {
     seams.push("single external witness — an M-of-N witness quorum would provide split-view resistance");
   }
-  // top horizons always beyond L6 with zero-dep reference providers
+  // Protected key custody and public mirroring are outside the reference implementation.
   seams.push("hardware key custody (TEE/HSM) for signing", "a public transparency-log mirror (Rekor-style)");
 
   const summary = `assurance ${level} (${idx}/6 layers)${gaps.length ? ` — capped by: ${gaps[0]}` : " — full chain present"}; ${seams.length} upgrade seam(s) named`;
@@ -586,13 +530,8 @@ export function trustReport(e: TrustEvidence): TrustReport {
 }
 
 /**
- * ASSURANCE-SURFACE — render a trust report into ONE concise, honest operator-facing line for the decision point.
- * "Actionable trust" must be tied to the DECISION, not the raw level (arXiv 2601.04486 2026: "no such thing as
- * actionable trust unless it is linked to the effects of escalation versus closure") — so the line states the assurance
- * level, the single capping gap (the "why"), AND whether the gate is proceeding or holding. It is GLANCEABLE (one line,
- * no jargon dump — OAD 2026) and HONEST: the level is stated as-is, NEVER rounded up or softened into reassurance
- * (miscalibrated signals enhance bias — arXiv 2601.04486). PRESENTATION-ONLY: it renders the existing report + gate
- * route, computes no verdict, mutates nothing, and is deterministic. ZERO-DEP.
+ * Render the reported evidence level, its first gap and the supplied gate route on one line.
+ * This presentation helper leaves both the report and the gate decision unchanged.
  */
 export function assuranceHeadline(report: TrustReport, gateRoute?: "auto-proceed" | "human-hold"): string {
   const gate = gateRoute === "human-hold" ? " · HELD for review" : gateRoute === "auto-proceed" ? " · proceeding" : "";
@@ -602,25 +541,16 @@ export function assuranceHeadline(report: TrustReport, gateRoute?: "auto-proceed
 }
 
 /**
- * ASSURANCE-BUDGET — fold the trust report's assurance level into a cost-aware routing advisory. Spending more on the
- * next (costlier) routing/escalation step is worthwhile only when it would RAISE assurance or resolve the capping gap —
- * "knowing which cheap model will succeed is worth more than additional blind budget… the value of a better SIGNAL, not
- * more sampling" (arXiv 2607.08665 2026). Paying more for the same-or-lower assurance is flagged low-value. It composes
- * the existing trustReport (assurance now vs if-escalated) with the existing cost signal (a USD number from the cost
- * router) — NO new router.
- *
- * SAFE — the advisory never suppresses a NEEDED escalation to save cost: an IRREVERSIBLE (high-consequence) action
- * escalates regardless of cost or assurance gain ("never downgrade a model mid-task" — Taskade 2026). REPORT-ONLY: it
- * advises, it does not override the deterministic floor or the consequence gate (`overridesGate: false`). HONEST: it
- * weighs ASSURANCE — a signal that is "weak, gameable" (arXiv 2607.08665) — NOT correctness; a low-value flag never means
- * the cheaper answer is right (`basis: "assurance-not-correctness"`). Only real trustReport signals are used; never
- * fabricated. Deterministic. ZERO-DEP.
+ * Compare current and projected evidence levels with the supplied marginal escalation cost.
+ * Irreversible consequences always produce an escalation advisory. Other cases report whether
+ * the projected step adds a level or resolves the current limiting gap. This advice measures
+ * reported assurance rather than answer correctness and cannot override the execution gate.
  */
 
 export interface AssuranceBudgetInput {
   /** Assurance at the current (cheaper) step. */
   readonly current: TrustReport;
-  /** Projected assurance IF the costlier next step is taken. */
+  /** Projected assurance after the proposed escalation. */
   readonly ifEscalated: TrustReport;
   /** The marginal cost of escalating (USD per task; from the existing cost router). */
   readonly escalationCost: number;
@@ -632,13 +562,13 @@ export type BudgetAdvice = "escalate-worthwhile" | "escalate-low-value" | "escal
 
 export interface AssuranceBudgetAdvisory {
   readonly advice: BudgetAdvice;
-  /** ifEscalated.levelIndex − current.levelIndex — the REAL assurance delta (never fabricated). */
+  /** Difference between projected and current reported levels. */
   readonly assuranceGain: number;
   readonly resolvesCappingGap: boolean;
   readonly escalationCost: number;
-  /** HONEST: advice-only — never overrides the deterministic floor or the consequence gate. */
+  /** Advisory only; execution gates retain authority. */
   readonly overridesGate: false;
-  /** HONEST: weighs ASSURANCE (a signal), NOT correctness. */
+  /** The advisory compares evidence levels rather than answer correctness. */
   readonly basis: "assurance-not-correctness";
   readonly reason: string;
 }
@@ -649,7 +579,7 @@ export function assuranceBudgetAdvice(input: AssuranceBudgetInput): AssuranceBud
 
   let advice: BudgetAdvice;
   let reason: string;
-  // SAFE — consequence FIRST: an irreversible action escalates regardless of cost or assurance gain. Cost never vetoes it.
+  // Irreversible consequences require escalation regardless of cost or projected gain.
   if (input.consequence === "irreversible") {
     advice = "escalate-required-by-consequence";
     reason = "irreversible consequence — escalation required regardless of cost or assurance gain; cost never suppresses it";

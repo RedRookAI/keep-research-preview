@@ -1,32 +1,12 @@
 /**
- * AI-BOM signing (signer-interface seam + in-env verify-side authenticity logic).
+ * Reference signing and verification for AI-BOM records.
+ * The signed content binds a BOM digest to an optional running measurement. Verification counts
+ * valid results from distinct configured keys and compares that count with the trust threshold.
  *
- * The AI-BOM (`ai_bom.ts`) is TAMPER-EVIDENT via the hash-chain: recompute the digest and compare. But
- * a bad actor can forge a FRESH well-formed manifest — tamper-evidence proves "not silently altered
- * after recording," not "only a trusted party could have produced it." R34 adds AUTHENTICITY: sign the
- * BOM digest with a key the AGENT CANNOT REACH, so a forged manifest fails signature verification.
- *
- * DISCIPLINE (research, 2026-08-09):
- *  - DSSE / in-toto envelope: `{ payload, payloadType, signatures:[{keyid, sig}] }` — the statement +
- *    its signature(s) in one envelope. Signing upgrades SLSA L1 (unsigned) to L2/L3.
- *  - SLSA L3 control/data-plane split: "separate user-defined build steps (data plane) from provenance
- *    generation (control plane); the signing key must be UNREACHABLE by user-defined steps." The agent
- *    (untrusted, data plane) cannot sign its own BOM; only the control-plane signer (HSM/KMS/TEE) can.
- *  - Signatures answer "WHO + that it wasn't changed"; provenance answers "how + from what." Signing is
- *    the "who."
- *  - Transparency log (Rekor): an append-only record of signing events complements the signature —
- *    Keep's SPINE is the Rekor analog (the signed digest is staged to the tamper-evident chain).
- *  - Threshold / fleet cosign (R25): DSSE allows multiple signatures; a k-of-n quorum of fleet signers.
- *
- * Implementation boundary: Implemented is the VERIFY side — recompute the digest, verify each signature
- * against the TRUSTED public keys, require a threshold, and fail safe (absent/tampered/untrusted-key/
- * quorum-not-met → unverifiable → the existing `bomVerified=false` gate veto). The real HSM/KMS/TEE KEY
- * CUSTODY — the private key that never leaves the boundary and the agent cannot reach — is the SEAM
- * (R34), the key-custody family of R25/R37. In-env "signing" is a keyed-hash stub; the sandbox has no HSM.
- *
- * Extension considerations: keyless signing (Sigstore Fulcio ephemeral cert + OIDC) or a real asymmetric
- * KMS key replaces the stub; a transparency-log inclusion proof strengthens auditability. Neither lets
- * a forged manifest or an untrusted-key signature verify.
+ * The envelope follows the payload/signature separation used by DSSE and in-toto. This implementation
+ * uses a keyed SHA-256 stub: verification requires the same secret as signing. It exercises the
+ * binding and threshold rules without providing public-key verification or independent key custody.
+ * Production asymmetric signing requires a matching verifier and protected key storage.
  */
 
 import { bomDigest, type AiBom } from "./ai_bom.js";
@@ -41,15 +21,15 @@ export interface Signature {
   readonly sig: string;
 }
 
-/** DSSE-style envelope: the BOM payload (+ the attested measurement, R37) and its signatures. */
+/** BOM payload, optional running measurement and detached signatures. */
 export interface SignedBom {
   readonly payload: AiBom;
-  /** The R37 attested running-measurement, bound into the signed content (authenticity + integrity). */
+  /** Optional running measurement bound into the signed content. */
   readonly attestedMeasurement?: string | undefined;
   readonly signatures: readonly Signature[];
 }
 
-/** The signer SEAM — a real deployment holds the private key in an HSM/KMS/TEE. */
+/** Injected signing interface; key custody belongs to its implementation. */
 export interface Signer {
   sign(digest: string): Signature;
 }
@@ -57,7 +37,7 @@ export interface Signer {
 /** The verifier's trust policy: which keyids are trusted (keyid → verify key) and the quorum size. */
 export interface TrustPolicy {
   readonly trustedKeys: ReadonlyMap<string, string>;
-  readonly threshold: number; // k-of-n cosign (R25); 1 for a single trusted signer
+  readonly threshold: number; // Required number of distinct trusted signers.
 }
 
 export type SigVerification =
@@ -69,14 +49,14 @@ export function signedContent(payload: AiBom, attestedMeasurement?: string): str
   return `${bomDigest(payload)}|${attestedMeasurement ?? ""}`;
 }
 
-/** The stub signature (stands in for the HSM/KMS signature — the SEAM). */
+/** Keyed-hash reference primitive; signing and verification share the same secret. */
 export function stubSign(privateKey: string, keyid: string, content: string): Signature {
   return { keyid, sig: sha256Hex(`${privateKey}|${content}`) };
 }
 
 /**
- * Verify a signed BOM. Total + fail-safe. Recompute the signed content, count signatures that are BOTH
- * from a TRUSTED key AND valid over the content, and require the threshold. Any shortfall ⇒ unverifiable.
+ * Recompute the signed content and count valid results from distinct configured keys.
+ * Reject absent signatures or a count below the policy threshold.
  */
 export function verifySignedBom(env: SignedBom | undefined, policy: TrustPolicy): SigVerification {
   if (env === undefined) return { verified: false, reason: "no-signed-bom" }; // absent → deny
@@ -86,7 +66,7 @@ export function verifySignedBom(env: SignedBom | undefined, policy: TrustPolicy)
   const seen = new Set<string>();
   for (const s of env.signatures) {
     const key = policy.trustedKeys.get(s.keyid);
-    if (key === undefined) continue; // UNTRUSTED key → does not count (the agent's own key is not trusted)
+    if (key === undefined) continue; // Only configured keys count toward the threshold.
     const expected = stubSign(key, s.keyid, content).sig;
     if (s.sig === expected && !seen.has(s.keyid)) {
       seen.add(s.keyid);
@@ -99,12 +79,12 @@ export function verifySignedBom(env: SignedBom | undefined, policy: TrustPolicy)
   return { verified: true, signerCount: valid };
 }
 
-/** A failed/absent/forged signature → bomVerified=false → the existing gate veto. */
+/** Project the verification result into the gate's bomVerified input. */
 export function signedBomVerified(v: SigVerification): boolean {
   return v.verified === true;
 }
 
-/** In-env stub signer: signs with a fixed private key + keyid. Not an HSM — it only exercises verify. */
+/** Reference signer using an injected shared secret and key identifier. */
 export class StubSigner implements Signer {
   constructor(private readonly privateKey: string, private readonly keyid: string) {}
   sign(content: string): Signature {

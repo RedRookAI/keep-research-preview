@@ -9,6 +9,7 @@ import { computeMicrovmProjectSourceManifestSha256 } from "../infra/microvm_boun
 import type { IdentityRegistry, AgentIdentity } from "../identity/agent_identity.js";
 import type { MergeSpec } from "../oversight/merge_executor.js";
 import type { DevelopmentForgeTarget } from "../git/repository_materializer.js";
+import type { RecoverableProposalEvidence } from "./issue_model.js";
 
 class CrashProbeInterruption extends Error {
   constructor(readonly interruption: unknown) { super("simulated process interruption"); }
@@ -204,6 +205,37 @@ export class GovernedLocalMerge {
     return undefined;
   }
 
+  private async assertReviewedWorktree(git: GitAdapter, evidence: RecoverableProposalEvidence): Promise<void> {
+    // Include ignored files: this path grants no auxiliary roots to GitMergePort.
+    // Indexed additions remain eligible when their bytes appear in the reviewed diff.
+    if ((await git.git(["ls-files", "--others", "-z"])).stdout.length !== 0) {
+      throw new Error("working tree contains unreviewed untracked or ignored files");
+    }
+    const diff = (await git.git(["diff", "--binary", "--no-ext-diff", evidence.baseRevision, "--"])).stdout;
+    if (diff !== evidence.diff) throw new Error("working tree differs from the persisted verified proposal");
+  }
+
+  private async commitReviewedCandidate(git: GitAdapter, branch: string, title: string, evidence: RecoverableProposalEvidence): Promise<string> {
+    if ((await git.git(["branch", "--show-current"])).stdout.trim() !== branch || await git.head() !== evidence.baseRevision) {
+      throw new Error("partial recovery branch does not retain the exact prepared base");
+    }
+    await this.assertReviewedWorktree(git, evidence);
+    // Do not sweep a new file into the index if it appears after the check above.
+    await git.git(["add", "--update"]);
+    const stagedDiff = (await git.git(["diff", "--cached", "--binary", "--no-ext-diff", evidence.baseRevision, "--"])).stdout;
+    if (stagedDiff !== evidence.diff) throw new Error("staged candidate differs from the persisted verified proposal");
+    await git.git(["-c", "user.name=Keep", "-c", "user.email=keep@local", "commit", "--no-verify", "-m", title]);
+    return git.head();
+  }
+
+  private async assertReviewedCandidate(git: GitAdapter, candidateCommit: string, evidence: RecoverableProposalEvidence): Promise<void> {
+    const parents = (await git.git(["rev-list", "--parents", "-n", "1", candidateCommit])).stdout.trim().split(/\s+/u);
+    const diff = (await git.git(["diff", "--binary", "--no-ext-diff", evidence.baseRevision, candidateCommit, "--"])).stdout;
+    if (parents.length !== 2 || parents[0] !== candidateCommit || parents[1] !== evidence.baseRevision || diff !== evidence.diff) {
+      throw new Error("candidate does not equal the durably prepared proposal");
+    }
+  }
+
   private async exactRevertOnBase(git: GitAdapter, headBefore: string, mergeId: string, proposalDiff: string): Promise<string | undefined> {
     const baseTip = (await git.git(["rev-parse", "--verify", `${this.deps.baseBranch}^{commit}`])).stdout.trim();
     const rows = (await git.git(["rev-list", "--first-parent", `${headBefore}..${baseTip}`])).stdout.trim().split("\n").filter(Boolean);
@@ -325,8 +357,7 @@ export class GovernedLocalMerge {
         const base = (await git.git(["rev-parse", "--verify", `${this.deps.baseBranch}^{commit}`])).stdout.trim();
         const head = await git.head();
         if (base !== evidence.baseRevision || head !== evidence.baseRevision) return this.record(runId, { status: "refused", reason: "base is stale or HEAD moved since proposal verification" });
-        const observedDiff = (await git.git(["diff", "--binary", "--no-ext-diff", evidence.baseRevision, "--"])).stdout;
-        if (observedDiff !== evidence.diff) return this.record(runId, { status: "refused", reason: "working tree differs from the persisted verified proposal" });
+        await this.assertReviewedWorktree(git, evidence);
         if (!this.deps.spine.durableStorage()) return this.record(runId, { status: "refused", reason: "local merge requires an fsync-durable pre-effect journal" });
         this.deps.spine.stage({ type: "effect.intent", actor: "governed-local-merge", payload: {
           kind: "local_merge.intent", operationId, runId, repoRef: artifact.issue.repoRef,
@@ -340,39 +371,30 @@ export class GovernedLocalMerge {
       await git.git(["config", "user.email", "keep@local"]);
       let candidateCommit = (await git.git(["rev-parse", "--verify", `refs/heads/${branch}^{commit}`]).catch(() => ({ stdout: "", stderr: "" }))).stdout.trim();
       if (!candidateCommit) {
+        await this.assertReviewedWorktree(git, evidence);
         await git.git(["checkout", "-b", branch]);
         this.probe("merge.candidate-branch-created");
-        await git.git(["add", "-A"]);
-        await git.git(["-c", "user.name=Keep", "-c", "user.email=keep@local", "commit", "--no-verify", "-m", solve.prProposal.title]);
-        candidateCommit = await git.head();
-        this.probe("merge.candidate-committed");
-      } else if (candidateCommit === evidence.baseRevision) {
-        const branchNow = (await git.git(["branch", "--show-current"])).stdout.trim();
-        const pendingDiff = (await git.git(["diff", "--binary", "--no-ext-diff", evidence.baseRevision, "--"])).stdout;
-        if (branchNow !== branch || await git.head() !== evidence.baseRevision || pendingDiff !== evidence.diff) throw new Error("partial recovery branch does not retain the exact prepared proposal");
-        await git.git(["add", "-A"]);
-        await git.git(["-c", "user.name=Keep", "-c", "user.email=keep@local", "commit", "--no-verify", "-m", solve.prProposal.title]);
-        candidateCommit = await git.head();
-        this.probe("merge.candidate-committed");
-      } else {
-        const parent = (await git.git(["rev-parse", `${candidateCommit}^`])).stdout.trim();
-        const candidateDiff = (await git.git(["diff", "--binary", "--no-ext-diff", evidence.baseRevision, candidateCommit, "--"])).stdout;
-        if (parent !== evidence.baseRevision || candidateDiff !== evidence.diff) throw new Error("recovery candidate does not equal the durably prepared proposal");
-        const observedMerge = await this.exactMergeOnBase(git, evidence.baseRevision, candidateCommit);
-        if (observedMerge) {
-          let publicationTarget: string | undefined;
-          if (this.deps.developmentForge) {
-            const recoverySpec: MergeSpec = { issueId: solve.issueId, repoRef: artifact.issue.repoRef, branch, baseBranch: this.deps.baseBranch, expectedCandidateCommit: candidateCommit, expectedCandidateProjectManifestDigest: "0".repeat(64), expectedGuestExecutionRequestDigest: evidence.rollback.patchSha256, projectDir };
-            const recoveryPort = this.port(git); publicationTarget = recoveryPort.publicationTarget(recoverySpec);
-            const confirmation = await recoveryPort.confirmPublicationCommit(observedMerge, recoverySpec, publicationTarget);
-            if (!confirmation.current) return this.record(runId, { status: "failed", mergeId: observedMerge, reason: confirmation.reason ?? "private forge publication could not be recovered" });
-          }
-          this.probe("merge.effect-completed");
-          return this.record(runId, { status: "merged", mergeId: observedMerge, ...(publicationTarget ? { publicationTarget } : {}), reason: "reconciled exact repository merge without redispatch" });
-        }
-        const branchNow = (await git.git(["branch", "--show-current"])).stdout.trim();
-        if (branchNow !== branch || await git.head() !== candidateCommit) await git.git(["checkout", branch]);
       }
+      if (!candidateCommit || candidateCommit === evidence.baseRevision) {
+        candidateCommit = await this.commitReviewedCandidate(git, branch, solve.prProposal.title, evidence);
+        this.probe("merge.candidate-committed");
+      }
+      // This binds fresh commits and every recovery path before merge or publication.
+      await this.assertReviewedCandidate(git, candidateCommit, evidence);
+      const observedMerge = await this.exactMergeOnBase(git, evidence.baseRevision, candidateCommit);
+      if (observedMerge) {
+        let publicationTarget: string | undefined;
+        if (this.deps.developmentForge) {
+          const recoverySpec: MergeSpec = { issueId: solve.issueId, repoRef: artifact.issue.repoRef, branch, baseBranch: this.deps.baseBranch, expectedCandidateCommit: candidateCommit, expectedCandidateProjectManifestDigest: "0".repeat(64), expectedGuestExecutionRequestDigest: evidence.rollback.patchSha256, projectDir };
+          const recoveryPort = this.port(git); publicationTarget = recoveryPort.publicationTarget(recoverySpec);
+          const confirmation = await recoveryPort.confirmPublicationCommit(observedMerge, recoverySpec, publicationTarget);
+          if (!confirmation.current) return this.record(runId, { status: "failed", mergeId: observedMerge, reason: confirmation.reason ?? "private forge publication could not be recovered" });
+        }
+        this.probe("merge.effect-completed");
+        return this.record(runId, { status: "merged", mergeId: observedMerge, ...(publicationTarget ? { publicationTarget } : {}), reason: "reconciled exact repository merge without redispatch" });
+      }
+      const branchNow = (await git.git(["branch", "--show-current"])).stdout.trim();
+      if (branchNow !== branch || await git.head() !== candidateCommit) await git.git(["checkout", branch]);
       const candidateProjectManifestDigest = await computeMicrovmProjectSourceManifestSha256(projectDir);
       const spec: MergeSpec = {
         issueId: solve.issueId, repoRef: artifact.issue.repoRef, branch, baseBranch: this.deps.baseBranch,

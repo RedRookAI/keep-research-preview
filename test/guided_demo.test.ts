@@ -1,14 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createBrowserProjectFixture } from "../src/demo/browser_project_fixture.js";
 import { SAMPLE_CONTRACT, SAMPLE_GOAL, SAMPLE_NOTICE, SAMPLE_FILE, SAMPLE_CHECK_FILE, SAMPLE_CHECKER, SAMPLE_ORIGINAL, SAMPLE_FIXED, reviewerSampleNotice } from "../src/review/reviewer_sample.js";
-import { startGatewayServer } from "../src/gateway/http_gateway.js";
+import { handleGatewayRequest, startGatewayServer } from "../src/gateway/http_gateway.js";
 import { handleProjectConsole, type ConsoleApi, type ConsoleSample } from "../src/review/project_console.js";
 import { verifyProposalExport } from "../src/audit/proposal_export.js";
+import type { GovernedLocalMergeDeps } from "../src/solve/governed_local_merge.js";
+import type { ProjectImplementationArtifact } from "../src/solve/project_loop_wiring.js";
 
 const input = (html: string, name: string): string => new RegExp(`name="${name}" value="([^"]+)"`, "u").exec(html)![1]!;
 const sample: ConsoleSample = { goal: SAMPLE_GOAL, notice: SAMPLE_NOTICE };
@@ -156,4 +159,126 @@ test("background preparation exposes held work, refuses duplicate/stale approval
     assert.equal((await post("/console/resume", form)).status, 409, "failed preparation needs explicit owner inspection");
     assert.equal(fixture.app.projectRuntime!.retainedJobs().length, 2); assert.equal(fixture.generations(), 0);
   } finally { release(); await server.close(); rmSync(root, { recursive: true, force: true }); }
+});
+
+const fixtureGit = (cwd: string, ...args: string[]): string => execFileSync("git", args, { cwd, encoding: "utf8", timeout: 5000 });
+
+async function preparedDecisionFixture(root: string, localAppliance = true) {
+  const fixture = createBrowserProjectFixture(root, localAppliance ? { localAppliance: true } : {});
+  const request = async (path: string, body: Record<string, unknown>) => {
+    const response = await handleGatewayRequest(fixture.app, { method: "POST", path, query: {},
+      headers: { authorization: "Bearer prepared-decision-fixture" }, body: JSON.stringify(body) }, { token: "prepared-decision-fixture" });
+    assert.equal(response.status, 200, response.body);
+    return JSON.parse(response.body) as { runId: string; proposalDigest?: string; wait?: { decisionId: string } };
+  };
+  const started = await request("/project", { goal: SAMPLE_GOAL });
+  assert.ok(started.wait?.decisionId);
+  const prepared = await request("/project/resume", { runId: started.runId, approval: { decisionId: started.wait.decisionId, approved: true } });
+  assert.ok(prepared.proposalDigest);
+  assert.equal(fixture.generations(), 2);
+  return { ...fixture, runId: started.runId, proposalDigest: prepared.proposalDigest, workspace: join(fixture.workspaces, "project") };
+}
+
+for (const variant of ["untracked", "ignored", "staged", "hosted-untracked"] as const) {
+  test(`exact proposal approval refuses ${variant} additions without changing Git state`, async () => {
+    const root = mkdtempSync(join(tmpdir(), "keep-exact-proposal-"));
+    try {
+      const fixture = await preparedDecisionFixture(root, variant !== "hosted-untracked");
+      const extra = join(fixture.workspace, "unreviewed.txt");
+      writeFileSync(extra, "outside the reviewed proposal\n");
+      if (variant === "ignored") appendFileSync(join(fixture.workspace, ".git/info/exclude"), "\nunreviewed.txt\n");
+      if (variant === "staged") fixtureGit(fixture.workspace, "add", "--", "unreviewed.txt");
+      const indexBefore = readFileSync(join(fixture.workspace, ".git/index"));
+      const result = await fixture.app.projectMerge!.decide(fixture.runId, "approve", fixture.proposalDigest);
+      assert.equal(result.status, "failed", result.reason);
+      assert.match(result.reason, /unreviewed|differs from the persisted verified proposal/);
+      assert.deepEqual(readFileSync(join(fixture.workspace, ".git/index")), indexBefore);
+      assert.equal(fixtureGit(fixture.workspace, "rev-parse", "HEAD").trim(), fixture.baseRevision);
+      assert.equal(fixtureGit(fixture.workspace, "branch", "--show-current").trim(), "main");
+      assert.equal(fixtureGit(fixture.workspace, "branch", "--list", "keep/*").trim(), "");
+      assert.equal(fixtureGit(fixture.source, "rev-parse", "HEAD").trim(), fixture.baseRevision);
+      assert.equal(readFileSync(extra, "utf8"), "outside the reviewed proposal\n");
+      assert.ok(!fixture.app.spine.replay().some(event => event.payload["kind"] === "local_merge.intent" || event.payload["kind"] === "auto_merge.publication_prepared"));
+      const veto = await fixture.app.projectMerge!.decide(fixture.runId, "veto", fixture.proposalDigest);
+      assert.equal(veto.decision, "veto");
+      assert.equal((await fixture.app.projectMerge!.decide(fixture.runId, "approve", fixture.proposalDigest)).status, "refused");
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+}
+
+for (const phase of ["merge.intent-sealed", "merge.candidate-branch-created"] as const) {
+  test(`interrupted ${phase} refuses a new file, then resumes the exact proposal once`, async () => {
+    const root = mkdtempSync(join(tmpdir(), "keep-exact-recovery-"));
+    try {
+      const fixture = await preparedDecisionFixture(root);
+      const controller = fixture.app.projectMerge as unknown as { deps: { crashProbe?: GovernedLocalMergeDeps["crashProbe"] } };
+      controller.deps.crashProbe = observed => { if (observed === phase) throw new Error("controlled merge interruption"); };
+      await assert.rejects(fixture.app.projectMerge!.decide(fixture.runId, "approve", fixture.proposalDigest), /controlled merge interruption/);
+      const extra = join(fixture.workspace, "unreviewed.txt");
+      writeFileSync(extra, "arrived after the durable intent\n");
+      const indexBefore = readFileSync(join(fixture.workspace, ".git/index"));
+      const resumed = createBrowserProjectFixture(root, { localAppliance: true, resume: true });
+      const refused = await resumed.app.projectMerge!.decide(fixture.runId, "approve", fixture.proposalDigest);
+      assert.equal(refused.status, "failed", refused.reason);
+      assert.match(refused.reason, /unreviewed/);
+      assert.deepEqual(readFileSync(join(fixture.workspace, ".git/index")), indexBefore);
+      assert.equal(fixtureGit(fixture.workspace, "rev-parse", "HEAD").trim(), fixture.baseRevision);
+      assert.equal(fixtureGit(fixture.workspace, "rev-parse", "main").trim(), fixture.baseRevision);
+      assert.ok(!resumed.app.spine.replay().some(event => event.payload["kind"] === "auto_merge.publication_prepared"));
+      rmSync(extra);
+      const approved = await resumed.app.projectMerge!.decide(fixture.runId, "approve", fixture.proposalDigest);
+      assert.equal(approved.status, "merged", approved.reason);
+      assert.equal(readFileSync(join(fixture.workspace, SAMPLE_FILE), "utf8"), SAMPLE_FIXED);
+      assert.equal(readFileSync(join(fixture.source, SAMPLE_FILE), "utf8"), SAMPLE_ORIGINAL);
+      assert.equal((await resumed.app.projectMerge!.decide(fixture.runId, "approve", fixture.proposalDigest)).mergeId, approved.mergeId);
+      assert.equal(resumed.app.spine.replay().filter(event => event.payload["kind"] === "local_merge.intent").length, 1);
+      assert.equal(resumed.app.spine.replay().filter(event => event.payload["event"] === "local_merge.merged").length, 1);
+      assert.equal(resumed.generations(), 0);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+}
+
+test("a file appearing after candidate branch creation is refused before staging or publication", async () => {
+  const root = mkdtempSync(join(tmpdir(), "keep-exact-race-"));
+  try {
+    const fixture = await preparedDecisionFixture(root);
+    const controller = fixture.app.projectMerge as unknown as { deps: { crashProbe?: GovernedLocalMergeDeps["crashProbe"] } };
+    let indexBefore: Buffer | undefined;
+    controller.deps.crashProbe = phase => {
+      if (phase !== "merge.candidate-branch-created") return;
+      indexBefore = readFileSync(join(fixture.workspace, ".git/index"));
+      writeFileSync(join(fixture.workspace, "unreviewed.txt"), "arrived during approval\n");
+    };
+    const result = await fixture.app.projectMerge!.decide(fixture.runId, "approve", fixture.proposalDigest);
+    assert.equal(result.status, "failed", result.reason); assert.match(result.reason, /unreviewed/);
+    assert.ok(indexBefore); assert.deepEqual(readFileSync(join(fixture.workspace, ".git/index")), indexBefore);
+    assert.equal(fixtureGit(fixture.workspace, "rev-parse", "HEAD").trim(), fixture.baseRevision);
+    assert.equal(fixtureGit(fixture.workspace, "rev-parse", "main").trim(), fixture.baseRevision);
+    assert.ok(!fixture.app.spine.replay().some(event => event.payload["kind"] === "auto_merge.publication_prepared"));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("an indexed new file explicitly included in the retained proposal remains approvable", async () => {
+  const root = mkdtempSync(join(tmpdir(), "keep-exact-new-file-"));
+  try {
+    const fixture = await preparedDecisionFixture(root);
+    writeFileSync(join(fixture.workspace, "delivery-notes.txt"), "Delivery IDs are recorded before counting.\n");
+    fixtureGit(fixture.workspace, "add", "-N", "--", "delivery-notes.txt");
+    // This merge-contract fixture supplies a retained proposal containing an indexed
+    // addition. It does not claim the scripted generator created or checked that file.
+    const controller = fixture.app.projectMerge as unknown as { deps: GovernedLocalMergeDeps };
+    const state = controller.deps.checkpoints.load(fixture.runId)!;
+    const artifact = state.artifacts["implement"] as ProjectImplementationArtifact;
+    const evidence = artifact.solve.proposalEvidence!;
+    const diff = fixtureGit(fixture.workspace, "diff", "--binary", "--no-ext-diff", fixture.baseRevision, "--");
+    const patchSha256 = createHash("sha256").update(diff).digest("hex");
+    controller.deps.checkpoints.save({ ...state, revision: state.revision + 1,
+      artifacts: { ...state.artifacts, implement: { ...artifact, solve: { ...artifact.solve,
+        proposalEvidence: { ...evidence, diff, rollback: { ...evidence.rollback, patchSha256 } } } } } }, state.revision);
+    const approved = await fixture.app.projectMerge!.decide(fixture.runId, "approve", patchSha256);
+    assert.equal(approved.status, "merged", approved.reason);
+    assert.equal(fixtureGit(fixture.workspace, "show", "HEAD:delivery-notes.txt"), "Delivery IDs are recorded before counting.\n");
+    assert.equal(fixtureGit(fixture.workspace, "diff", "--binary", "--no-ext-diff", fixture.baseRevision, "HEAD", "--"), diff);
+    assert.equal(fixtureGit(fixture.source, "rev-parse", "HEAD").trim(), fixture.baseRevision);
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });
