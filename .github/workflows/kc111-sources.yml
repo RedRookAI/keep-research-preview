@@ -1,0 +1,70 @@
+name: KC111 exact guest source companion
+on:
+  workflow_dispatch:
+    inputs:
+      consumer_run:
+        description: Exact successful owned appliance run ID
+        required: true
+      consumer_artifact:
+        description: Exact consumer evidence artifact ID
+        required: true
+      artifact_sha256:
+        description: Independently selected consumer artifact SHA256
+        required: true
+      candidate_source:
+        description: Frozen appliance source commit SHA
+        required: true
+      image_sha256:
+        description: Frozen qualified appliance image SHA256
+        required: true
+permissions:
+  contents: read
+  actions: read
+env:
+  KC111_CONSUMER_RUN: ${{ inputs.consumer_run }}
+  KC111_CONSUMER_ARTIFACT: ${{ inputs.consumer_artifact }}
+  KC111_ARTIFACT_SHA256: ${{ inputs.artifact_sha256 }}
+  KC111_EXPECTED_SOURCE: ${{ inputs.candidate_source }}
+  KC111_IMAGE_SHA256: ${{ inputs.image_sha256 }}
+  KC111_DRAFT_RELEASE_ID: "442420387"
+  KC111_DRAFT_RELEASE_TAG: keep-reviewer-2026-11-12
+jobs:
+  companion:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Focused source custody and exact closure checks
+        run: |
+          python3 tools/appliance/test_distribution_input.py
+          python3 tools/appliance/test_source_companion.py
+          python3 tools/appliance/test_source_upload.py
+      - name: Download and verify exact owned consumer evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/appliance/fetch_distribution_input.py
+      - name: Acquire exact installed guest sources on disposable CI
+        run: |
+          python3 tools/appliance/source_companion.py --input distribution-input \
+            --expected-source "$KC111_EXPECTED_SOURCE" --expected-image-sha256 "$KC111_IMAGE_SHA256" \
+            --output source-output
+      - name: Transfer complete source set to reviewed draft
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/appliance/upload_source_companion.py
+      - name: Retain small source closure and custody records
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: kc111-source-evidence
+          path: |
+            source-output/source-index.json
+            source-output/SHA256SUMS
+            distribution-input/custody.json
+            source-transfer.json
+          if-no-files-found: warn
+          retention-days: 1

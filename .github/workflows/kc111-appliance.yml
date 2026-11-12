@@ -1,7 +1,7 @@
 name: KC111 appliance source and candidate
 on:
   push:
-    branches: [work/kc111-appliance-2026-11-12, work/kc111-candidate-2026-11-12-4ct, work/kc111-candidate-2026-11-12-4ct-02, work/kc111-candidate-2026-11-12-4ct-03, work/kc111-candidate-2026-11-12-4ct-04]
+    branches: [work/kc111-appliance-2026-11-12, work/kc111-candidate-2026-11-12-4ct, work/kc111-candidate-2026-11-12-4ct-02, work/kc111-candidate-2026-11-12-4ct-03, work/kc111-candidate-2026-11-12-4ct-04, work/kc111-candidate-2026-11-12-4ct-05]
 permissions:
   contents: read
 env:
