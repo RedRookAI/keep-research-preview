@@ -10,29 +10,35 @@ import { pathToFileURL } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { startGatewayServer } from '../dist/src/gateway/http_gateway.js';
 import { verifyProposalExport } from '../dist/src/audit/proposal_export.js';
+import { SAMPLE_NOTICE } from '../dist/src/review/reviewer_sample.js';
 import { createBrowserProjectFixture, SAMPLE_GOAL, SAMPLE_ORIGINAL } from './browser_project_fixture.mjs';
 
-const [outputArg, driver, executablePath] = process.argv.slice(2);
+const [outputArg, driver, executablePath, mode] = process.argv.slice(2);
+const sampleMode = mode === '--sample';
 assert.ok(outputArg && driver, 'output directory and existing Playwright entry required');
 const root = resolve(outputArg); mkdirSync(root, { recursive: true });
 const { chromium } = await import(pathToFileURL(resolve(driver)).href);
 const fixture = createBrowserProjectFixture(root), token = randomBytes(32).toString('hex');
-const server = await startGatewayServer(fixture.app, { port: 0, token });
+const server = await startGatewayServer(fixture.app, { port: 0, token, ...(sampleMode ? { reviewerSample: true } : {}) });
 let browser, page;
 const stages = [];
 try {
   browser = await chromium.launch({ headless: true, ...(executablePath ? { executablePath } : {}), args: ['--mute-audio'] });
   const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1365, height: 1000 } });
   page = await context.newPage();
+  const sampleNotice = async () => { if (sampleMode) assert.equal(await page.getByText(SAMPLE_NOTICE, { exact: true }).count(), 1); };
   await page.goto(server.origin + '/console');
+  await sampleNotice();
   await page.getByLabel('Instance credential').fill(token);
   await page.getByRole('button', { name: 'Open console' }).click();
   assert.equal(await page.locator('.project').count(), 0);
   await page.getByRole('link', { name: 'Submit a repository goal' }).click();
+  await sampleNotice();
   const formUrl = page.url(), key = await page.locator('[name=idempotencyKey]').inputValue();
   await page.reload(); assert.equal(await page.locator('[name=idempotencyKey]').inputValue(), key);
   assert.equal(fixture.app.projectManager.list().length, 0); assert.equal(fixture.generations(), 0);
-  await page.getByLabel('Repository goal').fill(SAMPLE_GOAL);
+  if (sampleMode) assert.equal(await page.getByLabel('Repository goal').inputValue(), SAMPLE_GOAL);
+  else await page.getByLabel('Repository goal').fill(SAMPLE_GOAL);
   await page.getByRole('button', { name: 'Submit goal', exact: true }).click();
   await page.waitForURL('**/console/project?projectId=*');
   const projectUrl = page.url(), projectId = new URL(projectUrl).searchParams.get('projectId');
@@ -66,17 +72,20 @@ try {
   const checks = checkpoint.artifacts.implement.solve.proposalEvidence.checks;
   assert.equal(checks.testsPassed, true); assert.equal(checks.vettingCleared, true);
   assert.deepEqual(checks.passedTests, ['arithmetic', 'goal: requested outcome']);
+  await sampleNotice();
   stages.push('real-workspace-diff-and-two-unchanged-checks');
   await page.screenshot({ path: join(root, '02-checked-proposal.png'), fullPage: true });
   const retainedBefore = fixture.app.projectRuntime.retainedJobs(new Set([projectId])).map(job => job.id).sort();
   assert.ok(retainedBefore.includes(runId), 'original submission job is retained');
   // The same retained form recovers the accepted job, including after navigating away.
-  await page.goto(formUrl); await page.getByLabel('Repository goal').fill(SAMPLE_GOAL);
+  await page.goto(sampleMode ? server.origin + '/console/new' : formUrl); if (sampleMode) assert.equal(await page.getByLabel('Repository goal').inputValue(), SAMPLE_GOAL);
+  else await page.getByLabel('Repository goal').fill(SAMPLE_GOAL);
   await page.getByRole('button', { name: 'Submit goal', exact: true }).click();
   assert.equal(page.url(), projectUrl); assert.equal(fixture.app.projectManager.list().length, 1);
   assert.deepEqual(fixture.app.projectRuntime.retainedJobs(new Set([projectId])).map(job => job.id).sort(), retainedBefore, 'recovery creates no additional job; explicit step resume has its own job'); assert.equal(fixture.generations(), 2);
-  stages.push('same-key-browser-recovery-one-job');
+  stages.push('submission-recovery-no-new-job');
   await page.getByRole('button', { name: 'Veto proposal', exact: true }).click();
+  await sampleNotice();
   assert.match(await page.locator('main').innerText(), /refused|veto/i);
   await page.getByRole('link', { name: 'Open updated project' }).click();
   const downloadEvent = page.waitForEvent('download');
@@ -91,9 +100,10 @@ try {
   assert.equal(fixture.generations(), 2); assert.ok(!exported.includes(token));
   const html = await page.content(); assert.ok(!html.includes(token));
   assert.equal(await page.evaluate(() => localStorage.length + sessionStorage.length), 0);
+  await sampleNotice();
   stages.push('exact-proposal-veto-and-browser-export');
   await page.screenshot({ path: join(root, '03-vetoed-export.png'), fullPage: true });
-  writeFileSync(join(root, 'result.json'), JSON.stringify({ status: 'PASS', scripted: true, paidCalls: 0, browser: browser.version(), node: process.version,
+  writeFileSync(join(root, 'result.json'), JSON.stringify({ status: 'PASS', scripted: true, enforcedSample: sampleMode, paidCalls: 0, browser: browser.version(), node: process.version,
     sourceRevision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), stages, projectId, runId, proposalDigest: digest,
     fixtureBaseRevision: fixture.baseRevision, retainedJobCount: retainedBefore.length, originalSubmissionJobId: runId, generations: fixture.generations(), checks, sourceUnchanged: true, exported: true }, null, 2));
   process.stdout.write(JSON.stringify({ status: 'PASS', stages, generations: fixture.generations(), projectId, runId }) + '\n');

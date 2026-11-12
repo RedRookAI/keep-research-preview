@@ -41,6 +41,8 @@ export interface WebResponse {
   readonly body: string;
 }
 export interface WebSecurity {
+  /** Trusted, plain-text controlled-sample disclosure on the personal sign-in page. */
+  readonly sampleNotice?: string;
   /** Optional native-project surface, behind this handler's existing browser boundary. */
   readonly projectConsole?: (req: WebRequest, principal: Principal, csrf: string, sessionAuthority?: SessionAuthorityRef) => Promise<WebResponse>;
   /** The per-run secret required to use the UI (printed at startup). */
@@ -138,7 +140,7 @@ async function handleSingleOwner(app: KeepApp, req: WebRequest, sec: WebSecurity
     }
     if (!cookieOk && req.path !== "/console/style.css") {
       if (req.method !== "GET") return textRes(401, "Unauthorized: sign in to the console.");
-      return htmlRes(200, `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · Keep</title><link rel="stylesheet" href="/console/style.css"></head><body><main class="signin"><a class="brand" href="/console">KEEP</a><h1>Your workspace, under control.</h1><p>Sign in with this instance's gateway credential. It stays on this machine and is never placed in a URL.</p><form method="post" action="/console/login"><label>Instance credential<input name="token" type="password" required autocomplete="current-password" autofocus></label><button>Open console</button></form></main></body></html>`);
+      return htmlRes(200, `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · Keep</title><link rel="stylesheet" href="/console/style.css"></head><body><main class="signin"><a class="brand" href="/console">KEEP</a><h1>Your workspace, under control.</h1>${sec.sampleNotice ? `<p class="notice">${esc(sec.sampleNotice)}</p>` : ""}<p>Sign in with this instance's gateway credential. It stays on this machine and is never placed in a URL.</p><form method="post" action="/console/login"><label>Instance credential<input name="token" type="password" required autocomplete="current-password" autofocus></label><button>Open console</button></form></main></body></html>`);
     }
     const csrf = createHmac("sha256", sec.token).update("keep.native-project-console/v1").digest("hex");
     return route(app, req, sec, sec.principal, csrf, false);

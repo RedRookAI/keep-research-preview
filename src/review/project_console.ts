@@ -44,8 +44,8 @@ async function read(api: ConsoleApi, path: string, query?: Record<string, string
 }
 function isResponse(value: Row | GatewayResponse): value is GatewayResponse { return typeof value["status"] === "number" && typeof value["body"] === "string"; }
 const submissionKeyValid = (key: string): boolean => /^[A-Za-z0-9._:-]{16,128}$/u.test(key);
-function submissionForm(csrf: string, key: string, goal = ""): string {
-  return `<form method="post" action="/console/submit">${hidden("csrf", csrf)}${hidden("idempotencyKey", key)}<label for="goal">Repository goal</label><textarea id="goal" name="goal" rows="6" maxlength="16000" required>${esc(goal)}</textarea><p>Uses this owner's configured repository, checker, provider and execution limits. Describe one bounded change and its acceptance checks.</p><button>Submit goal</button></form><details><summary>Recover this submission</summary><p>Keep this page and goal text until the job appears. If a response is lost, return to this form and submit the unchanged goal with this same key. Keep will recover the original job. Inspect retained projects before starting another submission.</p><p class="mono">Submission key: ${esc(key)}</p><a href="/console">Inspect retained projects</a></details>`;
+function submissionForm(csrf: string, key: string, goal = "", fixed = false): string {
+  return `<form method="post" action="/console/submit">${hidden("csrf", csrf)}${hidden("idempotencyKey", key)}<label for="goal">Repository goal</label><textarea id="goal" name="goal" rows="6" maxlength="16000" required${fixed ? " readonly" : ""}>${esc(goal)}</textarea><p>${fixed ? "Submit this sample to inspect its actual code change, checks and proposal." : "Uses this owner's configured repository, checker, provider and execution limits. Describe one bounded change and its acceptance checks."}</p><button>Submit goal</button></form><details><summary>Recover this submission</summary><p>${fixed ? "This instance retains one sample. Submit this fixed goal again from any sample form to recover its original job. Inspect retained projects for its current result. A stopped or uncertain sample stays retained for the operator to reconcile." : "Keep this page and goal text until the job appears. If a response is lost, return to this form and submit the unchanged goal with this same key. Keep will recover the original job. Inspect retained projects before starting another submission."}</p>${fixed ? "" : `<p class="mono">Submission key: ${esc(key)}</p>`}<a href="/console">Inspect retained projects</a></details>`;
 }
 function workerNotice(list: Row): string {
   const runtime = row(list["runtime"]);
@@ -54,7 +54,13 @@ function workerNotice(list: Row): string {
   return runtime["paused"] === true ? '<p class="notice">Worker dispatch is paused. Jobs remain queued until the owner resumes the worker. Refresh to inspect its state.</p>' : "";
 }
 
-export async function handleProjectConsole(req: WebRequest, csrf: string, api: ConsoleApi, permissions: ConsolePermissions): Promise<WebResponse> {
+export interface ConsoleSample { readonly goal: string; readonly notice: string; }
+export async function handleProjectConsole(req: WebRequest, csrf: string, api: ConsoleApi, permissions: ConsolePermissions, sample?: ConsoleSample): Promise<WebResponse> {
+  const response = await routeProjectConsole(req, csrf, api, permissions, sample);
+  return sample && response.headers["Content-Type"]?.startsWith("text/html")
+    ? { ...response, body: response.body.replace("<main>", `<main><p class="notice" role="note">${esc(sample.notice)}</p>`) } : response;
+}
+async function routeProjectConsole(req: WebRequest, csrf: string, api: ConsoleApi, permissions: ConsolePermissions, sample?: ConsoleSample): Promise<WebResponse> {
   if (req.path === "/console/style.css" && req.method === "GET") return { status: 200, headers: { ...security, "Content-Type": "text/css; charset=utf-8" }, body: CONSOLE_STYLE };
   if (req.path === "/console/export" && req.method === "GET") {
     const response = await api("GET", "/project/export", { runId: req.query["runId"] ?? "", proposalDigest: req.query["proposalDigest"] ?? "" });
@@ -64,14 +70,16 @@ export async function handleProjectConsole(req: WebRequest, csrf: string, api: C
   if (req.path === "/console/submit" && req.method === "POST") {
     if (!permissions.submit) return page("Forbidden", "<h1>You cannot submit project goals.</h1>", 403);
     const form = new URLSearchParams(req.body), key = form.get("idempotencyKey") ?? "", goal = form.get("goal") ?? "";
+    if (sample && (goal !== sample.goal || [...form.keys()].some((name, index, all) => !["csrf", "goal", "idempotencyKey"].includes(name) || all.indexOf(name) !== index)))
+      return page("Sample request held", '<h1>This sample admits only its fixed repository goal.</h1><a href="/console/new">Open the sample goal</a>', 400);
     if (!submissionKeyValid(key)) return page("Invalid submission", '<h1>Submission key is missing or invalid.</h1><a href="/console">Inspect retained projects before starting another submission</a>', 400);
-    if (!goal.trim() || goal.length > 16000) return page("Invalid goal", `<h1>Enter a goal of at most 16,000 characters.</h1>${submissionForm(csrf, key, goal.slice(0, 16000))}`, 400);
+    if (!goal.trim() || goal.length > 16000) return page("Invalid goal", `<h1>Enter a goal of at most 16,000 characters.</h1>${submissionForm(csrf, key, goal.slice(0, 16000), sample !== undefined)}`, 400);
     let response: GatewayResponse;
     try { response = await api("POST", "/project", {}, { goal, background: true, idempotencyKey: key }); }
-    catch { return page("Submission uncertain", `<h1>Submission outcome is uncertain.</h1><p class="notice">Inspect retained projects first. Recover using the unchanged goal and this original key; a new key could start duplicate work.</p>${submissionForm(csrf, key, goal)}`, 503); }
+    catch { return page("Submission uncertain", `<h1>Submission outcome is uncertain.</h1><p class="notice">Inspect retained projects first. Recover using the unchanged goal and this original key; a new key could start duplicate work.</p>${submissionForm(csrf, key, goal, sample !== undefined)}`, 503); }
     if (response.status !== 202) {
       const held = failure(response);
-      return { ...held, body: held.body.replace('</main>', `${submissionForm(csrf, key, goal)}</main>`) };
+      return { ...held, body: held.body.replace('</main>', `${submissionForm(csrf, key, goal, sample !== undefined)}</main>`) };
     }
     const result = row(JSON.parse(response.body));
     return { status: 303, headers: { ...security, Location: link(result["projectId"]) }, body: "" };
@@ -84,7 +92,7 @@ export async function handleProjectConsole(req: WebRequest, csrf: string, api: C
     if (!submissionKeyValid(key)) return page("Invalid submission", '<h1>Invalid submission key.</h1><a href="/console">Inspect retained projects</a>', 400);
     const list = await read(api, "/projects");
     if (isResponse(list)) return failure(list);
-    return page("Submit a goal", `<a class="back" href="/console">← All projects</a><h1>Start a repository goal.</h1>${workerNotice(list)}${submissionForm(csrf, key)}`);
+    return page("Submit a goal", `<a class="back" href="/console">← All projects</a><h1>Start a repository goal.</h1>${workerNotice(list)}${submissionForm(csrf, key, sample?.goal ?? "", sample !== undefined)}`);
   }
   if (req.path === "/console/cancel" && req.method === "POST") {
     if (!permissions.cancel) return page("Forbidden", "<h1>You cannot cancel project jobs.</h1>", 403);

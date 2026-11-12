@@ -57,6 +57,7 @@ import { ProjectSubmissionConflictError } from "../session/project_job_journal.j
 import { ProjectSubmissionUncertainError, type ProjectJobContext } from "../session/project_runtime.js";
 import { handleReviewRequest, type IdentityLayer } from "../review/review_web.js";
 import { handleProjectConsole } from "../review/project_console.js";
+import { isReviewerSample, SAMPLE_GOAL, SAMPLE_NOTICE, SAMPLE_SUBMISSION_KEY } from "../review/reviewer_sample.js";
 import { assertRestrictedCurrent, assertRestrictedHuman, matchesRestrictedBearer, readRestrictedClientProfile, restrictedClientPrincipal, restrictedProjectStatus, type RestrictedClientProfile } from "./restricted_client.js";
 import { SessionCapacityError, type SessionReservation, type SessionAuthorityRef } from "../identity/session_store.js";
 
@@ -1574,6 +1575,10 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
 }
 
 export interface GatewayServerOptions {
+  /** Trusted personal TLS-terminator configuration; never inferred from forwarded headers. */
+  readonly publicBrowserOrigin?: string;
+  /** Only the controlled synthetic fixture may select this closed browser-only ingress. */
+  readonly reviewerSample?: true;
   readonly restrictedClientProfile?: string;
   readonly worker?: { readonly id: string; readonly onStopped: () => void };
   readonly port?: number; // default 7788; 0 = ephemeral (tests)
@@ -1594,6 +1599,18 @@ export interface GatewayServerHandle {
 
 /** Thin socket adapter around the pure handler. Owns only binding, body, and the per-instance token. */
 export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}): Promise<GatewayServerHandle> {
+  let publicOrigin: URL | undefined;
+  if (opts.publicBrowserOrigin !== undefined) {
+    try { publicOrigin = new URL(opts.publicBrowserOrigin); } catch { throw new Error("publicBrowserOrigin must be a canonical HTTPS origin"); }
+    if (publicOrigin.protocol !== "https:" || publicOrigin.origin !== opts.publicBrowserOrigin || publicOrigin.username || publicOrigin.password
+      || publicOrigin.pathname !== "/" || publicOrigin.search || publicOrigin.hash) throw new Error("publicBrowserOrigin must be a canonical HTTPS origin");
+  }
+  if (publicOrigin || opts.reviewerSample) {
+    if (opts.identity || opts.principalFor || app.identity || app.tenantDeployment || opts.restrictedClientProfile || opts.worker)
+      throw new Error("personal public browser/sample mode cannot replace identity, tenant, restricted client or worker admission");
+    if ((opts.host ?? "127.0.0.1") !== "127.0.0.1") throw new Error("public browser/sample listener must bind literal 127.0.0.1");
+  }
+  if (opts.reviewerSample && !isReviewerSample(app)) throw new Error("reviewer sample requires the controlled synthetic fixture");
   if (opts.identity?.codeFlow && opts.identity !== app.identity) throw new Error("Organization code flow requires the app's exact configured identity instance");
   if (app.identity?.codeFlow) {
     if ((opts.identity && opts.identity !== app.identity) || opts.principalFor) throw new Error("Configured organization code flow cannot be replaced by another server identity mode");
@@ -1642,6 +1659,16 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
       const headers: Record<string, string> = {};
       for (const [k, v] of Object.entries(req.headers)) if (typeof v === "string") headers[k.toLowerCase()] = v;
       const greq: GatewayRequest = { method: req.method ?? "GET", path: url.pathname, query, headers, body };
+      if (publicOrigin ? headers["host"] !== publicOrigin.host : opts.reviewerSample && ![`${host}:${port}`, `localhost:${port}`].includes(headers["host"] ?? "")) {
+        res.writeHead(403, { "content-type": "text/plain", "cache-control": "no-store" }); res.end("Forbidden: unexpected Host header."); return;
+      }
+      if (opts.reviewerSample) {
+        const allowed = greq.method === "GET" && ["/", "/console", "/console/new", "/console/project", "/console/export", "/console/style.css"].includes(greq.path)
+          || greq.method === "POST" && ["/console/login", "/console/submit", "/console/resume", "/console/merge", "/console/cancel"].includes(greq.path);
+        if (!allowed || Object.keys(query).some(key => !["submissionKey", "projectId", "runId", "proposalDigest"].includes(key)) || headers["authorization"] !== undefined) {
+          res.writeHead(404, { "content-type": "text/plain", "cache-control": "no-store" }); res.end("Sample route unavailable."); return;
+        }
+      }
       const browserRoute = url.pathname === "/console" || url.pathname.startsWith("/console/") || (opts.identity !== undefined && (["/login", "/logout", "/style.css"].includes(url.pathname) || url.pathname.startsWith("/auth/oidc/")));
       let resp;
       if (greq.method === "GET" && url.pathname === "/" && !headers["authorization"] && !query["token"]) {
@@ -1649,11 +1676,19 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
       } else if (browserRoute) {
         if (opts.principalFor) resp = json(403, { error: "browser sign-in requires a configured identity session" });
         else resp = await handleReviewRequest(app, greq, {
-          token, origin: opts.identity?.codeFlow?.config.publicOrigin ?? `http://${host}:${port}`, allowedHosts: opts.identity?.codeFlow ? [new URL(opts.identity.codeFlow.config.publicOrigin).host] : [`${host}:${port}`, `localhost:${port}`], principal: OWNER,
+          token, origin: publicOrigin?.origin ?? opts.identity?.codeFlow?.config.publicOrigin ?? `http://${host}:${port}`, allowedHosts: publicOrigin ? [publicOrigin.host] : opts.identity?.codeFlow ? [new URL(opts.identity.codeFlow.config.publicOrigin).host] : [`${host}:${port}`, `localhost:${port}`], principal: OWNER,
           ...(opts.identity ? { identity: opts.identity } : {}),
-          projectConsole: (request, principal, csrf, sessionAuthority) => handleProjectConsole(request, csrf, (method, path, query = {}, body) => handleGatewayRequest(app, {
+          ...(opts.reviewerSample ? { sampleNotice: SAMPLE_NOTICE } : {}),
+          projectConsole: (request, principal, csrf, sessionAuthority) => handleProjectConsole(request, csrf, (method, path, query = {}, body) => {
+            if (opts.reviewerSample && method === "POST" && path === "/project") {
+              if (body?.["goal"] !== SAMPLE_GOAL || Object.keys(body).sort().join(",") !== "background,goal,idempotencyKey" || body["background"] !== true)
+                return Promise.resolve(json(400, { error: "This sample admits only its fixed repository goal." }));
+              body = { goal: SAMPLE_GOAL, background: true, idempotencyKey: SAMPLE_SUBMISSION_KEY };
+            }
+            return handleGatewayRequest(app, {
             method, path, query, body: body === undefined ? "" : JSON.stringify(body), headers: { authorization: `Bearer ${token}` },
-          }, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(opts.identity ? { principalFor: () => principal, ...(sessionAuthority ? { sessionAuthority } : {}) } : {}) }), { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline"), cancel: can(app.authorization, principal, "change.solve"), submit: can(app.authorization, principal, "change.solve") }),
+          }, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(opts.identity ? { principalFor: () => principal, ...(sessionAuthority ? { sessionAuthority } : {}) } : {}) });
+          }, { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline"), cancel: can(app.authorization, principal, "change.solve"), submit: can(app.authorization, principal, "change.solve") }, opts.reviewerSample ? { goal: SAMPLE_GOAL, notice: SAMPLE_NOTICE } : undefined),
         });
       } else resp = await handleGatewayRequest(app, greq, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(workerControl ? { workerControl } : {}), ...(opts.principalFor ? { principalFor: opts.principalFor } : {}), ...(opts.identity ? { identity: opts.identity } : {}) });
       res.writeHead(resp.status, { ...resp.headers });
