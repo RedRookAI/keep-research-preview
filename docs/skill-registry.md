@@ -1,26 +1,23 @@
 # Skill catalog, admission, and preview-data recovery
 
-A stored skill package is available for inspection. That alone does not make it
-eligible for task retrieval. Managed admission records the hash of the skill
-content that passed the configured gate. Retrieval in the composed runtime checks
-that binding, the current retirement state, and the canary state. These checks do
-not turn an envelope-only gate into execution evidence or establish improvement
-over a no-skill baseline.
+Managed admission binds a skill's eligibility to the exact content that passed
+its configured gate. Retrieval checks that binding, retirement and canary state.
+Catalog storage makes a package available for inspection; task use requires
+admission. Execution and improvement over a no-skill baseline need their own checks.
 
 The install response includes an `assessment` with the gate's verdict, the submitted
 `inputContentHash`, and the accepted `contentHash`. Without an execution oracle,
 the public install path reports `envelope-checked`; it does not run typed examples
 or task cases. With validation configured, a refined candidate is repackaged under
 its own content hash and checked against the receiver's policy before admission.
-The requested skill ID remains unchanged. Origin is still a declared source, not
-an authenticated signature on the receiver's revised content.
+The requested skill ID remains unchanged. Origin records the declared source. Authenticating revised content requires
+a separate signature.
 
 Trusted custom gates that refine a candidate must return it as `checkedSkill`.
-Omitting that field means the unchanged input passed the named check. Installation
-detaches and freezes input/output objects, so callbacks should return revisions
-rather than mutate the supplied object. Bundle preflight keeps the checked versions
+Omitting that field means the unchanged input passed the named check. Installation detaches and freezes input/output objects. Callbacks must return
+revised objects. Bundle preflight keeps the checked versions
 and refuses the entire bundle if a later checked version violates receiver policy.
-This does not guarantee atomic recovery from every storage failure during commit.
+Storage failures during commit can require recovery.
 
 Replacing catalog content under an existing ID does not transfer the previous
 version's admission to it. Until the replacement is explicitly admitted, its
@@ -34,7 +31,7 @@ excluding it from current retrieval.
 The managed registry keeps the current lifecycle and retained exact admitted
 versions needed for restoration. Checked replacement starts a content-bound
 lifecycle and preserves the previous admitted package and its feedback. History
-contains only versions actually retained by this build; it cannot recover bytes
+contains only versions retained by this build; it cannot recover bytes
 already replaced by an older release. Identical-content re-admission retains its
 retirement. Restoring prior content requires current validation and a new admission
 instance, so an old in-flight attempt cannot regain authority through a version cycle.
@@ -66,7 +63,7 @@ promotion notice. Inspect and resolve the storage problem before retrying; do no
 install the leftover `.tmp` file as a committed snapshot. The reader never adopts
 that temporary file. A high-impact retry reruns execution and can reuse the cleared
 criticism only for the same failed-retention candidate, cases, scores and admission
-state. That retry cache is local and transient, not a persisted approval.
+state. The retry cache is process-local and transient; approval is checked again.
 
 Custom persistence or catalog callbacks can fail after changing their own state.
 Such failures report an error and fence managed eligibility and mutation as
@@ -74,7 +71,7 @@ Such failures report an error and fence managed eligibility and mutation as
 when its retirement could not be saved. Preserve and reconcile the actual stored
 state before reconstruction; restarting alone does not prove an unsaved withdrawal
 became durable. Custom ports and direct trusted canary calls must honor their
-coordination contracts. Notifications are best-effort, not an exactly-once queue.
+coordination contracts. Notifications use best-effort delivery.
 This implementation does not establish power-loss durability, concurrent-process
 writer safety, or a transaction spanning external services.
 
@@ -82,20 +79,21 @@ writer safety, or a transaction spanning external services.
 
 `/skill/adopt-openclaw` proposes a specification by default. Boolean
 `acknowledgeRisk: true` permits static catalog translation through an envelope
-screen, not execution validation, measured improvement, or activation. Both the
+screen. Execution validation, measured improvement and activation require
+separate checks. Both the
 proposal and translated envelope use the same declared-effect mapping.
 `file-write` carries a `workspace:write` requirement; declared binaries carry
 `sandbox:execute`. These fields never mint grants. Original permission strings
 remain tagged declarations, and unknown mappings appear in `unsupported`.
-The package still has no executable steps. Tools and environment names are
-metadata, not permission grants or authenticated descriptions of actual behavior.
+The package still has no executable steps. Tools and environment names are declared metadata. Actual behavior and required
+grants need separate checks.
 
 The supported SKILL.md subset is fenced top-level scalars, block string lists,
 JSON string arrays, and inline strict-JSON metadata. For example,
 `permissions: ["file-write"]` or a block list is supported;
 `permissions: [file-write]` returns `unsupported-input-language` rather than
 silently losing the permission. `allowed-tools: Read Write` is retained as one
-verbatim scalar declaration, not parsed executable tool rules. Multiline
+verbatim scalar declaration; it is not parsed into executable tool rules. Multiline
 metadata, YAML aliases/tags, duplicate fields/JSON keys, mixed-type lists, and
 ill-typed consumed fields are refused. Inline metadata reuses Keep's strict JSON
 reader: integers only, bounded nesting, and well-formed Unicode. This is not a
@@ -120,9 +118,8 @@ restarting; inspect and translate the original source again where needed.
 For native trajectory extraction, effects from all occurrences of retained
 actions are combined before screening. The returned `extraction` record names
 retained actions, omitted source-step count, distinct supplied solve IDs, and
-whether concrete targets collapsed into the same parameter slot. This is a
-common-action pattern, not a semantic reconstruction or a screen of omitted
-actions. Repeating one solve ID does not add corroboration; distinct supplied IDs
+whether concrete targets collapsed into the same parameter slot. The record describes common action patterns. Semantic reconstruction and screening
+of omitted actions remain outside extraction. Repeating one solve ID does not add corroboration; distinct supplied IDs
 still do not establish independent evaluation. Required authority conservatively
 unions declarations from all successful source traces, including omitted steps.
 The envelope has shared named parameters, so `read input.mjs` and
@@ -173,15 +170,14 @@ or parse the explanatory `detail` as an API contract.
 
 An explicit **static catalog install** remains separate: it can replace the stored
 package under this ID without clearing retirement or granting retrieval. A later
-managed save can persist that catalog replacement. This registry is not a version
-archive; recover the former body from the pre-upgrade backup if needed. Neither the
+managed save can persist that catalog replacement. Recover any legacy body already
+replaced before version-history support from the pre-upgrade backup. Neither the
 `retired` label nor a successful catalog response proves that the currently stored
 body is the one to which the unknown legacy retirement originally applied.
 
 ### Revalidate a retained, non-retired skill
 
-This is a trusted local integration operation, not a public revalidation endpoint
-or a one-click migration. Configure `composeKeep` with your task-specific
+Revalidation uses the trusted local integration API. Configure `composeKeep` with your task-specific
 `skillOracle`, any required `skillPrograms`, and appropriate `skillImportAuthorities`
 first. The oracle must execute relevant cases and judge actual outcomes. Keep cannot
 infer a valid execution test for arbitrary old procedures from their description.
@@ -208,8 +204,8 @@ retained-content revalidation.
 Stop writers and make a private copy of the complete configured data directory
 before starting the new version. Keep that copy outside the running data directory,
 protect its credentials and private contents, and verify the copied files. Loading
-alone preserves the registry file, but the first ordinary managed save replaces it
-with v2. **Keep does not create an automatic pre-upgrade backup.** Do not wait for a
+alone preserves the registry file, but the first ordinary managed save writes the
+current schema described above. **Keep does not create an automatic pre-upgrade backup.** Do not wait for a
 conversion prompt. Test upgrade and recovery on disposable copies first.
 
 Restoring an older backup is a point-in-time recovery: later skills, revalidations,
@@ -232,14 +228,9 @@ Version 2 is not readable by the original preview. If reverting to that build,
 restore its matching private state backup rather than editing the new snapshot's
 version number.
 
-The version boundary is deliberate: the old reader has no checked-content binding
-semantics. Keeping the old version label would make it accept records while ignoring
-their new restrictions. A sidecar or dual-format writer would add another state
-consistency problem without teaching the old runtime to enforce those restrictions.
-
-This is a targeted data-compatibility correction. It does not qualify every skill
-generation, refinement, evaluation, promotion, or storage-failure path. Consult
-the evidence for the particular build and workflow being used.
+The old reader cannot enforce checked-content bindings. Restore matching older
+data when returning to it. Consult the evidence for the build and workflow in use;
+qualification of other generation, evaluation and storage-failure paths remains open.
 
 
 ## Restore a regressed version in a source build
@@ -254,8 +245,8 @@ Read `GET /skill/versions?skillId=ID` to inspect version hashes, feedback and th
 current `subjectToken`. This read returns metadata rather than raw skill advice.
 For a current harmful-retired candidate, submit `POST /skill/restore` with exactly
 `skillId`, `failedContentHash`, `previousContentHash` and `expectedSubjectToken`.
-The last field is the current readback token, which identifies state rather than
-granting permission.
+The last field identifies the state being changed. The caller still needs the
+permissions above.
 
 Recovery checks the exact failed content and the requested prior admitted version
 against current policy and execution evidence. A stale token, missing history,
@@ -265,7 +256,7 @@ and activates its current canary/retrieval path. Read the current state before
 another attempt; repeating a stale request cannot select another version.
 
 The registry retains failed-version attribution. Ambiguous ID-only feedback after
-restoration is held rather than charged to the restored version. Current admission
+restoration is held to avoid charging it to the restored version. Current admission
 and the actual generator's consumed identity determine reuse; a trace label or
 retirement event alone does not demonstrate successful restoration.
 

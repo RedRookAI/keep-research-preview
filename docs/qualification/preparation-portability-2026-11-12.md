@@ -10,7 +10,7 @@ Bubblewrap creates a private network namespace so repository commands cannot use
 bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted
 ```
 
-This was a sandbox setup failure before a useful command could execute. The denied operation was network-interface configuration inside the new namespace. The restricted host reported `apparmor_restrict_unprivileged_userns=1`; the fresh host where preparation passed reported 0. These observations are consistent with Ubuntu's AppArmor restrictions on permissions inside unprivileged namespaces. We did not capture a policy audit record identifying the exact denying rule, and the different hosts are not a controlled single-setting comparison.
+Sandbox setup failed during network-interface configuration, before repository work could execute. The restricted host reported `apparmor_restrict_unprivileged_userns=1`; the fresh host where preparation passed reported 0. These observations are consistent with Ubuntu's AppArmor restrictions on permissions inside unprivileged namespaces. The exact denying rule was not captured; the hosts also differed in other settings.
 
 Ubuntu documents the namespace capability restrictions here:
 
@@ -32,7 +32,7 @@ Prepared repositories still take the existing no-install path. Keep does not cha
 | --- | --- | --- |
 | Actual public .21 archive, SHA-256 `7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca` | Ubuntu 22.04 x64, Node 22.23.4, new application home | Normal instance init, actual empty-cache hold, explicit public-registry cache seed, offline preparation retry and useful TypeScript checker passed. |
 | Exact source .22 at `e53867c1c2add998b9d382f26fc6c7aa97b3b2b7` | Separate fresh Ubuntu 22.04 x64, locked npm install and TypeScript emit | Same preparation/checker journey passed with the product preflight. |
-| Same source .22 | Separate fresh restricted Ubuntu 24.04 x64 | Normal CLI returned the new preflight diagnostic; no npm configuration/cache/dependency installation was created. Hold retained; original source unchanged. This is a successful refusal check, not successful preparation. |
+| Same source .22 | Separate fresh restricted Ubuntu 24.04 x64 | Normal CLI returned the new preflight diagnostic; no npm configuration/cache/dependency installation was created. Hold retained; original source unchanged. The refusal check passed; preparation remained blocked. |
 | Source CI | Fresh Ubuntu 24.04 x64 | 176/176 checks passed across the 20-file partial profile, with no skips. |
 
 Public-download preparation:
@@ -57,4 +57,4 @@ The Ubuntu 22.04 result qualifies dependency preparation; the bundled AI engine 
 
 Spark uses ARM64. Its portable workflows passed, but the current native tools, helper and generation engine target x64. ARM64 needs platform-specific source changes, builds and qualification, including different syscall filters and library layout handling.
 
-A fresh live-account generation task and broader platform acceptance remain open. These fixtures establish the listed setup behavior, not whole-product completion or production-native authority. Large downloads and builds ran on disposable CI VMs, with no new large Hetzner or Spark fixtures.
+A fresh live-account generation task and broader platform acceptance remain open. The fixtures cover the listed setup behavior. Whole-product completion and production-native authority remain unqualified. Downloads and builds ran on disposable CI VMs.

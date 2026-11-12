@@ -1,10 +1,10 @@
-# Reproduce the genuine case's recorded patch
+# Reproduce the recorded Codex patch
 
-This is the **corrected example export**, checked October 21, 2026. It fixes a missing final newline in `proposal.patch` that made ordinary `git apply` reject the original exported file. The repair adds only that newline; `check.mjs` is unchanged. It does not run a model again.
+The October 21, 2026 export correction adds the final newline missing from `proposal.patch`; `check.mjs` is unchanged. The original file caused `git apply` to reject it.
 
-The original October 20 execution record is `result.json`. Its patch hash identifies the original defective export and is deliberately preserved. Use `export-correction-2026-10-21.json` for current file hashes, the new reproduction result and the old-archive inventory. `independent-check.tap` is historical output, not today's rerun.
+`result.json` records the October 20 generation, including the old patch hash. `export-correction-2026-10-21.json` supplies current hashes and the reproduction result. `independent-check.tap` retains the original test output.
 
-Select the supported Node 22 runtime, set `KEEP_EXAMPLE` to this directory's absolute path, then run in a new directory you own:
+Use the supported Node 22 runtime and a new specimen directory:
 
 ```sh
 export KEEP_EXAMPLE=/absolute/path/to/this/example
@@ -13,11 +13,11 @@ git -C keep-specimen switch --detach 21c557c7f14a112eebe196abd98d085f5fcfcf5e
 KEEP_CASE_SOURCE="$(pwd)/keep-specimen" node "$KEEP_EXAMPLE/check.mjs"
 ```
 
-The original baseline must report **one failure (Unicode hyphen), two passes**. Then apply the distributed patch directly:
+The baseline should report **one failure (Unicode hyphen), two passes**. Apply the patch directly:
 
 ```sh
 git -C keep-specimen apply "$KEEP_EXAMPLE/proposal.patch"
 KEEP_CASE_SOURCE="$(pwd)/keep-specimen" node "$KEEP_EXAMPLE/check.mjs"
 ```
 
-Expected: **three passes, no failures**. Do not preprocess or normalize the patch. This reproduction changes the specimen checkout; it is separate from Keep's historical veto that left the original task source unchanged. Upstream source retains its MIT terms in `UPSTREAM-LICENSE`.
+Expected result: **three passes, no failures**. Leave the patch bytes unchanged. These commands modify the specimen checkout; Keep's historical veto preserved its original task source. Upstream MIT terms are retained in `UPSTREAM-LICENSE`.

@@ -1,18 +1,16 @@
 # Semantic memory encoder configuration
 
 Keep can combine lexical retrieval with an independently configured embedding
-endpoint in native project work. It needs no embedding SDK or new dependency.
-The endpoint must implement the OpenAI-compatible embeddings protocol. Existing
+endpoint in native project work. The endpoint must implement the OpenAI-compatible embeddings protocol. Existing
 chat-only installations continue to work without an encoder.
 
-Revision, dimension and role prefixes are operator declarations, not verified model
-weights. Configure them to match the endpoint's actual model. Prefixes are literal:
+Declare the revision, dimension and role prefixes to match the endpoint's model;
+Keep cannot verify its weights. Prefixes are literal:
 spaces and empty prefixes matter; Keep does not infer vendor-specific input types.
 
 ## Configure the encoder
 
-For example, using an endpoint you already operate (the model name below is a
-placeholder, not a recommendation or a download instruction):
+Use an endpoint you already operate and replace the model placeholders below:
 
 ```sh
 keep encoder configure --profile=/absolute/path/encoder.json \
@@ -36,12 +34,11 @@ Profiles are bounded mode-0600 JSON and contain references, not credential value
 There is no implicit encoder profile discovery: `KEEP_ENCODER_PROFILE` selects it.
 Edit the JSON if query/document processing requires distinct regions.
 
-The example limits are explicit per-original-job resource ceilings, not a price
-quote or recommended capacity. Requests, complete serialized input bytes and input
+Choose per-job limits for your corpus and endpoint. The values shown are examples.
+Requests, complete serialized input bytes and input
 windows are reserved for worst-case retries before dispatch. Restarting does not
-renew the budget. Unknown effects hold for reconciliation, not blind retry.
-Choose finite limits for your corpus and endpoint. Dollar-cost metering and larger
-corpus qualification are separate outstanding obligations.
+renew the budget. Uncertain effects stay held until reconciled.
+Dollar-cost metering and larger-corpus qualification remain separate work.
 
 ## Authorize retrieval and disclosure
 
@@ -132,13 +129,12 @@ After restart, the current policy governs recall, review, list, task context and
 derived views through their source lineage. Removing the policy or a purpose,
 tightening its duration beyond an existing source's lifetime, or reaching the use
 deadline withholds affected content, including previously recorded recall results.
-Changing the file does not hot-reload running processes. Withholding is not erasure:
-use the existing explicit erase/hold controls, and account separately for backups,
+Changing the file does not hot-reload running processes. For erasure, use the explicit erase/hold controls and account separately for backups,
 caller copies and provider copies. Old sanitized text cannot be reconstructed.
 
 Semantic use still requires the per-command disclosure flags above and applicable
-organization egress policy. Matching private-entity substitutes are applied to
-document/query encoding, not used as a substitute for retention authorization.
+organization egress policy. Retention authorization is checked separately from the private-entity substitutions
+applied during document and query encoding.
 These controls support auditability; they are not legal-compliance certification
 or a determination that consent alone supplies a lawful basis.
 

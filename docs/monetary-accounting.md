@@ -2,9 +2,6 @@
 
 The 0.0.10-preview.1 development checkpoint adds [manual document writes](manual-memory-write.md) and [manual corrections](manual-memory-correction.md) to the shared monetary ledger. [Combined exact-source qualification](qualification/manual-memory-create-correct-2026-10-05.json) passed 721 relevant tests and 24 recovery checks in each private/public profile. Earlier receipts retain their original source coverage; other document/task/fitness consumers remain outside this change.
 
-This describes the corrected development implementation. It does not change the
-results or contents of the historical research-preview release.
-
 `MeteredProvider` and `MeteredGateway.generateMetered` reserve projected token cost
 before entering the provider. Outstanding reservations count against the run and
 admission day's allowance. Valid returned usage settles the matching reservation;
@@ -36,7 +33,7 @@ that arbitrary injected development code is network-free.
 The October 5 development source meters `provider-check` and built-in FrontDoor
 model calls through this ledger. [One ordinary memory-recall query route](memory-recall-embedding.md) now also uses it under an explicit dated price declaration. Manual POST /memory and POST /memory/correct document embeddings also use it under explicit document consent/pricing/write authority. Other direct interactive calls and other document/task/fitness embeddings remain outside this monetary coverage. Bounded embedding work has a separate request/byte/window budget. The velocity
 breaker measures rate after calls; its post-call error does not establish non-execution.
-These distinctions are why Keep does not advertise a universal spending ceiling.
+The metered route therefore covers only its admitted calls and token charges.
 
 Direct HTTP streaming distinguishes missing or malformed usage from explicitly
 reported zero counters. Useful text can still be returned with `usageComplete:false`;
@@ -56,7 +53,7 @@ incomplete/failed-call usage remains unknown. Older spans without this metadata
 retain their recorded amounts with `legacy-unknown` status.
 
 Attribution and the local costs API expose `costKnown`, `unknownCostSpans` and
-`totalKind`. An incomplete `totalUsd` is an observed subtotal, not a complete bill.
+`totalKind`. An incomplete `totalUsd` is an observed subtotal; the remaining amount is unknown.
 Each attribution row and trace retains its coverage. Unknown-cost tasks are
 excluded from forecast samples, and OTLP exports omit their numeric cost attribute.
 These token-price estimates do not cover every route or non-token charge.
@@ -74,15 +71,13 @@ shared filesystem lock, not separate in-process mutexes. Never run old and corre
 accounting writers concurrently on the same state.
 
 Reporting getters expose the last loaded view; await `refresh()` before a diagnostic
-read that needs current durable state. A diagnostic check is not a reservation.
-Only reservation performs atomic accounting admission. The separate SafetyRail
+read that needs current durable state. Only reservation performs atomic accounting admission. The separate SafetyRail
 approval/soft-cap check is not a replacement for metered dispatch.
 
 Repeating a grant or run identity does not reset consumption. Composed startup does
 not revive a revoked envelope. A configuration that differs from existing durable
 authority requires an explicit grant revision, preserving the earlier consumption.
-Legacy preview records do not contain complete monetary consumption. The corrected
-ledger will not fabricate it as zero: paid work under an old allowance remains held.
+Legacy preview records do not contain complete monetary consumption. Paid work under an old allowance remains held until that history is reconciled.
 An owner can deliberately authorize a distinct allowance; changing a run ID alone
 does not clear the envelope's unknown history. Existing history is retained.
 

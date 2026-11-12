@@ -5,18 +5,18 @@ Keep's existing durable monetary ledger. It also makes the existing paste-summar
 flow reachable through validated `/message` attachment metadata. The downloadable
 0.0.5-preview.1 binary retains its original contents and qualification.
 
-## Research and smallest change
+## Design and references
 
 Primary sources retrieved October 5, 2026:
 
-- [LiteLLM reservation](https://docs.litellm.ai/docs/proxy/users#budget-reservation) reserves estimated exposure before processing and reconciles actual consumption afterward. Keep already has this machinery; no new proxy or dependency is needed.
+- [LiteLLM reservation](https://docs.litellm.ai/docs/proxy/users#budget-reservation) reserves estimated exposure before processing and reconciles actual consumption afterward. Keep uses its existing monetary ledger.
 - [Node async context](https://nodejs.org/api/async_context.html#asynclocalstoragerunstore-callback-args) confines `run` context to its callback and asynchronous descendants. `enterWith` can persist across other synchronous handlers. Use existing `run`/`getStore`, available since Node 12/13 and exercised here on pinned Node 22.23.2; newer Node 26 APIs are not required.
 - [TigerBeetle two-phase transfers](https://docs.tigerbeetle.com/coding/two-phase-transfers/) separate pending exposure from posted consumption. Its automatic transfer expiry is not evidence that an external model request was free; Keep retains ambiguous exposure.
 
 Source inspection found two concrete gaps: the shared FrontDoor callback used the
 plain gateway, and `/message` discarded existing attachment flags. A tenant label
-was passed to a cached FrontDoor without a live session. Reuse monetary admission
-and carry each message's authority separately; do not cache sessions on tenant objects.
+was passed to a cached FrontDoor without a live session. The change reuses monetary admission and carries each message's authority
+separately from the cached tenant object.
 
 ## Use and behavior
 
@@ -28,9 +28,8 @@ The existing gateway accepts pasted project/file content with optional metadata:
 
 Send this to `POST /message` with the configured gateway authorization. Organization
 requests also need their authenticated `x-keep-session` header. `hasAttachments` must
-be boolean; `attachmentCount` must be a nonnegative safe integer. This metadata routes
-the message's pasted text into existing sanitization/chunking; it does not upload,
-read or extract an external file, and adds no file-upload GUI. Body tenant/session
+be boolean; `attachmentCount` must be a nonnegative safe integer. This metadata sends the message's pasted text through sanitization and chunking.
+External file reading, extraction and upload UI are outside this path. Body tenant/session
 labels cannot authorize spending.
 
 Built-in model calls require an admitted route, acceptable configured prices and
@@ -64,8 +63,8 @@ Ordinary embeddings and other direct library calls remain separate obligations.
 
 FrontDoor shares the existing `autonomy-subsystem` run, `auto-research` class and
 `KeepConfig.autonomyBudget` with other metered work. Existing grants, consumption,
-revocation and holds survive reconstruction. This is a shared process/state allowance,
-not newly implemented fleet or per-tenant billing aggregation. Rates remain dated
+revocation and holds survive reconstruction. The allowance is shared by the process and saved state; fleet and per-tenant
+billing aggregation remain separate work. Rates remain dated
 configured seed/last-good inputs; approximate input projection, cache/framing and
 non-token charges prevent a universal bill guarantee. See [monetary accounting](monetary-accounting.md).
 
@@ -73,7 +72,3 @@ non-token charges prevent a universal bill guarantee. See [monetary accounting](
 actual loopback provider HTTP plus synthetic organization sessions/rosters and an
 injected local provider. Zero paid model calls; no live IdP, independent custody,
 newly qualified remote enterprise path, full/native build or new archive qualification.
-
-Future tickets must research current prior art and actual consumers, implement their
-smallest authorized scope and vet useful/refused/recovery outcomes before completion.
-This checkpoint activates no subsequent implementation batch.

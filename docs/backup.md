@@ -1,8 +1,8 @@
 # Backup interfaces and compatibility
 
 Keep exposes backup capture, signing and restoration through its trusted lifecycle
-and library interfaces. These are not a qualified unattended backup service or a
-new backup CLI. Maintain a separate, tested offline backup of operational data.
+and library interfaces. Maintain a separate, tested offline backup of operational
+data; unattended backup operation remains unqualified.
 
 Stop writers before capture. The two reads compare file contents, modes,
 directories, exclusions and deterministic protected-content identities. They
@@ -12,7 +12,7 @@ of an actively changing application or external services.
 The existing `maxFiles` limit counts all inventory entries: regular and protected
 files, directories, and exclusions. A larger directory-heavy archive may require
 an explicitly larger limit both when captured and when restored. Archive encoding
-is unchanged; exceeding the limit refuses the operation rather than truncating it.
+is unchanged; exceeding the limit refuses the operation.
 
 Protected capture encrypts state using an externally retained recovery authority.
 Keep that recovery secret and its configuration outside the archive. Restoration
@@ -38,9 +38,9 @@ operational recovery as unverified and cannot publish privileged file modes.
 There is no automatic fallback from failed signature checks to unsigned recovery.
 
 `LocalBackup` stores validated copies only for the lifetime of its process.
-Fetching or modifying a returned object does not edit the retained copy. These
+Returned objects are independent of the retained copy. These
 interfaces accept plain persisted event data; shared-memory buffers, typed arrays and other
-non-plain JavaScript objects are rejected instead of retained as mutable aliases.
+non-plain JavaScript objects are rejected.
 Shipping checks the fetched chain and metadata against the identity retained before the
 target call. A successful write acknowledgment alone is insufficient; a failed
 acknowledgment check may still leave an object at an append-only target.
@@ -51,7 +51,7 @@ Handled-error cleanup is not proof of recovery from every possible process crash
 
 ## Recovering the OpenClaw client candidate
 
-The OpenClaw client included in the current combined preview retains state outside
+The OpenClaw client retains state outside
 Keep's data directory. An installed synthetic journey exercised protected recovery
 of that state, its pending proposal and invocation history. The final release
 [explicitly reuses matching component evidence](qualification/combined-preview-2026-10-20.json);
@@ -81,14 +81,12 @@ Capture a consistent set:
 1. Stop new submissions and quiesce only the owned Keep and OpenClaw writers.
    Keep's normal shutdown refuses active or queued work; pausing dispatch alone
    does not establish quiescence. If work cannot stop safely, retain its uncertain
-   status and defer this capture rather than killing another process or deleting
-   lifecycle records.
+   status and defer capture. Preserve the other processes and lifecycle records.
 2. Use Keep's existing protected capture/signing interfaces for its product and
    state roots. Preserve configuration outside those roots and the owned OpenClaw
    components with the operator's existing private offline backup mechanism while
    their writers remain stopped. Copy the complete SQLite directory as one
-   stopped set, not just the main database while a client is active. No second
-   Keep backup service or archive format is required.
+   stopped set, including the main database and its sidecars.
    If files are staged first, compare the staged contents and permissions with
    the stopped originals before capture. Copy tools can change directory modes.
    Preserve symbolic links explicitly without following them into unlisted

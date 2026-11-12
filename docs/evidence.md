@@ -1,5 +1,11 @@
 # Validation evidence
 
+Each result applies to its named source revision, artifact and environment.
+The checks were developer-administered; separate environments and process-local
+outcome checkers are identified where used. Outside administration and broader
+model-quality or production claims require separate evidence. See the
+[release record](../KEEP_RELEASE.md) for the current download.
+
 ## November 11 installed checkpoint
 
 The .20 combined archive passed a fresh unprivileged direct-archive consumer covering both scripted demos, saved instance setup, prepared no-install readiness, paused lifecycle/console, authenticated proposal export and exact patch verification. Its native/engine bytes match the retained inputs. Required-jail positive preparation, a new genuine owner trial, new OpenClaw package loading and a fresh full/native suite remain open. The exact receipt records the source, archive hashes and limits.
@@ -10,28 +16,26 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/
 
 The [example export correction](genuine-codex-walkthrough.md#example-export-correction) adds one final newline to the published patch. A fresh exact-upstream reproduction observed the expected one-fail/two-pass baseline, ordinary `git apply` succeeded on the distributed repaired file, and the unchanged checker then passed all three cases. Historical execution receipts and old release bytes are preserved.
 
-The [new account-free recording](portfolio-demo.md) captures the actual installed console and real workspace/check/review behavior using two scripted local responses and automated simulated owner decisions. It is separate from the genuine Codex case below. The recording notes retain an observer-assertion correction and same-job continuation; no model generation was replayed. No native rebuild or full-suite rerun was performed for this presentation-only pass.
+The [account-free recording](portfolio-demo.md) shows the installed console, workspace edits, checks and review using two scripted responses and simulated owner decisions. Recording resumed the same job after correcting an observer assertion, without replaying generation. Native and full-suite checks were not rerun.
 
-## Combined preview0.0.19
+## Combined preview 0.0.19
 
-The [combined archive](combined-preview.md) passed unprivileged extraction and direct startup, both disclosed demos, instance/console lifecycle and native OpenClaw plugin installation/configuration/load. It invoked neither npm nor a live account. [Exact artifacts, supported profile and evidence](qualification/combined-preview-2026-10-20.json). The 525 production modules match the retained genuine workflow except reviewed comments/diagnostic wording; source18's 88 focused checks and unchanged source12 native bytes are explicitly reused. This is scoped integrated-preview qualification, not a new full-suite count or production certification.
+The [combined archive](combined-preview.md) passed unprivileged extraction and direct startup, both disclosed demos, instance/console lifecycle and native OpenClaw plugin installation/configuration/load. It invoked neither npm nor a live account. [Exact artifacts, supported profile and evidence](qualification/combined-preview-2026-10-20.json). The 525 production modules match the retained genuine workflow except reviewed comments/diagnostic wording; source18's 88 focused checks and unchanged source12 native bytes are explicitly reused. The result covers this integrated-preview profile; full-suite and production qualification remain separate.
 
-## Current genuine result
+## October 20 genuine Codex result
 
 The [genuine Codex/OpenClaw follow-up](genuine-codex-walkthrough.md) now has an inspectable proposed patch, unchanged independent checker (three passing cases), actual console approval/veto, fresh-process status and source preservation. It is developer-administered evidence on a historical case, with scripted OpenClaw tool selection and real Codex generation. The completed [exact-archive qualification](qualification/combined-preview-2026-10-20.json) is a separate record with matching runtime comparison; it did not make another live account request.
 
 Source **0.0.18-preview.1** passed emitting TypeScript compilation and **88 focused checks across six affected test files**, with zero failures or skips, on Node 22.23.3. These check the exported transport/profile, browser decisions, patch semantics and planner integration; they do not qualify a combined downloadable archive.
 
-Results apply to the named source revision or archive, not automatically to the current branch. All recorded qualification was administered by the development session; no outside audit or independent replication is claimed.
-
 | Profile | Result and scope |
 |---|---|
-| Current combined **0.0.19-preview.1** | Direct extraction/startup, both demos, instance/console lifecycle and plugin setup passed; genuine-case runtime comparison and reused component checks are explicit. [Receipt](qualification/combined-preview-2026-10-20.json). |
+| Combined **0.0.19-preview.1** | Direct extraction/startup, both demos, instance/console lifecycle and plugin setup passed; genuine-case runtime comparison and reused component checks are explicit. [Receipt](qualification/combined-preview-2026-10-20.json). |
 | Historical downloadable **0.0.12-preview.1** | Qualified Linux x64 preview: 5,468 selected source tests, installed scripted repository workflow, recovery and named boundary controls. Exact artifact identities and receipt below. |
 | Historical source **0.0.17-preview.1** | Scoped diagnostic, trusted-helper and approval repairs, bounded owner follow-up administration, and retained recovery evidence. Two genuine native attempts remain uncertain; no corresponding qualified download. |
 | OpenClaw runtime | Packaged plugin passed the controlled installed OpenClaw 2026.10.5 / Node 24.22.0 workflow with scripted local providers. Actual native tools, separate human approval, tested proposal, fresh-process status and veto were observed. [Receipt and limits](qualification/openclaw-2026-10-20.json). |
 
-The useful repository demo uses two scripted local responses and simulated operator decisions. Its edits, tests and retained proposal are inspectable; this is workflow evidence, not a measurement of model quality. See [architecture](architecture.md), [Codex limits](codex-project.md) and [security boundaries](../SECURITY.md).
+The repository demo exposes its edits, tests and retained proposal. It uses two scripted responses and simulated operator decisions; model quality is outside that demonstration's scope. See [architecture](architecture.md), [Codex limits](codex-project.md) and [security boundaries](../SECURITY.md).
 
 ## October 20 recovery and approval source checkpoint
 
@@ -41,7 +45,7 @@ Focused emitting compilation and checks passed on the respective implementation 
 
 The actual public export passed emitting compilation and **48 checks across five affected test files**, with zero failures or skips. These source checks used Node 22.23.2; they do not establish patched-runtime admission or a new installed archive.
 
-Both uncertain genuine account invocations remain charged and unresolved. At that source17 checkpoint, no genuine repository success was inferred. The genuine result alone does not qualify a combined download; the final archive now has its own qualification above. Complete dependency clearance, outside audit and universal OpenClaw containment are not claimed. [Dependency status](dependency-status.md) records the admitted route and remaining conditions. Historical compatibility and download receipts below keep their original versions and identities.
+Both uncertain account invocations remain charged and unresolved. The source17 checkpoint predates the genuine repository result. The final archive has separate qualification above. [Dependency status](dependency-status.md) records the admitted route and remaining conditions; complete dependency clearance, outside audit and universal OpenClaw containment remain unqualified.
 
 ## October 20 OpenClaw source checkpoint
 
@@ -56,23 +60,21 @@ and browser cancellation. [Exact inputs and boundaries](qualification/openclaw-2
 
 Initial setup failures exposed incomplete upstream package lifecycle setup, a
 legacy agent configuration key and native tool-catalog compaction. These were
-corrected before the successful consumer run. This is developer-administered
-compatibility evidence with local authored responses, not genuine Codex quality,
-complete OpenClaw containment, a new security-certified runtime or a qualified
-combined downloadable release. Prior failed account work and immutable download
-identities remain unchanged.
+corrected before the successful consumer run. This compatibility check used authored responses. Model quality, complete OpenClaw
+containment, runtime security certification and combined-download qualification
+remain outside its scope.
 
 ## October 5 downloadable portfolio preview
 
 **0.0.12-preview.1**, exact source `3e4e3e3990fcc6262d6a20491d067f2563b95bb1`: **5,468** complete selected source tests (5,295 ordinary, 34 release/security, 139 native), zero failures/skips. Scripts-enabled packaging and a fresh unprivileged offline installation matched **1,560** runtime files. The installed repository walkthrough produced an actual patch with two passing tests after simulated approval, retained its proposal over restart, refused a wrong token and preserved original source after veto; two scripted local responses, zero paid requests. Installed recovery passed 24 cases. Required-jail allow/refuse, two protected backup/restore tracks, the exact quickstart and wrong-checksum refusal passed. [Receipt](qualification/preview-2026-10-05.json), [release identities](../KEEP_RELEASE.md) and [walkthrough boundaries](portfolio-walkthrough.md).
 
-This establishes the named downloadable checkpoint and its first-use scenario. It does not establish real-model quality, live organization custody, independently administered replication or production isolation. The ordinary and release/security phases passed in a retained run whose native phase failed; the complete native phase then passed after a fixture-only correction, on unchanged source. These are combined phase results, not one successful all-phase command. Earlier records below retain their original identities and narrower scopes.
+This establishes the named downloadable checkpoint and its first-use scenario. It does not establish real-model quality, live organization custody, independently administered replication or production isolation. The ordinary and release/security phases passed in a retained run whose native phase failed; the complete native phase then passed after a fixture-only correction, on unchanged source. The count combines those passing phases; no single all-phase command passed.
 
 Installed solve source **0.0.11-preview.1**: exact public `376aba8f248d2517c68f3866ce8d54c692aa3999` and private `954d4eb56b44b341cd927c11f47c9a4e385e2059` each passed **157 relevant tests in 8 files**, zero failures/skips, emitting typecheck and **24 recovery checks**. An installed test-only package byte-matched **1557 production dist files** and produced a proposal with two passing tests after explicit approval, preserved source, refused a wrong token and retained the proposal over restart without model replay. Two controlled HTTP calls; zero paid vendor requests. [Receipt](qualification/installed-solve-2026-10-05.json) and [guide](installed-solve.md) separate owner/process fixture evidence, reused native binaries, source qualification and the downloadable archive at that checkpoint. Earlier receipts below retain their original identities.
 
 ## Historical source checkpoints
 
-Combined **0.0.10-preview.1** manual create/correct source: exact tested public revision `a957571b107f8567038cabe3f017ecd2a6596bb8` and private revision `2b311f144034d3441c88c2891384c51dc2cdedbc` each passed **721 tests in 44 files**, zero failures/skips, emitting typecheck and **24** synthetic recovery checks. CLI reports `keep 0.0.10-preview.1`; zero paid vendor requests. [Combined receipt](qualification/manual-memory-create-correct-2026-10-05.json), [write](manual-memory-write.md) and [correction](manual-memory-correction.md) guides state scope and limits. Earlier source/installed-artifact receipts below retain original identities.
+Combined **0.0.10-preview.1** manual create/correct source: exact tested public revision `a957571b107f8567038cabe3f017ecd2a6596bb8` and private revision `2b311f144034d3441c88c2891384c51dc2cdedbc` each passed **721 tests in 44 files**, zero failures/skips, emitting typecheck and **24** synthetic recovery checks. CLI reports `keep 0.0.10-preview.1`; zero paid vendor requests. [Combined receipt](qualification/manual-memory-create-correct-2026-10-05.json), [write](manual-memory-write.md) and [correction](manual-memory-correction.md) guides state scope and limits.
 
 ## October 5 memory-recall query source checkpoint
 
@@ -80,22 +82,6 @@ Development **0.0.9-preview.1**, exact tested public source `24a4a68d5b711870f1e
 
 This is one direct configured query encoder with explicit dated operator price input. Other embedding consumers, automatic price refresh, live organization custody, full native and new installed artifacts remain unqualified. The downloadable 0.0.5-preview.1 and earlier source receipts below retain their original identities.
 
-
-This page records what was exercised, on which artifacts, and within which
-boundaries. The [research overview](research.md) explains the proposed advances;
-the [preview guide](research-preview.md) explains how to run the first experiment.
-
-## Current release record
-
-Use [the release record](../KEEP_RELEASE.md) for the qualified downloadable binary.
-Earlier October 5 development checkpoints below have separate, narrower evidence.
-Results below remain attached to
-their original source and package, even when the implementation is retained in
-a later version.
-
-All results here were administered by the development session. A repository test
-or local effect sink is an outcome checker separate from the model; it is not
-outside administration. No genuinely outside replication is recorded.
 
 ## October 5 provider-check fresh-price source checkpoint
 
@@ -114,9 +100,9 @@ refresh failure, rate changes and captured concurrent settlement. Existing live
 subject and fresh-process ambiguous-hold controls passed. Initial failed checks
 are retained: pinned request typing, an outdated seed-priced CLI fixture and an
 older public export that lost the existing recovery-demo entry. The latter was
-restored and its real command vetted; no island exception was added.
+restored and its command checked.
 
-This is same-agent partial source evidence using the existing isolated test profile;
+This partial source check used the existing isolated test profile;
 no host policy changed and zero paid calls occurred. Fresh-price admission covers
 only the direct DeepSeek diagnostic, with an explicit operator age policy. It does
 not qualify a new binary, full native build, other price sources/routes, ordinary
@@ -130,7 +116,7 @@ passed TypeScript emission and **385 relevant tests: 16 FrontDoor outcomes,
 12 provider-check compatibility cases and 357 regressions; zero failures/skips**.
 The compiled CLI reports `keep 0.0.7-preview.1`.
 [Source-bound receipt](qualification/frontdoor-2026-10-05.json) and
-[research, behavior and limits](frontdoor-metering.md) describe the one-ticket scope.
+[behavior and limits](frontdoor-metering.md) describe the tested scope.
 
 The gateway summary consumer, actual loopback provider HTTP, per-chunk durable
 reservation/settlement and fresh-process ambiguous holds passed. Synthetic live
@@ -140,7 +126,7 @@ Refusal/uncertainty stops further built-in model calls in that message and prese
 sanitized deterministic fallback. Earlier private fixture failures were retained
 and corrected; no product authorization or spending check was weakened.
 
-This is same-agent partial source evidence. The run reused an existing owned
+The partial source run reused an existing owned
 isolated task profile with two CPUs, 4 GiB RAM, no swap and 512 processes; no host
 policy changed and zero paid model calls occurred. No full/native rebuild, new
 archive qualification, live IdP, independent custody or newly qualified remote
@@ -154,7 +140,7 @@ Development source **0.0.6-preview.1**, exact commit `2839bee290c2ff6847393c75ad
 passed TypeScript emission and **170 relevant tests: 12 focused + 158 regressions,
 zero failures/skips**. The compiled CLI reports `keep 0.0.6-preview.1`.
 [Source-bound receipt](qualification/provider-check-2026-10-05.json) and
-[research, behavior and limits](provider-check.md) describe the one-ticket scope.
+[behavior and limits](provider-check.md) describe the tested scope.
 
 Actual loopback requests follow durable reservations; valid usage settles them.
 Uncertain usage or lost acknowledgements remain held across a fresh process.
@@ -163,7 +149,7 @@ immutable installed organization boot without a live subject makes zero HTTP cal
 The fixture reused an existing isolated task profile, two CPUs, 4 GiB RAM, no swap
 and a 512-process ceiling; it changed no host policy and made zero paid provider calls.
 
-This is same-agent partial source qualification. No native rebuild, new archive,
+This is partial source qualification. No native rebuild, new archive,
 complete source profile, live organization custody, independent audit or universal
 billing ceiling is established. The historical downloadable binary below retained its original identity.
 FrontDoor/ordinary embedding monetary coverage and fresh pricing remain open.
@@ -172,7 +158,7 @@ FrontDoor/ordinary embedding monetary coverage and fresh pricing remain open.
 
 The exact public source `fca232810f6c2309ed0a9e5c5090577fc7112fee` passed 5,341 selected full-profile tests with zero failures/skips. The matching 0.0.5-preview.1 archive passed scripts-enabled offline installation, all 1,554 runtime byte checks, 24 synthetic accounting/restart cases, useful/refused required-boundary controls and two protected backup/restore tracks. See [exact artifacts and limits](../KEEP_RELEASE.md) and [the source/archive-bound receipt](qualification/preview-2026-10-04.json). The exact checksum-first quickstart shell block also passed with npm’s default layout and the installed CLI, and its wrong-checksum control refused before installation. Earlier failures were retained and corrected; no security/test check was weakened.
 
-The release tag adds companion receipts and current documentation after the exact source was frozen. The full pass remains bound to that source; it is not silently transferred to a later documentation commit. Evidence remains same-agent, one owned Linux fixture, synthetic local effects and injected tenant authority; no real IdP, outside custody, production launch or offsite survival is established.
+The release tag adds companion receipts and current documentation after the exact source was frozen. The full pass remains bound to that source. The check used one owned Linux fixture, synthetic local effects and injected tenant authority; no real IdP, outside custody, production launch or offsite survival is established.
 
 ## October 4 public source checkpoint
 
@@ -182,8 +168,8 @@ patched Bubblewrap 0.13.0 identity; the historical binary 0.0.4-preview.1 does n
 
 The originating development source `cc74ee2409c0bad33927dce5c28ea55fc2050002`
 passed all 5,175 ordinary, 34 release/security and 139 native tests with zero skips
-or failures. Same-agent actual-file auditing bound the source, native artifacts,
-compiler inventory and command logs. This is the exact development result; public
+or failures. File-level comparisons bound the source, native artifacts, compiler
+inventory and command logs. This is the exact development result; public
 export adaptations and changed package metadata require their own checks.
 
 The public export passed offline locked dependency installation, TypeScript
@@ -197,8 +183,7 @@ Linux x64 PIE executables. The compiled source CLI reported `keep 0.0.5-preview.
 The [machine-readable checkpoint](checkpoint-2026-10-04.json) records the actual
 source comparison, product-file digest and local build measurements. These checks
 ran unprivileged with networking disabled, two CPUs, 4 GiB RAM, no swap and a
-512-process ceiling. The same agent checked actual source and compiler files
-against the tested inputs. This is partial public-export verification and a
+512-process ceiling. Source and compiler files were compared with the tested inputs. This is partial public-export verification and a
 source-checkout demonstration; neither the complete public profile nor a fresh
 installed archive was qualified. These source-export checks preceded binary qualification and did not deploy an
 instance. The earlier development full pass remains attached to its exact source.
@@ -208,9 +193,9 @@ The separate earlier local version 0.0.2 archive passed scripts-enabled packagin
 tracks. That archive is not a public 0.0.5-preview.1 binary. Fixture identities do
 not establish authenticated organization custody or offsite disaster survival.
 
-Historical failures below retain their original inputs and dispositions. Completing
-all 26 scoped tickets does not turn plan, inventory or contract outcomes into
-production qualification.
+Historical failures below retain their original inputs and dispositions. Production
+qualification requires executed workload and boundary evidence beyond the
+26 completed implementation items.
 
 ## Starting results
 
@@ -233,8 +218,7 @@ performance or enterprise-model qualification. The acceptance request cap is not
 a comprehensive product billing ceiling.
 
 Runnable harness source: [native provider journey](../acceptance/installed_sg04_live_provider_journey.mjs).
-This model-backed historical harness requires separately authorized model access;
-it is not the no-key introductory experiment.
+This historical model-backed harness requires separately authorized model access.
 
 ### Governed repository workflow
 
@@ -277,10 +261,9 @@ warns that reporting persistence could not be confirmed, even if Git delivery
 was observed to succeed. Resolve that journal problem before relying on the
 record or retrying. No failed log write triggers an automatic Git retry or undo.
 
-An initial non-applicable edit returns a retained unsolved result rather than an
-uncertain-effect obstruction. Its apply record says `classification:
-"non-applicable"` and `effect: "not-attempted"`; a matched prefix is held, not
-partially applied. Actual unexpected exceptions still require reconciliation.
+An initial non-applicable edit returns a retained unsolved result with no effect
+attempted. Its apply record says `classification:
+"non-applicable"` and `effect: "not-attempted"`; a matched prefix is held and the whole edit remains unapplied. Actual unexpected exceptions still require reconciliation.
 These are corrected-runtime contracts; historical release results above and
 below retain their original artifact identities.
 
@@ -295,8 +278,7 @@ a model-selected memory read, and passed separately defined repository checks
 while leaving the source and tests unchanged. The earlier blocked pair made zero
 model calls and remains a separate failed diagnostic.
 
-The model transport used a controlled local Claude CLI bridge to Keep's native loop,
-not the external agent's full coding workflow. Reported model usage included
+Keep's native loop used a controlled local Claude CLI bridge for model transport. Reported model usage included
 `claude-opus-5` and auxiliary `claude-haiku-4-5-20251001` activity; these are the
 recorded service identifiers, not an assertion about current model availability.
 Both tasks belong to one authored family involving historical and corrected
@@ -306,8 +288,8 @@ outcomes were observed; internal causal reliance and broad learning transfer wer
 not established. Fixture authority is not a production identity provider.
 
 Implementation: [task context](../src/memory/task_context.ts).
-The historical raw development records are not included wholesale because they
-contain private operational context; this is a scoped public result summary.
+Raw development records contain private operational context and are excluded
+from this public summary.
 
 ### Uncertain outcomes and dispatch permits
 
@@ -341,9 +323,7 @@ and public export checks are recorded separately above.
 
 A passing accounting demonstration does not qualify general coding, solver or
 repository-recovery workflows. Earlier installed coding results are bounded historical
-evidence, not a current broad-suite pass. Relevant failures must be resolved before
-making stronger claims about those paths; publishing their experimental source does
-not require pretending those claims have already been earned.
+evidence, not a current broad-suite pass. Relevant failures must be resolved before making stronger claims about those paths.
 
 
 ## Reading implementation claims
@@ -365,7 +345,7 @@ does not establish complete observation or semantic truth. See [Security](../SEC
 for operational restrictions, including incomplete paid-usage metering.
 
 Public fixtures and expected answers are exposed development material. Future
-studies must separate them from genuinely held-out tasks, retain negative outcomes,
+studies must separate them from held-out tasks, retain negative outcomes,
 and distinguish independent execution from independent administration.
 
 ## Evidence history
@@ -375,10 +355,8 @@ the current distribution; use `KEEP_RELEASE.md` for that.
 
 ### Historical development evidence — source 63cbf80
 
-This is a superseded development artifact, not the current release candidate.
-The accompanying candidate handoff records the prepared artifact's exact bytes,
-environment and results separately; these historical results do not qualify later
-changes merely because they share a date.
+The superseded development artifact below has its own exact bytes, environment
+and results. Later changes require separate checks.
 
 Source `63cbf8065f7ad5d32d9026466986f907697bdd16` built from a
 selected snapshot with digest
@@ -391,8 +369,8 @@ outputs from source using the previously acquired pinned Rust toolchain, mounted
 read-only at a different path. It did not reacquire that toolchain. The consumer
 had neither the source checkout nor Rust visible; the demonstration had no external
 network and made no model calls. Direct sink readback agreed with the recorded
-capacity and uncertainty outcomes. This remains a same-host, builder-administered
-result, not outside replication or publication clearance.
+capacity and uncertainty outcomes. This was a same-host, builder-administered result. Outside replication and
+publication clearance were separate requirements.
 
 The following earlier result additionally exercised fresh toolchain acquisition:
 
@@ -410,9 +388,7 @@ network-disabled and made no model calls. Direct durable sink observations inclu
 one effect and one unresolved obligation against capacity one, with excess work held;
 capacity-two and genuine pre-invocation-refusal controls permitted useful work.
 
-Both environments still used the maintainer's host/kernel and system tools. This is
-builder-administered local isolation, not genuinely outside replication. This exact
-archive is historical development evidence, not a published release; later source
-or documentation changes have not automatically been rerun. Full-suite and broad
-platform/provider qualification are separate from these 24 cases. The final preview
-must identify its own bytes, environment, results and limitations.
+Both environments used the maintainer's host, kernel and system tools. The archive
+remains unpublished historical development evidence. These 24 cases leave outside
+replication, full-suite and broad platform/provider qualification open; later
+changes need their own results.

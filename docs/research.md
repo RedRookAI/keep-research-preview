@@ -30,10 +30,8 @@ supplies versioned sources; skill and adaptation mechanisms provide ways to prop
 and evaluate changes in later behavior.
 
 The runtime also includes delegated permissions, shared-resource accounting,
-recovery records, deployment checks, and a hash-linked audit history. These are
-useful experimental controls. They give studies a starting point for varying a
-memory policy or skill-selection method while holding tasks, permissions, and
-outcome checks comparable; each study must qualify the connections it uses.
+recovery records, deployment checks, and a hash-linked audit history. Studies can vary memory or skill-selection policy while holding tasks, permissions
+and outcome checks comparable. Each study must qualify the connections it uses.
 
 Development results provide three starting points:
 
@@ -75,10 +73,9 @@ unnecessary interruptions, and total retrieval and inference cost. Supplied pass
 and observable actions would be recorded separately from claims about a model's
 internal reliance on a source.
 
-A useful outcome would be a memory design that helps an agent work correctly as a
-repository evolves, along with task sequences and results that other developers
-can reproduce. The temporal-memory demonstration supplies an initial combined
-workflow; broader transfer is the question for the proposed study.
+The temporal-memory demonstration supplies an initial workflow. The proposed
+study would test transfer across evolving repositories and publish reproducible
+task sequences and results.
 
 Implementation: [task context](../src/memory/task_context.ts).
 Configuration: [semantic memory and private retention](semantic-memory.md).
@@ -101,9 +98,8 @@ task families, regressions on earlier tasks, and the cost of acquiring and evalu
 experience. We also want to understand what happens when information supporting a
 useful adaptation is corrected or withdrawn.
 
-The aim is to identify changes that keep earning their place as the workload
-evolves. A resulting method could help maintainers improve an agent over time while
-keeping the cost of evaluation and repair visible.
+The study would track whether changes remain useful as the workload evolves,
+including the cost of evaluation and repair.
 
 Implementation: [outcome adaptation](../src/learning/outcome_adaptation.ts).
 
@@ -151,9 +147,8 @@ checks, and permissions constant while varying candidate generation and selectio
 Outcomes would include regressions, incorrectly accepted changes, human intervention,
 and total cost per correct completion.
 
-This work could give developers practical guidance on where additional inference
-and verification are worth using. It also provides a setting for testing whether
-improved memory and skills translate into better software work.
+The comparison would test when extra inference, verification, memory and skills
+improve software delivery enough to justify their cost.
 
 Implementation: [native proposal loop](../src/solve/edit_planner.ts) and
 [governed merge](../src/solve/governed_local_merge.ts).
@@ -175,8 +170,8 @@ authority changes against competent transactional coordination and serialized
 execution. All methods would receive the same service observations and relevant
 state. We would examine when recovery can observe and settle an earlier operation,
 when another action needs fresh authority, and how long uncertainty blocks useful
-work. An idempotent retry may still initiate a first effect; it is not automatically
-a read-only observation.
+work. An idempotent retry may still initiate a first effect and needs authorization
+for that possibility.
 
 The intended result is a tested recovery contract and evidence about which
 coordination rules preserve useful concurrency. Important measures include actual
@@ -304,14 +299,6 @@ as applicable.
 Reports would retain failures and unresolved cases and identify the settings in
 which simpler methods are sufficient. The resulting evidence should let another
 developer decide which mechanisms are worth adopting.
-
-## Next stage
-
-The proposed next stage is a set of targeted studies built on this runtime:
-representative tasks, credible comparison implementations, repeated model
-evaluations, and externally administered runs. Individual projects can produce
-useful software and findings while contributing to the larger goal of agents
-that take responsibility for more demanding work.
 
 Keep is developed by Red Rook AI. Start with the [project introduction](../README.md),
 [preview guide](research-preview.md), and [evidence record](evidence.md).

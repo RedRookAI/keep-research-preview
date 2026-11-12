@@ -1,9 +1,8 @@
-# Maintenance preview — September 10.2, 2026
+# Maintenance preview: September 10.2, 2026
 
-Keep 0.0.3-preview.1 publishes the completed correction work through audit Segment
-13A, with regression tests and useful-work controls. The audit continues against
-the original September 9 release. This update is builder-tested, not independently
-audit-verified or qualified for unattended production use.
+Keep 0.0.3-preview.1 includes corrections, regression tests and useful-work controls
+from the continuing audit of the September 9 release. The builder tested this update;
+independent verification and unattended production qualification remain open.
 
 ## What changed
 
@@ -34,8 +33,7 @@ audit-verified or qualified for unattended production use.
 The earlier maintenance fixes remain included: tenant-scoped grant revocation,
 nonempty skill-validation evidence, prior counterexample checks, content-bound
 skill admission, retirement/promotion consistency, static adoption metadata, and
-accurate repository refusal/delivery reporting. These are engineering corrections;
-passing their tests does not establish a learning or security research advance.
+accurate repository refusal/delivery reporting. The evidence covers these engineering corrections; research comparisons remain open.
 
 ## Upgrade and recovery
 
@@ -83,6 +81,5 @@ coverage remain under audit. Undefined client multi-run interfaces are not claim
 as supported workflows. See [Security](../SECURITY.md) for the required command
 boundary's host assumptions, launcher advisory and native custody limitations.
 
-The original release tags/assets and earlier research results remain unchanged.
-The [security research brief](security-experiments.md) remains the proposed research
-agenda; this maintenance release does not report those studies as completed.
+Original release tags, assets and research results are unchanged. The
+[security research brief](security-experiments.md) describes the proposed studies.

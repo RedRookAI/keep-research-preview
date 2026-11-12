@@ -1,6 +1,6 @@
 # Independent workspace verification — November 12, 2026
 
-Follow-up: actual public-download and source preparation passed on fresh Ubuntu 22.04 x64. Source .22 also gained an independently checked preflight diagnostic for the restricted Ubuntu 24.04 setup. The original observations below retain their tested subjects; the follow-up supersedes their unresolved independent-positive-preparation status.
+A later check passed public-download and source preparation on fresh Ubuntu 22.04 x64. Source .22 also gained a checked preflight diagnostic for restricted Ubuntu 24.04. The observations below preserve the earlier preparation refusal; the follow-up records the passing environment.
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/preparation-portability-2026-11-12.md
 
@@ -12,11 +12,11 @@ The published .21 download and the .22 source build reproduced outside the devel
 | Native patch publisher | Same fresh VM and actual published package root export | Candidate contents, original inputs, checksums and evidence readback passed. |
 | Source .22 | Separate fresh x64 VM, exact public commit, fresh npm dependencies and Rust 1.97.1 | Standard `npm run build` and public API import passed. All three rebuilt native executables exactly matched the published checksums. |
 | Bundled generation engine | Fresh x64 VM, empty account home | Native executable launched and reported its expected version; login status correctly reported logged out. No live generation was attempted. |
-| Spark portable workflow | ARM64 NVIDIA GB10, separately downloaded Node 22.23.4, public release inputs | Both demos, lifecycle and export passed. Native capture returned `UNSUPPORTED`; the bundled native/generation executables target x64. This is portable-workflow evidence, not an ARM64 native release. |
+| Spark portable workflow | ARM64 NVIDIA GB10, separately downloaded Node 22.23.4, public release inputs | Both demos, lifecycle and export passed. Native capture returned `UNSUPPORTED`; the bundled native/generation executables target x64. ARM64 native execution remains unsupported. |
 | Namespace helper build | Fresh VM, public pinned Dockerfile and upstream source | Rebuilt helper matched the existing admitted SHA-256 exactly. |
 | Required-jail preparation | Fresh x64 VM with a protected, admitted helper | Namespace setup refused before the installation check could complete. Independent positive preparation remains unverified on this restricted host. |
 
-The tested combined archive is `keep-combined-0.0.21-preview.1-linux-x64.tar.gz`, SHA-256 `7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca`. The source build used commit `f4fd9e35f7655c646998c0618fa37639e10a24a1`. Its fresh compiler/build gate passed and produced the same native client, supervisor and capture bytes as the release. This is a build result; the complete runtime test suite was not run by that build job.
+The tested combined archive is `keep-combined-0.0.21-preview.1-linux-x64.tar.gz`, SHA-256 `7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca`. The source build used commit `f4fd9e35f7655c646998c0618fa37639e10a24a1`. Its fresh compiler/build gate passed and produced the same native client, supervisor and capture bytes as the release. That job checked the build and public API import; it did not run the complete runtime test suite.
 
 Published-download and native-consumer run:
 
@@ -78,4 +78,4 @@ https://rust-lang.github.io/rustup/basics.html
 
 These are developer-administered fresh-environment checks of public inputs. They establish the listed installation, workflow and build outcomes. Live model quality, live organization custody, maximum resource profiles, production-native authority and whole-platform completion remain outside this result.
 
-Large downloads and builds for this verification ran on the Spark or disposable CI VMs. No large artifacts or builds were added to Hetzner. The Spark's completed test downloads, runtime and extracted fixtures were removed; 24 KiB of receipts and logs remain in its owned workspace.
+Verification downloads and builds ran on Spark or disposable CI VMs. Completed Spark fixtures were removed; 24 KiB of receipts and logs remain.

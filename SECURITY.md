@@ -1,176 +1,75 @@
-# Security boundary and disclosure
+# Security boundaries
 
-Keep is a research preview and is not qualified for unattended consequential
-production use. The repository walkthrough uses a synthetic repository and
-scripted local responses; the companion recovery experiment uses a local test
-outbox. Neither demonstration requires a live model or external account.
+Keep is under development. The hosted guided task uses authored responses with real workspace edits, checks and proposal decisions. The self-contained Linux x64 appliance has its own measured browser/startup profile. Fresh live-account generation, production native execution and full-platform qualification remain open.
 
-The current development source is **0.0.29-preview.1**. The self-contained
-**0.0.29-preview.1 Linux x64 appliance** passed its account-free browser workflow:
-approval and veto, four executable checks, evidence export and stop/restart with
-retained jobs. The hosted guided demo runs **0.0.25-preview.1**. Both use authored
-responses and real workspace edits/checks.
+Current source, hosted and appliance identities:
 
-The current native OpenClaw SDK passed submission and fresh-process status against
-the shipped Keep API with dispatch paused and zero account/provider calls. Fresh
-live-account generation and full operator handover remain open. The earlier
-genuine Codex case and direct-installation checks retain their historical versions.
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/submission-snapshot-2026-11-12.json
 
-Current appliance profile and native API observation:
+<a id="what-the-mechanisms-establish"></a>
 
-https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-29-2026-11-12.md
+## Trust model
 
-https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/current-openclaw-api-2026-11-12.json
+- The host administrator and injected provider/adapter code are trusted. In-process adapters share the host boundary.
+- Authentication, permissions and tenant checks apply at their implemented entry points. Broader effect-path coverage needs separate verification.
+- Durable records retain dispatched and uncertain outcomes. Recovery inspects unresolved work before retrying; local restore leaves external service effects intact.
+- Hash-linked audit records bind recorded bytes. Their truth and completeness depend on the recorder and administrator.
+- Memory labels and prompt delimiters leave retrieved content untrusted. Execution controls and isolation apply separately.
+- Privacy transformations act on detected content. Context, missed secrets, external copies and retained key material remain relevant.
+- Monetary reservations cover selected routes. Trace reporting preserves unknown usage/pricing; it is separate from paid admission and provider billing.
 
-See [architecture](docs/architecture.md), [current status](ROADMAP.md),
-[exact release identities](KEEP_RELEASE.md) and [validation evidence](docs/evidence.md).
+Metering details:
 
-## What the mechanisms establish
-
-- Authorization applies at specific entry points; an in-process adapter is trusted
-  host code, not automatically an isolated adversary.
-- The reference deployment reports missing or detection-only controls explicitly.
-  Available namespaces, Landlock or virtualization do not establish active isolation.
-- Durable dispatch/accounting records preserve some uncertain outcomes. They do
-  not promise exactly-once effects for arbitrary remote services.
-- A hash-linked audit trail does not prove the truth of events, absence of omitted
-  events, or independence of the observer. A same-host witness is not an outside auditor.
-- Memory/skill labels and prompt delimiters do not make untrusted content safe.
-  Configured execution checks and actual isolation remain necessary.
-- Privacy transformations reduce some exposure; they do not guarantee anonymity,
-  complete secret detection, or deletion from external providers.
-- Paid-usage metering is incomplete across routes. Do not rely on it as a universal
-  billing ceiling or attach unrestricted paid credentials.
-
-See [monetary accounting](docs/monetary-accounting.md) for durable reservations,
-legacy-state handling and incomplete coverage.
-
-Inspect [enforcement profiles](src/platform/enforcement_profile.ts) and the
-[demonstration limits](docs/research-preview.md#interpreting-the-result) and
-[evidence record](docs/evidence.md) for the exact boundaries.
-Run hostile code only in an appropriately isolated, explicitly authorized environment.
-Do not expose a gateway publicly merely because local authentication tests pass.
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/monetary-accounting.md
 
 ## Opt-in required project boundary (experimental)
 
-The command runner's `namespaceJail: "required"` mode uses the existing Bubblewrap
-launcher and kernel namespaces. It refuses unsupported setup rather than falling
-back to an unrestricted command. Its current qualified-binary configuration is
-Linux x64 with the expected merged `/usr` layout and the exact launcher identity
-checked in [the implementation](src/infra/required_project_jail.ts). Other binaries
-or operating arrangements require qualification; a version string is insufficient.
+The command runner's `namespaceJail: "required"` mode uses a measured Bubblewrap launcher and kernel namespaces. It refuses unsupported setup. The qualified binary profile is Linux x64 with the expected merged `/usr` layout and exact executable hash.
 
-For the TypeScript project runner, the operator may set
-`KEEP_TEST_JAIL_EXECUTABLE` to an absolute protected installation path when
-`KEEP_TEST_NAMESPACE_JAIL=required`. The default is
-`/opt/keep/bubblewrap/0.13.0/bwrap`. Both selections require the same fixed hash,
-root ownership, protected ancestry and non-setuid/nonwritable executable checks;
-the path is not accepted from repository or model input. `keep doctor` checks
-launcher presence and trust without running repository code or exercising
-namespaces. Every actual required-jail execution still checks the launcher and
-setup result, refusing unsupported host policy. This setting does not change
-the separate native custody transport configuration or install a host helper.
+The operator can select an absolute protected launcher with `KEEP_TEST_JAIL_EXECUTABLE` when `KEEP_TEST_NAMESPACE_JAIL=required`. The default is `/opt/keep/bubblewrap/0.13.0/bwrap`. Both paths require the fixed hash, root ownership, protected ancestry and a non-setuid/nonwritable executable. Repository/model input cannot choose the launcher. `keep doctor` checks its presence and trust; each actual execution also checks setup.
 
-The task receives a read-only system tool tree, its project and explicitly allowed
-write directories, optional `readOnlyPaths`, and fresh temporary directories.
-Network access is off unless `allowNet: true` is explicitly selected. Unix socket
-creation is restricted, while private stream socketpairs support ordinary Node IPC.
-Developer home directories and other host paths are not automatically exposed.
-Network opt-in shares the network namespace; it does not supply resolver settings
-or certificate authorities. DNS/TLS may need operator-approved configuration in
-explicit `readOnlyPaths` directories. Only local numeric-address connectivity has
-been exercised in the current network checks.
+The task receives a read-only system tool tree, its project, explicitly allowed write directories, optional `readOnlyPaths` and fresh temporary directories. Network access defaults off. Unix socket creation is restricted; private stream socketpairs support Node IPC. Other host paths and developer homes stay outside the task view.
 
-Supply quiescent, operator-owned working directories. Required mode refuses shared
-file inodes (hard links), special files, unprotected writable trees and nested host
-mounts in supplied roots. It does not detach links, copy or migrate operational
-data. The host kernel, system tools and absence of concurrent host-side changes
-remain trusted; directory scanning does not establish global exclusive ownership.
-An explicitly selected root may itself be a mounted volume; mounts below it are
-refused. Admission scans at most 100,000 entries across the supplied read/write
-trees, including dependencies, within the command's existing time limit. Larger
-trees or slow scans are refused before task entry, not partially admitted.
+`allowNet:true` shares the network namespace. DNS/TLS settings may need operator-approved paths; only numeric-address local connectivity has been exercised. The host kernel and system tools remain trusted.
 
-`launcher-confirmed` records the trusted launcher's completed setup/exit protocol,
-not independent witnessing, a VM boundary or unrestricted production readiness.
-File-size limits are per file and rounded down to KiB; positive limits below one
-KiB are refused, while explicit zero remains zero. These are not a total disk
-quota. Process limits are per user and have privilege exceptions. This runner does
-not impose an aggregate memory ceiling. Use separately qualified outer resource
-controls for hostile workloads. Legacy `true`/default best-effort and explicit
-`false` behavior remain available and carry their weaker observations.
+Use quiescent, operator-owned working directories. Required mode refuses hard links, special files, unprotected writable trees and mounts nested under supplied roots. It scans at most 100,000 entries across all supplied trees within the command deadline; larger or slow scans refuse before entry. The selected root may itself be a mount. The runner preserves operational data when refusing; it leaves link detachment or migration to the operator.
 
-The 0.0.5-preview.1 source pins the measured non-setuid Bubblewrap **0.13.0**
-launcher across the TypeScript required jail, native supervisor and P2 candidate
-probe. [Upstream GHSA-pxhw-h44j-8pfx](https://github.com/containers/bubblewrap/security/advisories/GHSA-pxhw-h44j-8pfx)
-affects versions below 0.12.0; the selected
-[0.13.0 release](https://github.com/containers/bubblewrap/releases/tag/v0.13.0)
-contains the fix. Keep verifies exact bytes; a matching version string alone does
-not admit a launcher. Setup remains refused when the required binary is absent
-or mismatched. [Launcher recipe and identity](tools/bubblewrap/README.txt) describe
-the measured build and required requalification; they do not authorize shared-host
-installation or security-policy changes.
+`launcher-confirmed` records the trusted launcher's completed setup/exit protocol. File-size limits are per file, rounded down to KiB; positive limits below 1 KiB refuse, while explicit zero remains zero. Process limits are per user with privilege exceptions. Aggregate memory and total disk need outer resource controls. Default/legacy best-effort behavior and explicit `false` retain their weaker boundaries.
 
-The downloadable **0.0.4-preview.1 archive remains affected**. A source commit or
-documentation update cannot patch already published bytes. Its earlier fixed-layout
-mitigation is not a patched dependency. Consult [the checkpoint record](KEEP_RELEASE.md)
-for the distinction between development qualification, public export checks and
-historical installed artifacts. Local checks do not establish arbitrary workload
-isolation, organization custody or independent replication.
+Implementation and launcher recipe:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/src/infra/required_project_jail.ts
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/tools/bubblewrap/README.txt
+
+### Historical vulnerable archive
+
+The selected non-setuid launcher is Bubblewrap 0.13.0. GHSA-pxhw-h44j-8pfx affects versions below 0.12.0. The historical 0.0.4-preview.1 download remains affected; later source changes leave its published bytes unchanged. Use the release record to identify an artifact's actual dependencies.
+
+https://github.com/containers/bubblewrap/security/advisories/GHSA-pxhw-h44j-8pfx
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/KEEP_RELEASE.md
 
 ## Optional native refusal transport: installation prerequisites
 
-The packaged native client/supervisor currently provide a refusal-only development
-exchange. They do not launch workloads or grant production isolation authority.
-The introductory recovery demonstration does not require this transport.
+The packaged client/supervisor provide a refusal-only development exchange. Workload launch and production isolation authority remain unfinished.
 
-An ordinary npm installation preserves package contents but does not establish
-the native client's required custody. For this optional exchange, a separate
-administrator-controlled copy must have canonical, root-owned directory ancestry
-with no group/other write access. Its `dist/native/linux-x64` directory and client/
-supervisor executables must have mode `0555`; `keep-native-supervisor.sha256`
-must have mode `0444`. Verify all copied file bytes against the reviewed archive
-before and after staging. Do not run npm lifecycle scripts as root to establish
-these permissions, or change an existing application's data to satisfy them.
+The optional exchange requires an administrator-controlled copy with canonical root-owned ancestry and no group/other write access. `dist/native/linux-x64`, its client and supervisor executables need mode 0555; `keep-native-supervisor.sha256` needs mode 0444. Verify copied bytes against the reviewed archive before and after staging. Ordinary npm installation preserves package contents but leaves this custody step to the administrator.
 
-These are namespace-relative ownership and mode checks, not protection from a
-host administrator, proof of a read-only filesystem, or adversarial attestation
-between same-user processes. An ordinary install that fails these checks must
-remain refused. Stream failures retain bounded client diagnostics; neither an
-error message nor a failed write proves whether a peer received an operation.
+These ownership/mode checks are relative to the namespace and trusted administrator. Retain bounded diagnostics for stream failures; a local failure can leave peer receipt uncertain.
 
-## Public test material
+<a id="public-test-material"></a>
 
-Security tests intentionally contain synthetic credential-shaped strings, rejection
-markers and untrusted inputs. Vendored cryptography packages also retain upstream
-example keys and test vectors with their source notices. These are development
-fixtures, not credentials to use in an operational deployment. Do not substitute a
-real secret into a public reproducer or assume that a key-shaped match is harmless
-without inspecting its provenance and use.
+## Test fixtures
 
-Published fixtures and expected answers are exposed development material. A future
-research comparison must not describe them as unseen held-out tasks. Passing these
-tests does not establish complete secret detection, independent evaluation or
-protection against every untrusted input.
+Security tests contain synthetic credential-shaped strings, rejection markers and untrusted input. Vendored cryptography retains upstream example keys and test vectors with their notices. Inspect provenance before treating a key-shaped match as a fixture. Published fixtures and expected answers are exposed material for future evaluations.
 
-## Reporting a vulnerability
+<a id="reporting-a-vulnerability"></a>
 
-GitHub's built-in private vulnerability reporting is enabled for this public
-preview. Open this repository's **Security**
-tab, select **Advisories**, then **Report a vulnerability** to send a private report.
+## Report a vulnerability
+
+Open **Security → Advisories → Report a vulnerability** in this repository. Private vulnerability reporting is enabled.
 
 https://github.com/RedRookAI/keep-research-preview/security/advisories
 
-The enabled setting was verified through GitHub's API, and the public Advisories
-page displays the reporting link. Maintainer notification delivery has not yet been
-verified. No response deadline, bounty, dedicated security team or separate email
-address is promised. Do not use public issues to transmit sensitive reports.
-
-Do not post credentials, private repository contents, customer data, authentication
-headers or unredacted traces in public issues. Use the private form when available;
-provide the exact artifact/version, environment, minimal synthetic reproducer,
-expected outcome and observed result. Distinguish a static suspicion from a
-reproduced effect. Never test against another person's deployment without permission.
-
-Maintainer configuration follows GitHub's
-[private vulnerability reporting guidance](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository).
+Include the artifact/version, environment, synthetic reproducer, expected behavior and observed result. Keep credentials, private repositories, customer data and unredacted traces out of public issues. Test only deployments you are authorized to assess.

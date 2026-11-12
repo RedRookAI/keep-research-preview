@@ -1,18 +1,24 @@
 # Use the Linux x64 reviewer appliance
 
-The appliance carries Keep, its Node runtime, Git, the fixed sandbox helper and the bundled generation engine in a Debian13 guest. The account-free sample lets you submit a goal, inspect real edits and checks, veto the proposal and download its evidence. It uses two scripted responses.
+The **0.0.29-preview.1** appliance supplies Keep, Node, Git, the sandbox helper and the generation engine in a Debian 13 guest. Its webhook sample uses two authored responses to produce an edit, four checks and a proposal you can approve or veto. It needs no model account.
 
-This package targets Linux x64 with QEMU/KVM and the pc-q35-8.2 machine. QEMU8.2.2 was used for the profile proof. Your host needs Python3.8 or later, OpenSSH, qemu-system-x86_64, qemu-img and existing read/write KVM access. Allow storage for the download, the roughly2GB base image and each instance's growing writable overlay. Each guest disk has8GiB virtual capacity; this is separate from the base image's storage. At first start, the launcher requires at least 8 GiB of free host storage after extraction, in addition to the bundle already on disk. The guest uses2vCPU and2GiB RAM. Host Node/npm/Rust are unnecessary. The launcher installs no host tools or policy.
+## Host requirements and download
 
-Download the qualified **0.0.29-preview.1** appliance:
+Use Linux x64 with Python 3.8+, OpenSSH, `qemu-system-x86_64`, `qemu-img` and existing read/write KVM access. The tested profile uses QEMU 8.2.2 and `pc-q35-8.2`, with 2 vCPU, 2 GiB RAM and an 8 GiB virtual guest disk. ARM64 and other host/hypervisor profiles remain unqualified.
+
+Allow space for the download, roughly 2 GB base image and each instance's writable overlay. First start requires **8 GiB of free host storage after extraction**, in addition to the bundle already on disk. Host Node/npm/Rust are unnecessary; the launcher leaves host tools and policy unchanged.
 
 https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3
 
-Archive: `keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repack.tar.xz`. SHA256: `b4a0208da9ff6e713a624b0eca034ba4d6d70090f8a88f6c456474f44fc0ec51`. The exact archive passed both browser decisions, four checks, export and stop/restart on a fresh CI host. The release supplies matching sources and checksums. The source recipe is under tools/appliance.
+Archive: `keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repack.tar.xz`.
+
+SHA256: `b4a0208da9ff6e713a624b0eca034ba4d6d70090f8a88f6c456474f44fc0ec51`.
+
+The exact archive passed approval, veto, four checks, export and stop/restart on a fresh CI host. The release includes matching sources and checksums; the build recipe is under `tools/appliance`.
 
 ## Start your instance
 
-Verify the published download checksum, extract the bundle and keep that directory in place. Each instance has its own private writable directory and overlay. Choose a short path for that directory so the private QMP socket fits the Linux path limit.
+Verify the published checksum, extract the bundle and keep its directory in place. Choose a new private instance directory with a short path so its QMP socket fits the Linux path limit.
 
 ```sh
 python3 keep-appliance.py check
@@ -20,7 +26,7 @@ python3 keep-appliance.py start /your/private/keep-instance --port 7788 --ssh-po
 python3 keep-appliance.py status /your/private/keep-instance
 ```
 
-The ports must be free. Startup creates a private instance key and fresh guest SSH host keys. It starts the guest with the sample stopped. An occupied port or unfamiliar instance state produces a correction message and preserves existing work.
+Both ports must be free. Startup creates private instance and guest SSH keys, then boots with the sample stopped. Occupied ports or unfamiliar state produce a correction message and preserve existing work.
 
 ## Try the browser sample
 
@@ -29,50 +35,48 @@ python3 keep-appliance.py sample-start /your/private/keep-instance
 python3 keep-appliance.py credential /your/private/keep-instance
 ```
 
-Sample startup checks the console through the owned SSH forward before reporting its local browser address. On a host with a browser, open that reported address and enter the credential. The guest and host use the same literal127.0.0.1 port to preserve the browser origin.
+Open the reported address and enter the credential. The guest and host use the same literal `127.0.0.1` port to preserve the browser origin.
 
-For a remote host, make an additional SSH tunnel from your browser's computer to the host using the same local port. For example, forward your computer's127.0.0.1:7788 to the appliance host's127.0.0.1:7788. Open that address in your own browser. An assigned hosted invitation gives you the walkthrough directly in your browser:
+On a remote host, add an SSH tunnel from your browser's computer using that same local port. For example, forward your computer's `127.0.0.1:7788` to the appliance host's `127.0.0.1:7788`, then open it in your own browser.
 
-https://keep.redrook.ai/console
+For the hosted walkthrough, use your assigned invitation and its separately supplied credential:
 
-The operator supplies its invitation credential separately.
+https://keep-b.redrook.ai/console
 
-Choose **Start demo**, then **Prepare the fix**. Keep will edit a small webhook handler and run four checks. Inspect the checked diff, approve or veto the proposal, then choose **Download evidence** to save the patch, checks and decision.
+Choose **Start demo**, then **Prepare the fix**. Inspect the webhook diff and four checks, approve or veto the proposal, then choose **Download evidence**.
 
-In this appliance sample, proposal approval retains the reviewed workspace and leaves the source repository unchanged. You can reopen either an approved or vetoed sample to inspect its retained decision and export.
+Appliance approval retains the reviewed workspace and leaves the source repository unchanged. Both decisions remain available with their evidence after reopening the sample.
 
 ```sh
 python3 keep-appliance.py sample-stop /your/private/keep-instance
 python3 keep-appliance.py sample-start /your/private/keep-instance
 ```
 
-Restart reopens the same sample and its retained jobs. It preserves decisions and exports. If a job was interrupted, inspect its recorded state before resuming; startup does not reset the instance or create a replacement task.
+Restart retains the same jobs, decisions and exports. Inspect interrupted work before resuming it.
 
 ## Distribution records
 
-The manifest records the guest image's source separately from the host-tool assembly source. A host-tool update can reuse the same verified guest image. `HOST_SOURCE.tar.gz` supplies the assembly's exact source; the guest retains its own source support and component identities.
+The manifest identifies guest-runtime and host-assembly sources separately. `HOST_SOURCE.tar.gz` contains the assembly source. Guest support includes installed source versions, Built-Using fields, notices, component identities and file checksums. The bundle also carries the pinned Bubblewrap source and build recipe.
 
-The qualification consumer captures the final guest's installed package metadata, including source versions and Built-Using fields, plus its copyright notices and existing Keep, engine and Node support files. The capture records file checksums and the exact image and source identities. The bundle also retains the pinned Bubblewrap source archive and its build recipe.
-
-The published Debian source companion contains all 289 required source/version pairs, including the Debian patches identified by the guest inventory. The exact .29 image and clean-consumer observation are recorded with their hashes in the release qualification.
+The published Debian source companion contains all 289 required source/version pairs, including the Debian patches in the guest inventory. The release qualification records the exact image and clean-consumer observations.
 
 ## Set up your own repository
 
-Open the guest shell when you want to configure a personal project:
+Open the guest shell:
 
 ```sh
 python3 keep-appliance.py shell /your/private/keep-instance
 ```
 
-Inside the guest, start the existing device login flow and follow its browser instructions:
+Start device login and follow its browser instructions:
 
 ```sh
 keep-engine login --device-auth
 ```
 
-Then use keep instance init with your repository, checker, engine/model and chosen limits, following the existing Codex project and local-instance guides carried in the package. Login and model credentials stay in your private instance. Boot and sample startup make no model calls. OpenClaw remains a separate optional client with its own supported patched Node24 runtime.
+Use `keep instance init` with your repository, checker, engine/model and limits. Follow the packaged [Codex project](codex-project.md) and [local-instance](local-instance.md) guides. Login credentials stay in your private instance. Boot and sample startup make no model calls. Optional OpenClaw uses its own supported patched Node 24 runtime.
 
-Stop the sample before starting your personal instance on the same console port. The sample's host forward closes when the sample stops. After starting your personal instance inside the guest, open a foreground SSH forward from the appliance host. Use the private appliance directory and the ports you selected at startup; this example uses the defaults:
+Stop the sample before starting a personal instance on the same console port. After starting that instance inside the guest, open a foreground SSH forward from the appliance host. This example uses the default ports:
 
 ```sh
 APPLIANCE_STATE=/your/private/keep-instance
@@ -86,7 +90,7 @@ APPLIANCE_STATE=/your/private/keep-instance
 )
 ```
 
-The subshell uses relative credential files so OpenSSH treats `known-hosts` as one filename when the instance directory contains spaces. Use the same trusted private instance directory you started above. Keep that terminal open while using the personal console. For a remote appliance host, add the same client-to-host forward described above. Enter the personal instance's gateway credential in its sign-in form. The sample invitation and your model account login are separate credentials. Stop this foreground forward with Ctrl-C; it does not stop the guest or erase its state.
+Relative credential paths keep `known-hosts` usable when the instance directory contains spaces. Keep this terminal open while using the console. For a remote host, add the client-to-host tunnel described above. Enter the personal instance's gateway credential; it differs from the sample invitation and model login. Ctrl-C closes the forward while leaving the guest and state running.
 
 ## Stop and remove
 
@@ -96,6 +100,6 @@ python3 keep-appliance.py stop /your/private/keep-instance
 python3 keep-appliance.py status /your/private/keep-instance
 ```
 
-Stop requests graceful guest shutdown and reports whether it was confirmed. It also reports unresolved sample work when available. If shutdown or a process identity is uncertain, inspect the retained private logs and state before taking further action. The launcher leaves the instance directory intact.
+Stop reports whether graceful shutdown was confirmed and lists unresolved sample work when available. If shutdown or process identity is uncertain, inspect the retained private logs and state.
 
-Once status confirms that the owned guest and tunnel are stopped, you can remove that instance directory to remove its overlay, keys and state. Keep it when you want to retain work or personal login. Keep the bundle while any instance uses its base image. Other hypervisors and ARM64 remain outside this package's supported profile.
+Once status confirms that the guest and tunnel have stopped, you can remove the owned instance directory to erase its overlay, keys and state. Retain it to keep your work and login. Keep the bundle while any instance uses its base image.

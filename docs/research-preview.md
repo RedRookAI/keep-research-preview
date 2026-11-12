@@ -1,6 +1,8 @@
 # Keep research preview
 
-The current **0.0.19-preview.1** combined Linux x64 preview includes Keep, the generation-only Codex engine and restricted OpenClaw plugin. Verify its checksum in [the release record](../KEEP_RELEASE.md) and follow the [direct archive installation guide](combined-preview.md). The observed runtime is Node 22.23.3 for Keep and Node 24.22.0 for OpenClaw 2026.10.5; see the dated [dependency conditions](dependency-status.md). No npm installer or Rust/C compiler is needed for this route; the repository walkthrough also requires Git.
+Start with the [guided browser demo](guided-demo.md) or [installation guide](quickstart.md). The current reviewer appliance is **0.0.29-preview.1**; the separate direct Node archive is **0.0.21-preview.1**. The historical **0.0.19-preview.1** combined archive includes the generation-only Codex engine and restricted OpenClaw plugin described below.
+
+That .19 observation used Node 22.23.3 for Keep and Node 24.22.0 for OpenClaw 2026.10.5. Select a patched runtime using the current [dependency guidance](dependency-status.md). The direct archive route needs Git for repository work and runs without npm installation or Rust/C compilers.
 
 ## First useful result
 
@@ -8,28 +10,26 @@ The current **0.0.19-preview.1** combined Linux x64 preview includes Keep, the g
 keep demo project
 ```
 
-The walkthrough uses the installed repository workflow and two scripted local responses. It simulates sample approval/veto actions, prints an actual proposed diff and two passing tests, checks restart without replay and token refusal, and leaves the original sample source unchanged. Open the printed directory to inspect the workspace, proposal and command records. No account or paid provider request is needed. [Walkthrough details](portfolio-walkthrough.md).
+The installed walkthrough uses two authored responses and sample approval/veto decisions. It prints a workspace diff and two passing tests, checks restart without replay and token refusal, and preserves the original source. Inspect the printed directory for proposal and command records. [Walkthrough details](portfolio-walkthrough.md).
 
-For the companion recovery experiment:
+For the recovery experiment:
 
 ```sh
 keep demo recovery
 ```
 
-It compares actual append-only local outbox effects against committed/reserved capacity, including lost acknowledgments and fresh-process restarts. The 24 named synthetic checks require no Git or model account; the provider throws if called.
+The experiment compares append-only local outbox effects with committed/reserved capacity through lost acknowledgments and fresh-process restarts. Its 24 synthetic checks need neither Git nor a model account; the fixture provider throws if called.
 
 ## Continue on your own repository
 
-[Configure a provider and repository](installed-solve.md), run `keep doctor`, then submit one bounded goal with `keep solve`. Review the printed project approval and exact-proposal merge/veto controls. The selected model's accounting, processing and authority requirements apply. The walkthrough's scripted result is not a model-quality prediction.
+[Configure a provider and repository](installed-solve.md), run `keep doctor`, then submit a bounded goal with `keep solve`. Review the pending approval, diff/checks and exact-proposal decision. Your selected provider's accounting, processing and authority requirements apply.
 
-Keep retains [FrontDoor monetary admission](frontdoor-metering.md), [provider-check pricing](provider-check-pricing.md), [memory query admission](memory-recall-embedding.md), and [manual write](manual-memory-write.md)/[correction](manual-memory-correction.md) controls from recent checkpoints.
+Related controls cover [FrontDoor monetary admission](frontdoor-metering.md), [provider-check pricing](provider-check-pricing.md), [memory query admission](memory-recall-embedding.md), [manual writes](manual-memory-write.md) and [corrections](manual-memory-correction.md).
 
 ## Interpreting the result
 
-The [release record](../KEEP_RELEASE.md) and [evidence](evidence.md) bind actual checks to exact source and package identities. Component passes, a scripted workflow and complete source/installed qualification are distinct. Historical receipts keep their original identities and counts.
+The [release record](../KEEP_RELEASE.md) and [evidence](evidence.md) identify each tested source and archive. The account-free demonstrations use synthetic Linux fixtures. The [genuine Codex case](genuine-codex-walkthrough.md) records live generation on one historical public issue, with scripted OpenClaw tool selection. These observations were developer-administered; broader model evaluation and live organization operation remain open in the [completion map](completion-map.md).
 
-The demonstration reports best-effort process isolation. Required-jail operations separately require measured Bubblewrap 0.13.0 and a qualified namespace environment; absent/mismatched launcher bytes must refuse. Installing Keep does not install a host launcher or change shared-host policy. Native binaries have [additional custody prerequisites](../SECURITY.md#optional-native-refusal-transport-installation-prerequisites); their presence does not qualify arbitrary workloads or production PROBER/D3 authority.
+The demo uses best-effort process isolation. Required-jail operations need measured Bubblewrap 0.13.0 and working host namespaces; absent or mismatched launcher bytes refuse. Native binaries have [additional custody prerequisites](../SECURITY.md#optional-native-refusal-transport-installation-prerequisites). Production native authority, offsite recovery, complete spend enforcement and arbitrary-service exactly-once effects remain unqualified.
 
-The two account-free demos use synthetic Linux fixtures. The separate [genuine Codex result](genuine-codex-walkthrough.md) used real generation on one historical public issue; OpenClaw tool selection was scripted. All supplied qualification remains developer-administered. It does not establish real-model success rates, live organization identity/custody, offsite disaster survival, universal spend enforcement or exactly-once effects across arbitrary services. Personal and organization requirements remain coequal in the [completion map](completion-map.md); this preview is not complete-product readiness.
-
-Before upgrading existing state, stop its writers and retain a verified complete private backup. See [backup guidance](backup.md) and the matching release notes; do not mix old/new writers or interfere with other instances. Older 0.0.5 and affected 0.0.4 releases retain their original archives, tags and qualification records.
+Before upgrading state, stop its writers and retain a verified private backup. Follow [backup guidance](backup.md) and the matching release notes. Older 0.0.5 and affected 0.0.4 archives retain their original tags and records.

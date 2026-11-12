@@ -1,6 +1,6 @@
-# November 11 source update — session authority and native patch application
+# November 11 source update: session authority and native patch application
 
-Development source and the new combined download are **0.0.21-preview.1**. This record preserves the source checks and exact installed subjects from its development; the external release receipt records final assembly and evidence reuse.
+This update introduced source and combined download **0.0.21-preview.1**. The results below identify their tested inputs; the release receipt records final assembly and reused component evidence.
 
 ## Organization key and session lifecycle
 
@@ -18,9 +18,9 @@ The SDK now exposes `publishPackagedNativePatchApplicationV1`. It captures a sup
 
 The supported package is the existing fixed `curve25519-dalek@5.0.0` codec profile. Exact review-input references are retained with status `unverified`; evidence grants no build, admission or launch authority. Candidate permissions are owner-reversible. Publication assumes cooperating owned writers and a trusted administrator; a hostile same-user staging-name race can leave a visible uncertain candidate. The detailed API and trust boundary are in the native application guide.
 
-The native lane passed three owned-directory Rust checks, ten application/audit/structural checks, and focused native/SDK publication and refusal checks. Actual races cover source replacement, staged file/directory/carrier substitution and post-rename file or ledger alteration. Post-publication alterations produce `unknown` and no successful SDK return. An offline installed minimal SDK also invoked the freshly compiled native application as an unprivileged user. Only the audit-plan structural exception justified by this actual consumer was removed. The ABI adds one reviewed syscall site; the exact unsafe-site gate advances from 56 to 57 with its mutant check intact.
+The native lane passed three owned-directory Rust checks, ten application/audit/structural checks, and focused native/SDK publication and refusal checks. Actual races cover source replacement, staged file/directory/carrier substitution and post-rename file or ledger alteration. Post-publication alterations produce `unknown` and no successful SDK return. An offline installed minimal SDK also invoked the freshly compiled native application as an unprivileged user. The ABI adds one reviewed syscall site; the exact unsafe-site gate advances from 56 to 57 with its mutant check intact.
 
-Initial Rust syntax/import build errors were corrected before passing builds. Debug binaries and the final release binaries have distinct subjects; their evidence must retain those identities. No whole-suite, maximum application profile, live review/custody or production-native admission follows from these scoped results.
+Debug and release binaries have separate evidence records. No whole-suite, maximum application profile, live review/custody or production-native admission follows from these scoped results.
 
 ## Integrated evidence
 
@@ -52,7 +52,7 @@ The next attempt reached npm but failed because both user and global configurati
 
 An unprivileged changed-source consumer then observed an actual empty-cache `ENOTCACHED` hold, an explicit seeded retry installing TypeScript 5.9.3, and a configured checker importing TypeScript and verifying transpilation output. The required namespace and resource-limit setup was launcher-confirmed without degradation, installation scripts stayed disabled, and the original source stayed clean and unchanged. Initial toolchain selection and checker-fixture errors were retained separately from product failures. This was a hybrid installed consumer before the final archive; its exact source/artifact subjects are preserved in the release qualification.
 
-After integration, emitting TypeScript compilation and **23/23** affected prerequisite, clone-isolation, workflow and CI checks passed. The two emitted repair modules exactly match the hybrid consumer's observed modules. The new clone regression joins partial hosted CI; the redundant new hardlink-refusal case was removed because the existing required-jail suite already exercises that policy. No unchanged native build or passing native test was repeated for these TypeScript repairs.
+After integration, emitting TypeScript compilation and **23/23** affected prerequisite, clone-isolation, workflow and CI checks passed. The two emitted repair modules exactly match the hybrid consumer's observed modules. The clone regression joins partial hosted CI; the required-jail suite retains its hardlink-refusal checks. The TypeScript repairs reused unchanged native component evidence.
 
 ## Published .21 payload evidence
 

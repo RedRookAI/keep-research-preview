@@ -2,7 +2,7 @@
 
 Proposed research directions · September 10, 2026
 
-## How can we empower agents while keeping people in control?
+## Letting agents take on more work under human control
 
 An agent that can work for days, learn new procedures, and coordinate with other
 agents could take on much more useful work. It also creates a harder oversight
@@ -12,16 +12,12 @@ outcome.
 
 Keep is being developed as a setting for investigating that problem. The aim is to
 let agents take on more responsibility while preserving people's ability to set
-limits, judge the results, and intervene effectively. Security matters here as a
-condition for greater capability, not just a filter on individual responses.
+limits, judge the results, and intervene effectively. Security controls need to support that broader responsibility.
 
 The three directions below focus on oversight across agent teams, learning from
-unreliable experience, and recovery after compromised information spreads. They
-are proposed studies, not completed results. Existing research provides important
-solutions and strong comparisons; the protocols must establish where a new method
-adds value. These directions sit within Keep's wider
-[research program](research.md), rather than defining every future use of the
-platform.
+unreliable experience, and recovery after compromised information spreads. These proposed studies sit within Keep's wider [research program](research.md).
+Each protocol must compare its method with existing approaches and establish
+where it adds value.
 
 ## 1. Keeping oversight effective across long-running agent teams
 
@@ -58,8 +54,8 @@ giving one method more information.
 
 Adversarial agents would be allowed to adapt to the oversight procedure during
 development. Separate evaluation campaigns would test transfer to new tasks and
-attack strategies. Legitimate work must genuinely require the permissions being
-tested: a system that refuses everything would not count as successful oversight.
+attack strategies. Legitimate work must require the permissions being tested, so blanket refusal
+cannot count as successful oversight.
 
 We would measure actual harmful effects, correct completed work, missed incidents,
 unnecessary interventions, detection delay, and model and human review cost.
@@ -78,9 +74,8 @@ also identifies risks distributed across many agent instances.
 
 Our proposed focus is persistent, cooperating agents under realistic limits on
 review, including the reliability of the evidence on which oversight depends.
-Adding another reviewing model is not itself the proposed advance. An advance
-would be a method that withstands stronger adaptive tests while allowing more
-legitimate work for the same oversight resources.
+The method would need to withstand adaptive tests while allowing more legitimate
+work for the same oversight resources.
 
 ### What Keep contributes and what remains
 
@@ -108,13 +103,11 @@ evaluation mistake into a persistent habit.
 
 The question is how an agent should decide which lessons deserve to influence
 future work when reliable feedback is incomplete, delayed, or expensive. The goal
-is genuine improvement on new work, not a growing library of procedures that
-merely passed their own examples.
+is improvement on new work, measured beyond each procedure's original examples.
 
 For example, a coding agent might retain a shortcut that passes an incomplete test
 suite. Later tasks could reveal the error. A useful learning system would need to
-reassess the lesson and related work without discarding every genuinely useful
-procedure it acquired.
+reassess the lesson and related work while preserving the useful procedures it acquired.
 
 ### What we would investigate
 
@@ -147,10 +140,8 @@ evaluates skill learning through task outcomes. Work on
 examines unreliable self-scoring and external checks.
 [MemSkill](https://arxiv.org/html/2602.02474v2) learns memory-management procedures.
 
-The proposed advance must go beyond retaining successful traces or asking another
-model to grade them. We would look for a reliable way to decide which evidence is
-worth obtaining and how it should change future behavior under a fixed resource
-budget. The exact decision method remains to be designed and compared with these
+The study would test which evidence is worth obtaining and how it should change
+future behavior under a fixed resource budget. The exact decision method remains to be designed and compared with these
 approaches.
 
 ### What Keep contributes and what remains
@@ -159,8 +150,7 @@ Keep includes [skill comparison](../src/loop/skill_evaluator.ts),
 [registry lifecycle controls](../src/registry/skill_registry.ts), and mechanisms
 for recording candidate assignments, exposure, and outcomes. The maintenance
 preview ties relevant approval and lifecycle decisions to the checked content.
-These are foundations for conducting a study, not evidence that Keep has already
-demonstrated continual learning gains.
+Continual-learning gains still need to be measured.
 
 The study needs a learning policy, representative task streams, comparison
 implementations, and repeated model evaluations. Foreign-skill intake currently
@@ -226,17 +216,15 @@ downstream consequences.
 addresses authorization over changing shared state.
 
 The proposed focus is the combined case involving derived skills, cooperating
-agents, partial observations, and effects that may already have happened. This
-overlaps substantial existing work. Before a main study, we must identify a
-specific failure that strong existing methods do not adequately address and a
-testable improvement. Connecting components alone would not establish that advance.
+agents, partial observations, and effects that may already have happened. Before a main study, we must identify a specific failure that existing methods
+leave unresolved and a testable improvement.
 
 ### What Keep contributes and what remains
 
 Keep's [source-linked task context](../src/memory/task_context.ts), authority
 checks, and durable accounting provide starting mechanisms. Its lost-response
-demonstration is a useful engineering check of a bounded recovery path. It is not
-a claim to have invented reliable retries or solved this larger research problem.
+demonstration checks one bounded recovery path. The combined research problem
+remains open.
 
 The proposed combined recovery procedure, service adapters, and model-backed
 evaluation still need development. Intended outputs include controlled scenarios,
@@ -249,8 +237,7 @@ across their own components after suitable integration work.
 Each study would specify its hypothesis, comparison implementations, task
 distribution, attacker powers where relevant, outcome checks, and resource budget
 before the main evaluation. A promising result must improve useful completed work,
-control, or oversight cost against strong alternatives—not merely pass tests written
-for Keep. If existing methods solve the chosen problem adequately, we would revise
+control, or oversight cost against strong alternatives on separately defined outcome checks. If existing methods solve the chosen problem adequately, we would revise
 or drop that study.
 
 Development tasks and published examples would be kept distinct from held-out
@@ -262,11 +249,10 @@ work well.
 Planned public outputs include cleared tasks, runners, configurations, permitted
 model outputs, resulting artifacts, outcome checks, and results with resource use.
 Publication details remain subject to applicable data and model terms and
-responsible disclosure. Reusable outputs should help other developers evaluate
-their systems, rather than require them to accept Keep's own verdict.
+responsible disclosure. Reusable outputs should let other developers evaluate their own systems.
 
 Keep supplies an experimental foundation for this work. Its
-[existing evidence](evidence.md) records what has actually been demonstrated; the
+[existing evidence](evidence.md) records observed results; the
 [research overview](research.md) covers the broader platform. Each study requires
 qualification of the execution, isolation, observation, and spending boundaries it
 uses. Experiments would use authorized, isolated resources, not production

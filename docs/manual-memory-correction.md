@@ -1,6 +1,6 @@
 # Manual memory-correction monetary admission
 
-MC001 extends MW001's document admission to one manual `POST /memory/correct`. Development source **0.0.10-preview.1** combines these two tickets. The create/correct source checkpoint passed the exact private/public source profiles; its [receipt](qualification/manual-memory-create-correct-2026-10-05.json) records the source identities and boundaries. Downloadable 0.0.5-preview.1 retains its original identity.
+Source **0.0.10-preview.1** extends manual-write metering to `POST /memory/correct`. The [combined create/correct receipt](qualification/manual-memory-create-correct-2026-10-05.json) records the tested public and private source revisions. The downloadable 0.0.5-preview.1 archive is unchanged.
 
 ## Configure and use
 
@@ -18,14 +18,14 @@ Missing, retired, expired, foreign or unusable original notes do not trigger emb
 
 The shared durable monetary ledger reserves before wire and settles matching complete input usage before replacement. Missing/malformed usage, wrong model, HTTP failure or lost acknowledgement retains an unresolved hold across restart; no automatic refund or retry. A known overrun settles actual spend, withholds replacement and blocks further paid admission.
 
-After embedding, live write authority is checked again and the existing complete old-note comparison detects concurrent changes. Reweighting, retirement or a competing correction prevents the stale replacement. Keep preserves the current winning state rather than restoring a stale snapshot. A known charge remains recorded even if permission is revoked, a conflict is found or publication fails. Successful ephemeral publication synchronously retires the old note and inserts one successor with oldId/newId; this is not a new durable disk transaction or replay/idempotency guarantee.
+After embedding, live write authority is checked again and the existing complete old-note comparison detects concurrent changes. Reweighting, retirement or a competing correction prevents the stale replacement. Keep preserves the current winning state. A known charge remains recorded even if permission is revoked, a conflict is found or publication fails. Successful ephemeral publication synchronously retires the old note and inserts one successor with oldId/newId; this is not a new durable disk transaction or replay/idempotency guarantee.
 
 Existing responses remain: 200 with oldId/newId on success; null/404 for missing, rejected or conflicting replacement; 400 for invalid processing; 403 for gateway RBAC denial. Unavailable authority/accounting/publication work returns 409 with a reconciliation message. A 404 alone is not proof that no embedding was billed: a conflict may be detected after known settlement. Reconcile charge and note state before retrying; do not reset a hold.
 
-Other direct corrections, durable custody commands, bulk/system ingestion, consolidation, fitness and task encoders retain their existing behavior. No new persistence backend, billing service, tokenizer, index rebuild or dependencies are introduced.
+Other direct corrections, durable custody commands, bulk/system ingestion, consolidation, fitness and task encoders retain their existing behavior.
 
 ## Research and evidence
 
-Primary sources checked October 5, 2026: [embedding input/model/usage](https://developers.openai.com/api/reference/resources/embeddings/methods/create), [observed model pricing](https://developers.openai.com/api/docs/models/text-embedding-3-small), [provider data controls](https://developers.openai.com/api/docs/guides/your-data), [conditional concurrent-update prior art](https://www.postgresql.org/docs/current/transaction-iso.html). The update principle supports preserving Keep's existing comparison; PostgreSQL behavior does not qualify Keep's ephemeral backend as a database transaction. Same-day MW001/ME001 findings are reused where unchanged.
+Primary sources checked October 5, 2026: [embedding input/model/usage](https://developers.openai.com/api/reference/resources/embeddings/methods/create), [observed model pricing](https://developers.openai.com/api/docs/models/text-embedding-3-small), [provider data controls](https://developers.openai.com/api/docs/guides/your-data), [conditional concurrent-update prior art](https://www.postgresql.org/docs/current/transaction-iso.html). The update principle supports preserving Keep's existing comparison; PostgreSQL behavior does not qualify Keep's ephemeral backend as a database transaction. The write and query routes use the same representation and metering design.
 
 The focused correction/create/query/memory/transport/gateway profile passed 153 tests, zero failures/skips, including 31 correction cases. Actual owned loopback sinks and fresh child processes use synthetic replies/keys; no paid vendor operation. Final private/public 0.0.10-preview.1 profiles each passed 721 tests in 44 files, zero failures/skips, plus 24 actual synthetic recovery checks. [Combined source receipt](qualification/manual-memory-create-correct-2026-10-05.json). Full native, live organization custody and downloadable artifact qualification remain separate.

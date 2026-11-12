@@ -1,12 +1,12 @@
 # Memory-recall query monetary admission — October 5, 2026
 
-Current 0.0.10-preview.1 source also admits one [manual write](manual-memory-write.md) and [manual correction](manual-memory-correction.md) document consumer. The original ME001 query findings/receipt below retain their 0.0.9-preview.1 source identity; wider document/encoder coverage remains open.
+Source 0.0.10-preview.1 later added [manual writes](manual-memory-write.md) and [manual corrections](manual-memory-correction.md). The query findings and receipt below describe 0.0.9-preview.1; wider encoder coverage remains open.
 
 Development source **0.0.9-preview.1** adds monetary admission to the built-in ordinary memory store's query embedding. It reuses the private durable autonomy monetary ledger and existing governed bounded transport. It does not rebuild an index or meter document ingestion, fitness, task encoders or opaque injected stores. Downloadable **0.0.5-preview.1** retains its original contents and qualification.
 
 ## Research and configured route
 
-Primary sources checked October 5, 2026: [OpenAI embedding API](https://developers.openai.com/api/reference/resources/embeddings/methods/create), [model pricing](https://developers.openai.com/api/docs/models/text-embedding-3-small), [encoding guide](https://developers.openai.com/api/docs/guides/embeddings), and [LiteLLM reservation prior art](https://docs.litellm.ai/docs/proxy/users#budget-reservation). The observed standard price was USD **0.02 per million input tokens**. Direct embeddings return a model and prompt/total usage. Reserve-before-processing and settlement already exist in Keep, so this change adds a consumer rather than another billing service.
+Primary sources checked October 5, 2026: [OpenAI embedding API](https://developers.openai.com/api/reference/resources/embeddings/methods/create), [model pricing](https://developers.openai.com/api/docs/models/text-embedding-3-small), [encoding guide](https://developers.openai.com/api/docs/guides/embeddings), and [LiteLLM reservation prior art](https://docs.litellm.ai/docs/proxy/users#budget-reservation). The observed standard price was USD **0.02 per million input tokens**. Direct embeddings return a model and prompt/total usage. The query route uses Keep's existing reservation and settlement ledger.
 
 Only the captured `openai-compatible` descriptor with base URL `https://api.openai.com` and model `text-embedding-3-small` is admitted; aggregator routing is excluded. That descriptor is the existing model route. Keep does not infer a separate encoder from a chat model or migrate stored vectors. Stored and query vectors must use the same representation; configuring an embedding-only model does not make it a chat model.
 
@@ -20,7 +20,7 @@ memoryRecallPricing: {
 }
 ```
 
-`priceObservation` and `operatorPolicy` are host-owned inputs; this snippet is not a standalone command. Record the actual price observation timestamp, not the request time or a fabricated revalidation. Rates must be positive finite numbers, observation timestamps nonnegative safe integers, and maximum age a positive safe integer. Fields are captured at composition. Future-dated, expired or missing observations and unsupported routes refuse before reservation/dispatch. This is a **trusted operator price declaration**, not an automatically refreshed or signed provider quote. Recheck the official source and supply a newly observed declaration when expired. No new CLI environment flags or background fetcher are introduced.
+`priceObservation` and `operatorPolicy` are host-owned inputs; this snippet is not a standalone command. Record the actual price observation timestamp, not the request time or a fabricated revalidation. Rates must be positive finite numbers, observation timestamps nonnegative safe integers, and maximum age a positive safe integer. Fields are captured at composition. Future-dated, expired or missing observations and unsupported routes refuse before reservation/dispatch. This is a **trusted operator price declaration**, not an automatically refreshed or signed provider quote. Recheck the official source and supply a newly observed declaration when expired. Price refresh is managed by the host.
 
 The host must separately configure the existing query/document `embeddingProcessing` purposes/regions, residency allowlists and monetary `autonomyBudget`. Organization descriptors retain their own installed-release admission. Price/budget configuration grants no egress or human authority.
 
@@ -32,7 +32,7 @@ The pre-call projection uses complete serialized UTF-8 JSON bytes as input token
 
 The reservation is durable before wire and shares the autonomy envelope/lock with provider-check and built-in FrontDoor. This is the internal metering ledger, not the separate exported scheduler ledger. Missing, negative, inconsistent or wrong-model usage and uncertain entered failures retain the hold. Valid matching nonnegative integer prompt/total counters settle input spend against the reservation's captured rates. A known usage overrun records actual spend, then withholds the result and blocks further paid admission under that envelope. Neither a 503 nor a lost acknowledgement causes an automatic retry or release of uncertain monetary exposure. Restart does not reset holds or grants.
 
-The query hook preserves indexing/document calls as separate paths. Opaque injected memory stores cannot be metered by the composed recall capability and are refused remotely; independently constructed gateways/stores remain outside this claim. Wider encoder configuration and document billing require separate tickets.
+The query hook preserves indexing/document calls as separate paths. Opaque injected memory stores cannot be metered by the composed recall capability and are refused remotely; independently constructed gateways/stores remain outside this claim. Wider encoder configuration and document billing have separate admission requirements.
 
 ## Session and HTTP consumer
 

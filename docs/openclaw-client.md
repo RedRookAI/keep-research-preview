@@ -1,10 +1,10 @@
 # Restricted OpenClaw client admission
 
-The **0.0.20-preview.1** combined preview includes the personal restricted client and native plugin for Keep's required OpenClaw integration. This page describes Keep's credential and authority boundaries; use the [plugin guide](../integrations/openclaw/README.md) for native configuration. A genuine installed Codex follow-up passed using the measured generation-only engine. That specific engine/profile evidence does not establish unrestricted OpenClaw containment; see [Codex projects](codex-project.md) and [exact release qualification](qualification/combined-preview-2026-10-20.json).
+Keep's personal restricted client and native plugin connect OpenClaw to the configured repository workflow. Use the [plugin guide](../integrations/openclaw/README.md) for native configuration; the credential and authority requirements are below. A genuine installed Codex follow-up passed using the measured generation-only engine. That specific engine/profile evidence does not establish unrestricted OpenClaw containment; see [Codex projects](codex-project.md) and [exact release qualification](qualification/combined-preview-2026-10-20.json).
 
 ## Issue a client
 
-The saved-instance subcommand below requires development source .26 or later. The .21 download and .25 appliance candidate frozen at `6a1d880` use the environment-configured route described after it.
+The saved-instance subcommand below requires development source .26 or later. The earlier .21 download and .25 appliance candidate frozen at `6a1d880` use the environment-configured route described after it.
 
 For a [saved local instance](local-instance.md), use `keep instance client-issue` while its worker is stopped. It projects the saved personal public-repository Codex configuration and original data directory into the existing owner issuance command, then saves the nonsecret client-profile reference after success. The selected repository must remain at its pinned commit with a clean working tree. Keep's data, workspace and client credentials belong outside that source repository.
 
@@ -21,7 +21,7 @@ keep instance client-issue /absolute/path/to/my-keep \
 
 Keep refuses existing output files. The profile stores a credential hash, grant identity, expiry and exact project runtime binding. The token file contains the random client credential; neither file contains the owner bearer or Codex authentication. Keep prints file locations, never the credential value. Give the trusted plugin access only to the client token file and its own state. Its process must not have direct source-write authority or access to Keep owner/Codex credentials; a tool allowlist alone does not provide that isolation.
 
-The saved-instance command refuses an active/unresolved worker, existing binding or concurrent control and retains every original limit and invocation claim. It prints locations and setup guidance without raw account diagnostics. Failed issuance saves no new reference; inspect retained output files and grants before retrying. A reference-save failure after issuance needs explicit reconciliation, not another grant.
+The saved-instance command refuses an active/unresolved worker, existing binding or concurrent control and retains every original limit and invocation claim. It prints locations and setup guidance without raw account diagnostics. Failed issuance saves no new reference; inspect retained output files and grants before retrying. If saving the reference fails after issuance, reconcile the existing grant before another attempt.
 
 For an environment-configured worker, `keep openclaw-client issue` with the same four options remains supported. Supply its complete personal public-repository Codex settings and original `KEEP_DATA_DIR`, then set `KEEP_OPENCLAW_CLIENT_PROFILE` before starting that same worker. Supplying `KEEP_DATA_DIR` alone does not reproduce the project binding. The saved-instance command does this projection without shell evaluation or manual profile editing. The profile and durable grant are checked again on use; revocation does not require a worker restart. Organization deployments retain their separate identity admission and cannot use this personal profile as an owner fallback.
 

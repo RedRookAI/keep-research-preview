@@ -1,6 +1,6 @@
 # November 11, 2026 source update
 
-Development source is **0.0.20-preview.1**. The exact combined **0.0.20-preview.1** download now has scoped unprivileged installed checks. The .19 archive retains its original checksums and historical qualification.
+This update introduced source **0.0.20-preview.1**. Its combined download passed scoped unprivileged installed checks. The .19 archive retains its original checksums and historical qualification.
 
 ## Working changes
 
@@ -8,7 +8,7 @@ Development source is **0.0.20-preview.1**. The exact combined **0.0.20-preview.
 - Self-improvement promotion requires executed capability and safety evaluations. Missing safety gates, empty corpora, throwing evaluators and nonboolean results hold the candidate with a machine-readable reason. Evaluated passing controls and actual regression handling remain available.
 - The source CI command reads the supported Node range from `package.json`. A public workflow runs locked installation with lifecycle scripts disabled, TypeScript compilation, attribution checks and thirteen focused test files with one worker. Its final result requires executed tests with zero failures, skips or cancellations.
 - Quickstart checks cover both the current combined archive and historical npm instructions. Synthetic matching archives reach execution; missing or mismatched archives stop before extraction or installation. Historical release identities remain unchanged.
-- Authenticated proposal export reads the retained checkpoint and current event records. CLI and console downloads include the exact patch/source identity, selected checker results, pseudonymous identities and recorded decisions/delivery. Offline verification checks a clean exact source without applying changes. Privacy checks refuse unsafe portable content; refused approval attempts retain their recorded status. The existing manifest accessor now supplies the live review packet, closing its unused-export exception.
+- Authenticated proposal export reads the retained checkpoint and current event records. CLI and console downloads include the exact patch/source identity, selected checker results, pseudonymous identities and recorded decisions/delivery. Offline verification checks a clean exact source without applying changes. Privacy checks refuse unsafe portable content; refused approval attempts retain their recorded status. The manifest accessor supplies the live review packet.
 
 - Repository readiness identifies the checker, lockfile and missing declared dependencies before generation. Explicit `keep instance prepare` uses a selected toolchain and offline npm recipe through the required jail; prepared workspaces retain the no-install path. Pending preparation records survive thrown effects and require explicit source/workspace integrity reconciliation. Real positive preparation with the qualified external helper remains unverified.
 
@@ -16,7 +16,7 @@ Development source is **0.0.20-preview.1**. The exact combined **0.0.20-preview.
 
 Focused checks use Node **22.23.4**, the locked TypeScript dependency and owned local fixtures. Setup checks use a synthetic metadata/login engine and an owned paused worker; they make no generation request. Evaluation checks use deterministic corpora. CI coordinator fixtures exercise actual Node tests with inert dependency/compile/notice phases; the integrated source command separately runs those phases against the real checkout.
 
-Observed local result: `node tools/run_ci_checks.mjs` passed locked installation, emitting TypeScript compilation, attribution validation and **107/107 tests** across eleven selected files, with zero failures, skips or cancellations. This includes the new setup, evaluation admission and checksum checks. Initial compilation failures in the new checksum test were corrected before this passing run.
+Observed local result: `node tools/run_ci_checks.mjs` passed locked installation, emitting TypeScript compilation, attribution validation and **107/107 tests** across eleven selected files, with zero failures, skips or cancellations. This includes the new setup, evaluation admission and checksum checks.
 
 An additional focused run passed **49/49 tests** across `m6_revet`, `learning`, `differ`, `doctor` and `openclaw_adapter`, with zero failures, skips or cancellations. These checks preserve the adjoining learning, configuration and skill-adoption behavior.
 
@@ -28,7 +28,7 @@ Prerequisite integration initially passed **77/79** selected checks. Two refusal
 
 The other 77 integration checks included the preparation intent/throw case, unchanged setup/runtime/doctor paths, the autonomy loop and the actual exported patch CLI bytes. Explicit offline preparation remains pending real positive namespace/installed qualification; missing-helper refusal uses the actual required runner.
 
-The source profile covers selected behavior. It does not establish a new installed archive, a fresh full/native-suite result, live model compatibility, independent security verification or completion of the broader platform. The existing downloadable release retains its dated evidence.
+The source profile covers selected behavior. Full/native-suite results, live model compatibility, independent security verification and broader platform completion remain outside these checks. The installed archive's separate result follows below.
 
 Build instructions:
 

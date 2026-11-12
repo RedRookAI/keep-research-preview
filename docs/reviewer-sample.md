@@ -1,61 +1,61 @@
-# Controlled reviewer sample
+# Host a controlled reviewer sample
 
-The foreground sample gives one assigned reviewer a separate Keep instance with a prepared webhook reliability task: a repeated delivery is counted twice. The fix records a delivery ID before updating the count. Two authored provider responses produce a real workspace edit and executable checks. The reviewer chooses **Start demo**, then deliberately chooses **Prepare the fix** at the pending approval step. Keep edits a separate workspace and runs the frozen first-delivery, duplicate-ID and distinct-ID checks plus an independent goal check. The reviewer inspects the actual results, approves or vetoes the exact proposal, and downloads retained evidence. Every console page identifies the scripted sample. No AI account or paid provider is used.
+The sample gives one assigned reviewer a separate instance and a prepared webhook task. Two authored responses produce a workspace fix and four executable checks. The reviewer chooses **Start demo**, then **Prepare the fix**, inspects the diff, approves or vetoes the proposal, and downloads evidence. Every sample page identifies the scripted responses. An AI account is unnecessary.
 
-Each invitation needs its own process, new private root, credential and HTTPS origin. These are operator-assigned instances. The launcher does not allocate visitors or create hosting, DNS, certificates or services.
-
-The deployed Red Rook invitations passed actual public HTTPS browser qualification on November 12, 2026. Ask the operator for the credential assigned to your instance, then open its sign-in page:
-
-https://keep.redrook.ai/console
+The current assigned reviewer sign-in is:
 
 https://keep-b.redrook.ai/console
 
-The qualification report and exact source/profile receipts are in `qualification/reviewer-handover-2026-11-12.md`. This sample demonstrates the real workflow with scripted responses; personal live-account setup is a separate path.
+The operator supplies its credential separately. The [guided demo](guided-demo.md) records the public HTTPS result; [personal account setup](codex-project.md) is separate.
 
 ## Prepare an instance
 
-Use a compiled checkout with Node and Git already available. The launcher refuses an existing instance root. Supply the operator-selected canonical HTTPS origin and an optional private listener port; zero selects an available port.
+Each invitation needs its own process, new private root, credential and HTTPS origin. The launcher uses existing hosting and TLS configuration. It refuses an existing instance root.
+
+Use a compiled checkout with Node and Git available. Supply the canonical HTTPS origin and optional private listener port; zero selects a free port:
 
 ```sh
 node tools/reviewer_sample.mjs "$NEW_PRIVATE_ROOT" "$PUBLIC_ORIGIN" 0
 ```
 
-The process stays in the foreground. It prints the private loopback listener, configured public origin, source identity and private credential-file location. It writes a fresh random credential to `invitation-token` with mode `0600`, inside a new `0700` instance root. Deliver that credential to the assigned reviewer separately. The credential never appears in a URL or startup output.
+The foreground process prints its private loopback address, public origin, source identity and credential-file location. A random `invitation-token` is written with mode `0600` inside the new `0700` root. Deliver its contents privately to the assigned reviewer. The token stays out of startup output and URLs.
 
-The child runtime has separate source, workspaces, state, HOME and TMP directories. It receives a minimal environment without inherited model credentials. Its source, checker and two scripted responses come from `createBrowserProjectFixture`; HTTP input cannot select another repository, command, memory scope, workflow, provider or credential.
+Source, workspaces, state, HOME and TMP are separate for each instance. The child receives a minimal environment without model credentials. `createBrowserProjectFixture` fixes the repository, checker and two responses; HTTP requests cannot substitute paths, commands, memory scope, workflow, provider or credentials.
 
 ## Configure the authorized TLS terminator
 
-Map one exact public HTTPS origin to this instance's printed private loopback listener. Preserve the public Host and browser Origin. The app checks them directly and does not use Forwarded headers to establish authority. Keep the listener private and give the second reviewer a separate origin, process, root and credential.
+Map the exact public HTTPS origin to the printed private listener. Preserve Host and browser Origin, which the app checks directly. Forwarded headers confer no authority. Keep the listener private and use a distinct origin/process/root/credential for another reviewer.
 
-The `publicBrowserOrigin` server option accepts a canonical HTTPS origin with no userinfo, path, query or fragment. `handle.origin` remains the actual private listener. This option refuses organization identity, tenant, custom-principal, restricted-client and native-worker combinations. The existing native worker CLI retains its local behavior.
+`publicBrowserOrigin` accepts a canonical HTTPS origin without userinfo, path, query or fragment; `handle.origin` stays the private listener. This option refuses organization identity, tenant, custom-principal, restricted-client and native-worker combinations. The native worker CLI keeps its local behavior.
 
-Enable `reviewerSample:true` only on the controlled fixture app. This setting closes ingress to the listed console and root-redirect routes. Raw bearer APIs, health/admin/worker/debug/auth routes, query-token entry and unknown console routes refuse even with the invitation credential. Real console sign-in, Host/Origin, CSRF, exact decision and export checks remain in force. HTTPS sign-in sets a host-only Secure, HttpOnly, SameSite=Strict cookie.
+Enable `reviewerSample:true` only on the controlled fixture. It admits the listed console/root-redirect routes. Raw bearer APIs, health/admin/worker/debug/auth endpoints, query-token entry and unknown console routes refuse even with the invitation. Sign-in retains Host/Origin, CSRF, exact-proposal and export checks, and sets a host-only Secure, HttpOnly, SameSite=Strict cookie.
 
 ## One retained sample
 
-The guided entry explains the prepared task and expected behavior. It has a **Start demo** action with a fixed hidden goal; it offers no arbitrary repository or goal input. The server validates the exact sample goal and rejects additional submission fields. All accepted forms use one private canonical submission identity. A refresh, lost response, double submission or fresh form recovers the original project/job. It cannot start another pair of responses. Explicit approval resume jobs remain separate retained jobs.
+**Start demo** submits the fixed hidden goal. The server rejects arbitrary goals and extra fields. Accepted forms share one canonical submission identity: refresh, lost-response retry, double submission and a fresh form recover the same project/job. Approval resumes create their own retained jobs without another response pair.
 
-Cancellation, failure or uncertain effects remain visible. The operator must inspect retained state before deciding what to do next. A new form does not reset the sample. After the reviewer finishes, retain the proposal export and decide whether to retire that instance.
+The three frozen repository checks cover first, duplicate and distinct delivery IDs; a developer-authored goal assertion supplies the fourth check. The example remembers delivery IDs in one running in-memory state. Production webhook deduplication requires durable storage and broader delivery guarantees.
+
+Cancellation, failure and uncertain effects remain visible. Inspect that retained state before the next action. After review, retain the export and decide whether to retire the instance.
 
 ## Stop and retain evidence
 
-Send SIGINT or SIGTERM to the foreground launcher. It pauses new dispatch and closes its listener, retaining state and reporting any unresolved jobs. Existing in-flight process work can finish under its original controls. A stopped listener is not proof that every external effect settled. Inspect the retained journal and process state before an explicit operator reset.
+Send SIGINT or SIGTERM to the foreground launcher. It pauses new dispatch, closes the listener, retains state and reports unresolved jobs. In-flight work can finish under its original controls. Inspect the journal and process state before replacing an instance with unresolved effects.
 
-The launcher never deletes or replaces an instance and cannot restart an existing root. Startup failure or interrupted work requires operator inspection. A replacement invitation uses a separately authorized fresh root and credential after the old instance's effects are reconciled. Stop/reset only the owned instance; leave other slots and shared services alone.
+The launcher preserves existing roots and cannot restart one. A replacement needs a separately authorized fresh root/credential after the old effects are reconciled. Stop only the owned instance.
 
-The sample uses the existing best-effort process execution profile for authored code. Separate roots and credentials establish the demonstrated application boundary; they do not establish production isolation against hostile same-user code. A deployment requiring stronger isolation must qualify that profile separately and retain its refusal behavior.
+Authored code runs under the best-effort process profile. Separate roots and credentials provide the demonstrated application boundary. Hostile same-user code needs a separately qualified stronger execution profile.
 
 ## Source verification and browser evidence
 
-Focused source tests simulate TLS-terminator headers over loopback and check origins, Secure cookies, fixed admission, one logical submission, cross-instance refusal and private launcher state. Those checks do not establish real hosted HTTPS.
+Focused loopback tests cover origins, Secure cookies, fixed admission, one submission, cross-instance refusal and launcher privacy. Public deployment also needs an actual HTTPS browser check with assigned credentials and two isolated instances.
 
-The existing browser runner accepts an optional final `--sample` flag. With an already installed Playwright driver/browser and compiled source:
+With a compiled checkout and available Playwright driver/browser:
 
 ```sh
 node acceptance/browser_project.mjs "$NEW_EVIDENCE_ROOT" "$PLAYWRIGHT_ENTRY" "$BROWSER_EXECUTABLE" --sample
 ```
 
-It drives the enforced sample using a private browser profile with muted audio, verifies the real checks and exact veto/export, and confirms that a fresh form adds no job or provider calls. The shared `SAMPLE_CONTRACT` binds source/expected file bytes, the fixed goal and actual expected check names for browser and appliance consumers. IDs, raw records and the diff remain in expandable technical detail. Active work refreshes only its actual GET state; pending decisions, paused/failed/uncertain work and completed results do not auto-refresh. The demo remembers processed IDs in memory within one running state; production exactly-once delivery is outside this demonstration.
+The runner uses a private browser context with muted audio. It checks the actual results, exact veto/export and fresh-form recovery without added jobs or responses. `SAMPLE_CONTRACT` binds the goal, file bytes and check names for browser/appliance consumers.
 
-Public deployment needs its own actual HTTPS browser qualification with assigned credentials, correct routing and two isolated reviewer instances.
+Advanced panels retain IDs, records and the diff. Active work refreshes its GET state; pending decisions, paused/failed/uncertain work and completed results stay still for review.

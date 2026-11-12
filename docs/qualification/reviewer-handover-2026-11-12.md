@@ -1,6 +1,6 @@
 # Reviewer handover evidence — November 12, 2026
 
-The hosted browser sample completed its actual public HTTPS qualification on source `fe14178df5ca1726ed13172236fe14fc181b4eef` (`0.0.24-preview.1`). Separately, a Debian 13 x64 guest ran the bundled generation engine and required sandbox together. The downloadable VM package is being built from that selected profile; its fresh-consumer and real-account acceptance are still pending.
+This historical check qualified the hosted HTTPS sample at source `fe14178df5ca1726ed13172236fe14fc181b4eef` (`0.0.24-preview.1`). Separately, a Debian 13 x64 guest ran the bundled generation engine and required sandbox together. VM fresh-consumer and real-account checks were pending at this checkpoint; the later [appliance qualification](appliance-29-2026-11-12.md) records its completed account-free consumer.
 
 ## Interactive hosted sample
 
@@ -21,7 +21,7 @@ Each instance used two authored responses and zero paid calls. Its original sour
 
 Wrong invitation credentials, cross-origin and null-origin requests, forged CSRF, cross-instance cookies, and non-sample inputs were refused. Known invitation credentials could not open raw project, job, worker or authentication APIs. Cross-instance project reads, decisions, cancellation and exports were refused. Each instance retained one original submission and one explicit approval-resume job; a fresh form added neither a job nor provider responses.
 
-The deployment uses two nonroot containers with separate writable state and read-only runtime mounts. Each private loopback listener has its own Cloudflare connector and exact public hostname. The main Red Rook site and its DNS records were preserved. The controlled authored-code sample uses Keep's existing best-effort process execution profile. Hostile-code production tenancy is outside this qualification.
+The deployment uses two nonroot containers with separate writable state and read-only runtime mounts. Each private loopback listener has its own Cloudflare connector and exact public hostname. The controlled authored-code sample uses Keep's existing best-effort process execution profile. Hostile-code production tenancy is outside this qualification.
 
 After qualification, the operator retired each completed instance separately. Its launcher reported no unresolved jobs and exited cleanly; the other instance remained authenticated and available. Fresh roots and credentials replaced the invitations, and actual HTTPS browser checks confirmed that old credentials/cookies were refused and each new instance had zero projects. The completed states and exports remain retained.
 
@@ -41,7 +41,7 @@ The observed host was an ephemeral Ubuntu 24.04 x64 GitHub runner using QEMU 8.2
 
 https://github.com/RedRookAI/keep-research-preview/actions/runs/43132851687
 
-This proves the selected Linux x64 qcow2 route's minimal joint engine/sandbox prerequisite. Browser access inside the shipping image, image sanitization, import, actual package size and fresh-account generation remain package acceptance work. Other hypervisors, Windows/macOS hosts, ARM64 and arbitrary Linux host policies are unqualified. Unsupported local hosts can use an assigned hosted browser invitation.
+The engine and sandbox prerequisites passed together on the selected Linux x64 qcow2 profile. Browser access inside the shipping image, image sanitization, import, actual package size and fresh-account generation remain package acceptance work. Other hypervisors, Windows/macOS hosts, ARM64 and arbitrary Linux host policies are unqualified. Unsupported local hosts can use an assigned hosted browser invitation.
 
 ## Source checks and preserved failures
 
@@ -49,8 +49,8 @@ The `.24` public source checkpoint passed its 191-check partial CI profile with 
 
 https://github.com/RedRookAI/keep-research-preview/actions/runs/43132779709
 
-The VM proof preserves two earlier orchestration failures: a missing runner utility before boot, and a nested-shell readiness error followed by blocked cleanup. The corrected harness passed its focused failure checks before the successful fresh guest run. No sandbox policy was weakened to obtain the result.
+Earlier VM checks failed on a missing runner utility and a nested-shell readiness error with blocked cleanup. The corrected harness passed its focused failure checks before the fresh guest run; sandbox policy was unchanged.
 
 The hosted qualification's first recorder stopped before sign-in because it incorrectly expected the public sign-in page to carry the authenticated console's cache header. The corrected recorder checks `no-store` on authenticated content; the original failure is retained. A first Cloudflare configuration read also returned a valid null configuration for a new tunnel; the controller was corrected before installing ingress. Neither failure is counted as a successful workflow.
 
-The first retirement probe was refused by Cloudflare's browser-integrity check with code 1010 for the default Python client. No container was stopped in that attempt; the operator probe then used the qualified browser's User-Agent without changing Cloudflare policy. A fresh-state assertion initially assumed an empty sessions directory already existed; the corrected check accepts the absence of that lazily created directory as zero sessions. These recorder corrections did not submit another goal or change runtime guards.
+The first retirement probe was refused by Cloudflare's browser-integrity check with code 1010 for the default Python client. No container was stopped in that attempt; the operator probe then used the qualified browser's User-Agent without changing Cloudflare policy. A fresh-state assertion initially assumed an empty sessions directory already existed; the corrected check accepts the absence of that lazily created directory as zero sessions. Recorder corrections reused the retained goals and runtime guards.

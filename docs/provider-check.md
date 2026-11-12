@@ -1,78 +1,39 @@
-# Budget-bound provider-check — October 5, 2026
+# Check a provider within a durable budget
 
-The **0.0.6-preview.1** source checkpoint meters this one diagnostic through Keep's
-existing durable monetary ledger. It does not add this behavior to the previously
-published 0.0.5-preview.1 binary. Other interactive and ordinary embedding routes
-remain separate obligations.
+`keep provider-check [prompt]` makes one diagnostic request with at most 64 output tokens and one HTTP attempt. It reserves projected cost before remote dispatch and settles the reservation from valid reported usage. Missing or malformed usage, a lost response or a provider exception leaves a durable hold across restart. Text can be returned while usage remains uncertain. The command does not automatically retry that call.
 
-The later **0.0.7-preview.1** [FrontDoor checkpoint](frontdoor-metering.md) extends
-the same ledger to built-in FrontDoor calls. Its source has separate qualification;
-this diagnostic's original 170-test receipt retains its original source identity.
+Remote admission needs fresh applicable prices and an available allowance. The supported direct DeepSeek route uses the [fresh-price policy](provider-check-pricing.md); other remote diagnostic routes refuse. Credential-free personal local operation remains available.
 
-The **0.0.8-preview.1** [fresh-price checkpoint](provider-check-pricing.md) now
-requires an explicit maximum-age policy and a fresh official observation for the
-one supported direct DeepSeek route. Other remote diagnostic routes refuse.
-The older qualification below remains source-bound; local operation is preserved.
+## Authority and allowance
 
-## Research before implementation
+Personal remote operation requires its captured owner descriptor. Organization operation requires a live session, current roster/role and an admitted provider route. Keep checks authority before reservation and immediately before dispatch. Revocation after reservation retains the hold.
 
-Primary sources inspected October 5, 2026:
+The standalone organization CLI cannot acquire or restore those sessions and refuses the diagnostic. A trusted embedding host can pass an authenticated same-process session through `CliDeps.providerCheckSession` or `KeepApp.providerCheck(prompt, sessionId)`.
 
-- [LiteLLM budget reservation](https://docs.litellm.ai/docs/proxy/users#budget-reservation) reserves projected cost before dispatch and reconciles actual cost afterward. Stale or unavailable accounting needs fail-closed admission; missing prices differ from explicit zero fees.
-- [Azure API Management token limits](https://learn.microsoft.com/en-us/azure/api-management/llm-token-limit-policy) distinguish estimated admission from response-based consumption. Concurrent requests can overshoot response-only accounting.
-- [TigerBeetle two-phase transfers](https://docs.tigerbeetle.com/coding/two-phase-transfers/) distinguish pending exposure from posted consumption. Transfer expiry cannot prove that an external model request incurred no cost.
+The diagnostic uses the `autonomy-subsystem` run, `auto-research` class and `KeepConfig.autonomyBudget`. Defaults are **USD 100 daily**, **USD 50 per run** and **32,000 projected tokens per call**. This command's output cap remains 64 tokens. Consumption and unresolved holds survive restart. Select an authorized allowance explicitly to change these defaults.
 
-Decision: reuse `MeteredProvider`, `MeteredGateway` and the existing internal
-monetary ledger. No new service, dependency or accounting framework. Preserve
-ambiguous exposure rather than automatically expiring or retrying it.
+## Accounting limits
 
-## Behavior and authority
+Input projection uses roughly one token per four prompt characters. Framing, cache-price breakdowns, hidden input and non-token fees remain limitations. Explicit local zero-token fees exclude hosting costs. Injected providers are trusted code and must honor the request contract. See [monetary accounting](monetary-accounting.md) for coverage and bill-reconciliation limits.
 
-`keep provider-check [prompt]` requests at most 64 output tokens and one HTTP attempt.
-Fresh applicable prices under the explicit supported-source policy and an
-acceptable durable allowance are required before remote dispatch. Awaited reservation precedes the actual provider request; valid
-reported usage settles that reservation. Missing/malformed usage, a lost response
-or an entered provider exception leaves a durable hold across process restart.
-The command can return useful text while usage remains uncertain; successful text
-is not evidence of settlement. It never automatically retries an ambiguous call.
+## Evidence and history
 
-Credential-free personal local operation remains supported. A remote personal
-route needs its captured owner descriptor. Organization operation requires a live
-session, current roster/role and the admitted organization provider route. Checks
-run before reservation and immediately before provider entry. A revoked or changed
-subject cannot borrow owner authority; revocation after reservation conservatively
-retains that hold.
+Source **0.0.6-preview.1** introduced this diagnostic's durable accounting. The prior **0.0.5-preview.1** binary retains its earlier behavior. The **0.0.7-preview.1** [FrontDoor checkpoint](frontdoor-metering.md) extended the ledger to those built-in calls; **0.0.8-preview.1** added the fresh-price admission policy.
 
-The standalone organization CLI does not yet acquire or restore authenticated
-sessions and therefore refuses this diagnostic. A trusted embedding host can pass
-an already authenticated same-process session through `CliDeps.providerCheckSession`
-or `KeepApp.providerCheck(prompt, sessionId)`. A gateway bearer token is not that
-session. Synthetic organization fixtures do not qualify live IdP or custody.
+The diagnostic's original 170-test receipt covers synthetic endpoints and zero paid calls. It checks reservation before HTTP entry, valid settlement, unknown-price/budget/subject refusal, concurrent admission, revocation and fresh-process unresolved holds. Its source identity and TypeScript/regression results are in [validation evidence](evidence.md). Live organization identity and complete billing enforcement remain open.
 
-The diagnostic shares the existing `autonomy-subsystem` run, `auto-research` class
-and `KeepConfig.autonomyBudget`. Consumption, revocation and holds are preserved;
-startup does not reset the allowance. Defaults are USD 100 daily, USD 50 per run and
-32,000 projected tokens per call; output remains capped at 64 for this command.
-Use an explicit authorized envelope for a different allowance.
+The accounting design draws on these primary sources, inspected October 5, 2026:
 
-## Limits and acceptance
+LiteLLM reserves projected cost and reconciles usage after dispatch:
 
-Current remote diagnostic admission uses the fresh official observation described
-in [price policy](provider-check-pricing.md); other routes retain their configured
-seed/last-good inputs. Neither establishes verified provider bills.
-Input projection is approximately one token per four prompt characters. Framing,
-cache price breakdowns, hidden input and non-token fees remain limitations.
-Local zero token fees do not measure hosting costs. Custom injected providers are
-trusted code and must honor the request contract. See [monetary accounting](monetary-accounting.md).
+https://docs.litellm.ai/docs/proxy/users#budget-reservation
 
-Acceptance covers useful local operation, actual loopback HTTP reservation before
-wire, valid usage settlement, unknown-price/budget/subject refusal, concurrent
-admission, revocation before entry and fresh-process unresolved holds. All model
-endpoints are synthetic: zero paid provider calls. The development checkpoint is
-qualified only by the relevant TypeScript and outcome/regression profile recorded
-in [evidence](evidence.md). No new native build, installable archive, independent
-audit, real organization custody or universal billing ceiling is claimed.
+Azure API Management distinguishes estimated admission from response-based consumption:
 
-Every subsequent ticket must research current prior art and actual consumers,
-implement the smallest authorized scope, then vet useful/refused/recovery outcomes
-before candidacy or completion. No subsequent implementation batch is activated here.
+https://learn.microsoft.com/en-us/azure/api-management/llm-token-limit-policy
+
+TigerBeetle distinguishes pending exposure from posted consumption:
+
+https://docs.tigerbeetle.com/coding/two-phase-transfers/
+
+Keep applies those distinctions through its existing `MeteredProvider`, `MeteredGateway` and monetary ledger. Uncertain exposure stays held for inspection.

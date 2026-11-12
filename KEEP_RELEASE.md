@@ -20,9 +20,14 @@ Exact consumer receipt, scope and source-closure result:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-29-2026-11-12.md
 
-All 289 required source/version pairs were acquired. The release includes the source archive, installed inventory, notices/support and source-index.json. KEEP-RELEASE-SHA256SUMS covers the selected release assets; SHA256SUMS covers the source companion. The immutable candidate descriptor retains its pre-test flag; consumer-qualification.json is the completed test receipt. CI verified complete hashes while transferring the selected bytes; anonymous public availability was checked separately without downloading the large payloads again.
+All 289 required source/version pairs were acquired. The release includes the source archive, installed inventory, notices/support and source-index.json. KEEP-RELEASE-SHA256SUMS covers the selected release assets; SHA256SUMS covers the source companion. The source companion and public assets were checked against their complete hashes.
 
 Fresh live-account generation, current OpenClaw-to-Keep handover, independent operator acceptance and full-platform completion remain open. ARM64 and other host profiles are unqualified for this appliance. The earlier combined archive retains its historical qualification below.
+
+## Historical releases
+
+<details>
+<summary>Earlier archives, checksums and observations</summary>
 
 ## Historical 0.0.21-preview.1 combined archive
 
@@ -268,3 +273,5 @@ The introductory experiment qualifies the documented local synthetic recovery be
 Before opening existing state with this version, stop writers and retain a separately verified private backup of the complete data directory. Review the [maintenance upgrade guidance](docs/maintenance-2026-10-02.md#upgrade-and-recovery), [registry migration notes](docs/skill-registry.md#upgrading-data-from-the-september-9-research-preview) and [backup guide](docs/backup.md). Do not mix old/new writers or silently downgrade state formats.
 
 Historical results remain attached to their original artifacts in [Evidence](docs/evidence.md#known-test-status). This release is distributed through GitHub assets, not the npm registry. No operational deployment, visibility change or new automatic maintenance service accompanies it.
+
+</details>

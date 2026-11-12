@@ -1,32 +1,26 @@
 # Submit and review a repository goal in the browser
 
-Source 0.0.23-preview.1 adds goal submission to Keep's existing project console. The current .21 download predates this browser submission form; use the qualified release instructions for that artifact.
+Browser submission was introduced in source 0.0.23-preview.1. The earlier .21 combined download predates the form.
 
-Configure and start an owned instance using the local-instance guide, then sign in at its console. The owner selects the repository, checker, model and execution limits during setup. The form uses those saved settings.
+[Configure and start a local instance](local-instance.md), then sign in at its console. The form uses the repository, checker, model and execution limits saved during setup.
 
-1. Select **Submit a repository goal** and describe a bounded code change with its acceptance checks.
-2. Submit the form. Keep opens the retained project, including its current stage, worker state, jobs and any pending decision.
-3. If a step needs approval, inspect it and choose whether to proceed. Review the actual proposed diff and executable check results before approving or vetoing the exact proposal.
-4. Choose **Download proposal evidence** to retain the patch, pinned revision, checks and decision record.
+1. Select **Submit a repository goal** and describe a bounded change with acceptance checks.
+2. Submit. Keep opens the retained project with its stage, jobs and pending decision.
+3. Approve preparation when required, then review the diff and check results before approving or vetoing the exact proposal.
+4. Choose **Download proposal evidence** to save the patch, pinned revision, checks and decision.
 
-If the response to submission is lost, keep the original form and unchanged goal. Resubmitting with its original submission key recovers the same project and job. Refreshing the form preserves that key and does not start work. Starting a new form creates a new submission identity.
+Keep the form until the project appears. If submission loses its response, resubmit the unchanged goal with the original submission key to recover the same project and job. Refresh preserves the key. A new form creates a new submission identity and can start another job.
 
-Paused workers, missing prerequisites, failed jobs and unresolved work remain visible. Correct the reported setup or reconcile the original job before retrying. Opening the console never starts generation. CLI and OpenClaw remain supported clients of the same runtime; organization routes retain their existing qualification holds.
+Paused workers, missing prerequisites, failures and unresolved work remain visible. Correct setup or reconcile the original job before retrying. Opening the console leaves generation stopped. CLI and OpenClaw use the same runtime; organization routes retain their separate requirements.
 
 ## Observed browser result
 
-On November 12, Chromium 151 completed the actual form, step approval, a real workspace edit, two unchanged passing checks, same-key recovery without another submission job, exact-proposal veto and browser evidence download. The sample used two explicitly scripted responses and zero paid calls. Browser decisions were driven by the test; this result does not measure live model quality or qualify a hosted deployment.
+On November 12, Chromium 151 completed submission, preparation approval, a workspace edit, two unchanged passing checks, same-key recovery, veto and evidence download. The test used two authored responses, automated decisions and zero paid calls.
 
-The inspected source was 6da002fdc720ac2a61273178470261b26826e716. Its runtime source was integrated unchanged; the source checkpoint separately updates version metadata and public CI coverage. Ninety-three focused checks passed with no skips. The actual console capture below shows the checked proposal before veto:
+The tested source was `6da002fdc720ac2a61273178470261b26826e716`; 93 focused checks passed with no skips. The retained console capture shows the proposal before veto:
 
 https://raw.githubusercontent.com/RedRookAI/keep-research-preview/main/docs/images/browser-goal-console-2026-11-12.png
 
-The reusable account-free fixture and browser runner are in `acceptance/browser_project_fixture.mjs` and `acceptance/browser_project.mjs`. They use the real composed application and authored sample responses. The runner requires an already available browser driver and browser; those tools are not runtime dependencies of Keep.
+The fixture and runner are `acceptance/browser_project_fixture.mjs` and `acceptance/browser_project.mjs`. Running them requires an available browser driver and browser. Public HTTPS hosting is covered by the separate [guided-demo observation](guided-demo.md).
 
-Instance setup:
-
-https://github.com/RedRookAI/keep-research-preview/blob/main/docs/local-instance.md
-
-Proposal evidence:
-
-https://github.com/RedRookAI/keep-research-preview/blob/main/docs/proposal-export.md
+[Proposal export guide](proposal-export.md).

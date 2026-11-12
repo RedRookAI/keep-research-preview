@@ -1,40 +1,34 @@
 # Install and try Keep
 
-For the guided browser walkthrough, open your assigned invitation and enter the credential supplied by the operator:
+Open your assigned browser invitation and enter its separately supplied credential:
 
-https://keep.redrook.ai/console
+https://keep-b.redrook.ai/console
 
-Choose **Start demo**, then **Prepare the fix**. Review four actual checks, approve or veto the proposed change, and download the evidence. The guide shows the full flow and its scripted-response disclosure:
-
-https://github.com/RedRookAI/keep-research-preview/blob/main/docs/guided-demo.md
+Choose **Start demo**, then **Prepare the fix**. Review the diff and four checks, approve or veto the proposal, and download the evidence. The sample uses authored responses and needs no AI account. [Full walkthrough](guided-demo.md).
 
 ## Self-contained reviewer appliance
 
-The recommended downloadable walkthrough is **0.0.29-preview.1**. It supplies Keep, Node and the required sandbox in a Linux x64 VM. Your host needs QEMU/KVM with existing KVM access, Python 3.8+ and OpenSSH. It passed both browser decisions, checks, export and stop/restart on a fresh CI machine.
+The **0.0.29-preview.1** appliance supplies Keep, Node and the required sandbox in a Linux x64 VM. Your host needs QEMU/KVM with existing KVM access, Python 3.8+ and OpenSSH. It passed both browser decisions, checks, export and stop/restart on a fresh CI machine.
 
-Download and checksum record:
+Download and checksums:
 
 https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3
 
-Start and stop instructions:
-
-https://github.com/RedRookAI/keep-research-preview/blob/main/docs/reviewer-appliance.md
-
-The sample needs no AI account. Personal repository/account setup has separate instructions and remains outside the completed fresh-consumer result.
+Follow the [appliance guide](reviewer-appliance.md) for storage requirements, startup and shutdown. Personal repository/account setup remains outside the completed account-free consumer result.
 
 ## Earlier direct Node archive
 
-The current **0.0.21-preview.1** combined Linux x64 download includes Keep, bundled TypeScript, the generation-only Codex engine and the restricted OpenClaw plugin. Use Linux x64 with the Ubuntu 24.04 library baseline, Node 22.23.5 or later on the Node 22 line, and Git for the repository walkthrough. This installation path needs no npm installer or Rust/C compiler. Review the dated [dependency conditions](dependency-status.md).
+The **0.0.21-preview.1** combined Linux x64 archive includes Keep, TypeScript, the generation-only Codex engine and the restricted OpenClaw plugin. Use Linux x64 with the Ubuntu 24.04 library baseline, Node 22.23.5 or later on Node 22, and Git. This path runs without npm installation or Rust/C compilers. See [dependency conditions](dependency-status.md).
 
-This download's account-free workflow was reproduced on a fresh x64 VM. Independent source-build evidence and the additional host prerequisite for required-jail preparation are recorded here:
-
-https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/independent-preview-2026-11-12.md
+Its account-free workflow was reproduced on a fresh x64 VM. The [source-build report](qualification/independent-preview-2026-11-12.md) also records the additional host prerequisite for required-jail preparation.
 
 ## Download, verify and run
 
-Download `keep-combined-0.0.21-preview.1-linux-x64.tar.gz` from the [current release](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-11-11.2) into a new directory you own. Compare its expected checksum with the [release record](../KEEP_RELEASE.md); a checksum alone does not authenticate a publisher.
+Download `keep-combined-0.0.21-preview.1-linux-x64.tar.gz` into a new directory you own:
 
-Set the Node path to an existing supported runtime. This block refuses a missing or mismatched archive before extraction:
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-11-11.2
+
+Compare the checksum with the [release record](../KEEP_RELEASE.md), then select your existing supported Node runtime:
 
 ```sh
 (
@@ -50,23 +44,23 @@ Set the Node path to an existing supported runtime. This block refuses a missing
 )
 ```
 
-Expected version: `keep 0.0.21-preview.1`. The walkthrough discloses two scripted local responses and simulated approval/veto. It produces a real separate-workspace edit, passing checks, a diff and retained evidence, with no account request. [What to inspect](portfolio-walkthrough.md).
+Expected version: `keep 0.0.21-preview.1`. The demo uses two authored responses and sample approval/veto decisions. It produces a workspace edit, passing checks, diff and retained evidence. [What to inspect](portfolio-walkthrough.md).
 
-For later commands, select the same Node runtime and use the extracted command's absolute path, or add that archive's `bin` directory to your own shell's PATH. The [combined archive guide](combined-preview.md) covers engine selection and native OpenClaw setup. OpenClaw uses its separately supported Node 24 runtime; selecting Keep's Node does not upgrade or reconfigure another installation.
+For later commands, use that same Node runtime and the extracted command's absolute path, or add its `bin` directory to your shell's PATH. The [combined guide](combined-preview.md) covers engine selection and OpenClaw, which uses its own supported Node 24 runtime.
 
 ## Continue with Keep
 
-- Run `keep demo recovery` for the account-free recovery experiment: 24 synthetic checks and zero model calls.
-- [Configure a repository and Codex](installed-solve.md), using your own existing login and the bundled engine. The [genuine recorded result](genuine-codex-walkthrough.md) shows what has actually passed.
-- [Start an owned instance and open its console](local-instance.md), then [connect the restricted OpenClaw plugin](../integrations/openclaw/README.md). An unconfigured instance remains paused and does not generate code.
+- Run `keep demo recovery` for 24 synthetic recovery checks and zero model calls.
+- [Configure a repository and Codex](installed-solve.md) with your own login. The [recorded genuine case](genuine-codex-walkthrough.md) shows one live-generation result.
+- [Start a local instance](local-instance.md), then optionally [connect OpenClaw](../integrations/openclaw/README.md). An unconfigured instance starts paused.
 
-Required-jail work additionally needs the measured Bubblewrap 0.13.0 helper in a protected installation and working host namespaces. Missing prerequisites refuse; extraction does not install a host helper or change host policy. Keep's native refusal transport has separate [custody prerequisites](../SECURITY.md#optional-native-refusal-transport-installation-prerequisites).
+Required-jail operations also need the measured Bubblewrap 0.13.0 helper in a protected installation and working host namespaces. Missing prerequisites refuse. Native refusal transport has separate [custody prerequisites](../SECURITY.md#optional-native-refusal-transport-installation-prerequisites).
 
 ## Build from source
 
-Development source and the latest reviewer appliance are **0.0.29-preview.1**; the separate earlier combined download is **0.0.21-preview.1**. The release record names the frozen source commit, fresh native and carried engine inputs and fresh scoped installed checks. The downloadable source snapshot is bound to its exact release commit; later documentation corrections do not rebuild or requalify that archive. See [the release record](../KEEP_RELEASE.md) for source identity and [Contributing](../WORKFLOW.md) for build interfaces and evidence limits.
+Current development source and the frozen reviewer appliance both carry **0.0.29-preview.1**. Their source commits differ; the [release record](../KEEP_RELEASE.md) identifies the appliance's guest/runtime and assembly inputs. The earlier combined archive is **0.0.21-preview.1**.
 
-Contributors need isolated Linux x64 resources, Node.js 22.23.5 or later on Node 22, npm and Git, pinned Rust 1.97.1 with its musl target and host C build tools. Follow [Contributing](../WORKFLOW.md); the build verifies existing pinned tools rather than fetching replacements.
+Use isolated Linux x64 resources with Node.js 22.23.5 or later on Node 22, npm, Git, Rust 1.97.1 with its musl target, and host C build tools. The build verifies installed pinned tools. [Contributing](../WORKFLOW.md) lists build and partial-source checks.
 
 ```sh
 git clone https://github.com/RedRookAI/keep-research-preview.git
@@ -76,19 +70,21 @@ npm run build
 node dist/src/main.js demo project
 ```
 
-Before upgrading existing state, stop its writers and retain a verified complete private backup. See [backup guidance](backup.md) and the [release record](../KEEP_RELEASE.md). Do not mix old/new writers or stop other users' services.
+Before upgrading state, stop its writers and retain a verified private backup. Follow [backup guidance](backup.md) and the matching release notes.
 
 ## Historical 0.0.12 installation
 
-These older installation steps describe the October 5 artifact and its original evidence. They are retained for reference, not the current recommended installation path. In particular, the current direct route excludes the advisory-matched Node 22 npm installer; use the combined archive above for a new installation.
+These steps describe the October 5 archive. Use the combined route above for a new direct installation; it avoids the advisory-matched Node 22 npm installer.
 
-Keep **0.0.12-preview.1** is a Linux x64 research preview. Use Node.js 22.23.3 or later on Node 22 and npm; the repository walkthrough also needs Git. The installed package includes compiled JavaScript, its existing bundled TypeScript dependency and three native executables. No Rust or C compiler is needed to install or run the walkthrough. The original installed qualification used Node 22.23.2; the updated runtime guidance follows a published dependency fix and is not a rerun of that qualification. See [dependency status](dependency-status.md).
+The historical **0.0.12-preview.1** Linux x64 package includes compiled JavaScript, TypeScript and three native executables. It needs Node.js 22.23.3 or later on Node 22, npm and Git, with no Rust/C compiler. Its original qualification used Node 22.23.2. Updated runtime guidance follows a dependency fix; see [dependency status](dependency-status.md).
 
 ### Historical download, verify and run
 
-Download `keep-0.0.12-preview.1.tgz` and the companion `KEEP_RELEASE.md` from [the matching preview release](https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1).
+Download `keep-0.0.12-preview.1.tgz` and its companion `KEEP_RELEASE.md`:
 
-Set `KEEP_RELEASE_SHA256` to the binary package checksum in that trusted release record. A computed checksum by itself does not authenticate the publisher. This block refuses a missing or mismatched expected checksum before installation:
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-preview-2026-10-05.1
+
+Set `KEEP_RELEASE_SHA256` to the package checksum in that release record:
 
 ```sh
 (
@@ -105,11 +101,9 @@ Set `KEEP_RELEASE_SHA256` to the binary package checksum in that trusted release
 )
 ```
 
-Expected version: `keep 0.0.12-preview.1`. The walkthrough states that its two responses are scripted locally and its sample approval/veto decisions are simulated. It then shows an actual changed working copy, passing repository/goal tests and a diff. It checks restart without replay, token refusal and source preservation after veto. No account or paid request is needed, and it uses its own temporary repository rather than your files.
+Expected version: `keep 0.0.12-preview.1`. The demo uses a temporary repository, two authored responses and sample decisions. It checks the edit, repository/goal tests, restart without replay, token refusal and vetoed source preservation.
 
-This installs into a temporary user-owned prefix. Use the printed `Installed command` path wherever this guide says `keep`, or add that prefix's `node_modules/.bin` to your shell's PATH. Retain the prefix to keep using the preview.
-
-Open the printed evidence directory to inspect `result.json`, `outcome.json`, `source/`, `workspaces/project/` and command records. The [walkthrough guide](portfolio-walkthrough.md) explains what to inspect and what the result does not establish. The demo needs permission to bind an ephemeral loopback port; if a constrained environment refuses it, retain the report and use the recovery experiment below.
+Use the printed `Installed command` path for later commands, or add its directory to your PATH. Retain the installation prefix to keep using it. The printed evidence directory contains `result.json`, `outcome.json`, source, workspace and command records. The demo needs an available ephemeral loopback port; if that is blocked, use the recovery experiment.
 
 ### Historical follow-up commands
 
@@ -117,8 +111,6 @@ Open the printed evidence directory to inspect `result.json`, `outcome.json`, `s
 keep demo recovery
 ```
 
-This prints `Recovery experiment passed: 24 checks; 0 model calls.` and a report path. It requires no Git or model account. Its synthetic local outbox and fresh processes demonstrate the named recovery/accounting cases.
+Expected output: `Recovery experiment passed: 24 checks; 0 model calls.` The experiment uses a synthetic local outbox and fresh processes; Git and a model account are unnecessary.
 
-When ready, [configure your provider and repository](installed-solve.md), run `keep doctor`, and use `keep solve "your goal"`. Your chosen provider's prices, permissions and custody requirements apply; the demo is not model-quality or production-host qualification.
-
-Required-jail operations need the exact reviewed Bubblewrap launcher and a qualified namespace environment. Missing/mismatched bytes must refuse. Installation does not install a host launcher or change shared-host policy; [native custody prerequisites](../SECURITY.md#optional-native-refusal-transport-installation-prerequisites) remain separate.
+For model-backed work, [configure your provider and repository](installed-solve.md), run `keep doctor`, then use `keep solve "your goal"`. Your provider's prices and processing conditions apply. Required-jail operations still need their protected helper and namespace environment.

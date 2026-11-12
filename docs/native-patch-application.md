@@ -39,8 +39,8 @@ acquisition or candidate writes. The native consumer reads each input payload
 once, checks the source and overlay/carrier byte equations, validates the audit
 plan against the overlay commitment and checks the derived result tree. It
 rechecks input path identities before publication. A captured snapshot is a set
-of owned, digest-bound bytes with acquisition and identity checks; it is not a
-filesystem-wide atomic snapshot.
+of owned, digest-bound bytes with acquisition and identity checks. Concurrent
+changes elsewhere in the filesystem remain outside that snapshot.
 
 Each successful attempt publishes a new `attemptId/candidate` directory using
 atomic no-replace rename. A reused attempt ID refuses and preserves earlier
@@ -71,7 +71,7 @@ confers no admission, and the consumer preserves uncertain files for inspection.
 The SDK receives the same captured source rows and original patch inputs. It
 recomputes the result, audit join, checksum and canonical application evidence,
 then compares those bytes with the native receipt before returning the result.
-Neither side executes a build or a reviewer.
+Build execution and reviewer validation are separate steps.
 
 The canonical review-input record has this shape:
 
