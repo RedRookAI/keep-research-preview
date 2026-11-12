@@ -3,6 +3,7 @@ import importlib.util
 import io
 import json
 import os
+import shlex
 from pathlib import Path
 import socket
 import subprocess
@@ -47,6 +48,40 @@ class HostControls(unittest.TestCase):
             self.assertEqual(actual, path)
             self.assertEqual(data['schema'], app.SCHEMA)
         self.assertEqual(path.stat().st_mode & 0o777, 0o700)
+
+    def test_openssh_parses_one_relative_credential_path_in_spaced_instance(self):
+        path = self.root / 'instance 1 %h'; path.mkdir(mode=0o700)
+        (path / 'owner-key').write_text('parser fixture only')
+        data = {'sshPort': 2222}
+        for pinned, policy in ((False, 'accept-new'), (True, 'true')):
+            with self.subTest(pinned=pinned):
+                if pinned: (path / 'known-hosts').write_text('retained host key')
+                result = subprocess.run(app.ssh_options(path, data) + ['-G', 'keep@127.0.0.1'],
+                                        cwd=path, check=True, capture_output=True, text=True)
+                parsed = dict(line.split(' ', 1) for line in result.stdout.splitlines())
+                self.assertEqual(parsed['userknownhostsfile'], 'known-hosts')
+                self.assertEqual(parsed['identityfile'], 'owner-key')
+                self.assertEqual(parsed['globalknownhostsfile'], '/dev/null')
+                self.assertEqual(parsed['stricthostkeychecking'], policy)
+                self.assertEqual(parsed['identitiesonly'], 'yes')
+
+    def test_guest_and_interactive_shell_use_validated_instance_cwd(self):
+        path = self.root / 'instance 1'
+        with app.instance(path, create=True) as (_, data):
+            data['sshPort'] = 2222
+            app.save(path / 'instance.json', data)
+        argv = ['printf', '%s', 'argument with spaces']
+        with patch.object(app, 'alive', return_value=True), patch.object(app, 'verify_overlay'), \
+             patch.object(app, 'command') as command:
+            app.guest(path, {'sshPort': 2222, 'qemu': {}}, argv, capture_output=True)
+            self.assertEqual(command.call_args.kwargs['cwd'], path)
+            self.assertEqual(command.call_args.args[0][-1], shlex.join(argv))
+            self.assertTrue(command.call_args.kwargs['capture_output'])
+        with patch.object(app.sys, 'argv', ['keep-appliance', 'shell', str(path)]), \
+             patch.object(app, 'command') as command:
+            app.main()
+            self.assertEqual(command.call_args.kwargs, {'cwd': path, 'timeout': None})
+            self.assertEqual(command.call_args.args[0][-2:], ['-t', 'keep@127.0.0.1'])
 
     def test_unknown_state_is_preserved_and_refused(self):
         path = self.root / 'unknown'; path.mkdir(mode=0o700)

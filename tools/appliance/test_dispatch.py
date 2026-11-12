@@ -5,7 +5,9 @@ import os
 from pathlib import Path
 import stat
 import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -43,7 +45,7 @@ class DispatchDurability(unittest.TestCase):
                     if len(saves) == 2: raise Crash('handle confirmation interrupted')
                     original_save(path, value)
 
-                def spawn(argv, log):
+                def spawn(argv, log, *, cwd=None):
                     pending = json.loads((root / 'instance.json').read_text())
                     self.assertEqual(pending['dispatches'][role]['state'], 'intent')
                     self.assertTrue(synced_directories, 'intent directory must be durable before spawn')
@@ -66,6 +68,48 @@ class DispatchDurability(unittest.TestCase):
                     self.assertIsNone(children[0].poll(), 'unknown child must not be guessed or signaled')
                 finally:
                     for child in children: child.terminate(); child.wait()
+
+    def test_managed_tunnel_retains_intent_and_launches_in_instance_cwd(self):
+        with tempfile.TemporaryDirectory(prefix='tunnel instance ') as temporary:
+            root = Path(temporary)
+            (root / 'owner-key').write_text('owned key fixture')
+            (root / 'known-hosts').write_text('owned host fixture')
+            data = {'stage': 'running', 'port': 7788, 'sshPort': 2222}
+            original_spawn, original_popen = host.spawn_owned, subprocess.Popen
+            children = []
+
+            def popen(*args, **kwargs):
+                child = original_popen(*args, **kwargs); children.append(child); return child
+
+            def spawn(argv, log, *, cwd=None):
+                pending = json.loads((root / 'instance.json').read_text())
+                self.assertEqual(pending['dispatches']['tunnel']['state'], 'intent')
+                self.assertNotIn('tunnel', pending)
+                self.assertEqual(cwd, root)
+                self.assertIn('UserKnownHostsFile=known-hosts', argv)
+                self.assertEqual(argv[argv.index('-i') + 1], 'owner-key')
+                script = ('from pathlib import Path; import time; '
+                          'print(Path("owner-key").read_text(), Path("known-hosts").read_text(), flush=True); '
+                          'time.sleep(30)')
+                return original_spawn([sys.executable, '-c', script], log, cwd=cwd)
+
+            try:
+                with patch.object(host, 'port_available'), patch.object(host, 'spawn_owned', side_effect=spawn), \
+                     patch.object(host.subprocess, 'Popen', side_effect=popen):
+                    host.tunnel(root, data)
+                record = json.loads((root / 'instance.json').read_text())
+                self.assertEqual(record['dispatches']['tunnel']['state'], 'confirmed')
+                self.assertTrue(host.alive(record['tunnel']))
+                # Wait for useful relative-file reads, then use the admitted owned handle.
+                deadline = time.monotonic() + 5
+                while not (root / 'tunnel.log').read_text() and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                self.assertEqual((root / 'tunnel.log').read_text().strip(), 'owned key fixture owned host fixture')
+                host.terminate(record['tunnel'])
+            finally:
+                for child in children:
+                    if child.poll() is None: child.terminate()
+                    child.wait()
 
     def test_guest_handle_gap_cannot_be_cleared_by_stop_or_retry(self):
         with tempfile.TemporaryDirectory(prefix='guest dispatch ') as temporary, patch.object(guest, 'ROOT', Path(temporary)):

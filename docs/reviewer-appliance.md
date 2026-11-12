@@ -70,14 +70,17 @@ Stop the sample before starting your personal instance on the same console port.
 
 ```sh
 APPLIANCE_STATE=/your/private/keep-instance
-ssh -F /dev/null -i "$APPLIANCE_STATE/owner-key" \
-  -o IdentitiesOnly=yes -o ForwardAgent=no \
-  -o UserKnownHostsFile="$APPLIANCE_STATE/known-hosts" -o StrictHostKeyChecking=yes \
-  -o ExitOnForwardFailure=yes -N \
-  -L 127.0.0.1:7788:127.0.0.1:7788 -p 2222 keep@127.0.0.1
+(
+  cd -- "$APPLIANCE_STATE" || exit
+  exec ssh -F /dev/null -i owner-key \
+    -o IdentitiesOnly=yes -o ForwardAgent=no \
+    -o UserKnownHostsFile=known-hosts -o StrictHostKeyChecking=yes \
+    -o ExitOnForwardFailure=yes -N \
+    -L 127.0.0.1:7788:127.0.0.1:7788 -p 2222 keep@127.0.0.1
+)
 ```
 
-Keep that terminal open while using the personal console. For a remote appliance host, add the same client-to-host forward described above. Enter the personal instance's gateway credential in its sign-in form. The sample invitation and your model account login are separate credentials. Stop this foreground forward with Ctrl-C; it does not stop the guest or erase its state.
+The subshell uses relative credential files so OpenSSH treats `known-hosts` as one filename when the instance directory contains spaces. Use the same trusted private instance directory you started above. Keep that terminal open while using the personal console. For a remote appliance host, add the same client-to-host forward described above. Enter the personal instance's gateway credential in its sign-in form. The sample invitation and your model account login are separate credentials. Stop this foreground forward with Ctrl-C; it does not stop the guest or erase its state.
 
 ## Stop and remove
 

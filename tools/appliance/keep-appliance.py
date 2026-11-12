@@ -156,14 +156,14 @@ def alive(record):
     return True
 
 
-def spawn_owned(argv, log):
+def spawn_owned(argv, log, *, cwd=None):
     executable = shutil.which(argv[0])
     if executable is None:
         fail('Missing launch executable: ' + argv[0])
     argv = [executable, *argv[1:]]
     with open(log, 'ab', buffering=0) as stream:
         child = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=stream, stderr=stream,
-                                 env={'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8'}, start_new_session=True)
+                                 env={'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8'}, start_new_session=True, cwd=cwd)
     return identity(child.pid)
 
 
@@ -190,13 +190,13 @@ def refuse_pending(data):
         fail('Unresolved appliance dispatch: ' + ','.join(pending or ['initialization']) + '; inspect retained state; no replacement or reset')
 
 
-def dispatch_owned(path, data, name, argv, log):
+def dispatch_owned(path, data, name, argv, log, *, cwd=None):
     refuse_pending(data)
     data.setdefault('dispatches', {})[name] = {'state': 'intent', 'id': str(uuid.uuid4())}
     save(path / 'instance.json', data)
     # A crash before this confirmed handle leaves durable intent. Stop/retry may
     # not turn an unknown child into permission to launch a replacement.
-    record = spawn_owned(argv, log)
+    record = spawn_owned(argv, log, cwd=cwd)
     data[name] = record
     data['dispatches'][name]['state'] = 'confirmed'
     save(path / 'instance.json', data)
@@ -214,10 +214,13 @@ def terminate(record):
 
 
 def ssh_options(path, data):
-    return ['ssh', '-F', '/dev/null', '-i', str(path / 'owner-key'), '-o', 'IdentitiesOnly=yes',
+    # -o UserKnownHostsFile is parsed again by OpenSSH as a filename list.
+    # Constant relative names avoid whitespace/token expansion in instance paths;
+    # every SSH launch must use this validated instance directory as its cwd.
+    return ['ssh', '-F', '/dev/null', '-i', 'owner-key', '-o', 'IdentitiesOnly=yes',
             '-o', 'ForwardAgent=no', '-o', 'ControlMaster=no', '-o', 'PermitLocalCommand=no',
             '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'GlobalKnownHostsFile=/dev/null',
-            '-o', 'UserKnownHostsFile=' + str(path / 'known-hosts'),
+            '-o', 'UserKnownHostsFile=known-hosts',
             '-o', 'StrictHostKeyChecking=' + ('yes' if (path / 'known-hosts').exists() else 'accept-new'),
             '-p', str(data['sshPort'])]
 
@@ -226,7 +229,7 @@ def guest(path, data, argv, **options):
     if not alive(data.get('qemu')):
         fail('Owned guest is not running')
     verify_overlay(path, data)
-    return command(ssh_options(path, data) + ['keep@127.0.0.1', shlex.join(argv)], **options)
+    return command(ssh_options(path, data) + ['keep@127.0.0.1', shlex.join(argv)], cwd=path, **options)
 
 
 def seed_server(raw):
@@ -336,7 +339,7 @@ def tunnel(path, data):
     port_available(data['port'])
     args = ssh_options(path, data) + ['-N', '-o', 'ExitOnForwardFailure=yes', '-o', 'ServerAliveInterval=15',
             '-o', 'ServerAliveCountMax=2', '-L', '127.0.0.1:{0}:127.0.0.1:{0}'.format(data['port']), 'keep@127.0.0.1']
-    dispatch_owned(path, data, 'tunnel', args, path / 'tunnel.log')
+    dispatch_owned(path, data, 'tunnel', args, path / 'tunnel.log', cwd=path)
 
 
 def sample(path, data, action):
@@ -430,7 +433,7 @@ def main():
         elif args.action == 'credential':
             guest(path, data, ['cat', '/home/keep/reviewer-sample/invitation-token']); return
         elif args.action == 'shell':
-            command(ssh_options(path, data) + ['-t', 'keep@127.0.0.1'], timeout=None); return
+            command(ssh_options(path, data) + ['-t', 'keep@127.0.0.1'], cwd=path, timeout=None); return
         else:
             if rest and rest[0] == '--': rest = rest[1:]
             if not rest: fail('run requires a guest command after --')
