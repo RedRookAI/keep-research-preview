@@ -8,6 +8,9 @@ on:
       consumer_artifact:
         description: Exact consumer evidence artifact ID
         required: true
+      consumer_workflow_source:
+        description: Independently selected successful consumer workflow commit SHA
+        required: true
       artifact_sha256:
         description: Independently selected consumer artifact SHA256
         required: true
@@ -23,6 +26,7 @@ permissions:
 env:
   KC111_CONSUMER_RUN: ${{ inputs.consumer_run }}
   KC111_CONSUMER_ARTIFACT: ${{ inputs.consumer_artifact }}
+  KC111_EXPECTED_CONSUMER_WORKFLOW_SOURCE: ${{ inputs.consumer_workflow_source }}
   KC111_ARTIFACT_SHA256: ${{ inputs.artifact_sha256 }}
   KC111_EXPECTED_SOURCE: ${{ inputs.candidate_source }}
   KC111_IMAGE_SHA256: ${{ inputs.image_sha256 }}

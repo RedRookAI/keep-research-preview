@@ -13,6 +13,15 @@ fetch = importlib.util.module_from_spec(spec); spec.loader.exec_module(fetch)
 
 
 class DistributionCustody(unittest.TestCase):
+    def test_qualification_workflow_and_frozen_image_sources_are_separate(self):
+        run = {'head_sha': 'c' * 40, 'conclusion': 'success'}
+        fetch.verify_run(run, 'c' * 40)
+        for expected in ['a' * 40, '']:
+            with self.assertRaisesRegex(RuntimeError, 'qualification workflow'):
+                fetch.verify_run(run, expected)
+        with self.assertRaisesRegex(RuntimeError, 'qualification workflow'):
+            fetch.verify_run(dict(run, conclusion='failure'), 'c' * 40)
+
     def fixture(self):
         files = {'guest-dpkg-status': b'Package: fixture\nStatus: install ok installed\n',
                  'guest-packages.tsv': b'fixture\t1\tfixture\t1\n', 'guest-distribution-support.tar.gz': b'compressed fixture\x00\xff\n'}

@@ -54,14 +54,20 @@ def verify(output, source, image):
     return receipt
 
 
+def verify_run(run, workflow_source):
+    if not re.fullmatch('[0-9a-f]{40}', workflow_source or '') or run['head_sha'] != workflow_source or run['conclusion'] != 'success':
+        raise RuntimeError('Owned consumer run did not pass at the independently selected qualification workflow')
+
+
 def main():
     if os.environ.get('GITHUB_ACTIONS') != 'true': raise RuntimeError('Disposable CI only')
     run_id, artifact_id = int(os.environ['KC111_CONSUMER_RUN']), int(os.environ['KC111_CONSUMER_ARTIFACT'])
     source, image, digest = [os.environ[name] for name in ['KC111_EXPECTED_SOURCE', 'KC111_IMAGE_SHA256', 'KC111_ARTIFACT_SHA256']]
+    workflow_source = os.environ['KC111_EXPECTED_CONSUMER_WORKFLOW_SOURCE']
     if not re.fullmatch('[0-9a-f]{40}', source) or not all(re.fullmatch('[0-9a-f]{64}', x) for x in [image, digest]):
         raise RuntimeError('Exact source and SHA256 identities are required')
     run = api('/actions/runs/' + str(run_id))
-    if run['head_sha'] != source or run['conclusion'] != 'success': raise RuntimeError('Owned candidate run did not pass at expected source')
+    verify_run(run, workflow_source)
     artifact = api('/actions/artifacts/' + str(artifact_id))
     if artifact['workflow_run']['id'] != run_id or artifact['name'] != 'kc111-consumer-evidence' or artifact['expired'] or artifact.get('digest') != 'sha256:' + digest:
         raise RuntimeError('Consumer artifact differs from independently selected owned record')
@@ -70,7 +76,7 @@ def main():
     output = Path('distribution-input'); unpack(data, output); receipt = verify(output, source, image)
     (output / 'custody.json').write_text(json.dumps({'schema': 'keep.appliance.distribution-custody/v1', 'consumerRun': run_id,
         'artifactId': artifact_id, 'artifactSha256': digest, 'source': source, 'imageSha256': image,
-        'scriptSource': os.environ['GITHUB_SHA']}, indent=2) + '\n')
+        'consumerWorkflowSource': workflow_source, 'scriptSource': os.environ['GITHUB_SHA']}, indent=2) + '\n')
     print('KC111_DISTRIBUTION_INPUT_JSON=' + json.dumps(receipt))
 
 
