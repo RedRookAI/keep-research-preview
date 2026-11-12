@@ -1,0 +1,48 @@
+{
+  "schema": "keep.appliance.clean-consumer/v1",
+  "passed": true,
+  "source": "73fabd7a98971335153590193ac9235140d5fbe3",
+  "runtimeSource": "253fbca62133bef33ecc7d0c4b2192541cb55918",
+  "imageSha256": "0ec8468c91ebf2afabeb88c149e8d48fc85e1485211c6c8849085b52900f1897",
+  "checkoutAvailable": false,
+  "hostNodeNpmRustUsed": false,
+  "browserDriver": "ChromeDriver 156.0.8078.80 (fb096c0011f9d50f0a264a9376420cdea9c421e3-refs/branch-heads/8078@{#1705})",
+  "browser": "Google Chrome 156.0.8078.79",
+  "stages": [
+    {
+      "decision": "veto",
+      "projectId": "prj_df00e19b46b4643de6530c9eba06e53b",
+      "runId": "92412510-b68c-4e52-a10c-c6f4494ebbe2",
+      "digest": "3cd7eccb33b5af8a6cb17dd0c3d377a894a0f4bfe8edda196d45ce7051992e72",
+      "actualBrowser": true,
+      "requiredJailChecks": true,
+      "sourceUnchanged": true,
+      "restartRetained": true
+    },
+    {
+      "decision": "approve",
+      "projectId": "prj_47660248d7698f9a3fdbd6af4c3f85bb",
+      "runId": "90abebb3-da3b-42f7-8cab-37fc47b1c882",
+      "digest": "3cd7eccb33b5af8a6cb17dd0c3d377a894a0f4bfe8edda196d45ce7051992e72",
+      "actualBrowser": true,
+      "requiredJailChecks": true,
+      "sourceUnchanged": true,
+      "restartRetained": true
+    }
+  ],
+  "freshCloneIdentities": [
+    {
+      "machineId": "9ac375cd80244d71b050bf8890af5233",
+      "hostKey": "SHA256:5DUPvEzxoHGkdPiIjl6iIrzMUD7/n59r+lduiwmX3i8",
+      "tokenSha256": "b56c595057413e5496870fa60b223e95df83dd29af3e10cae3ae45977b94849a",
+      "publicKeySha256": "5fd4c4dcdf456fd7e7a3b46518c5f7b55abd6372e4e513d9a299400f4f2bf525"
+    },
+    {
+      "machineId": "ef7b28d3c890439099a2cf58b55df97e",
+      "hostKey": "SHA256:VotH6j0XQ9VbbNvFPU1iYK0wldikqq+Jq4RQiS8JpGA",
+      "tokenSha256": "115b4b235a796be0effe21b17380291bf549f3ed6cbcd4c507f5ec2cbab4ed12",
+      "publicKeySha256": "2cceac7fb93f45e28d58b885153a5c62e67953186b9b02c8bce0cde4fe48b6e2"
+    }
+  ],
+  "paidCalls": 0
+}

@@ -1,0 +1,58 @@
+{
+  "schema": "keep.appliance.source-closure-observation/v1",
+  "observedDate": "2026-11-12",
+  "runId": 43185745394,
+  "jobId": 131072337050,
+  "source": "73fabd7a98971335153590193ac9235140d5fbe3",
+  "runtimeSource": "253fbca62133bef33ecc7d0c4b2192541cb55918",
+  "imageSha256": "0ec8468c91ebf2afabeb88c149e8d48fc85e1485211c6c8849085b52900f1897",
+  "complete": true,
+  "planOnly": false,
+  "requiredPairs": 289,
+  "acquiredPairs": 289,
+  "missingPairs": 0,
+  "assets": {
+    "source-index.json": {
+      "sha256": "80e50445a6e6c9547ec9329a64e6b9736aa4c61c711722148be27dfdf59e561b",
+      "bytes": 768477,
+      "id": 738751821
+    },
+    "distribution-input.json": {
+      "sha256": "40dedf1c861b5e59d994497f31883df4e80354188aa8d1e77dd4530edea27db5",
+      "bytes": 1256,
+      "id": 738751902
+    },
+    "guest-dpkg-status": {
+      "sha256": "d951e0c25092367010a58637b254a7ae959f2809c9177edb704957ffbe7d3d0c",
+      "bytes": 330730,
+      "id": 738751984
+    },
+    "guest-packages.tsv": {
+      "sha256": "4b3501e589ff15592851cb130baafc09cd1c539d320b81178a88841d0a60645e",
+      "bytes": 15989,
+      "id": 738752051
+    },
+    "guest-distribution-support.tar.gz": {
+      "sha256": "aa036b0781abbd6e53d6a1fc471503e248eb7018c72ae68d34607a4f3f961724",
+      "bytes": 46588290,
+      "id": 738752115
+    },
+    "debian-sources-0001.tar": {
+      "sha256": "d26529691a1d131119f1f36e99bf0c91e794d0730cc5e5884b2692733594bf07",
+      "bytes": 867338240,
+      "id": 738752254
+    },
+    "SHA256SUMS": {
+      "sha256": "1d49b87768d205d1897408c402202bab862dfa23eb51546550cb411045e32faa",
+      "bytes": 533,
+      "id": 738753799
+    },
+    "consumer-qualification.json": {
+      "sha256": "31c12825636d2597649d7803ce32414a1632d468d6af8722c5d0ccc698564445",
+      "bytes": 1935,
+      "id": 738753889
+    }
+  },
+  "consumerReceiptSha256": "31c12825636d2597649d7803ce32414a1632d468d6af8722c5d0ccc698564445",
+  "scope": "Exact final image source fulfillment. Source collection and complete consumer artifact digest verification occurred in disposable CI. This record does not qualify live-account generation."
+}

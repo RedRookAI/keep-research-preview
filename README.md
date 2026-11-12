@@ -16,13 +16,9 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/docs/guided-demo.md
 
 **Development source: 0.0.29-preview.1. Hosted demo: 0.0.25-preview.1. Latest download: 0.0.21-preview.1, a Linux x64 development preview.** The broader platform remains under development; the table below separates implemented scope from observed readiness.
 
-The new self-contained Linux x64 appliance carries its own Node runtime, sandbox helper and generation engine. On a fresh CI machine, the .28 candidate made the code change, passed four checks and exported an attributable veto decision through the browser. Source .29 adds a shutdown correction; the new package stays in private qualification. Stop/restart, fresh live-account generation and current OpenClaw-to-Keep integration remain open.
+The new self-contained Linux x64 appliance carries its own Node runtime, sandbox helper and generation engine. The exact .29 archive passed both browser approval and veto on a fresh CI machine, four real checks, evidence export and stop/restart with retained jobs. Two fresh instances received distinct identities. Its matching source companion includes all 289 required source/version pairs. The qualified package is being prepared for public download; fresh live-account generation and current OpenClaw-to-Keep integration remain open.
 
-https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-28-partial-browser-2026-11-12.json
-
-The previous .27 image's complete source-closure observation retains its own image identity:
-
-https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-source-closure-2026-11-12.json
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-29-2026-11-12.md
 
 Browser submission, recovery and evidence:
 
