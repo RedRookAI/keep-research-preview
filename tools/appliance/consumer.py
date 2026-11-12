@@ -150,6 +150,44 @@ def failure_diagnostics(url, body, credential=None):
     return {'urlWithoutQuery': route, 'bodyText': body[:8192]}
 
 
+CONSOLE_PAGE_STATE_SCRIPT = '''return {
+  url: location.href,
+  document: performance.timeOrigin,
+  ready: document.readyState,
+  projectLink: document.querySelector('a[href^="/console/project?projectId="]')?.href || "",
+  expectedControl: !!arguments[0] && !!document.querySelector(arguments[0]),
+  refresh: document.querySelector('meta[http-equiv="refresh" i]')?.getAttribute('content') ?? null,
+  heading: document.querySelector('h1')?.textContent || "",
+  message: document.querySelector('.intro, .notice')?.textContent || ""
+}'''
+
+
+def wait_for_console_control(read_page, project_url, deadline, credential=None):
+    """Read one atomic DOM snapshot at the UI's two-second refresh cadence.
+
+    The browser follows the page's existing meta-refresh. This observer never
+    reloads, clicks, submits or repeats an approval.
+    """
+    expected_id = console_project_id(project_url)
+    if not expected_id:
+        raise RuntimeError('Expected retained project URL is invalid')
+    while time.monotonic() < deadline:
+        page = read_page()
+        if page['ready'] == 'complete':
+            if console_project_id(page['url']) != expected_id:
+                raise RuntimeError('Console observation reached another/unexpected page; no action retried')
+            if page['expectedControl']:
+                return page
+            refreshing = re.fullmatch(r'\s*2(?:\.0+)?\s*', page['refresh'] or '') is not None
+            if page['heading'].strip() and not refreshing:
+                detail = failure_diagnostics(page['url'], page['heading'] + '\n' + page['message'], credential)
+                raise RuntimeError('Console held/failed before the expected control; no action retried: ' + json.dumps(detail))
+        remaining = deadline - time.monotonic()
+        if remaining > 0:
+            time.sleep(min(2, remaining))
+    raise RuntimeError('Console expected control not observed before deadline; inspect retained work; no action retried')
+
+
 def main():
     bundle, output = [Path(value).resolve() for value in sys.argv[1:3]]
     output.mkdir(mode=0o700)
@@ -197,8 +235,8 @@ def main():
     def navigate(url): call('POST', '/url', {'url': url})
     def screenshot(name): (output / name).write_bytes(base64.b64decode(call('GET', '/screenshot')))
     def control(state, action, *args): return execute([sys.executable, str(cli), action, str(state), *args])
-    def page_state():
-        return call('POST', '/execute/sync', {'script': 'return {url: location.href, document: performance.timeOrigin, ready: document.readyState, projectLink: document.querySelector(\'a[href^="/console/project?projectId="]\')?.href || ""}', 'args': []})
+    def page_state(expected_control=None):
+        return call('POST', '/execute/sync', {'script': CONSOLE_PAGE_STATE_SCRIPT, 'args': [expected_control]})
     def click_navigation(selector):
         previous = page_state()['document']
         click(selector)
@@ -259,20 +297,12 @@ def main():
             deadline = time.monotonic() + 600
             previous = click_navigation('form[action="/console/submit"] button')
             project_url, project_id = wait_for_console_navigation(page_state, previous, deadline)
-            while time.monotonic() < deadline:
-                call('POST', '/refresh', {})
-                if elements('form[action="/console/resume"] button[value=approve]'): break
-                time.sleep(0.1)
+            prepare_control = 'form[action="/console/resume"] button[value=approve]'
+            wait_for_console_control(lambda: page_state(prepare_control), project_url, deadline, token)
             deadline = time.monotonic() + 600
-            previous = click_navigation('form[action="/console/resume"] button[value=approve]')
+            previous = click_navigation(prepare_control)
             open_action_result(project_url, previous, '/console/resume', deadline)
-            while time.monotonic() < deadline:
-                call('POST', '/refresh', {})
-                if elements('form[action="/console/merge"]'): break
-                if elements('form[action="/console/resume"] button[value=approve]'):
-                    previous = click_navigation('form[action="/console/resume"] button[value=approve]')
-                    open_action_result(project_url, previous, '/console/resume', deadline)
-                time.sleep(0.1)
+            wait_for_console_control(lambda: page_state('form[action="/console/merge"]'), project_url, deadline, token)
             observed_diff = inspect_diff()
             for name in changed_files: assert 'diff --git a/' + name + ' b/' + name in observed_diff
             assert all(name in content('body') for name in contract['passedTests'])
