@@ -1,0 +1,34 @@
+{
+  "schema": "keep.appliance.partial-browser-observation/v1",
+  "observedDate": "2026-11-12",
+  "operator": "developer-administered CI",
+  "source": "f79c31c4df445253a90402cf7b18e1541dadb15c",
+  "version": "0.0.28-preview.1",
+  "imageSha256": "6c1bd823bd3654ed0708c138b777cf87868050943ed321fd5d575f1fe3294b3e",
+  "candidateArchiveSha256": "f4525f9152bdb8e4f2259cb7c6dc3b1439384e5cb643b1fc4e5fc2c8509a44ba",
+  "runId": 43172473128,
+  "consumerJobId": 131031227044,
+  "runUrl": "https://github.com/RedRookAI/keep-research-preview/actions/runs/43172473128",
+  "fixture": "authored webhook responses; real workspace edits and executable checks",
+  "actualBrowserVetoExport": true,
+  "paidCalls": 0,
+  "checks": {
+    "testsPassed": true,
+    "vettingCleared": true,
+    "passedTests": [
+      "first delivery counts once",
+      "duplicate delivery ID is ignored",
+      "distinct delivery IDs still count",
+      "goal: requested outcome"
+    ],
+    "failedTests": []
+  },
+  "sourceUnchangedAfterVeto": true,
+  "proposalExportSha256": "7f65deca4f03e892915e8e555e3f262df2bec2ad6ebb0be65d315b99920eb01e",
+  "proposalExportFile": "appliance-28-veto-export-2026-11-12.json",
+  "stopRestartQualified": false,
+  "completeConsumerPassed": false,
+  "consumerFailure": "sample-stop returned a nested guest-control refusal; exact reason not retained in this attempt",
+  "nextAttempt": "same image with corrected bounded nested stderr capture",
+  "evidenceAcquisition": "small selected ZIP entries via verified API identity, HTTPS Range, stable ETag and entry CRC/SHA; whole ZIP SHA not recomputed locally"
+}
