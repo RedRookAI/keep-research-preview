@@ -1,29 +1,49 @@
 # Project status and roadmap
 
-Updated November 11, 2026. This page distinguishes the shipped portfolio preview from the remaining product commitments. Future capabilities are not claims about the downloadable preview.
+Updated November 12, 2026. This page records the delivered preview, its observed behavior and the remaining product commitments.
 
 ## Current development
 
-Source **0.0.22-preview.1** adds tenant-scoped review decisions and durable-memory control attribution. Download **0.0.21-preview.1** includes organization code/PKCE login, pinned key refresh, session-bound project dispatch and captured native patch application. Unsupported organization effect routes remain held pending their session checks. The current source record identifies remaining tenant and export work. The .21 combined payload passed scoped unprivileged demo, instance, export and real required-jail offline preparation checks. A fresh genuine owner/account trial and the broader platform remain open.
+Development source is **0.0.29-preview.1**. The hosted guided demo runs **0.0.25-preview.1**; the latest Linux x64 appliance is **0.0.29-preview.1**. The appliance retains its own frozen guest-runtime and host-assembly sources, recorded separately in KEEP_RELEASE.md. Later source changes do not update the installed appliance or hosted demo.
+
+The exact .29 appliance passed a fresh-machine browser workflow with approval and veto, four executable checks, evidence export and stop/restart with retained jobs. Its sample uses authored responses and makes zero paid model calls. Current native OpenClaw submission and fresh-process status also passed against the shipped Keep API with dispatch paused. That SDK observation made zero account/provider calls. Fresh live-account generation, complete owner handover and the broader platform remain open.
 
 ## Available to inspect
 
-The shipped **0.0.21-preview.1** combined Linux x64 download includes Keep, its TypeScript dependency, the generation-only Codex engine, the restricted OpenClaw plugin and the native project console. [Download and run](docs/combined-preview.md) · [Exact artifacts and checks](KEEP_RELEASE.md).
+The **0.0.29-preview.1** appliance supplies Keep, Node, the required sandbox helper and the generation engine in a Debian guest. Use Linux x64 with Python 3.8+, OpenSSH, QEMU tools and existing read/write KVM access. First startup requires at least **8 GiB of free host storage after extraction**, in addition to the bundle already on disk. ARM64, macOS, Windows and other hypervisor profiles remain unqualified for this appliance.
 
-The portfolio release milestone is complete at this supported scope:
+Download and start guide:
+
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/reviewer-appliance.md
+
+Exact appliance and current SDK observations:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-29-2026-11-12.md
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/current-openclaw-api-2026-11-12.json
+
+The hosted guided demo is available with an assigned invitation:
+
+https://keep.redrook.ai/console
+
+The historical **0.0.21-preview.1** combined Linux x64 archive remains available for the separate direct Node installation route. Its scoped startup, export and required-jail preparation receipts retain their original subject. See [the direct installation guide](docs/combined-preview.md) and [exact release identities](KEEP_RELEASE.md).
+
+Delivered behavior and its evidence boundaries:
 
 | Delivered capability | Observed result and limit |
 |---|---|
 | Genuine Codex repository work | One historical public issue produced a working patch and passed all three unchanged predefined checks. Native OpenClaw submitted and recovered the job; actual browser approval and exact veto preserved the original source. Codex generation was real; OpenClaw tool selection was scripted and decisions developer-administered. [Inspect the result](docs/genuine-codex-walkthrough.md). |
 | Restricted OpenClaw client | Submission/status use the same Keep runtime, a separate expiring/revocable credential and a durable client journal. The two tools cannot approve or land a proposal. [Setup](integrations/openclaw/README.md). |
 | Review and recovery | The console exposes pending steps, diffs, checks and exact decisions. Scoped installed checks cover refused authority, outage, cancellation without stopping another job, and synthetic protected recovery/upgrade. These are bounded observations, not universal containment or offsite recovery. [Evidence](docs/evidence.md). |
-| Combined installation | The exact .20 archive passed unprivileged extraction/startup, both account-free demos, instance/console lifecycle and authenticated export/offline verification. Native/engine bytes and their dated evidence are carried unchanged. New OpenClaw package loading, a new full suite and live-account trial remain separate. [Qualification](docs/qualification/combined-preview-2026-11-11.json). |
+| Historical combined installation | The exact .20 archive passed unprivileged extraction/startup, both account-free demos, instance/console lifecycle and authenticated export/offline verification. Native/engine bytes and their dated evidence are carried unchanged. Those historical checks do not qualify later artifacts. [Qualification](docs/qualification/combined-preview-2026-11-11.json). |
 
-The account-free repository walkthrough uses two scripted responses and simulated decisions. It produces actual workspace edits, checks and review artifacts. The separate recovery experiment checks synthetic local effects. Configured memory, skills, usage admission and backup interfaces retain their own prerequisites and evidence limits.
+The hosted and appliance walkthroughs use two authored responses and actual reviewer decisions. They produce real workspace edits, checks and review artifacts. Hosted approval applies the exact proposal to the synthetic source repository; appliance approval retains the reviewed workspace and preserves its source repository. Historical scripted-decision demos and the separate synthetic recovery experiment retain their original receipts. Configured memory, skills, usage admission and backup interfaces retain their own prerequisites and evidence limits.
 
 ## Remaining delivery priorities
 
-The completed portfolio milestone does not close the full enterprise platform. Further work should deliver one usable consumer at a time; implementation is proceeding in dependency order, beginning with setup, evaluation admission and source CI.
+The broader platform retains the commitments below. Current development improves client job continuity, private-data storage, skill consumption and recovery, while reusing the existing setup, evaluation-admission and source-CI mechanisms. Each change needs its own relevant checks; stronger-profile qualification remains separate.
 
 1. **Make adoption easier.** Reduce manual setup for a new owner's supported Codex/OpenClaw repository workflow, including clear readiness failures and the required helper/runtime prerequisites. The shipped archive and existing walkthrough remain usable now.
 2. **Deliver live organization identity and isolation.** Implement an attributable organization credential lifecycle, scoped non-human identity and tenant boundaries while preserving personal operation. Injected tenant fixtures do not establish these capabilities in a live deployment.

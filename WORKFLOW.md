@@ -1,12 +1,41 @@
 # Contributing to Keep
 
-Development source is **0.0.24-preview.1**; the latest combined Linux x64 download
-is **0.0.21-preview.1**.
-The release record identifies its frozen source and scoped installed checks.
-The download includes the generation-only Codex engine and restricted OpenClaw
-plugin. Start with [installation](docs/quickstart.md) to try the preview, or
-[architecture](docs/architecture.md) to inspect the design.
-Use [validation evidence](docs/evidence.md) and [exact release identities](KEEP_RELEASE.md)
+Development source is **0.0.29-preview.1**. The hosted guided demo runs
+**0.0.25-preview.1**; the latest Linux x64 appliance is **0.0.29-preview.1**.
+The release record identifies the appliance's frozen guest-runtime and
+host-assembly sources separately from the current source checkout.
+
+The appliance includes its Node runtime, required sandbox helper and generation
+engine. Its exact archive passed the account-free browser approval/veto workflow,
+four executable checks, export and stop/restart with retained jobs. The sample
+uses authored responses. The current native OpenClaw SDK also passed submission
+and fresh-process status against the shipped API with dispatch paused and zero
+account/provider calls. Fresh live-account generation and complete owner handover
+remain open.
+
+For the appliance, use Linux x64 with Python 3.8+, OpenSSH, QEMU tools and existing
+read/write KVM access. First startup requires at least **8 GiB of free host storage
+after extraction**, in addition to the bundle already on disk. Other platforms
+and hypervisor profiles remain unqualified for this appliance.
+
+Download, start instructions and exact observations:
+
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/reviewer-appliance.md
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-29-2026-11-12.md
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/current-openclaw-api-2026-11-12.json
+
+The hosted walkthrough requires an assigned invitation:
+
+https://keep.redrook.ai/console
+
+The historical **0.0.21-preview.1** combined archive remains available for the
+separate [direct Node installation route](docs/quickstart.md). Use
+[architecture](docs/architecture.md) to inspect the design, and
+[validation evidence](docs/evidence.md) and [exact release identities](KEEP_RELEASE.md)
 when assessing results. Historical receipts remain bound to their tested source.
 
 Start with the problem, the relevant implementation and an observable acceptance
@@ -73,7 +102,7 @@ node tools/run_installed_golden_journeys.mjs --tarball=/absolute/keep.tgz --sha2
 
 That runner's offline, script-disabled fixture setup does not establish ordinary
 installation. Historical npm installation checks retain their original versions;
-the current combined preview uses separately checked direct extraction and startup.
+the historical .21 combined preview uses separately checked direct extraction and startup.
 
 ## Optional host-specific tests
 

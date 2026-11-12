@@ -1787,19 +1787,109 @@ button.ghost{background:#262b36}
 <textarea id="msg" rows="2" placeholder="Ask Keep to do something…"></textarea>
 <div><button id="send">Send</button> <button id="start" class="ghost">Start as project</button></div>
 <div id="reply"></div>
+<section aria-labelledby="projectHeading"><h2 id="projectHeading">Repository work</h2><p id="projectStatus" role="status">Start a repository goal or inspect retained work.</p><button id="refreshProject" class="ghost">Refresh retained work</button> <button id="newProject" class="ghost">Start another project</button><div id="projectJobs"></div><p>Request and job IDs in this page address support recovery. They grant no access. Review exact proposals in the <a href="/console">project console</a>; sign in there separately when required.</p></section>
 <div id="offer"><span id="offerText"></span><div><button id="accept">Accept</button> <button id="decline" class="ghost">Decline</button></div></div>
 </div>
 <script>
 var TOKEN=${tok};
-function api(method,path,body){return fetch(path,{method:method,headers:{authorization:"Bearer "+TOKEN,"content-type":"application/json"},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json()})}
-function loadProjects(){api("GET","/projects").then(function(d){var el=document.getElementById("projects");if(!d.projects||!d.projects.length){el.innerHTML='<div class="none">No projects yet.</div>';return}el.innerHTML=d.projects.map(function(p){return '<div>'+(p.id===d.active?"\u2605 ":"")+esc(p.name)+' \u2014 '+esc(p.lifecycle)+'</div>'}).join("")})}
+function api(method,path,body){return fetch(path,{method:method,headers:{authorization:"Bearer "+TOKEN,"content-type":"application/json"},body:body?JSON.stringify(body):undefined}).then(async function(r){var d;try{d=await r.json()}catch{var e=new Error("Gateway response could not be read");e.status=r.status;throw e}if(!r.ok){var e=new Error(d.error||("Request held: "+r.status));e.status=r.status;throw e}return d})}
+function loadProjects(){return api("GET","/projects").then(function(d){var el=document.getElementById("projects");if(!d.projects||!d.projects.length){el.innerHTML='<div class="none">No projects yet.</div>';return}el.innerHTML=d.projects.map(function(p){return '<div>'+(p.id===d.active?"\u2605 ":"")+esc(p.name)+' \u2014 '+esc(p.lifecycle)+'</div>'}).join("")}).catch(function(){document.getElementById("projects").textContent="Projects are unavailable; check authentication and retry."})}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return c==="&"?"&amp;":c==="<"?"&lt;":c===">"?"&gt;":c==='"'?"&quot;":"&#39;"})}
 function showOffer(o){var box=document.getElementById("offer");if(!o){box.style.display="none";return}document.getElementById("offerText").textContent=o.text;box.style.display="block"}
-document.getElementById("send").onclick=function(){var m=document.getElementById("msg").value;api("POST","/message",{message:m}).then(function(d){document.getElementById("reply").textContent=d.result?d.result.say:"";showOffer(d.result&&d.result.offer)})}
-document.getElementById("start").onclick=function(){var m=document.getElementById("msg").value;api("POST","/project",{goal:m}).then(function(d){document.getElementById("reply").textContent="Project: "+d.status+(d.note?" \u2014 "+d.note:"");loadProjects();loadVeto()})}
-document.getElementById("accept").onclick=function(){api("POST","/offer",{accepted:true}).then(function(){showOffer(null)})}
-document.getElementById("decline").onclick=function(){api("POST","/offer",{accepted:false}).then(function(){showOffer(null)})}
-function loadVeto(){api("GET","/veto").then(function(d){var panel=document.getElementById("vetoPanel");var el=document.getElementById("veto");if(!d.digest||!d.digest.entries||!d.digest.entries.length){panel.style.display="none";return}panel.style.display="block";el.innerHTML=d.digest.entries.map(function(e){return '<div>'+esc(e.line)+' <button data-a="'+esc(e.id)+'">Approve</button> <button class="ghost" data-d="'+esc(e.id)+'">Veto</button></div>'}).join("");el.querySelectorAll("button[data-a]").forEach(function(b){b.onclick=function(){api("POST","/veto/approve",{id:b.getAttribute("data-a")}).then(loadVeto)}});el.querySelectorAll("button[data-d]").forEach(function(b){b.onclick=function(){api("POST","/veto/decline",{id:b.getAttribute("data-d")}).then(loadVeto)}})})}
+document.getElementById("send").onclick=function(){var m=document.getElementById("msg").value;api("POST","/message",{message:m}).then(function(d){document.getElementById("reply").textContent=d.result?d.result.say:"";showOffer(d.result&&d.result.offer)}).catch(function(e){document.getElementById("reply").textContent=e.message;showOffer(null)})}
+var projectKey=null, projectId=null, projectJob=null, projectBusy=false, projectViewRevision=0;
+var work=document.getElementById("projectStatus"), start=document.getElementById("start");
+function saveProjectLocation(){
+  var u=new URL(location.href);
+  ["submissionKey","projectId","jobId"].forEach(function(k){u.searchParams.delete(k)});
+  if(projectKey)u.searchParams.set("submissionKey",projectKey);
+  if(projectId&&projectJob){u.searchParams.set("projectId",projectId);u.searchParams.set("jobId",projectJob)}
+  history.replaceState(null,"",u.pathname+u.search+u.hash);
+}
+function projectControls(){
+  start.disabled=projectBusy||!!projectJob;
+  start.textContent=projectKey&&!projectJob?"Recover original request":"Start as project";
+  document.getElementById("newProject").disabled=projectBusy||!!(projectKey&&!projectJob);
+}
+function projectFailure(error){
+  work.textContent=(error.status===401||error.status===403?"Authentication or permission is unavailable. Sign in again before inspecting this work. ":"Work status is unavailable. ")+String(error.message||error)+" The original request identity is retained. Inspect or recover this work before starting another project.";
+}
+async function inspectProjectJob(pid,jid){
+  var revision=++projectViewRevision;
+  try{
+  var d=await api("GET","/project/jobs?projectId="+encodeURIComponent(pid)+"&jobId="+encodeURIComponent(jid));
+  if(revision!==projectViewRevision)return false;
+  if(!d.job||d.job.id!==jid||d.job.projectId!==pid)throw new Error("Job identity does not match the selected project");
+  work.textContent="Project "+pid+" · Job "+jid+" · "+d.job.state+(d.job.reason?" · "+d.job.reason:"");
+  // Job completion and delivery are separate. The exact retained run owns review state.
+  try{
+    var detail=await api("GET","/project?runId="+encodeURIComponent(jid));
+    if(revision!==projectViewRevision)return false;
+    if(detail.projectId!==pid||!detail.project||detail.project.runId!==jid)throw new Error("Run identity does not match the selected job");
+    work.textContent+=" · Run: "+detail.project.status+" / "+detail.project.stage;
+    var repo=detail.repository;
+    if(repo&&repo.workspace&&repo.source)work.textContent+=" · Workspace: "+repo.workspace.status+" · Source delivery: "+repo.source.merge.status+" · Review: "+(repo.latestDecision||"not recorded");
+  }catch(error){
+    if(revision!==projectViewRevision)return false;
+    if(error.status!==404)throw error;
+    work.textContent+=" · No run checkpoint is available yet.";
+  }
+  return true;
+  }catch(error){if(revision===projectViewRevision)projectFailure(error);return false}
+}
+async function loadProjectJobs(){
+  var el=document.getElementById("projectJobs");el.textContent="Loading retained jobs…";
+  try{
+    var d=await api("GET","/project/jobs?includeTerminal=true");
+    if(!Array.isArray(d.jobs))throw new Error("Retained job list is unavailable");
+    el.innerHTML=d.jobs.length?d.jobs.map(function(j){return '<div><button class="ghost" data-project="'+esc(j.projectId)+'" data-job="'+esc(j.id)+'">Inspect '+esc(j.id)+'</button> '+esc(j.state)+'</div>'}).join(""):"No retained jobs are visible.";
+    el.querySelectorAll("button[data-job]").forEach(function(b){b.onclick=async function(){
+      var pid=b.getAttribute("data-project"),jid=b.getAttribute("data-job");
+      try{
+        var observed=await inspectProjectJob(pid,jid);
+        // An arbitrary list selection never resolves a different uncertain submission.
+        if(observed&&!projectKey){projectId=pid;projectJob=jid;saveProjectLocation();projectControls()}
+      }catch(error){projectFailure(error)}
+    }});
+  }catch(error){el.textContent="Retained jobs could not be read.";projectFailure(error)}
+}
+start.onclick=async function(){
+  if(projectBusy||projectJob)return;
+  var goal=document.getElementById("msg").value;
+  if(!goal.trim()){work.textContent=projectKey?"Enter the exact original goal to recover this request, or inspect retained jobs.":"Enter a repository goal first.";return}
+  projectBusy=true;projectControls();
+  try{
+    if(!projectKey){projectKey=crypto.randomUUID();saveProjectLocation()}
+    work.textContent="Submitting with the retained request identity…";
+    var d=await api("POST","/project",{goal:goal,background:true,idempotencyKey:projectKey});
+    if(typeof d.projectId!=="string"||typeof d.jobId!=="string"||d.runId!==d.jobId||!["accepted","observed"].includes(d.status))throw new Error("Submission reply lacks an exact tracked job identity");
+    projectId=d.projectId;projectJob=d.jobId;saveProjectLocation();
+    await inspectProjectJob(projectId,projectJob);
+    loadProjects();loadVeto();await loadProjectJobs();
+  }catch(error){projectFailure(error)}finally{projectBusy=false;projectControls()}
+};
+document.getElementById("refreshProject").onclick=async function(){
+  try{if(projectId&&projectJob)await inspectProjectJob(projectId,projectJob);await loadProjectJobs()}catch(error){projectFailure(error)}
+};
+document.getElementById("newProject").onclick=function(){
+  if(projectBusy||(projectKey&&!projectJob))return;
+  projectViewRevision++;projectKey=null;projectId=null;projectJob=null;saveProjectLocation();projectControls();
+  document.getElementById("msg").value="";work.textContent="Enter a new goal. Existing jobs remain retained.";
+};
+try{
+  var saved=new URL(location.href);
+  projectKey=saved.searchParams.get("submissionKey");
+  projectId=saved.searchParams.get("projectId");projectJob=saved.searchParams.get("jobId");
+  if(projectKey&&!/^[A-Za-z0-9._:-]{16,128}$/.test(projectKey))throw new Error("Invalid saved submission key; inspect retained jobs without replaying it");
+  if((projectId&&!projectJob)||(!projectId&&projectJob))throw new Error("Incomplete saved job identity; inspect retained jobs without guessing it");
+  projectControls();
+  if(projectJob)inspectProjectJob(projectId,projectJob).catch(projectFailure);
+  else if(projectKey)work.textContent="A request identity is retained. Enter the exact original goal and recover it, or inspect retained jobs. A refresh never submits work.";
+  loadProjectJobs();
+}catch(error){start.disabled=true;document.getElementById("newProject").disabled=true;projectFailure(error)}
+document.getElementById("accept").onclick=function(){api("POST","/offer",{accepted:true}).then(function(){showOffer(null)}).catch(function(e){document.getElementById("reply").textContent=e.message})}
+document.getElementById("decline").onclick=function(){api("POST","/offer",{accepted:false}).then(function(){showOffer(null)}).catch(function(e){document.getElementById("reply").textContent=e.message})}
+function loadVeto(){return api("GET","/veto").then(function(d){var panel=document.getElementById("vetoPanel");var el=document.getElementById("veto");if(!d.digest||!d.digest.entries||!d.digest.entries.length){panel.style.display="none";return}panel.style.display="block";el.innerHTML=d.digest.entries.map(function(e){return '<div>'+esc(e.line)+' <button data-a="'+esc(e.id)+'">Approve</button> <button class="ghost" data-d="'+esc(e.id)+'">Veto</button></div>'}).join("");el.querySelectorAll("button[data-a]").forEach(function(b){b.onclick=function(){api("POST","/veto/approve",{id:b.getAttribute("data-a")}).then(loadVeto).catch(projectFailure)}});el.querySelectorAll("button[data-d]").forEach(function(b){b.onclick=function(){api("POST","/veto/decline",{id:b.getAttribute("data-d")}).then(loadVeto).catch(projectFailure)}})}).catch(function(){document.getElementById("vetoPanel").style.display="none"})}
 loadProjects();loadVeto();
 </script></main></body></html>`;
 }
