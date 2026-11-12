@@ -43,6 +43,22 @@ def fetch(url, path, wanted=None, algorithm='sha256'):
         raise RuntimeError('Public input checksum mismatch: ' + path.name)
 
 
+def extract_baseline(archive, destination):
+    # The frozen archive is SHA-verified before this call. Preserve its recorded
+    # readonly/executable modes even under the builder's private umask077.
+    run(['tar', '--same-permissions', '-xzf', str(archive), '-C', str(destination)])
+
+
+def verify_carried_native(artifact, expected):
+    actual_sha = sha(artifact)
+    actual_mode = artifact.stat().st_mode & 0o777
+    expected_mode = int(expected['modeOctal'], 8)
+    if actual_sha != expected['sha256'] or actual_mode != expected_mode:
+        raise RuntimeError('Carried native identity/mode mismatch: ' + expected['name']
+            + ' expected_sha256=' + expected['sha256'] + ' actual_sha256=' + actual_sha
+            + ' expected_mode=' + oct(expected_mode) + ' actual_mode=' + oct(actual_mode))
+
+
 def main():
     if os.environ.get('GITHUB_ACTIONS') != 'true' or platform.machine() != 'x86_64' or os.getuid() == 0:
         raise RuntimeError('Use the approved nonroot disposable CI x64 fixture only')
@@ -61,15 +77,14 @@ def main():
     sample_contract = json.loads(run(['node', '--input-type=module', '-e', contract_code], cwd=ROOT, capture_output=True, text=True).stdout)
     bundle = work / ('keep-reviewer-' + version + '-linux-x64'); bundle.mkdir()
     fetch(RELEASE + '/keep-combined-0.0.21-preview.1-linux-x64.tar.gz', work / 'baseline.tgz', ARCHIVE_SHA)
-    run(['tar', '-xzf', str(work / 'baseline.tgz'), '-C', str(work)])
+    extract_baseline(work / 'baseline.tgz', work)
     runtime = work / 'keep-0.0.21-preview.1'
     metadata_path = work / 'baseline.json'
     fetch(RELEASE + '/combined-preview-2026-11-11.2.json', metadata_path, '960485c2f2e2a6d469789c849f7adf56ebd7a2e727dac5e42a9edcfa9f41bcd0')
     metadata = json.loads(metadata_path.read_text())
     for item in metadata['nativeRelease']['artifacts']:
         artifact = runtime / 'dist/native/linux-x64' / item['name']
-        if sha(artifact) != item['sha256'] or artifact.stat().st_mode & 0o777 != int(item['modeOctal'], 8):
-            raise RuntimeError('Carried native identity/mode mismatch: ' + item['name'])
+        verify_carried_native(artifact, item)
     shutil.rmtree(runtime / 'dist/src')
     shutil.copytree(ROOT / 'dist/src', runtime / 'dist/src')
     for name in ('src', 'docs', 'tools', 'bin'):
