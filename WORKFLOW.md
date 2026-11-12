@@ -1,6 +1,6 @@
 # Contributing to Keep
 
-Development source is **0.0.22-preview.1**; the latest combined Linux x64 download
+Development source is **0.0.23-preview.1**; the latest combined Linux x64 download
 is **0.0.21-preview.1**.
 The release record identifies its frozen source and scoped installed checks.
 The download includes the generation-only Codex engine and restricted OpenClaw

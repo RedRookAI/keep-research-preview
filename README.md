@@ -6,11 +6,15 @@ Keep brings project goals, memory, reusable skills and execution records into on
 
 The implementation spans software development, research, knowledge management and content workflows. The most developed installed workflow takes a repository goal through generation, workspace edits, executable checks and review.
 
-**Development source: 0.0.22-preview.1. Latest download: 0.0.21-preview.1, a Linux x64 development preview.** The repository contains runnable workflows, tested components and experimental integration points. Readiness varies by capability; the broader platform remains under development.
+**Development source: 0.0.23-preview.1. Latest download: 0.0.21-preview.1, a Linux x64 development preview.** The repository contains runnable workflows, tested components and experimental integration points. Readiness varies by capability; the broader platform remains under development.
 
-Source .22 adds tenant-scoped review decisions and attributable durable-memory control events. Download .21 includes organization code/PKCE login, pinned key refresh and session checks at supported project dispatch points. Unverified organization routes remain held. Native capture can also publish a separate patch candidate with retained inputs and application evidence. These additions have controlled source and SDK checks; live organization deployment, current membership and production-native authority remain open. The .21 release receipt identifies its exact payload and preparation checks.
+Source .23 adds browser goal submission, same-submission recovery and retained job history. It includes the .22 tenant-scoped review decisions and attributable durable-memory control events. Download .21 includes organization code/PKCE login, pinned key refresh and session checks at supported project dispatch points. Unverified organization routes remain held. Native capture can also publish a separate patch candidate with retained inputs and application evidence. These additions have controlled source and SDK checks; live organization deployment, current membership and production-native authority remain open. The .21 release receipt identifies its exact payload and preparation checks.
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/maintenance-2026-11-11.4.md
+
+Browser submission and its actual Chromium walkthrough:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/browser-project.md
 
 ## Scope and implementation status
 

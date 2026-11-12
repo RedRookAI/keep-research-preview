@@ -1,0 +1,54 @@
+{
+  "status": "PASS",
+  "scripted": true,
+  "paidCalls": 0,
+  "browser": "151.0.7922.34",
+  "node": "v22.23.4",
+  "sourceRevision": "6da002fdc720ac2a61273178470261b26826e716",
+  "stages": [
+    "browser-form-submitted",
+    "real-workspace-diff-and-two-unchanged-checks",
+    "same-key-browser-recovery-one-job",
+    "exact-proposal-veto-and-browser-export"
+  ],
+  "projectId": "prj_1ecf35b43adce1e143978787000d838e",
+  "runId": "e8a22a54-4cbd-4ef1-b228-42b9b4341653",
+  "proposalDigest": "88fdcb370d84f5296c2172a3332aac7d110274260ea58d42a9328b20459bbc8c",
+  "fixtureBaseRevision": "63a667b86dc0e6bfa287f395327f77cd24c7b8cb",
+  "retainedJobCount": 2,
+  "originalSubmissionJobId": "e8a22a54-4cbd-4ef1-b228-42b9b4341653",
+  "generations": 2,
+  "checks": {
+    "detail": "all tests passed; vetting cleared",
+    "failures": [],
+    "passedCount": 2,
+    "passedTests": [
+      "arithmetic",
+      "goal: requested outcome"
+    ],
+    "testsPassed": true,
+    "vettingCleared": true
+  },
+  "sourceUnchanged": true,
+  "exported": true,
+  "schema": "keep.browser-project-qualification/v1",
+  "date": "2026-11-12",
+  "focusedChecks": {
+    "passed": 93,
+    "failed": 0,
+    "skipped": 0,
+    "scope": "project console, runtime, inspection, export, organization login/admission and review web"
+  },
+  "integration": {
+    "runtimeSourceUnchangedFromTestedWorker": true,
+    "workerSource": "6da002fdc720ac2a61273178470261b26826e716",
+    "sourceVersion": "0.0.23-preview.1",
+    "latestDownloadVersion": "0.0.21-preview.1",
+    "changesAfterBrowserRun": "Aligned version metadata, documentation, screenshot and addition of project_console to public partial CI; runtime source/tests/browser scripts unchanged."
+  },
+  "capture": {
+    "file": "docs/images/browser-goal-console-2026-11-12.png",
+    "sha256": "cd5224e316b2fa5fcb9ef35629cb4bde1adbc0a5764db5e9720942a83dd6a35f"
+  },
+  "limits": "Developer-administered scripted browser fixture with actual workspace edits/checks; no live-account generation, new installed download, public hosting or whole-product qualification."
+}
