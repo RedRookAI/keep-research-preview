@@ -1,7 +1,7 @@
 name: KC111 appliance source and candidate
 on:
   push:
-    branches: [work/kc111-appliance-2026-11-12, work/kc111-candidate-2026-11-12-4ct, work/kc111-candidate-2026-11-12-4ct-02, work/kc111-candidate-2026-11-12-4ct-03, work/kc111-candidate-2026-11-12-4ct-04, work/kc111-candidate-2026-11-12-4ct-05, work/kc111-candidate-2026-11-12-4ct-06, work/kc111-candidate-2026-11-12-4ct-07]
+    branches: [work/kc111-appliance-2026-11-12, work/kc111-candidate-2026-11-12-4ct, work/kc111-candidate-2026-11-12-4ct-02, work/kc111-candidate-2026-11-12-4ct-03, work/kc111-candidate-2026-11-12-4ct-04, work/kc111-candidate-2026-11-12-4ct-05, work/kc111-candidate-2026-11-12-4ct-06, work/kc111-candidate-2026-11-12-4ct-07, work/kc111-candidate-2026-11-12-4ct-08]
 permissions:
   contents: read
 env:
@@ -37,7 +37,7 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund
           node node_modules/typescript/bin/tsc -p tsconfig.json
           node tools/release_notices.mjs --check
-          node --test --test-concurrency=1 dist/test/reviewer_sample.test.js
+          node --test --test-concurrency=1 dist/test/reviewer_sample.test.js dist/test/gateway_shutdown.test.js
           node --test tools/reviewer_node_toolchain.test.mjs
           python3 tools/appliance/test_consumer_navigation.py
           python3 tools/appliance/test_consumer_observation.py

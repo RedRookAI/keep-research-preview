@@ -1,6 +1,6 @@
 {
   "name": "@redrookai/openclaw-keep",
-  "version": "0.0.28-preview.1",
+  "version": "0.0.29-preview.1",
   "description": "Restricted Keep submission and status tools for OpenClaw",
   "type": "module",
   "main": "index.mjs",
@@ -16,10 +16,10 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=24.18.1 <25 || >=26.5.1"
+    "node": ">=24.22.3 <25 || >=26.5.1"
   },
   "peerDependencies": {
-    "openclaw": "2026.10.5"
+    "openclaw": "2026.11.3"
   },
   "openclaw": {
     "extensions": [

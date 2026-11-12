@@ -1,0 +1,87 @@
+{
+  "schema": "keep.openclaw.current-client-contract-observation/v1",
+  "observedDate": "2026-11-12",
+  "operator": "developer-administered private CI",
+  "runId": 43176681911,
+  "probeSource": "270bca0fd6615a0663c1b9c0079c5f3248447e91",
+  "testedPluginBaseSource": "fbd88f7c0190da905b49809290dfa496af290e10",
+  "testedPluginVersion": "0.0.27-preview.1",
+  "testedPeerChange": "2026.10.5 to 2026.11.3",
+  "runtimeFilesUnchangedInDevelopment29": {
+    "index.mjs": "9d7a7d000df3dc5e3cc4b49ab1ed0749b833486a3fa8fd833a218ebcf43c5806",
+    "client.mjs": "034b35e591a75e655e05cd338ebfe9980fe425939bc301aeb44d68e01defca74",
+    "contracts.mjs": "e54c4f4fe2f9bada627b56eb8dfc7d8919498bd9d896c8a41aef230d6a154a17"
+  },
+  "result": {
+    "passed": true,
+    "fixtureOnly": true,
+    "actualKeepCompatibility": false,
+    "actualNativeCli": true,
+    "nodeVersion": "24.22.3",
+    "nodeExecutableSha256": "a7ec1b37e6ff9d187e4198c5b6df9a4eb1c74dd31804fb3bac55cc4ceca1ac01",
+    "openclawVersion": "2026.11.3",
+    "catalogs": [
+      {
+        "action": "submit",
+        "names": [
+          "keep_status",
+          "keep_submit"
+        ]
+      },
+      {
+        "action": "submit",
+        "names": [
+          "keep_status",
+          "keep_submit"
+        ]
+      },
+      {
+        "action": "status",
+        "names": [
+          "keep_status",
+          "keep_submit"
+        ]
+      },
+      {
+        "action": "status",
+        "names": [
+          "keep_status",
+          "keep_submit"
+        ]
+      }
+    ],
+    "httpCounts": {
+      "submit": 1,
+      "status": 2
+    },
+    "freshProcessSameJob": true,
+    "accountCalls": 0,
+    "liveProviderCalls": 0,
+    "privatePathsDenied": true,
+    "runtimeWriteDenied": true,
+    "probeScriptSha256": "571d3dc99f63b171f5cfd49bcac55cadc69aac1d53b4e8e88594b159da03cbec",
+    "preparationReceiptSha256": "78876881ffa1463420ed8d2cd31ac1628604e2c057e5ccb4afa1b6d6d25ac274"
+  },
+  "preparation": {
+    "onlyRequestedHook": "scripts/postinstall-bundled-plugins.mjs",
+    "nativeReadyBeforeAfter": true,
+    "nodeExecutableUnchanged": true,
+    "lockUnchanged": true,
+    "packageEffects": {
+      "added": [],
+      "removed": [
+        {
+          "path": ".openclaw-lifecycle-pending",
+          "before": {
+            "kind": "file",
+            "mode": "0o600",
+            "bytes": 8,
+            "sha256": "52d26753462488ad21852bc6718e21b84835f53765304d0a1e1b89d05a2a71b1"
+          }
+        }
+      ],
+      "changed": []
+    }
+  },
+  "limits": "Scripted local tool selection and fake HTTP endpoint. Saved-instance CLI setup, actual Keep integration and fresh-account generation remain unqualified."
+}

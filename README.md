@@ -14,9 +14,9 @@ Walkthrough and observed desktop/phone browser results:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/guided-demo.md
 
-**Development source: 0.0.28-preview.1. Hosted demo: 0.0.25-preview.1. Latest download: 0.0.21-preview.1, a Linux x64 development preview.** The broader platform remains under development; the table below separates implemented scope from observed readiness.
+**Development source: 0.0.29-preview.1. Hosted demo: 0.0.25-preview.1. Latest download: 0.0.21-preview.1, a Linux x64 development preview.** The broader platform remains under development; the table below separates implemented scope from observed readiness.
 
-The new self-contained Linux x64 appliance carries its own Node runtime, sandbox helper and generation engine. On a fresh CI machine, the .28 candidate made the code change, passed four checks and exported an attributable veto decision through the browser. Its stop/restart check remains open, so the package stays in private qualification. Fresh live-account generation and current OpenClaw compatibility remain separate handover conditions.
+The new self-contained Linux x64 appliance carries its own Node runtime, sandbox helper and generation engine. On a fresh CI machine, the .28 candidate made the code change, passed four checks and exported an attributable veto decision through the browser. Source .29 adds a shutdown correction; the new package stays in private qualification. Stop/restart, fresh live-account generation and current OpenClaw-to-Keep integration remain open.
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-28-partial-browser-2026-11-12.json
 
