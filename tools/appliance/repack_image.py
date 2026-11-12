@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reassemble reviewed host tools around the exact frozen .27 guest image."""
+"""Reassemble reviewed host tools around the exact frozen .28 guest image."""
 import argparse
 import hashlib
 import json
@@ -12,15 +12,13 @@ import tarfile
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-ORIGINAL = {
-    'source': 'fbd88f7c0190da905b49809290dfa496af290e10',
-    'archive': 'keep-reviewer-0.0.27-preview.1-linux-x64-fbd88f7c0190-43158900773.tar.xz',
-    'sha256': '055ff90c5051e10ad8a38cf2f7e5f29625f59973ec2538ca0a30947e7c5d748b',
-    'compressedBytes': 569054452,
-    'imageSha256': '77ac8d6b57ee4ef6815294aecdf59f8bc7ef90044e9e3014631a0c43de0cc50b',
-    'imageBytes': 1977548800,
-    'diskVirtualBytes': 8589934592,
-}
+ORIGINAL = {'source': 'f79c31c4df445253a90402cf7b18e1541dadb15c',
+ 'archive': 'keep-reviewer-0.0.28-preview.1-linux-x64-f79c31c4df44-43172473128.tar.xz',
+ 'sha256': 'f4525f9152bdb8e4f2259cb7c6dc3b1439384e5cb643b1fc4e5fc2c8509a44ba',
+ 'compressedBytes': 569083656,
+ 'imageSha256': '6c1bd823bd3654ed0708c138b777cf87868050943ed321fd5d575f1fe3294b3e',
+ 'imageBytes': 1979056128,
+ 'diskVirtualBytes': 8589934592}
 GUEST_PATHS = ['src', 'bin', 'package.json', 'package-lock.json',
                'integrations/openclaw', 'tools/reviewer_local_sample.mjs', 'tools/reviewer_node_toolchain.mjs',
                'tools/appliance/guest-control.py', 'tools/appliance/guest-proof.mjs']
