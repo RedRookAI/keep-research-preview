@@ -23,8 +23,13 @@ def execute(args, **options):
 def capture_file(args, path):
     """Keep guest bytes intact, including compressed data and trailing newlines."""
     with path.open('xb') as stream:
-        subprocess.run(args, check=True, stdout=stream, stderr=subprocess.PIPE, timeout=600,
-                       env={'PATH': os.environ['PATH'], 'HOME': os.environ['HOME'], 'LANG': 'C.UTF-8'})
+        try:
+            subprocess.run(args, check=True, stdout=stream, stderr=subprocess.PIPE, timeout=600,
+                           env={'PATH': os.environ['PATH'], 'HOME': os.environ['HOME'], 'LANG': 'C.UTF-8'})
+        except subprocess.CalledProcessError as error:
+            # This helper captures only the fixed public distribution inputs.
+            # Preserve the failing file diagnostic, never the binary stdout.
+            raise RuntimeError('Read-only distribution capture failed: ' + error.stderr[:8192].decode(errors='replace')) from error
     digest = hashlib.sha256()
     with path.open('rb') as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b''): digest.update(block)

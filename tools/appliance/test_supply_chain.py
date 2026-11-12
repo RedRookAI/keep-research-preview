@@ -28,8 +28,9 @@ class FrozenCandidate(unittest.TestCase):
             receipt = consumer.capture_file([sys.executable, '-c', 'import sys;sys.stdout.buffer.write(bytes.fromhex("1f8b00ff0a0a"))'], path)
             self.assertEqual(path.read_bytes(), wanted)
             self.assertEqual(receipt, {'file': path.name, 'sha256': hashlib.sha256(wanted).hexdigest(), 'bytes': len(wanted)})
-            with self.assertRaises(subprocess.CalledProcessError):
-                consumer.capture_file([sys.executable, '-c', 'raise SystemExit(4)'], root / 'failed')
+            with self.assertRaisesRegex(RuntimeError, 'public-support: Permission denied') as captured:
+                consumer.capture_file([sys.executable, '-c', 'import sys;sys.stdout.write("binary stdout excluded");sys.stderr.write("public-support: Permission denied");raise SystemExit(4)'], root / 'failed')
+            self.assertNotIn('binary stdout excluded', str(captured.exception))
 
     def test_postfreeze_bytes_size_descriptor_and_source_must_all_match(self):
         with tempfile.TemporaryDirectory(prefix='candidate bytes ') as temporary:

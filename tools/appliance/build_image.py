@@ -240,7 +240,7 @@ systemctl poweroff
     (bundle / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     (bundle / 'SHA256SUMS').write_text(''.join(sha(p) + '  ' + p.name + '\n' for p in sorted(bundle.iterdir()) if p.is_file()))
     artifact = output / (bundle.name + '-' + source[:12] + '-' + os.environ['GITHUB_RUN_ID'] + '.tar.xz')
-    run(['tar', '-cJf', str(artifact), '-C', str(work), bundle.name], env={**os.environ, 'XZ_OPT': '-T1 -6'})
+    run(['tar', '-cJf', str(artifact), '-C', str(work), bundle.name], env={**os.environ, 'XZ_OPT': '-T1 -1'})
     (output / 'SHA256SUMS').write_text(sha(artifact) + '  ' + artifact.name + '\n')
     receipt = {'schema': 'keep.appliance.candidate/v1', 'source': source, 'archive': artifact.name, 'sha256': sha(artifact), 'compressedBytes': artifact.stat().st_size,
                'imageSha256': manifest['files']['keep.qcow2'], 'imageBytes': (bundle / 'keep.qcow2').stat().st_size,
