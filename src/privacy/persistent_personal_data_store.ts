@@ -32,7 +32,7 @@ interface EncryptedItem extends Omit<PersonalDataItem, "label" | "value"> {
 }
 
 interface StoreFile {
-  readonly schema: "keep.personal-data/v2";
+  readonly schema: "keep.personal-data/v2" | "keep.personal-data/v3";
   readonly subject: SubjectId;
   readonly items: readonly EncryptedItem[];
 }
@@ -52,15 +52,31 @@ export interface PersistentPersonalDataStoreOptions {
  */
 export class PersistentPersonalDataStore {
   private items: EncryptedItem[] = [];
+  private writeFailed = false;
 
   constructor(private readonly options: PersistentPersonalDataStoreOptions) {
     if (!options.enabled) return;
     if (options.subject.trim() === "") throw new Error("personal data subject is required");
     const existed = existsSync(options.path);
     if (!existed) options.keys.ensureKey(options.subject);
-    this.items = this.load();
     if (existed && !options.keys.hasKey(options.subject)) {
       throw new Error(`subject ${options.subject} has been erased (key shredded)`);
+    }
+    const loaded = this.load();
+    this.items = loaded.items;
+    // Authenticate every record before exposing a writable store. Neither a
+    // wrong key nor a partial migration may overwrite the recoverable original.
+    try {
+      for (const item of this.items) {
+        options.keys.decrypt(options.subject, item.label);
+        options.keys.decrypt(options.subject, item.value);
+      }
+      if (loaded.migrate) this.persist(this.items);
+    } catch (cause) {
+      if (loaded.migrate) {
+        throw new Error("personal data migration incomplete; retain the store and reopen with its authorized key", { cause });
+      }
+      throw cause;
     }
   }
 
@@ -68,14 +84,15 @@ export class PersistentPersonalDataStore {
     this.assertEnabled();
     if (label.trim() === "" || value === "") throw new Error("label and value are required");
     const plain: PersonalDataItem = { id: randomUUID(), kind, label, value, createdAt: now };
-    this.items.push({
+    const next = [...this.items, {
       id: plain.id,
       kind: plain.kind,
       label: this.options.keys.encrypt(this.options.subject, label),
       value: this.options.keys.encrypt(this.options.subject, value),
       createdAt: plain.createdAt,
-    });
-    this.persist();
+    }];
+    this.persist(next);
+    this.items = next;
     return plain;
   }
 
@@ -101,8 +118,10 @@ export class PersistentPersonalDataStore {
       value: this.options.keys.encrypt(this.options.subject, value),
       correctedAt: now,
     };
-    this.items[index] = next;
-    this.persist();
+    const items = this.items.slice();
+    items[index] = next;
+    this.persist(items);
+    this.items = items;
     return { ...next, label: this.options.keys.decrypt(this.options.subject, next.label), value };
   }
 
@@ -115,30 +134,33 @@ export class PersistentPersonalDataStore {
   erase(id: string): boolean {
     this.assertEnabled();
     const before = this.items.length;
-    this.items = this.items.filter((item) => item.id !== id);
-    if (this.items.length === before) return false;
-    this.persist();
+    const items = this.items.filter((item) => item.id !== id);
+    if (items.length === before) return false;
+    this.persist(items);
+    this.items = items;
     return true;
   }
 
   /** Irreversibly destroy the store key; retained ciphertext becomes unreadable. */
   cryptoShred(): boolean {
-    this.assertEnabled();
+    this.assertEnabled(true);
     const shredded = this.options.keys.shred(this.options.subject);
     this.items = [];
     return shredded;
   }
 
-  private assertEnabled(): void {
+  private assertEnabled(allowHeldErasure = false): void {
     if (!this.options.enabled) throw new Error("persistent personal data store is not opted in");
+    if (this.writeFailed && !allowHeldErasure) throw new Error("personal data store is held after a failed write; reopen to reconcile its retained file");
   }
 
-  private load(): EncryptedItem[] {
-    if (!existsSync(this.options.path)) return [];
+  private load(): { items: EncryptedItem[]; migrate: boolean } {
+    if (!existsSync(this.options.path)) return { items: [], migrate: false };
     const decoded = JSON.parse(readFileSync(this.options.path, "utf8")) as Partial<StoreFile>;
-    if (decoded.schema !== "keep.personal-data/v2" || decoded.subject !== this.options.subject || !Array.isArray(decoded.items)) {
+    if (!["keep.personal-data/v2", "keep.personal-data/v3"].includes(String(decoded.schema)) || decoded.subject !== this.options.subject || !Array.isArray(decoded.items)) {
       throw new Error("invalid or foreign persistent personal data store");
     }
+    let migrate = decoded.schema === "keep.personal-data/v2";
     const items = decoded.items.map((raw): EncryptedItem => {
       const item = raw as Partial<EncryptedItem>;
       if (
@@ -150,23 +172,24 @@ export class PersistentPersonalDataStore {
       ) {
         throw new Error("invalid encrypted personal data item");
       }
+      migrate ||= item.label.plaintextHash !== undefined || item.value.plaintextHash !== undefined;
       return {
         id: item.id,
         kind: item.kind as PersonalDataKind,
-        label: item.label,
-        value: item.value,
+        label: protectedCiphertext(item.label),
+        value: protectedCiphertext(item.value),
         createdAt: item.createdAt,
         ...(item.correctedAt === undefined ? {} : { correctedAt: item.correctedAt }),
       };
     });
     chmodSync(this.options.path, 0o600);
-    return items;
+    return { items, migrate };
   }
 
-  private persist(): void {
+  private persist(items: readonly EncryptedItem[]): void {
     ensureDurableDir(NODE_IO, dirname(this.options.path));
     const temp = `${this.options.path}.${process.pid}.${randomUUID()}.tmp`;
-    const data: StoreFile = { schema: "keep.personal-data/v2", subject: this.options.subject, items: this.items };
+    const data: StoreFile = { schema: "keep.personal-data/v3", subject: this.options.subject, items };
     let fd: number | undefined;
     try {
       fd = openSync(temp, "wx", 0o600);
@@ -176,6 +199,11 @@ export class PersistentPersonalDataStore {
       fd = undefined;
       renameSync(temp, this.options.path);
       fsyncDir(NODE_IO, dirname(this.options.path));
+    } catch (error) {
+      // A failure after rename leaves a valid new file, but its durability is
+      // uncertain. Fence this instance rather than continue with stale state.
+      this.writeFailed = true;
+      throw error;
     } finally {
       if (fd !== undefined) closeSync(fd);
       try { unlinkSync(temp); } catch { /* absent or already renamed */ }
@@ -186,6 +214,13 @@ export class PersistentPersonalDataStore {
 function isCiphertext(value: unknown): value is Ciphertext {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
   const c = value as Partial<Ciphertext>;
-  return typeof c.iv === "string" && typeof c.authTag === "string" && typeof c.data === "string" && typeof c.plaintextHash === "string";
+  return typeof c.iv === "string" && /^[a-f0-9]{24}$/iu.test(c.iv)
+    && typeof c.authTag === "string" && /^[a-f0-9]{32}$/iu.test(c.authTag)
+    && typeof c.data === "string" && /^(?:[a-f0-9]{2})*$/iu.test(c.data)
+    && (c.plaintextHash === undefined || typeof c.plaintextHash === "string");
+}
+
+function protectedCiphertext(value: Ciphertext): Ciphertext {
+  return { iv: value.iv, authTag: value.authTag, data: value.data };
 }
 

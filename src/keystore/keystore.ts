@@ -1,20 +1,8 @@
-/**
- * Crypto-shred key store (Round 15) — GDPR-endorsed erasure on an immutable log.
- *
- * The paradox: the spine is immutable (tamper-evidence), but GDPR Art. 17 requires
- * erasure. Resolution (explicitly endorsed by 2026 guidance): encrypt sensitive
- * data per-subject; store only ciphertext + a hash in the chain. Erasure destroys
- * the subject's key -> the ciphertext becomes unrecoverable noise, while the chain
- * is untouched and still verifies.
- *
- * This store is Phase 0 foundation: backup encryption (R17) and cryptographic
- * per-tenant namespaces (R19) reuse these keys.
- *
- * Node's crypto only (AES-256-GCM). In-memory key registry for the zero-dependency
- * tier; a KMS/Vault-backed impl drops in behind the same shape later.
- */
+/** Per-subject AES-256-GCM encryption and key revocation. Ciphertext carries no
+ * unkeyed plaintext fingerprint. Erasure depends on custody of all key copies;
+ * this store cannot revoke copies held outside its configured persistence. */
 
-import { randomBytes, createCipheriv, createDecipheriv, createHash, createHmac } from "node:crypto";
+import { randomBytes, createCipheriv, createDecipheriv, createHmac } from "node:crypto";
 
 export type SubjectId = string;
 
@@ -23,7 +11,7 @@ export interface Ciphertext {
   readonly iv: string;
   readonly authTag: string;
   readonly data: string;
-  /** Optional transient content identity. Never persist it with secret-bearing ciphertext. */
+  /** Legacy field accepted for compatibility; new encryption never emits it. */
   readonly plaintextHash?: string;
 }
 
@@ -95,7 +83,6 @@ export class CryptoShredKeyStore {
       iv: iv.toString("hex"),
       authTag: authTag.toString("hex"),
       data: enc.toString("hex"),
-      plaintextHash: createHash("sha256").update(plaintext, "utf8").digest("hex"),
     };
   }
 

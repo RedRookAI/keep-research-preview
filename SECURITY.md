@@ -5,17 +5,25 @@ production use. The repository walkthrough uses a synthetic repository and
 scripted local responses; the companion recovery experiment uses a local test
 outbox. Neither demonstration requires a live model or external account.
 
-The current combined download is **0.0.19-preview.1**, including the generation-only
-Codex engine and restricted OpenClaw plugin. A genuine installed repository case
-passed with real Codex generation, native OpenClaw dispatch and actual console
-approval/veto; OpenClaw tool selection was scripted and decisions developer-administered.
-The exact released archive separately passed unprivileged installation/startup,
-demos, instance/console lifecycle and plugin setup, with matching component evidence
-explicitly reused. This establishes the declared preview profile, not general model
-quality, complete OpenClaw containment or production enterprise readiness.
+The current development source is **0.0.29-preview.1**. The self-contained
+**0.0.29-preview.1 Linux x64 appliance** passed its account-free browser workflow:
+approval and veto, four executable checks, evidence export and stop/restart with
+retained jobs. The hosted guided demo runs **0.0.25-preview.1**. Both use authored
+responses and real workspace edits/checks.
+
+The current native OpenClaw SDK passed submission and fresh-process status against
+the shipped Keep API with dispatch paused and zero account/provider calls. Fresh
+live-account generation and full operator handover remain open. The earlier
+genuine Codex case and direct-installation checks retain their historical versions.
+
+Current appliance profile and native API observation:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-29-2026-11-12.md
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/current-openclaw-api-2026-11-12.json
+
 See [architecture](docs/architecture.md), [current status](ROADMAP.md),
-[exact release qualification](docs/qualification/combined-preview-2026-10-20.json)
-and [validation evidence](docs/evidence.md).
+[exact release identities](KEEP_RELEASE.md) and [validation evidence](docs/evidence.md).
 
 ## What the mechanisms establish
 
@@ -150,6 +158,8 @@ protection against every untrusted input.
 GitHub's built-in private vulnerability reporting is enabled for this public
 preview. Open this repository's **Security**
 tab, select **Advisories**, then **Report a vulnerability** to send a private report.
+
+https://github.com/RedRookAI/keep-research-preview/security/advisories
 
 The enabled setting was verified through GitHub's API, and the public Advisories
 page displays the reporting link. Maintainer notification delivery has not yet been

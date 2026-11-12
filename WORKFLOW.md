@@ -146,6 +146,15 @@ results, remaining failures and environment. A local repeat is not independent
 replication. See [Security](SECURITY.md) before reporting vulnerabilities and
 [Licensing](docs/licensing.md) before distributing artifacts.
 
+## Submit a change
+
+Fork the public repository, create a branch for the change, and open a pull request
+with its purpose, affected checks and remaining limitations. The source checkout
+and documented public dependencies supply the build inputs. Use the private
+reporting route in SECURITY.md for a vulnerability report.
+
+https://github.com/RedRookAI/keep-research-preview/pulls
+
 ## Changes and releases
 
 Contributions should contain a coherent product change, its meaningful checks and
