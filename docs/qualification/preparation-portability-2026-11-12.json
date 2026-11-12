@@ -1,0 +1,374 @@
+{
+  "schema": "keep.preparation-portability-followup/v1",
+  "date": "2026-11-12",
+  "source": "e53867c1c2add998b9d382f26fc6c7aa97b3b2b7",
+  "publishedArchive": {
+    "tag": "keep-preview-2026-11-11.2",
+    "version": "0.0.21-preview.1",
+    "sha256": "7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca",
+    "runId": 43124902024,
+    "jobId": 130874393992,
+    "workflowCommit": "fa7d508a4dc9ed4d23dde477914fdfbcf90cf3b3",
+    "host": "Ubuntu 22.04 x64",
+    "hostPolicyChanged": false,
+    "observedApparmorUserNamespaceRestriction": 0,
+    "receipt": {
+      "status": "PASS_INDEPENDENT_PUBLIC_ARCHIVE_OFFLINE_PREPARATION",
+      "scope": "constructed preparation fixture; no model or whole-product quality claim",
+      "keepVersion": "0.0.21-preview.1",
+      "publicSdkRoot": "./dist/src/index.js",
+      "uid": 1001,
+      "platform": "linux",
+      "arch": "x64",
+      "nodeVersion": "v22.23.4",
+      "nodeSha256": "94efd062ed066c1a0b332e18249859c905e920eeada5df55d24c99b919629a90",
+      "npmVersion": "10.9.9",
+      "npmCliSha256": "8e5f6f3429f8cdbe693cdc29904e9d5a7b127a494bd15c804bd54c7403bfcbe7",
+      "helperSha256": "e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f",
+      "sdkEntrySha256": "753b7acede014bc4424c2651b95e1a47910ac1a90cd71533ca9d7d101d3c6d2d",
+      "sourceRevision": "e2c66bc198a7603cac798f3d62820c4cd230b7ce",
+      "trackedSourceSha256": {
+        "package.json": "7037d782be0e48c2546d1cfe97c677890c18554edc8aecf98130cefd58e75de7",
+        "package-lock.json": "8301aee383f5211ca27780433d7084ede49921568dfce92042daba6c42875e8c",
+        ".gitignore": "25622cb106bae6bb037e22d4be19f11b235acfc8e398501ddea31169f11fbd80",
+        "check.cjs": "aa40760b498c8f1dba606dd3b5037376aa513cbfdabe00736c9082070cd169f6"
+      },
+      "sourceUnchanged": true,
+      "emptyCacheRefused": true,
+      "explicitRetry": true,
+      "cacheSeed": {
+        "publicTarball": "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz",
+        "integrity": "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==",
+        "method": "selected npm cache add, after actual empty-cache hold; no maintainer cache"
+      },
+      "requiredJailPreflight": {
+        "results": [
+          {
+            "name": "required jail can execute selected Node",
+            "passed": true
+          }
+        ],
+        "processIsolation": {
+          "version": 1,
+          "basis": "launcher-status",
+          "namespacePolicy": "required",
+          "requestedNamespaces": [
+            "mount-ns",
+            "pid-ns",
+            "ipc-ns",
+            "uts-ns",
+            "net-ns"
+          ],
+          "degraded": [],
+          "namespaceSetup": "launcher-confirmed",
+          "requestedRlimits": [
+            "cpuLimit",
+            "file-size",
+            "process-count",
+            "open-files"
+          ],
+          "rlimitSetup": "launcher-confirmed"
+        }
+      },
+      "installedDependency": "typescript@5.9.3",
+      "lifecycleScriptsDisabled": true,
+      "usefulChecker": [
+        {
+          "name": "prepared TypeScript transpiles the configured input",
+          "passed": true
+        }
+      ],
+      "processIsolation": {
+        "version": 1,
+        "basis": "launcher-status",
+        "namespacePolicy": "required",
+        "requestedNamespaces": [
+          "mount-ns",
+          "pid-ns",
+          "ipc-ns",
+          "uts-ns",
+          "net-ns"
+        ],
+        "degraded": [],
+        "namespaceSetup": "launcher-confirmed",
+        "requestedRlimits": [
+          "cpuLimit",
+          "file-size",
+          "process-count",
+          "open-files"
+        ],
+        "rlimitSetup": "launcher-confirmed"
+      },
+      "moduleOverlays": false,
+      "devCheckoutRequired": false,
+      "workerStarted": false,
+      "modelCalls": 0,
+      "observations": [
+        {
+          "sequence": 0,
+          "stage": "inputs",
+          "status": 0
+        },
+        {
+          "sequence": 1,
+          "stage": "source-fixture",
+          "status": 0
+        },
+        {
+          "sequence": 2,
+          "stage": "source-fixture",
+          "status": 0
+        },
+        {
+          "sequence": 3,
+          "stage": "source-fixture",
+          "status": 0
+        },
+        {
+          "sequence": 4,
+          "stage": "source-fixture",
+          "status": 0
+        },
+        {
+          "sequence": 5,
+          "stage": "instance-init",
+          "status": 0
+        },
+        {
+          "sequence": 6,
+          "stage": "actual-empty-cache-prepare",
+          "status": 1
+        },
+        {
+          "sequence": 7,
+          "stage": "public-registry-cache-seed",
+          "status": 0
+        },
+        {
+          "sequence": 8,
+          "stage": "explicit-seeded-offline-prepare",
+          "status": 0
+        },
+        {
+          "sequence": 9,
+          "stage": "source-and-lifecycle-readback",
+          "status": 0
+        },
+        {
+          "sequence": 10,
+          "stage": "source-and-lifecycle-readback",
+          "status": 0
+        }
+      ]
+    }
+  },
+  "sourcePositive": {
+    "runId": 43125525091,
+    "jobId": 130876500613,
+    "workflowCommit": "c40674a94bce057ed879e9e754c43ca9f169609c",
+    "host": "Ubuntu 22.04 x64",
+    "receipt": {
+      "status": "PASS_SOURCE_OFFLINE_PREPARATION",
+      "scope": "constructed preparation fixture; no model or whole-product quality claim",
+      "keepVersion": "0.0.22-preview.1",
+      "publicSdkRoot": "./dist/src/index.js",
+      "uid": 1001,
+      "platform": "linux",
+      "arch": "x64",
+      "nodeVersion": "v22.23.4",
+      "nodeSha256": "94efd062ed066c1a0b332e18249859c905e920eeada5df55d24c99b919629a90",
+      "npmVersion": "10.9.9",
+      "npmCliSha256": "8e5f6f3429f8cdbe693cdc29904e9d5a7b127a494bd15c804bd54c7403bfcbe7",
+      "helperSha256": "e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f",
+      "sdkEntrySha256": "753b7acede014bc4424c2651b95e1a47910ac1a90cd71533ca9d7d101d3c6d2d",
+      "sourceRevision": "c1488762b7f532a51b367267e8d90f5e2de1f427",
+      "trackedSourceSha256": {
+        "package.json": "7037d782be0e48c2546d1cfe97c677890c18554edc8aecf98130cefd58e75de7",
+        "package-lock.json": "8301aee383f5211ca27780433d7084ede49921568dfce92042daba6c42875e8c",
+        ".gitignore": "25622cb106bae6bb037e22d4be19f11b235acfc8e398501ddea31169f11fbd80",
+        "check.cjs": "aa40760b498c8f1dba606dd3b5037376aa513cbfdabe00736c9082070cd169f6"
+      },
+      "sourceUnchanged": true,
+      "emptyCacheRefused": true,
+      "explicitRetry": true,
+      "cacheSeed": {
+        "publicTarball": "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz",
+        "integrity": "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==",
+        "method": "selected npm cache add, after actual empty-cache hold; no maintainer cache"
+      },
+      "sourcePreflight": "executed by the normal CLI before each npm attempt",
+      "installedDependency": "typescript@5.9.3",
+      "lifecycleScriptsDisabled": true,
+      "usefulChecker": [
+        {
+          "name": "prepared TypeScript transpiles the configured input",
+          "passed": true
+        }
+      ],
+      "processIsolation": {
+        "version": 1,
+        "basis": "launcher-status",
+        "namespacePolicy": "required",
+        "requestedNamespaces": [
+          "mount-ns",
+          "pid-ns",
+          "ipc-ns",
+          "uts-ns",
+          "net-ns"
+        ],
+        "degraded": [],
+        "namespaceSetup": "launcher-confirmed",
+        "requestedRlimits": [
+          "cpuLimit",
+          "file-size",
+          "process-count",
+          "open-files"
+        ],
+        "rlimitSetup": "launcher-confirmed"
+      },
+      "moduleOverlays": false,
+      "devCheckoutRequired": true,
+      "workerStarted": false,
+      "modelCalls": 0,
+      "observations": [
+        {
+          "sequence": 0,
+          "stage": "inputs",
+          "status": 0
+        },
+        {
+          "sequence": 1,
+          "stage": "source-fixture",
+          "status": 0
+        },
+        {
+          "sequence": 2,
+          "stage": "source-fixture",
+          "status": 0
+        },
+        {
+          "sequence": 3,
+          "stage": "source-fixture",
+          "status": 0
+        },
+        {
+          "sequence": 4,
+          "stage": "source-fixture",
+          "status": 0
+        },
+        {
+          "sequence": 5,
+          "stage": "instance-init",
+          "status": 0
+        },
+        {
+          "sequence": 6,
+          "stage": "actual-empty-cache-prepare",
+          "status": 1
+        },
+        {
+          "sequence": 7,
+          "stage": "public-registry-cache-seed",
+          "status": 0
+        },
+        {
+          "sequence": 8,
+          "stage": "explicit-seeded-offline-prepare",
+          "status": 0
+        },
+        {
+          "sequence": 9,
+          "stage": "source-and-lifecycle-readback",
+          "status": 0
+        },
+        {
+          "sequence": 10,
+          "stage": "source-and-lifecycle-readback",
+          "status": 0
+        }
+      ]
+    }
+  },
+  "sourceCI": {
+    "runId": 43125422956,
+    "jobId": 130876139509,
+    "profile": "partial-unprivileged",
+    "tests": 176,
+    "passed": 176,
+    "files": 20,
+    "skipped": 0,
+    "fullRuntimeSuite": false
+  },
+  "historicalRestrictedHost": {
+    "runId": 43121418313,
+    "error": "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
+    "observedApparmorUserNamespaceRestriction": 1,
+    "exactDenyingRuleIdentified": false
+  },
+  "scope": "Actual dependency preparation and checker on constructed repository fixtures. Ubuntu 22.04 preparation is not full bundled-engine compatibility. No live account generation, ARM64/native production or whole-product completion claim.",
+  "sourceRestrictedHost": {
+    "runId": 43125525091,
+    "jobId": 130876500002,
+    "workflowCommit": "c40674a94bce057ed879e9e754c43ca9f169609c",
+    "host": "Ubuntu 24.04 x64",
+    "receipt": {
+      "status": "PASS_SOURCE_PREFLIGHT_REFUSAL",
+      "version": "0.0.22-preview.1",
+      "npmStarted": false,
+      "cacheSeeded": false,
+      "holdRetained": true,
+      "sourceUnchanged": true,
+      "hostPolicyChanged": false,
+      "modelCalls": 0,
+      "cliDiagnostic": "Instance prepare failed: Owned workspace: /home/runner/keep-source-preparation-WDH3GqPn/consumer/instance/workspaces/project\nOffline workspace preparation held: required sandbox preflight failed. Namespace/resource-limit setup or the selected Node runtime could not be confirmed. npm was not launched; adding packages to the cache will not resolve this preflight failure. Check the qualified helper, protected installation path, Linux user/network namespace permissions and AppArmor or container policy. Use a namespace-capable host or an administrator-reviewed application-specific policy, then explicitly retry prepare. The preparation hold is retained; no host policy was changed.\n",
+      "observations": [
+        {
+          "sequence": 0,
+          "stage": "inputs",
+          "status": 0
+        },
+        {
+          "sequence": 1,
+          "stage": "source-fixture",
+          "status": 0
+        },
+        {
+          "sequence": 2,
+          "stage": "source-fixture",
+          "status": 0
+        },
+        {
+          "sequence": 3,
+          "stage": "source-fixture",
+          "status": 0
+        },
+        {
+          "sequence": 4,
+          "stage": "source-fixture",
+          "status": 0
+        },
+        {
+          "sequence": 5,
+          "stage": "instance-init",
+          "status": 0
+        },
+        {
+          "sequence": 6,
+          "stage": "actual-empty-cache-prepare",
+          "status": 1
+        },
+        {
+          "sequence": 7,
+          "stage": "actual-empty-cache-prepare",
+          "status": 0
+        },
+        {
+          "sequence": 8,
+          "stage": "actual-empty-cache-prepare",
+          "status": 0
+        }
+      ]
+    }
+  },
+  "hostPolicyChanges": false
+}

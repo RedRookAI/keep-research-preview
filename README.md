@@ -73,7 +73,9 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/integrations/opencl
 
 ## Release status and remaining work
 
-Fresh-workspace checks reproduced the .21 download and the standard .22 source build on separate Ubuntu x64 VMs. The rebuilt native binaries matched the published checksums. Spark ARM64 checks passed the portable workflow. Required-jail preparation still needs a qualified namespace-capable host; the clean runner denied its network setup.
+Fresh-workspace checks reproduced the .21 download and the standard .22 source build on separate Ubuntu x64 VMs. The rebuilt native binaries matched the published checksums. Spark ARM64 checks passed the portable workflow. Actual offline dependency preparation subsequently passed on fresh Ubuntu 22.04 x64 runners using the public download and source .22. Restricted Ubuntu 24.04 sandbox setup remains open; source .22 now detects that setup failure before launching npm.
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/preparation-portability-2026-11-12.md
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/independent-preview-2026-11-12.md
 

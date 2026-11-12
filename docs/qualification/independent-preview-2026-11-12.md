@@ -1,5 +1,9 @@
 # Independent workspace verification — November 12, 2026
 
+Follow-up: actual public-download and source preparation passed on fresh Ubuntu 22.04 x64. Source .22 also gained an independently checked preflight diagnostic for the restricted Ubuntu 24.04 setup. The original observations below retain their tested subjects; the follow-up supersedes their unresolved independent-positive-preparation status.
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/preparation-portability-2026-11-12.md
+
 The published .21 download and the .22 source build reproduced outside the development server. Required-jail dependency preparation remains conditional on a separately qualified host: the clean runner denied network-namespace setup.
 
 | Check | Independent environment | Observed result |
