@@ -1,0 +1,101 @@
+{
+  "schema": "keep.guided-public-https/v1",
+  "status": "PASS",
+  "source": "8e8eeaaad17f8a7e0aa239edfd4284eb7162a672",
+  "version": "0.0.25-preview.1",
+  "browser": "151.0.7922.34",
+  "node": "v22.23.4",
+  "actualPublicHttps": true,
+  "ignoreHttpsErrors": false,
+  "paidCalls": 0,
+  "stages": [
+    "two-clean-https-invitations",
+    "clear-start-and-preparation-actions",
+    "desktop-and-phone-layouts",
+    "fixed-goal-csrf-origin-cookie-and-raw-api-refusals",
+    "cross-slot-project-job-decision-cancel-refused",
+    "actual-background-preparation-and-four-passing-checks",
+    "fresh-form-recovers-identical-jobs",
+    "exact-hosted-source-approval-and-veto",
+    "verified-browser-downloads",
+    "source-and-checker-byte-checks",
+    "cross-slot-exact-export-refused"
+  ],
+  "reusedBaseline": "Unchanged .24 broad ingress/authority proof is retained separately; revised source53 focused checks and selected actual HTTPS refusal cases are recorded here.",
+  "slots": [
+    {
+      "slot": "a",
+      "origin": "https://keep.redrook.ai",
+      "tls": {
+        "issuer": "YE1",
+        "protocol": "TLS 1.3",
+        "subjectName": "redrook.ai",
+        "validFrom": 1793694817,
+        "validTo": 1801470816
+      },
+      "viewport": "desktop1365",
+      "projectId": "prj_f354d36689a46ef1c8e9d57208b65fb9",
+      "runId": "9c45e971-9a25-45b5-8b54-a5fd5b51c7ef",
+      "proposalDigest": "3cd7eccb33b5af8a6cb17dd0c3d377a894a0f4bfe8edda196d45ce7051992e72",
+      "retainedJobIds": [
+        "8b4fdec5-6318-4182-8465-0bea57591abd",
+        "9c45e971-9a25-45b5-8b54-a5fd5b51c7ef"
+      ],
+      "checks": [
+        "first delivery counts once",
+        "duplicate delivery ID is ignored",
+        "distinct delivery IDs still count",
+        "goal: requested outcome"
+      ],
+      "decision": "approve",
+      "sourceFixed": true,
+      "checkerUnchanged": true,
+      "workspaceFixed": true,
+      "observedPreparing": true,
+      "exportSha256": "fc4daf8a00080d934cc4495c1602dac7c88b8400a5b97dbb3f37e650d0e2015c"
+    },
+    {
+      "slot": "b",
+      "origin": "https://keep-b.redrook.ai",
+      "tls": {
+        "issuer": "YE1",
+        "protocol": "TLS 1.3",
+        "subjectName": "redrook.ai",
+        "validFrom": 1793694817,
+        "validTo": 1801470816
+      },
+      "viewport": "phone390",
+      "projectId": "prj_3e65a71bca768027b0e9c8be7596535f",
+      "runId": "41d85e48-5d2b-49a9-9f70-a05ec5a0aad4",
+      "proposalDigest": "3cd7eccb33b5af8a6cb17dd0c3d377a894a0f4bfe8edda196d45ce7051992e72",
+      "retainedJobIds": [
+        "19367a32-5ea9-42d3-9bca-07da07412b00",
+        "41d85e48-5d2b-49a9-9f70-a05ec5a0aad4"
+      ],
+      "checks": [
+        "first delivery counts once",
+        "duplicate delivery ID is ignored",
+        "distinct delivery IDs still count",
+        "goal: requested outcome"
+      ],
+      "decision": "veto",
+      "sourceFixed": false,
+      "checkerUnchanged": true,
+      "workspaceFixed": true,
+      "observedPreparing": true,
+      "exportSha256": "c29665b163d6ae3068a817a3ba4567822b1ac5bee5b1584497310d851012b685"
+    }
+  ],
+  "retirements": [
+    {
+      "slot": "a",
+      "generations": 2,
+      "unresolved": []
+    },
+    {
+      "slot": "b",
+      "generations": 2,
+      "unresolved": []
+    }
+  ]
+}

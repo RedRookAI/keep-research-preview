@@ -27,7 +27,11 @@ python3 keep-appliance.py credential /your/private/keep-instance
 
 Sample startup checks the console through the owned SSH forward before reporting its local browser address. On a host with a browser, open that reported address and enter the credential. The guest and host use the same literal127.0.0.1 port to preserve the browser origin.
 
-For a remote host, make an additional SSH tunnel from your browser's computer to the host using the same local port. For example, forward your computer's127.0.0.1:7788 to the appliance host's127.0.0.1:7788. Open that address in your own browser. The separately hosted HTTPS demo is the direct browser option for a headless setup; its actual URL belongs in the published release instructions.
+For a remote host, make an additional SSH tunnel from your browser's computer to the host using the same local port. For example, forward your computer's127.0.0.1:7788 to the appliance host's127.0.0.1:7788. Open that address in your own browser. An assigned hosted invitation gives you the walkthrough directly in your browser:
+
+https://keep.redrook.ai/console
+
+The operator supplies its invitation credential separately.
 
 Choose **Submit a repository goal**, then **Submit goal**. Approve the displayed step to run the sample. Inspect the checked diff, choose **Veto proposal**, open the updated project and download the proposal evidence. The original sample repository remains unchanged after veto. Opening or refreshing the console does not submit another goal.
 
@@ -55,6 +59,19 @@ keep-engine login --device-auth
 ```
 
 Then use keep instance init with your repository, checker, engine/model and chosen limits, following the existing Codex project and local-instance guides carried in the package. Login and model credentials stay in your private instance. Boot and sample startup make no model calls. OpenClaw remains a separate optional client with its own supported patched Node24 runtime.
+
+Stop the sample before starting your personal instance on the same console port. The sample's host forward closes when the sample stops. After starting your personal instance inside the guest, open a foreground SSH forward from the appliance host. Use the private appliance directory and the ports you selected at startup; this example uses the defaults:
+
+```sh
+APPLIANCE_STATE=/your/private/keep-instance
+ssh -F /dev/null -i "$APPLIANCE_STATE/owner-key" \
+  -o IdentitiesOnly=yes -o ForwardAgent=no \
+  -o UserKnownHostsFile="$APPLIANCE_STATE/known-hosts" -o StrictHostKeyChecking=yes \
+  -o ExitOnForwardFailure=yes -N \
+  -L 127.0.0.1:7788:127.0.0.1:7788 -p 2222 keep@127.0.0.1
+```
+
+Keep that terminal open while using the personal console. For a remote appliance host, add the same client-to-host forward described above. Enter the personal instance's gateway credential in its sign-in form. The sample invitation and your model account login are separate credentials. Stop this foreground forward with Ctrl-C; it does not stop the guest or erase its state.
 
 ## Stop and remove
 
