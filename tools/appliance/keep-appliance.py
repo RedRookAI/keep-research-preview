@@ -167,6 +167,23 @@ def spawn_owned(argv, log):
     return identity(child.pid)
 
 
+def read_stop_state(pid):
+    proc = Path('/proc') / str(pid)
+    fields = (proc / 'stat').read_text().rsplit(')', 1)[1].split()
+    return {'uid': proc.stat().st_uid, 'start': fields[19], 'state': fields[0]}
+
+
+def awaiting_exit(record):
+    """Non-actuating observer, used only after an admitted stop request."""
+    try:
+        now = read_stop_state(record['pid'])
+    except (FileNotFoundError, ProcessLookupError):
+        return False
+    if now['uid'] != record['uid'] or now['start'] != record['start']:
+        fail('Process identity changed during shutdown; outcome remains unresolved')
+    return now['state'] not in ('Z', 'X')
+
+
 def refuse_pending(data):
     pending = [name for name, record in data.get('dispatches', {}).items() if record['state'] == 'intent']
     if pending or data.get('stage') == 'initializing':
@@ -190,9 +207,9 @@ def terminate(record):
     if alive(record):
         os.kill(record['pid'], signal.SIGTERM)
         deadline = time.monotonic() + 30
-        while alive(record) and time.monotonic() < deadline:
+        while awaiting_exit(record) and time.monotonic() < deadline:
             time.sleep(0.1)
-        if alive(record):
+        if awaiting_exit(record):
             fail('Owned process did not stop; state retained, no forced kill or reset')
 
 
@@ -378,9 +395,9 @@ def stop(path, data):
             pass
         qmp_powerdown(path)
         deadline = time.monotonic() + 30
-        while alive(data['qemu']) and time.monotonic() < deadline:
+        while awaiting_exit(data['qemu']) and time.monotonic() < deadline:
             time.sleep(0.1)
-        if alive(data['qemu']):
+        if awaiting_exit(data['qemu']):
             fail('Guest shutdown not confirmed; retained state and own processes require inspection')
     terminate(data.get('tunnel')); terminate(data.get('seed'))
     data['stage'] = 'stopped'

@@ -59,6 +59,23 @@ def events():
     return result
 
 
+def read_stop_state(pid):
+    proc = Path('/proc') / str(pid)
+    fields = (proc / 'stat').read_text().rsplit(')', 1)[1].split()
+    return {'uid': proc.stat().st_uid, 'start': fields[19], 'state': fields[0]}
+
+
+def awaiting_exit(record):
+    """Observe exit after one fully admitted signal; do not read dying argv."""
+    try:
+        now = read_stop_state(record['pid'])
+    except (FileNotFoundError, ProcessLookupError):
+        return False
+    if now['uid'] != record['uid'] or now['start'] != record['start']:
+        raise RuntimeError('Process identity changed during stop; outcome remains unresolved')
+    return now['state'] not in ('Z', 'X')
+
+
 def write_state(data):
     path = ROOT / 'control.new'
     with path.open('x') as stream:
@@ -101,9 +118,9 @@ def stop_sample(data):
     if data.get('stage') != 'stopped' and alive(data.get('process')):
         os.kill(data['process']['pid'], signal.SIGTERM)
         deadline = time.monotonic() + 30
-        while alive(data['process']) and time.monotonic() < deadline:
+        while awaiting_exit(data['process']) and time.monotonic() < deadline:
             time.sleep(0.1)
-        if alive(data['process']):
+        if awaiting_exit(data['process']):
             raise RuntimeError('Sample stop not confirmed; state retained without forced termination')
     data['stage'] = 'stopped'; write_state(data)
 
