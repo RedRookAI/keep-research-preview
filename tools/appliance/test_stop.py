@@ -1,6 +1,7 @@
 """Deterministic post-signal argv teardown and pre-signal ownership regressions."""
 import hashlib
 import importlib.util
+import json
 import os
 from pathlib import Path
 import signal
@@ -62,6 +63,38 @@ class StopObservation(unittest.TestCase):
                     self.assertIsNone(child.poll())
                 finally:
                     child.terminate(); child.wait()
+
+    def test_stop_timeout_reports_only_current_dispatch_acknowledgement(self):
+        older = [{'event': 'sample-ready'}, {'event': 'sample-stopped'}]
+        current = [{'event': 'sample-ready', 'tokenFile': 'private-path-sentinel', 'token': 'private-value-sentinel'}]
+        for recorded in (False, True):
+            with self.subTest(recorded=recorded), tempfile.TemporaryDirectory(prefix='stop event ') as temporary:
+                root = Path(temporary)
+                history = older + current + ([{'event': 'sample-stopped', 'unresolved': []}] if recorded else [])
+                (root / 'sample.log').write_text(''.join(json.dumps(event) + '\n' for event in history))
+                data = {'stage': 'running', 'eventsBeforeStart': len(older), 'process': {'pid': 123}}
+                original = json.loads(json.dumps(data))
+                with patch.object(guest, 'ROOT', root), patch.object(guest, 'alive', return_value=True), \
+                     patch.object(guest, 'awaiting_exit', return_value=True), patch.object(guest.os, 'kill') as kill, \
+                     patch.object(guest.time, 'monotonic', side_effect=[0, 31]), patch.object(guest, 'write_state') as write:
+                    with self.assertRaises(RuntimeError) as captured:
+                        guest.stop_sample(data)
+                expected = 'recorded' if recorded else 'not-recorded'
+                self.assertEqual(str(captured.exception), 'Sample stop not confirmed; state retained without forced termination; current-dispatch sample-stopped event: ' + expected)
+                self.assertNotIn('private-', str(captured.exception))
+                kill.assert_called_once_with(123, signal.SIGTERM); write.assert_not_called()
+                self.assertEqual(data, original)
+
+    def test_missing_invalid_truncated_or_stale_event_offset_reports_unknown(self):
+        history = [{'event': 'sample-ready'}, {'event': 'sample-stopped'}, {'event': 'sample-ready'}]
+        for value in (None, -1, True, '2', 1.5, 4, 3, 0, 1):
+            with self.subTest(value=value), patch.object(guest, 'events', return_value=history):
+                data = {} if value is None else {'eventsBeforeStart': value}
+                self.assertEqual(guest.stopped_event_observation(data), 'unknown')
+        with patch.object(guest, 'events', return_value=[]):
+            self.assertEqual(guest.stopped_event_observation({'eventsBeforeStart': 0}), 'unknown')
+        with patch.object(guest, 'events', side_effect=OSError('unreadable controlled log')):
+            self.assertEqual(guest.stopped_event_observation({'eventsBeforeStart': 0}), 'unknown')
 
     def test_pid_reuse_or_uid_change_while_waiting_remains_unresolved(self):
         for module in (host, guest):

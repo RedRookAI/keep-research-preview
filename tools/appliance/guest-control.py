@@ -59,6 +59,24 @@ def events():
     return result
 
 
+def stopped_event_observation(data):
+    offset = data.get('eventsBeforeStart')
+    if type(offset) is not int or offset < 0:
+        return 'unknown'
+    try:
+        history = events()
+    except (OSError, UnicodeError):
+        return 'unknown'
+    if offset > len(history):
+        return 'unknown'
+    current = history[offset:]
+    # A missing/truncated log or offset spanning another dispatch cannot turn an
+    # old acknowledgement into evidence that this dispatch finished closing.
+    if not current or current[0]['event'] != 'sample-ready' or sum(event['event'] == 'sample-ready' for event in current) != 1:
+        return 'unknown'
+    return 'recorded' if any(event['event'] == 'sample-stopped' for event in current[1:]) else 'not-recorded'
+
+
 def read_stop_state(pid):
     proc = Path('/proc') / str(pid)
     fields = (proc / 'stat').read_text().rsplit(')', 1)[1].split()
@@ -121,7 +139,7 @@ def stop_sample(data):
         while awaiting_exit(data['process']) and time.monotonic() < deadline:
             time.sleep(0.1)
         if awaiting_exit(data['process']):
-            raise RuntimeError('Sample stop not confirmed; state retained without forced termination')
+            raise RuntimeError('Sample stop not confirmed; state retained without forced termination; current-dispatch sample-stopped event: ' + stopped_event_observation(data))
     data['stage'] = 'stopped'; write_state(data)
 
 
