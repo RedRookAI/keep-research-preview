@@ -13,7 +13,7 @@ import uuid
 
 ROOT = Path.home() / '.keep-reviewer-control'
 SAMPLE = Path.home() / 'reviewer-sample'
-NODE = '/opt/keep/node-v22.23.4-linux-x64/bin/node'
+NODE = '/opt/keep/node-v22.23.5-linux-x64/bin/node'
 ENTRY = '/opt/keep/runtime/tools/reviewer_local_sample.mjs'
 
 
@@ -99,7 +99,7 @@ def start_sample(data, port):
     with open(ROOT / 'sample.log', 'ab', buffering=0) as log:
         child = subprocess.Popen([NODE, ENTRY, str(SAMPLE), str(port)], stdin=subprocess.DEVNULL,
             stdout=log, stderr=log, start_new_session=True,
-            env={'PATH': '/opt/keep/node-v22.23.4-linux-x64/bin:/usr/bin:/bin', 'HOME': str(Path.home()), 'LANG': 'C.UTF-8'})
+            env={'PATH': str(Path(NODE).parent) + ':/usr/bin:/bin', 'HOME': str(Path.home()), 'LANG': 'C.UTF-8'})
     data['process'] = identity(child.pid)
     write_state(data)
     deadline = time.monotonic() + 30

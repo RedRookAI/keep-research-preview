@@ -6,9 +6,8 @@ import { readFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import os from 'node:os';
-const runtime = '/opt/keep/runtime', toolchain = '/opt/keep/node-v22.23.4-linux-x64';
+const runtime = '/opt/keep/runtime';
 const helper = '/opt/keep/bubblewrap/0.13.0/bwrap', engine = runtime + '/engines/codex-generation.2/bin/codex';
-const node = toolchain + '/bin/node';
 const read = p => { try { return readFileSync(p, 'utf8').trim(); } catch { return null; } };
 const receipt = { schema: 'keep.appliance.guest-proof/v1', passed: false, uid: process.getuid(), arch: process.arch,
   bootId: read('/proc/sys/kernel/random/boot_id'), kernel: os.release(), apparmorEnabled: read('/sys/module/apparmor/parameters/enabled'),
@@ -16,10 +15,16 @@ const receipt = { schema: 'keep.appliance.guest-proof/v1', passed: false, uid: p
 try {
   assert.notEqual(process.getuid(), 0); assert.equal(process.arch, 'x64');
   const metadata = JSON.parse(readFileSync('/opt/keep/image-build.json', 'utf8'));
+  assert.match(metadata.nodeVersion, /^\d+\.\d+\.\d+$/u);
+  assert.match(metadata.nodeExecutableSha256, /^[0-9a-f]{64}$/u);
+  const toolchain = '/opt/keep/node-v' + metadata.nodeVersion + '-linux-x64', node = toolchain + '/bin/node';
+  receipt.nodeVersion = process.versions.node;
+  assert.equal(receipt.nodeVersion, metadata.nodeVersion);
+  assert.equal(process.execPath, node);
   receipt.source = metadata.source; receipt.version = JSON.parse(readFileSync(runtime + '/package.json', 'utf8')).version;
   assert.equal(receipt.version, metadata.version);
   for (const [name, path, wanted] of [
-    ['node', node, '94efd062ed066c1a0b332e18249859c905e920eeada5df55d24c99b919629a90'],
+    ['node', process.execPath, metadata.nodeExecutableSha256],
     ['helper', helper, 'e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f'],
     ['engine', engine, 'fdd9a1a3e86fc2213e4c0bd9c9b278080f38d756a5256e3217092a30e48d98c1'],
   ]) { const hash = createHash('sha256').update(readFileSync(path)).digest('hex'); receipt.hashes[name] = hash; assert.equal(hash, wanted); }

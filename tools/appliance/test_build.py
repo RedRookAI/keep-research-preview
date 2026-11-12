@@ -18,6 +18,36 @@ recipe = importlib.util.module_from_spec(spec); spec.loader.exec_module(recipe)
 
 
 class FrozenArchiveModes(unittest.TestCase):
+    def test_node_executable_hash_is_bound_to_verified_archive(self):
+        with tempfile.TemporaryDirectory(prefix='node archive ') as temporary:
+            archive = Path(temporary) / 'node.tar.xz'; data = b'fixed executable fixture'
+            with tarfile.open(archive, 'w:xz') as stream:
+                member = tarfile.TarInfo('node-v22.23.5-linux-x64/bin/node')
+                member.mode = 0o755; member.size = len(data)
+                stream.addfile(member, io.BytesIO(data))
+            archive_sha = recipe.sha(archive)
+            self.assertEqual(recipe.node_executable_sha256(archive, archive_sha), hashlib.sha256(data).hexdigest())
+            with self.assertRaisesRegex(RuntimeError, 'archive checksum mismatch'):
+                recipe.node_executable_sha256(archive, '0' * 64)
+            with archive.open('ab') as stream: stream.write(b'changed archive')
+            with self.assertRaisesRegex(RuntimeError, 'archive checksum mismatch'):
+                recipe.node_executable_sha256(archive, archive_sha)
+
+    def test_node_archive_refuses_link_missing_or_duplicate_executable(self):
+        with tempfile.TemporaryDirectory(prefix='node member ') as temporary:
+            archive = Path(temporary) / 'node.tar.xz'
+            for kind in ('symlink', 'hardlink', 'missing', 'duplicate'):
+                with self.subTest(kind=kind):
+                    with tarfile.open(archive, 'w:xz') as stream:
+                        for _ in range(2 if kind == 'duplicate' else 1):
+                            member = tarfile.TarInfo('node-v22.23.5-linux-x64/bin/' + ('other' if kind == 'missing' else 'node'))
+                            if kind in ('symlink', 'hardlink'):
+                                member.type = tarfile.SYMTYPE if kind == 'symlink' else tarfile.LNKTYPE
+                                member.linkname = 'elsewhere'
+                            stream.addfile(member, io.BytesIO(b''))
+                    with self.assertRaisesRegex(RuntimeError, 'exactly one regular bin/node'):
+                        recipe.node_executable_sha256(archive, recipe.sha(archive))
+
     def test_new_public_support_modes_survive_runtime_archive_without_touching_native_or_private_state(self):
         with tempfile.TemporaryDirectory(prefix='public support modes ') as temporary:
             root = Path(temporary); runtime = root / 'runtime'; runtime.mkdir()

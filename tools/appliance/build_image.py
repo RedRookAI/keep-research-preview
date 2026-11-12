@@ -21,7 +21,9 @@ BASE_NAME = 'debian-13-generic-amd64-20261111-2659.qcow2'
 BASE_SHA = 'ec8c175e39d59e711798c3a2f22ba11b9aee9bca1887c7e505a800aeffd5d7616099bd0e9fad869efba96100fe09d2c8b49d6d7001d501f0056c556bdc25b605'
 RELEASE = 'https://github.com/RedRookAI/keep-research-preview/releases/download/keep-preview-2026-11-11.2'
 ARCHIVE_SHA = '7b22762a48a0f6e1e26db342b51ef211035db0cf1b88619a720324b3ef5f3fca'
-NODE_SHA = '1805bcd35e6815559bd2eb97db438d3fdb0eb3a5e6a977b7c1badca76337e9ce'
+NODE_VERSION = '22.23.5'
+NODE_NAME = 'node-v' + NODE_VERSION + '-linux-x64'
+NODE_SHA = 'cdeb8670a0c81f51b4dc4ac61919f9b1ad917b304bf8221eb939570663d240f8'
 HELPER_SHA = 'e96e817b17de74e75f9680755a700f16c9f59917a264c499175da704651bd41f'
 HELPER_SOURCE_SHA = '4734237473c0e5d695e4e9034a34e43b2dbf5164655bd13fa59ae376b2b7a765'
 ENGINE_SHA = 'fdd9a1a3e86fc2213e4c0bd9c9b278080f38d756a5256e3217092a30e48d98c1'
@@ -79,6 +81,21 @@ def publish_generated_runtime_support(runtime):
     plugin_directory.chmod(0o755)
 
 
+def node_executable_sha256(archive, wanted_archive_sha256=NODE_SHA, version=NODE_VERSION):
+    # Bind the executable measurement to the exact approved distribution bytes.
+    if sha(archive) != wanted_archive_sha256:
+        raise RuntimeError('Node archive checksum mismatch')
+    name = 'node-v' + version + '-linux-x64/bin/node'
+    with tarfile.open(archive, 'r:xz') as stream:
+        members = [member for member in stream.getmembers() if member.name == name]
+        if len(members) != 1 or not members[0].isfile():
+            raise RuntimeError('Node archive must contain exactly one regular bin/node')
+        with stream.extractfile(members[0]) as executable:
+            h = hashlib.sha256()
+            for block in iter(lambda: executable.read(1024 * 1024), b''): h.update(block)
+    return h.hexdigest()
+
+
 def main():
     if os.environ.get('GITHUB_ACTIONS') != 'true' or platform.machine() != 'x86_64' or os.getuid() == 0:
         raise RuntimeError('Use the approved nonroot disposable CI x64 fixture only')
@@ -122,7 +139,8 @@ def main():
     if sha(runtime / 'engines/codex-generation.2/bin/codex') != ENGINE_SHA:
         raise RuntimeError('Engine changed')
     run(['tar', '-czf', str(payload / 'runtime.tgz'), '-C', str(runtime), '.'])
-    fetch('https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-x64.tar.xz', payload / 'node.tar.xz', NODE_SHA)
+    fetch('https://nodejs.org/dist/v' + NODE_VERSION + '/' + NODE_NAME + '.tar.xz', payload / 'node.tar.xz', NODE_SHA)
+    node_sha = node_executable_sha256(payload / 'node.tar.xz')
     run(['docker', 'build', '--file', 'tools/bubblewrap/Dockerfile', '--tag', 'kc111-helper:' + os.environ['GITHUB_RUN_ID'], '.'], cwd=ROOT)
     container = run(['docker', 'create', 'kc111-helper:' + os.environ['GITHUB_RUN_ID']], capture_output=True, text=True).stdout.strip()
     try:
@@ -138,6 +156,7 @@ def main():
     components = {'schema': 'keep.appliance.image-build/v1', 'source': source, 'version': version,
                   'baseUrl': BASE_URL + '/' + BASE_NAME, 'baseSha512': BASE_SHA,
                   'archiveBaselineSha256': ARCHIVE_SHA, 'nodeArchiveSha256': NODE_SHA,
+                  'nodeVersion': NODE_VERSION, 'nodeExecutableSha256': node_sha,
                   'helperSha256': HELPER_SHA, 'helperSourceSha256': HELPER_SOURCE_SHA, 'engineSha256': ENGINE_SHA,
                   'nativeSourceTree': metadata['source']['nativeTree'], 'nativeArtifacts': metadata['nativeRelease']['artifacts']}
     (payload / 'image-build.json').write_text(json.dumps(components, indent=2) + '\n')
@@ -159,13 +178,13 @@ def main():
     provision = '#!/bin/bash\nset -euo pipefail\numask 022\nmkdir -p /opt/keep/runtime /opt/keep/bubblewrap/0.13.0 /opt/keep/downloads\ncd /opt/keep/downloads\n'
     for name in ('runtime.tgz', 'node.tar.xz', 'bwrap', 'bubblewrap-0.13.0.tar.xz', 'guest-control.py', 'image-build.json'):
         provision += f"curl --fail --silent --show-error http://10.0.2.2:{port}/{name} -o {name}\nprintf '%s\\n' '{sha(payload / name)}  {name}' | sha256sum -c -\n"
-    provision += '''tar -xzf runtime.tgz -C /opt/keep/runtime
+    provision += f'''tar -xzf runtime.tgz -C /opt/keep/runtime
 tar -xJf node.tar.xz -C /opt/keep
 install -m 0755 bwrap /opt/keep/bubblewrap/0.13.0/bwrap
 install -m 0644 bubblewrap-0.13.0.tar.xz /opt/keep/bubblewrap/0.13.0/bubblewrap-0.13.0.tar.xz
 install -m 0755 guest-control.py /usr/local/bin/keep-reviewer
 install -m 0644 image-build.json /opt/keep/image-build.json
-printf '%s\\n' '#!/bin/sh' 'exec /opt/keep/node-v22.23.4-linux-x64/bin/node /opt/keep/runtime/dist/src/main.js "$@"' > /usr/local/bin/keep
+printf '%s\\n' '#!/bin/sh' 'exec /opt/keep/{NODE_NAME}/bin/node /opt/keep/runtime/dist/src/main.js "$@"' > /usr/local/bin/keep
 printf '%s\\n' '#!/bin/sh' 'exec /opt/keep/runtime/engines/codex-generation.2/bin/codex "$@"' > /usr/local/bin/keep-engine
 chmod 0755 /usr/local/bin/keep /usr/local/bin/keep-engine
 apt-get update -qq
