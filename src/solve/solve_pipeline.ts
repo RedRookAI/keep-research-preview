@@ -1,15 +1,10 @@
 /**
- * SolvePipeline orchestrator (Increment 13d).
+ * Repository solve pipeline: localize, plan, apply, validate and prepare a proposal.
  *
- * SOTA basis (2026-08-05): the Agentless fixed pipeline (localize → repair → validate) is competitive
- * with autonomous agent loops at a fraction of the cost, and its value is the test-gated structure
- * (Chen 2026). This orchestrates the 13a–c parts into that pipeline, emits ProgressNarrator events for
- * the operator, audits every stage to the spine (tamper-evident trajectory), and returns a PR PROPOSAL
- * for the human merge gate — Keep NEVER auto-merges. Runs deterministically here under the replay
- * provider (every model call goes through the gateway port). Zero deps.
- *
- * What would change it: an AgentLoop strategy behind the same Solver port if cross-scaffold evidence
- * favors it for our task mix — this pipeline stays as the deterministic, auditable default.
+ * Model calls use the configured provider port. Stage progress and decisions are
+ * recorded to the spine. Governed edits use the reversible envelope; admitted
+ * project edits additionally bind to repository content and fixed goal checks.
+ * The caller's review/delivery path controls proposal landing.
  */
 
 import type { Spine } from "../spine/spine.js";
@@ -89,36 +84,12 @@ export interface SolvePipelineDeps {
   readonly identity?: AgentIdentity;
   readonly identityRegistry?: IdentityRegistry;
   /**
-   * Strangler-fig cutover flag (Build Step 2). When true, an auto-proceed reversible apply flows
-   * through the composed chain (floor → gate → REE envelope: checkpoint → fork → budget → accept →
-   * commit/rollback) instead of direct applyEditPlan.
-   *
-   * ROUND 34 — DEFAULTS **ON**. Omitting this now routes through the envelope.
-   *
-   * The one-line revert, kept deliberately available: pass `reversibleEnvelope: false`. That
-   * restores the direct `applyEditPlan` path exactly as it was, and it is covered by its own
-   * test so it cannot rot while unused.
-   *
-   * BUILD-ORDER 2.5 (Z126) — THE RETIRE-VS-KEEP DECISION, BOUND ON EVIDENCE, NOT PREFERENCE.
-   * Measured (see redrook-ops/.round-artifacts/ENVELOPE-FLAG-RETIREMENT/measurement.txt): the
-   * direct-apply fallback is reached by NO non-test src caller, and equivalence-for-accepted-ops
-   * holds — so retirement is *evidence-permitted*. It is NOT taken, because the disconfirming case
-   * bites: the envelope has never executed against real work (BUILD-ORDER 1.8 real-provider run and
-   * all of Phase 4 are open — every run to date is under the replay/in-memory fixtures), so this is
-   * an IMMATURE cutover and deleting its one-line revert would strip the only revert path.
-   *
-   * DECISION: KEEP, but GOVERNED. This SUPERSEDES Round 34's keep, which rested on an UNMEASURABLE
-   * criterion ("100% of traffic for a 2-4 week stabilization period") that a telemetry-less,
-   * userless 0.0.1 tool can never satisfy — that framing would drift into a permanent border. The
-   * SPECIFIC, MEASURABLE unmet criterion and the revisit trigger are recorded as a durable,
-   * auditable fact in {@link REVERSIBLE_ENVELOPE_STABILIZATION} (validated fail-closed and
-   * spine-audited on every kept-default run — see the apply seam), so the flag can never become a
-   * silent permanent border.
-   *
-   * WHAT CHANGES FOR AN OPERATOR: edits that the barriers refuse no longer land. They return
-   * `applied: false` with `status: "held"` and the gate's actual reasons, instead of being
-   * applied and left for review after the fact. Equivalence is preserved for accepted ops —
-   * the final tree state matches direct-apply — so benign work is unaffected.
+   * Defaults to the composed floor/gate/reversible-envelope apply path.
+   * Explicit false retains the legacy direct-apply compatibility path. The two
+   * paths have different refusal behavior: the envelope can hold an operation
+   * before mutation. Admitted project edits always require the governed path.
+   * The compatibility rationale is recorded on each kept-default apply through
+   * REVERSIBLE_ENVELOPE_STABILIZATION; this flag is not an isolation guarantee.
    */
   readonly reversibleEnvelope?: boolean;
   /**
@@ -146,15 +117,7 @@ export interface SolvePipelineOptions {
   readonly maxEditsPerPlan?: number;
 }
 
-/**
- * BUILD-ORDER 2.5 (Z126) — the KEEP decision for the `reversibleEnvelope` strangler-fig cutover
- * flag, recorded as a durable, auditable fact rather than a bare comment. Emitted to the spine on
- * every kept-default apply (see the apply seam) and asserted by the round's tests, so a "keep" is a
- * decision with a named, MEASURABLE revisit condition — never drift into a permanent border.
- *
- * HONESTY BOUND: this records only that the flag is kept and WHY (the specific unmet criterion),
- * never that the envelope is bug-free.
- */
+/** Current compatibility rationale emitted for a default envelope apply. */
 export interface StabilizationRecord {
   readonly flag: string;
   readonly disposition: string;
@@ -166,20 +129,15 @@ export interface StabilizationRecord {
 export const REVERSIBLE_ENVELOPE_STABILIZATION: StabilizationRecord = {
   flag: "reversibleEnvelope",
   disposition: "kept",
-  /** The SPECIFIC stabilization criterion still unmet — measured, not "just in case". */
   unmetCriterion:
-    "the envelope path has never executed against real work — every run to date is under the " +
-    "deterministic replay/in-memory fixtures; BUILD-ORDER 1.8 (real-provider end-to-end) and all " +
-    "of Phase 4 (real repo / SWE-bench) are open, so the cutover is immature and its one-line " +
-    "direct-apply revert must stay.",
-  /** The concrete trigger that flips this from keep to retire — tied to an existing milestone. */
+    "explicit legacy callers can select direct apply with different refusal semantics; " +
+    "the supported configuration still exposes this compatibility choice. Admitted project " +
+    "edits require the governed envelope and cannot use the legacy path.",
   revisitWhen:
-    "retire once BUILD-ORDER 1.8 (E-1 real-provider end-to-end) has exercised the envelope against " +
-    "real work, OR at the first tagged release with users — whichever comes first.",
-  /** What this decision replaces, so the border cannot silently persist on the old, unmeasurable rule. */
+    "retire the flag in a reviewed compatibility release after removing the explicit-false " +
+    "configuration contract and checking accepted edits, protected-path refusal and rollback.",
   supersedes:
-    "Round 34's keep, which rested on an UNMEASURABLE criterion (100% of traffic for a 2-4 week " +
-    "stabilization period) that a telemetry-less, userless 0.0.1 tool can never satisfy.",
+    "earlier development-milestone rationale; historical audit events retain their original text.",
 };
 
 /**

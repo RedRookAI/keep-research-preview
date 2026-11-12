@@ -7,7 +7,7 @@ Open your assigned invitation and enter the credential supplied by the operator:
 https://keep.redrook.ai/console
 
 1. Choose **Start demo**, then **Prepare the fix**.
-2. Watch the actual job state update. The review shows three repository checks and an independent goal check.
+2. Watch the actual job state update. The review shows three repository checks and a separate developer-authored goal check. The hosted .25 interface calls the fourth assertion **Independent goal check**; it is part of the prepared sample, rather than an outside evaluation. Current source labels it **Goal check**.
 3. Open **Inspect the code change** to see the diff.
 4. Approve or veto that exact proposal, then choose **Download evidence**.
 
@@ -21,7 +21,7 @@ The revised public HTTPS workflow passed on source `8e8eeaaad17f8a7e0aa239edfd42
 
 After qualification, each completed test instance stopped cleanly with two observed authored responses and no unresolved jobs. Their state and exports were retained. Fresh invitations passed HTTPS sign-in with **Start demo** visible and zero projects. Earlier credentials were refused.
 
-The public source checkpoint passed 197 checks in its partial CI profile. This is separate from full-product, live-account and appliance-download qualification. The first appliance candidate attempt stopped in its cheap source checks before any image was built; its process-exit observation race was corrected for the next frozen attempt.
+The public source checkpoint passed 197 checks in its partial CI profile. This is separate from full-product, live-account and appliance-download qualification.
 
 Exact public browser receipt: `qualification/guided-reviewer-2026-11-12.json`. The original arithmetic sample's `.24` evidence remains unchanged in `qualification/reviewer-handover-2026-11-12.md`.
 

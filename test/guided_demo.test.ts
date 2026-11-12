@@ -67,7 +67,7 @@ for (const localAppliance of [false, true]) test(`guided Start → deliberate pr
       await new Promise(resolve => setTimeout(resolve, 20));
     }
     assert.match(review, /Review the checked change/); assert.match(review, /Approve this proposal/); assert.match(review, /Veto this proposal/);
-    assert.match(review, /Independent goal check/); assert.doesNotMatch(review, /http-equiv="refresh"/);
+    assert.match(review, /Goal check/); assert.doesNotMatch(review, /http-equiv="refresh"/);
     assert.equal(fixture.generations(), 2);
     const checks = (fixture.app.projectManager!.session(fixture.app.projectManager!.list()[0]!.id).inspect().checkpoint!.artifacts["implement"] as { solve: { proposalEvidence: { checks: { passedTests: string[]; testsPassed: boolean } } } }).solve.proposalEvidence.checks;
     assert.deepEqual(checks.passedTests, SAMPLE_CONTRACT.passedTests); assert.equal(checks.testsPassed, true);

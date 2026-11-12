@@ -1,16 +1,10 @@
 /**
- * Tokenizer + HandlingPolicy (Increment 4.5b) — tag-driven, context-preserving.
+ * Tag-driven handling for detected sensitive spans.
  *
- * SOTA basis (2026-08-04):
- *  - Tokenize, don't blank: "blanking a name destroys the semantic value the model needs —
- *    replace with tokens that preserve meaning/format" (Protecto). Deterministic mapping so the
- *    same value → the same token every time, keeping joins/analytics valid (firstsource).
- *  - Masking (irreversible) = anonymized, out of GDPR scope; tokenization (reversible via a vault)
- *    = pseudonymized, still regulated (pctechmag). Keep offers both; regulated data defaults to
- *    tokenization via the project's CryptoShred vault so it can be re-identified under authority.
- *  - Ingestion behavior changes automatically by sensitivity tag (Atlan; AI-Business-Solutions).
- *
- * Zero deps beyond the session-layer vault (node:crypto under the hood).
+ * Tokenization replaces supplied findings with stable tokens and retains encrypted
+ * originals in the project vault. Masking replaces those spans with category
+ * placeholders. Both preserve surrounding context; neither establishes anonymity
+ * or complete detection. Handling rules select the action for each sensitivity tier.
  */
 
 import type { PiiFinding, SensitivityTier } from "./data_classifier.js";
@@ -64,7 +58,7 @@ export class Tokenizer {
   }
 }
 
-/** Irreversible mask: replace with a category placeholder (anonymized, out of GDPR scope). */
+/** Replace a detected value with a category placeholder; surrounding context can still identify a person. */
 export function mask(category: string): string {
   return `«${category}_REDACTED»`;
 }

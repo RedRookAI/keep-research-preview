@@ -1,16 +1,8 @@
 /**
- * Auto-Training system: permission + explanation layer (Increment 11c).
- *
- * The system must ask the human "I'd like to train on X, for reason Y; it will involve Z; I need your
- * permission" WHEN the situation warrants — and proceed autonomously when it's SOTA-safe to do so
- * without over-bothering them. This layer decides which, and renders both the ask and the reasoning
- * in PLAIN LANGUAGE a non-engineer can follow — because "make AI training accessible to everyone who
- * isn't an engineer" is the whole point, and it all has to be auditable + explainable.
- *
- * Calibration principle (from the autonomy-calibration research already used in item 7): over-asking
- * is itself a failure. So a narrow, low-impact, verifiable run that a standing authorization already
- * covers can proceed; anything novel, higher-impact, first-of-its-kind, or outside the standing grant
- * asks first. Zero deps.
+ * Permission decisions and explanations for an external training request.
+ * Standing authority, novelty, expected cost and promotion intent determine
+ * whether to proceed, ask or refuse. Permission does not establish training-data
+ * provenance, backend isolation or model safety.
  */
 
 import type { TrainingDecision } from "./training_decision.js";
@@ -91,10 +83,10 @@ export function buildPermissionRequest(
 ): PermissionRequest {
   return {
     headline: `Permission to train a small specialized adapter for: ${details.capability}`,
-    what: `I'd like to train a narrow adapter on ${details.exampleCount} verified examples to improve how I handle "${details.capability}".`,
+    what: `I'd like to train a narrow adapter on ${details.exampleCount} examples reported as verified to improve how I handle "${details.capability}".`,
     why: decision.rationale,
-    involves: `This will run a small, sandboxed training job on a copy of ${details.baseModel} (nothing leaves your machine unless you've set that up). It won't touch the base model — it makes a separate, removable adapter. Estimated cost: about $${details.estimatedCostUsd.toFixed(2)}. Expected improvement: about ${details.estimatedGainPct}% on this specific task.`,
-    risksAndSafeguards: `Safeguards: it trains only against an automatic success check (so it can't learn the wrong thing), keeps some general practice data mixed in (so it doesn't forget other skills), and is watched for "gaming the metric" during training. Before anything is used, it must pass before/after safety and capability checks, and a combined-safety check with any other adapters. It ships as a trial ("canary") first, with one-tap undo, and I'll never fully activate it without your say-so.`,
+    involves: `This requests an external training job for ${details.baseModel}, with a separate adapter as its output. Data handling and isolation depend on the configured backend. Estimated cost: about $${details.estimatedCostUsd.toFixed(2)}. Estimated improvement: about ${details.estimatedGainPct}% on this specific task.`,
+    risksAndSafeguards: `Keep checks permission and private-compute authority and monitors the backend's reported progress. Its configuration requests replay data, a safety module and a sandbox. The current backend contract supplies no verification of those properties or of example screening, so automatic adapter construction and deployment are refused even if the backend reports completion.`,
     ask: `May I go ahead and train this adapter? (yes / no / tell me more)`,
   };
 }

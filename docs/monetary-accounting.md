@@ -48,6 +48,23 @@ The default metered wrapper uses nonstream generation. Custom stream adapters mu
 preserve the returned completeness flag. `HttpProvider.lastUsage` is a shared
 diagnostic of the last parsed response, not per-request billing evidence.
 
+## Trace cost coverage
+
+Model-call traces distinguish `known`, `unpriced` and `usage-unknown` cost status.
+A reported zero with configured pricing remains known zero. Missing pricing or
+incomplete/failed-call usage remains unknown. Older spans without this metadata
+retain their recorded amounts with `legacy-unknown` status.
+
+Attribution and the local costs API expose `costKnown`, `unknownCostSpans` and
+`totalKind`. An incomplete `totalUsd` is an observed subtotal, not a complete bill.
+Each attribution row and trace retains its coverage. Unknown-cost tasks are
+excluded from forecast samples, and OTLP exports omit their numeric cost attribute.
+These token-price estimates do not cover every route or non-token charge.
+
+This telemetry is separate from monetary admission: unknown remote pricing still
+refuses paid admission through the metered route described above. Current source
+changes do not alter an older hosted build or downloaded archive.
+
 ## Persistence and API use
 
 Ledger mutations are asynchronous and must be awaited: `grant`, `revoke`, `beginRun`,

@@ -8,8 +8,9 @@ import { Spine } from "../src/spine/spine.js";
 import { FileSpineStore } from "../src/spine/store.js";
 import { InProcessLock } from "../src/lock/lock.js";
 import { SchemaRegistry } from "../src/spine/upcaster.js";
-import { TraceRecorder } from "../src/observability/tracing.js";
+import { TraceRecorder, attributeCost } from "../src/observability/tracing.js";
 import { TracingModelProvider, type PriceFor } from "../src/gateway/tracing_provider.js";
+import { localCostTraceView, toPrivateOtlpSpans } from "../src/observability/fleet_telemetry.js";
 import { runWithinTrace } from "../src/observability/trace_context.js";
 import type { ModelProvider, GenerateResult } from "../src/gateway/gateway.js";
 
@@ -34,15 +35,22 @@ test("COST SPAN: a model call records a span with cost = usage × pricing", asyn
   assert.equal(spans[0]!.taskId, "task-1", "the span is attributed to the current task");
   assert.equal(spans[0]!.provider, "p", "the concrete provider is measured separately from model/agent identity");
   assert.equal(spans[0]!.status, "ok");
+  assert.equal(spans[0]!.costStatus, "known");
   // 1000/1e6*1 + 1000/1e6*3 = 0.001 + 0.003 = 0.004
   assert.ok(Math.abs(spans[0]!.cost.totalUsd - 0.004) < 1e-9, "per-call cost computed from tokens × price");
 });
 
-test("HONEST COST: an unknown model → zero cost (never fabricated)", async () => {
+test("an unpriced call retains usage and explicit unknown cost coverage", async () => {
   const rec = new TraceRecorder(newSpine());
   const tp = new TracingModelProvider(providerReturning({ model: "mystery-model" }), rec, price);
   await runWithinTrace({ traceId: "T", taskId: "t" }, () => tp.generate({ prompt: "x" }));
-  assert.equal(rec.all()[0]!.cost.totalUsd, 0, "no pricing → zero, not a guess");
+  assert.equal(rec.all()[0]!.costStatus, "unpriced");
+  assert.deepEqual(rec.all()[0]!.tokens, { input: 1000, output: 1000 });
+  const costs = attributeCost(rec.all());
+  assert.equal(costs.total, 0, "no unknown amount is estimated");
+  assert.equal(costs.costKnown, false);
+  assert.equal(costs.totalKind, "observed-subtotal");
+  assert.equal(costs.unknownCostSpans, 1);
 });
 
 test("HIERARCHY: a model-call span nests under the ambient parent span", async () => {
@@ -58,6 +66,71 @@ test("LLM-ERROR LOCALIZATION: a throwing model call records an llm-error span an
   const tp = new TracingModelProvider(failing, rec, price);
   await assert.rejects(() => runWithinTrace({ traceId: "T", taskId: "t" }, () => tp.generate({ prompt: "x" })), /boom/);
   assert.equal(rec.all()[0]!.status, "llm-error", "the failed call is recorded as an llm-error span");
+  assert.equal(rec.all()[0]!.costStatus, "usage-unknown");
+  assert.equal(rec.all()[0]!.tokens, undefined, "a thrown call has no measured usage counters");
+});
+
+test("priced, explicit zero, unpriced, incomplete and failed calls keep cost coverage through rollups, export and restore", async () => {
+  const spine = newSpine(), rec = new TraceRecorder(spine);
+  const pricing: PriceFor = model => model === "free-model" ? { inputPerM: 0, outputPerM: 0 } : price(model);
+  for (const [taskId, response] of [
+    ["priced", {}],
+    ["free", { model: "free-model", tokensIn: 0, tokensOut: 0 }],
+    ["unpriced", { model: "mystery-model" }],
+    ["partial", { usageComplete: false }],
+  ] as const) {
+    const provider = new TracingModelProvider(providerReturning(response), rec, pricing);
+    await runWithinTrace({ traceId: "coverage", taskId, agent: "worker", lessonIds: ["lesson"] }, () => provider.generate({ prompt: "x" }));
+  }
+  const failure = new Error("provider response lost after dispatch");
+  const provider = new TracingModelProvider({ ...providerReturning({}), generate: async () => { throw failure; } }, rec, pricing);
+  await assert.rejects(() => runWithinTrace({ traceId: "coverage", taskId: "failed", agent: "worker", lessonIds: ["lesson"] }, () => provider.generate({ prompt: "x" })), error => error === failure);
+  const spans = rec.trace("coverage"), byTask = new Map(spans.map(span => [span.taskId, span]));
+  assert.equal(byTask.get("free")!.cost.totalUsd, 0);
+  assert.equal(byTask.get("free")!.costStatus, "known", "declared free pricing and reported zero usage are known zero");
+  assert.equal(byTask.get("partial")!.costStatus, "usage-unknown");
+  assert.equal(byTask.get("partial")!.tokens, undefined);
+  const attributed = attributeCost(spans);
+  assert.equal(attributed.total, 0.004);
+  assert.equal(attributed.totalKind, "observed-subtotal");
+  assert.equal(attributed.unknownCostSpans, 3);
+  assert.equal(attributed.unknownByTask.get("priced"), undefined);
+  assert.equal(attributed.unknownByTask.get("failed"), 1);
+  assert.equal(attributed.unknownByProvider.get("p"), 3);
+  assert.equal(attributed.unknownByAgent.get("worker"), 3);
+  assert.equal(attributed.unknownByLesson.get("lesson"), 3);
+  const view = localCostTraceView(spans);
+  assert.equal(view.totalUsd, 0.004);
+  assert.equal(view.costKnown, false);
+  assert.equal(view.totalKind, "observed-subtotal");
+  assert.equal(view.unknownCostSpans, 3);
+  assert.equal(view.attribution.providers[0]!.costKnown, false);
+  assert.equal(view.attribution.providers[0]!.unknownCostSpans, 3);
+  assert.equal(view.forecast.sampleSize, 2, "unknown tasks do not become zero-cost forecast samples");
+  assert.equal(view.traces.find(trace => trace.taskId === "unpriced")!.costStatus, "unpriced");
+  const exported = toPrivateOtlpSpans(spans, "p".repeat(32));
+  assert.equal(exported.filter(span => span.attributes["keep.cost.status"] === "known").length, 2);
+  assert.deepEqual(exported.filter(span => span.attributes["keep.cost.status"] === "known").map(span => span.attributes["keep.cost.usd"]), [0.004, 0]);
+  assert.ok(exported.filter(span => span.attributes["keep.cost.status"] !== "known").every(span => !("keep.cost.usd" in span.attributes)));
+  await spine.seal();
+  const restored = localCostTraceView(new TraceRecorder(spine).trace("coverage"));
+  assert.equal(restored.totalUsd, view.totalUsd);
+  assert.equal(restored.unknownCostSpans, 3);
+  assert.deepEqual(restored.traces.map(trace => trace.costStatus), view.traces.map(trace => trace.costStatus));
+});
+
+test("legacy persisted costs retain their recorded amount with unknown coverage", async () => {
+  const spine = newSpine(), rec = new TraceRecorder(spine);
+  await new TracingModelProvider(providerReturning({}), rec, price).generate({ prompt: "x" });
+  const { costStatus: _status, ...legacy } = rec.all()[0]!;
+  spine.stage({ type: "identity.action", actor: "trace", payload: { event: "span", schema: "keep.trace-span/v1", ...legacy, spanId: "legacy-span" } });
+  await spine.seal();
+  const restored = new TraceRecorder(spine);
+  assert.equal(restored.all().find(span => span.spanId === "legacy-span")!.costStatus, "legacy-unknown");
+  const view = localCostTraceView(restored.all());
+  assert.equal(view.totalUsd, 0.008, "existing recorded amounts remain available");
+  assert.equal(view.totalKind, "observed-subtotal");
+  assert.equal(view.unknownCostSpans, 1);
 });
 
 test("NO CONTEXT: a model call outside any run still records (adhoc task), never crashes", async () => {

@@ -6,14 +6,17 @@
  * parent-child). Each span carries a CostBreakdown and dimension tags. The
  * attribution engine rolls up spend across all four grains:
  *   - per-task, per-agent (Claude/Gemini/Codex/DeepSeek), per-node, and
- *   - per-LESSON (cost of the builds a lesson influenced) — the novel grain nobody
- *     else can do, enabled by memory provenance + spine cost.
+ *   - per-lesson (cost of the builds a lesson influenced), using memory provenance.
  */
 
 import { createHash, randomUUID } from "node:crypto";
 import type { Spine } from "../spine/spine.js";
 import type { CostBreakdown } from "./cost_model.js";
 import { scanIngestion } from "../memory/ingestion.js";
+
+/** Known means supplied usage/pricing are available; it does not attest provider bills. */
+export type SpanCostStatus = "known" | "unpriced" | "usage-unknown" | "legacy-unknown";
+export function spanCostStatus(span: Pick<Span, "costStatus">): SpanCostStatus { return span.costStatus ?? "legacy-unknown"; }
 
 export interface Span {
   readonly spanId: string;
@@ -31,6 +34,8 @@ export interface Span {
   /** Lessons that influenced this span's work (enables per-lesson attribution). */
   readonly lessonIds: readonly string[];
   readonly cost: CostBreakdown;
+  /** Missing metadata on legacy/injected spans never establishes a measured zero. */
+  readonly costStatus?: SpanCostStatus;
   readonly tokens?: { readonly input: number; readonly output: number };
   readonly startTs: number;
   readonly endTs: number;
@@ -49,6 +54,8 @@ export interface SpanInput {
   readonly node?: string;
   readonly lessonIds?: readonly string[];
   readonly cost: CostBreakdown;
+  /** Omitted for a new record means the trusted caller supplied a known amount. */
+  readonly costStatus?: SpanCostStatus;
   readonly tokens?: { readonly input: number; readonly output: number };
   readonly startTs: number;
   readonly endTs: number;
@@ -82,6 +89,7 @@ export class TraceRecorder {
       taskId: input.taskId,
       lessonIds: input.lessonIds ?? [],
       cost: input.cost,
+      costStatus: input.costStatus ?? "known",
       ...(input.tokens !== undefined ? { tokens: { ...input.tokens } } : {}),
       startTs: input.startTs,
       endTs: input.endTs,
@@ -125,6 +133,7 @@ export class TraceRecorder {
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
 const STATUSES = new Set<Span["status"]>(["ok", "llm-error", "tool-error", "timeout-error"]);
+const COST_STATUSES = new Set<SpanCostStatus>(["known", "unpriced", "usage-unknown", "legacy-unknown"]);
 
 function text(value: unknown, maxBytes: number): value is string {
   return typeof value === "string" && value.length > 0 && !value.includes("\0") && Buffer.byteLength(value, "utf8") <= maxBytes;
@@ -150,6 +159,7 @@ function captureSpan(value: unknown): Span | undefined {
   if (!Array.isArray(row["lessonIds"]) || row["lessonIds"].length > 64 || row["lessonIds"].some((id) => !text(id, 512))) return undefined;
   if (row["cost"] === null || typeof row["cost"] !== "object" || Array.isArray(row["cost"])) return undefined;
   const cost = row["cost"] as Record<string, unknown>;
+  if (row["costStatus"] !== undefined && !COST_STATUSES.has(row["costStatus"] as SpanCostStatus)) return undefined;
   const costKeys = ["inputUsd", "cachedInputUsd", "outputUsd", "tokenUsd", "humanUsd", "infraUsd", "toolApiUsd", "totalUsd"] as const;
   if (costKeys.some((key) => typeof cost[key] !== "number" || !Number.isFinite(cost[key]) || (cost[key] as number) < 0)) return undefined;
   if (typeof row["startTs"] !== "number" || !Number.isFinite(row["startTs"]) || typeof row["endTs"] !== "number" || !Number.isFinite(row["endTs"]) || row["endTs"] < row["startTs"] || !STATUSES.has(row["status"] as Span["status"])) return undefined;
@@ -161,6 +171,7 @@ function captureSpan(value: unknown): Span | undefined {
     spanId: minimized(row["spanId"], true), traceId: minimized(row["traceId"], true), name: minimized(row["name"], false), taskId: minimized(row["taskId"], true),
     lessonIds: Object.freeze((row["lessonIds"] as string[]).map((id) => minimized(id, true))),
     cost: Object.freeze(Object.fromEntries(costKeys.map((key) => [key, cost[key]]))) as unknown as CostBreakdown,
+    costStatus: (row["costStatus"] as SpanCostStatus | undefined) ?? "legacy-unknown",
     startTs: row["startTs"], endTs: row["endTs"], status: row["status"] as Span["status"],
     ...(row["parentId"] === undefined ? {} : { parentId: minimized(row["parentId"] as string, true) }),
     ...(row["tenant"] === undefined ? {} : { tenant: row["tenant"] as string }),
@@ -178,15 +189,27 @@ export interface Attribution {
   readonly byNode: Map<string, number>;
   readonly byLesson: Map<string, number>;
   readonly total: number;
+  /** Numeric totals preserve recorded amounts; incomplete coverage is an observed subtotal. */
+  readonly totalKind: "observed" | "observed-subtotal";
+  readonly costKnown: boolean;
+  readonly unknownCostSpans: number;
+  readonly unknownByTask: Map<string, number>;
+  readonly unknownByProvider: Map<string, number>;
+  readonly unknownByAgent: Map<string, number>;
+  readonly unknownByNode: Map<string, number>;
+  readonly unknownByLesson: Map<string, number>;
 }
 
-/** Roll up spend across all four attribution grains. Per-lesson is the novel one. */
+/** Roll up recorded amounts and retain unknown coverage at each attribution grain. */
 export function attributeCost(spans: readonly Span[]): Attribution {
   const byTask = new Map<string, number>();
   const byProvider = new Map<string, number>();
   const byAgent = new Map<string, number>();
   const byNode = new Map<string, number>();
   const byLesson = new Map<string, number>();
+  const unknownByTask = new Map<string, number>(), unknownByProvider = new Map<string, number>();
+  const unknownByAgent = new Map<string, number>(), unknownByNode = new Map<string, number>(), unknownByLesson = new Map<string, number>();
+  let unknownCostSpans = 0;
   let total = 0;
 
   for (const s of spans) {
@@ -200,8 +223,18 @@ export function attributeCost(spans: readonly Span[]): Attribution {
     // (If multiple lessons influenced a build, each is credited the full build cost
     // it shaped — attribution is about influence, not partition; documented as such.)
     for (const lessonId of s.lessonIds) add(byLesson, lessonId, c);
+    if (spanCostStatus(s) !== "known") {
+      unknownCostSpans++;
+      add(unknownByTask, s.taskId, 1);
+      if (s.provider) add(unknownByProvider, s.provider, 1);
+      if (s.agent) add(unknownByAgent, s.agent, 1);
+      if (s.node) add(unknownByNode, s.node, 1);
+      for (const lessonId of s.lessonIds) add(unknownByLesson, lessonId, 1);
+    }
   }
-  return { byTask, byProvider, byAgent, byNode, byLesson, total };
+  return { byTask, byProvider, byAgent, byNode, byLesson, total,
+    totalKind: unknownCostSpans === 0 ? "observed" : "observed-subtotal", costKnown: unknownCostSpans === 0, unknownCostSpans,
+    unknownByTask, unknownByProvider, unknownByAgent, unknownByNode, unknownByLesson };
 }
 
 function add(m: Map<string, number>, key: string, v: number): void {

@@ -1,21 +1,8 @@
 /**
- * Auto-Training system: the training loop + backend port (Increment 11b).
- *
- * This is the part that ACTUALLY TRAINS — the correction to the earlier dead-end. It does not
- * reimplement a trainer; it GENERATES a declarative config and drives a real backend through a port.
- *
- * SOTA basis (2026-08-04): the mature single-GPU, solo-dev-affordable toolchain is Unsloth (2-5x
- * faster, 50-70% less VRAM), Axolotl (declarative YAML), and TRL v1.0 (unified SFT/DPO/GRPO). GRPO
- * (DeepSeek-R1; TRL GRPOTrainer) is the 2026 standard when you have a VERIFIABLE reward — N rollouts
- * per prompt, each scored by the verifier (unit tests / compiler / exact-match), group-normalized, no
- * value model — which is exactly Keep's situation. QLoRA is the default (fits a 70B on one GPU).
- * Safety must be preserved DURING training, not only gated after: SaLoRA (arXiv 2501.01765) adds a
- * fixed safety module + task projection so the adapter can't move into the harmful subspace.
- * Reward hacking is detectable during training (TRACE, ICLR 2026) — reward rising while a held-out
- * signal degrades is the signal (the same rise-then-collapse insight as the RegressionGuard, item 6).
- *
- * Keep generates the config so a NON-ENGINEER never scripts; the backend (a real trainer in a
- * sandbox) plugs in behind the port. Zero deps.
+ * Experimental configuration and progress-monitoring wrapper for an external training backend.
+ * Keep requests a training method, replay fraction and isolation/safety properties, then monitors
+ * backend-supplied metrics. This module does not implement training, create a sandbox or verify
+ * data provenance, replay inclusion or backend safety. Completion describes the backend report.
  */
 
 /** The training method. Only verifiable-reward methods are eligible in Keep's safe path. */
@@ -30,17 +17,17 @@ export function usesVerifiableReward(method: TrainingMethod): boolean {
 export interface TrainingConfig {
   readonly baseModel: string;
   readonly method: TrainingMethod;
-  /** PEFT: QLoRA is the 2026 default (memory-efficient, single-GPU). */
+  /** Requested parameter-efficient training method. */
   readonly peft: "qlora" | "lora";
   readonly loraRank: number;
-  /** Fraction of general replay data mixed in (10-20% — resists catastrophic forgetting). */
+  /** Requested general replay fraction; not proof that the backend mixed that data. */
   readonly replayFraction: number;
-  /** Safety-preserving training module (SaLoRA-style) enabled — keeps the adapter out of harmful subspace. */
+  /** Request a safety-preserving module; backend behavior is not verified here. */
   readonly safetyPreserving: boolean;
   /** The verifiable reward the verifier computes (only for GRPO). */
   readonly verifierKind?: "unit-tests" | "compiler" | "exact-match";
   readonly maxSteps: number;
-  /** Sandbox is mandatory. */
+  /** Require a sandbox in the requested configuration; this flag does not establish isolation. */
   readonly sandboxed: true;
 }
 
@@ -59,7 +46,7 @@ export interface TrainingStepSnapshot {
 /** Result of a completed (or aborted) training run. */
 export interface TrainingRunResult {
   readonly completed: boolean;
-  /** Opaque handle to the trained adapter weights (in the sandbox — never loaded into Keep's process). */
+  /** Opaque backend-reported weights handle; this module does not establish its location or custody. */
   readonly adapterRef?: string;
   readonly steps: number;
   /** If aborted mid-training, why (e.g. reward-hacking detected). */
@@ -69,7 +56,7 @@ export interface TrainingRunResult {
   readonly finalHeldOut: number;
 }
 
-/** The trainer backend port — a real trainer (Unsloth/Axolotl/TRL in a sandbox) plugs in here. */
+/** Trusted external trainer port; results/metrics are backend reports, not independent evidence. */
 export interface TrainerBackend {
   readonly name: string;
   /**
@@ -93,8 +80,8 @@ export interface TrainingLoopOptions {
 }
 
 /**
- * Generate a safe training config from the decision context. Always GRPO + QLoRA + safety-preserving
- * + a replay buffer, because those are the safe defaults; the operator never writes this by hand.
+ * Generate requested GRPO/QLoRA, replay, safety-module and sandbox settings. Actual backend
+ * implementation and fulfillment of those settings require separate evidence.
  */
 export function generateConfig(baseModel: string, verifierKind: "unit-tests" | "compiler" | "exact-match", maxSteps = 200): TrainingConfig {
   return {

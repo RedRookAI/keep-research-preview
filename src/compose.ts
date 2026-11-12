@@ -1794,9 +1794,9 @@ export function composeKeep(config: KeepConfig): KeepApp {
   // confirmed memory are quarantined as lesson-memory anomalies. Guards the MemoryLearner's proposals. ---
   const memoryConsensus = new MemoryConsensus();
 
-  // ── Scheduled autonomy (7c) ── operator-toggled cadence under a one-time authorization envelope. EU AI Act Art.14
-  // (human oversight, enforceable 2026-08-02) is satisfied natively: proposals accrue for review, never auto-merged;
-  // budget breaches HALT the whole tick (enforcement); unrecoverable tasks dead-letter for a human; all events audited.
+  // Scheduled autonomy runs under an operator-selected authorization envelope.
+  // Proposals wait for review; budget breaches halt the tick and unrecoverable tasks
+  // enter the dead-letter queue. These controls do not establish regulatory compliance.
   const schedulerCostModel = new CostModel();
   const budgetLedger = new BudgetLedger(spine, schedulerCostModel);
   const deadLetterQueue = new DeadLetterQueue(spine);

@@ -1,4 +1,4 @@
-import { attributeCost, type Span } from "./tracing.js";
+import { attributeCost, spanCostStatus, type Span, type SpanCostStatus } from "./tracing.js";
 import { forecastTask, type CostBand } from "./forecasting.js";
 import { createHash, createHmac } from "node:crypto";
 import { canonicalize } from "../spine/event.js";
@@ -6,27 +6,32 @@ import type { Spine } from "../spine/spine.js";
 import type { CapabilityHub, CapabilityInvocation, CapabilityResult } from "../ecosystem/capability_port.js";
 
 export interface LocalCostTraceView {
+  /** Observed subtotal when costKnown is false; unknown amounts are not estimated. */
   readonly totalUsd: number;
+  readonly totalKind: "observed" | "observed-subtotal";
+  readonly costKnown: boolean;
+  readonly unknownCostSpans: number;
   readonly attribution: {
-    readonly providers: readonly { readonly id: string; readonly usd: number }[];
-    readonly tasks: readonly { readonly id: string; readonly usd: number }[];
-    readonly agents: readonly { readonly id: string; readonly usd: number }[];
-    readonly lessons: readonly { readonly id: string; readonly usd: number }[];
+    readonly providers: readonly CostAttributionRow[];
+    readonly tasks: readonly CostAttributionRow[];
+    readonly agents: readonly CostAttributionRow[];
+    readonly lessons: readonly CostAttributionRow[];
   };
   readonly forecast: CostBand;
   readonly traces: readonly {
     readonly traceId: string; readonly spanId: string; readonly taskId: string;
     readonly provider?: string; readonly agent?: string; readonly lessonIds: readonly string[];
-    readonly usd: number; readonly status: Span["status"];
+    readonly usd: number; readonly costStatus: SpanCostStatus; readonly status: Span["status"];
   }[];
   readonly page: { readonly offset: number; readonly limit: number; readonly total: number; readonly nextOffset: number | null };
 }
 
-function rows(values: ReadonlyMap<string, number>): readonly { readonly id: string; readonly usd: number }[] {
-  return Object.freeze([...values].map(([id, usd]) => Object.freeze({ id, usd })).sort((a, b) => b.usd - a.usd || a.id.localeCompare(b.id)));
+export interface CostAttributionRow { readonly id: string; readonly usd: number; readonly costKnown: boolean; readonly unknownCostSpans: number; }
+function rows(values: ReadonlyMap<string, number>, unknown: ReadonlyMap<string, number>): readonly CostAttributionRow[] {
+  return Object.freeze([...values].map(([id, usd]) => Object.freeze({ id, usd, costKnown: !unknown.has(id), unknownCostSpans: unknown.get(id) ?? 0 })).sort((a, b) => b.usd - a.usd || a.id.localeCompare(b.id)));
 }
 
-/** Complete local aggregates plus a bounded detail page, derived only from measured canonical spans. */
+/** Local recorded subtotals and cost coverage plus a bounded detail page. */
 export function localCostTraceView(spans: readonly Span[], page: { readonly offset?: number; readonly limit?: number } = {}): LocalCostTraceView {
   if (!Array.isArray(spans) || spans.length > 100_000) throw new Error("trace view exceeds the supported history bound");
   const offset = page.offset ?? 0, limit = page.limit ?? Math.min(1_000, Math.max(1, spans.length));
@@ -36,12 +41,14 @@ export function localCostTraceView(spans: readonly Span[], page: { readonly offs
     traceId: span.traceId, spanId: span.spanId, taskId: span.taskId,
     ...(span.provider === undefined ? {} : { provider: span.provider }),
     ...(span.agent === undefined ? {} : { agent: span.agent }),
-    lessonIds: Object.freeze([...span.lessonIds]), usd: span.cost.totalUsd, status: span.status,
+    lessonIds: Object.freeze([...span.lessonIds]), usd: span.cost.totalUsd, costStatus: spanCostStatus(span), status: span.status,
   }));
   return Object.freeze({
     totalUsd: attributed.total,
-    attribution: Object.freeze({ providers: rows(attributed.byProvider), tasks: rows(attributed.byTask), agents: rows(attributed.byAgent), lessons: rows(attributed.byLesson) }),
-    forecast: Object.freeze(forecastTask([...attributed.byTask.values()])),
+    totalKind: attributed.totalKind, costKnown: attributed.costKnown, unknownCostSpans: attributed.unknownCostSpans,
+    attribution: Object.freeze({ providers: rows(attributed.byProvider, attributed.unknownByProvider), tasks: rows(attributed.byTask, attributed.unknownByTask), agents: rows(attributed.byAgent, attributed.unknownByAgent), lessons: rows(attributed.byLesson, attributed.unknownByLesson) }),
+    // An unpriced/uncertain task cannot become a zero-cost sample in a future forecast.
+    forecast: Object.freeze(forecastTask([...attributed.byTask].filter(([id]) => !attributed.unknownByTask.has(id)).map(([, usd]) => usd))),
     traces: Object.freeze(detail),
     page: Object.freeze({ offset, limit, total: spans.length, nextOffset: offset + detail.length < spans.length ? offset + detail.length : null }),
   });
@@ -138,7 +145,8 @@ export function toPrivateOtlpSpans(spans: readonly Span[], pseudonymizationKey: 
     ...(span.parentId === undefined ? {} : { parentSpanId: pseudonym(pseudonymizationKey, span.parentId, 8) }),
     name: exportLabel(span.name), startTimeUnixNano: String(Math.trunc(span.startTs * 1_000_000)), endTimeUnixNano: String(Math.trunc(span.endTs * 1_000_000)),
     attributes: Object.freeze({
-      "keep.task.id": pseudonym(pseudonymizationKey, span.taskId, 16), "keep.cost.usd": span.cost.totalUsd,
+      "keep.task.id": pseudonym(pseudonymizationKey, span.taskId, 16), "keep.cost.status": spanCostStatus(span),
+      ...(spanCostStatus(span) === "known" ? { "keep.cost.usd": span.cost.totalUsd } : {}),
       ...(span.provider === undefined ? {} : { "keep.provider": exportLabel(span.provider) }),
       ...(span.agent === undefined ? {} : { "keep.agent": pseudonym(pseudonymizationKey, span.agent, 16) }),
       ...(span.node === undefined ? {} : { "keep.node": exportLabel(span.node) }),

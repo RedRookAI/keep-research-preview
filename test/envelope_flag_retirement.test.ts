@@ -22,23 +22,9 @@ import type { TestRunner, TestRunResult } from "../src/solve/validate.js";
 import type { Issue } from "../src/solve/issue_model.js";
 
 /**
- * BUILD-ORDER 2.5 (ENVELOPE-FLAG-RETIREMENT, Z126) — THE RETIRE-VS-KEEP DECISION, BOUND ON EVIDENCE.
- *
- * MEASURED (.round-artifacts/ENVELOPE-FLAG-RETIREMENT/measurement.txt): the direct-apply fallback is
- * dead code for real callers and equivalence-for-accepted-ops holds — so RETIREMENT is *permitted*.
- * It is NOT taken, because the envelope has never executed against real work (BUILD-ORDER 1.8 / Phase
- * 4 open): an immature cutover keeps its one-line revert. DECISION: KEEP, but GOVERNED — Round 34's
- * keep rested on an UNMEASURABLE criterion (100% traffic for 2-4 weeks); this round SUPERSEDES it
- * with a SPECIFIC, MEASURABLE unmet criterion + a revisit trigger, recorded as a durable, auditable
- * fact so the flag can never drift into a silent permanent border.
- *
- * These tests pin the KEEP as a decision, not a preference:
- *   (a) the documented reason is REQUIRED (fail-closed — a hollow keep throws);
- *   wiring: a default (kept) run RECORDS the reason to the spine (ledger-298);
- *   (b) `reversibleEnvelope: false` STILL restores direct-apply (honest revert);
- *   (c) the default is STILL ON (omitting the flag routes through the envelope).
- * Each assertion is on the EFFECT (Z108) — the record's contents, the spine event, the file bytes —
- * never a route name.
+ * The compatibility flag retains a recorded rationale while defaulting to the
+ * governed path. Tests inspect the emitted event and actual file effects, enforce
+ * nonempty rationale, and retain explicit legacy behavior plus default refusal.
  */
 
 function freshSpine(): Spine {
@@ -94,9 +80,9 @@ test("2.5(a): the KEEP record names a SPECIFIC unmet criterion AND a revisit con
   assert.equal(fact.disposition, "kept", "the flag is kept this round");
   assert.ok(fact.unmetCriterion.trim().length > 0, "a kept flag must name the specific unmet criterion");
   assert.ok(fact.revisitWhen.trim().length > 0, "a kept flag must name the revisit condition");
-  // Honest and measurable, not 'just in case': it points at the real-work milestone that is open.
-  assert.match(fact.unmetCriterion, /real work|real-provider|1\.8|Phase 4/i, "the criterion is the real-run one, measurable");
-  assert.match(fact.revisitWhen, /1\.8|release|retire/i, "the revisit condition is a concrete trigger");
+  assert.match(fact.unmetCriterion, /compatibility|legacy/i, "the criterion identifies the current compatibility contract");
+  assert.match(fact.revisitWhen, /release.*configuration contract/i, "retirement requires an explicit compatibility change");
+  assert.doesNotMatch(fact.unmetCriterion, /never executed|BUILD-ORDER|userless|Phase 4/i);
 });
 
 test("2.5(a): reversibleEnvelopeStabilizationFact is FAIL-CLOSED — a hollow keep throws", () => {

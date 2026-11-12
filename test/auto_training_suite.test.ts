@@ -78,17 +78,27 @@ test("SAFETY (deploy needs a fresh session authorization): even a COMPLETED run 
   assert.ok(out.deploy ? out.deploy.deployed === false : true, "the adapter was not deployed");
 });
 
-test("explicit opt-in trains, probes, evaluates, composes, and deploys a reversible sandbox canary", async () => {
+test("plain examples and a completed backend cannot create trusted provenance or deploy a canary", async () => {
   const backend: TrainerBackend = { name: "private-local-test-backend", async train(_config, _data, onStep) { onStep({ step: 1, reward: 0.9, heldOutSignal: 0.95 }); return { adapterRef: "sandbox://trained", steps: 1, final: { step: 1, reward: 0.9, heldOutSignal: 0.95 } }; } };
   const harness: EvalHarness = { evaluate: (ids) => ids.length === 0 ? { capability: 0.8, safety: 0.96 } : { capability: 0.86, safety: 0.97 }, redTeamComposed: () => ({ attackSuccessRate: 0, probesRun: 50 }) };
-  const now = Date.now(); const adapterId = "authorized-local-adapter"; let deployed = 0;
+  const now = Date.now(); const adapterId = "authorized-local-adapter"; let deployed = 0; let probed = 0;
   const auth: SessionAuthorization = { sessionId: "session-1", operator: "operator", authorizedAdapterId: adapterId, grantedTs: now, expiresTs: now + 60_000 };
-  const suite = buildAutoTrainingSuite(newSpine(), { backend, compute: privateCompute(now), evalHarness: harness, backdoorProbe: (ref) => ref === "sandbox://trained", canaryDeploy: async (adapter) => { assert.equal(adapter.id, adapterId); deployed++; return { undo: async () => {} }; } });
+  const spine = newSpine();
+  const suite = buildAutoTrainingSuite(spine, { backend, compute: privateCompute(now), evalHarness: harness, backdoorProbe: (ref) => { probed++; return ref === "sandbox://trained"; }, canaryDeploy: async (adapter) => { assert.equal(adapter.id, adapterId); deployed++; return { undo: async () => {} }; } });
   const out = await suite.run(req(STRONG, AUTON_CTX, { auth }));
-  assert.equal(out.stage, "done", out.summary);
-  assert.equal(out.deploy?.stageReached, "canary");
-  assert.equal(deployed, 1);
-  assert.ok(out.deploy?.canaryRollbackId);
+  assert.equal(out.training?.completed, true);
+  assert.equal(out.training?.adapterRef, "sandbox://trained", "retain the backend's weights handle without admitting it");
+  assert.equal(out.stage, "deploy", out.summary);
+  assert.equal(out.deploy?.deployed, false);
+  assert.match(out.deploy?.reason ?? "", /screening\/trust, sandbox or replay evidence/);
+  assert.equal(deployed, 0);
+  assert.equal(probed, 0, "a backdoor probe alone cannot establish the other missing provenance");
+  assert.equal(out.deploy?.canaryRollbackId, undefined);
+  const events = spine.currentEvents();
+  assert.equal(events.some((event) => event.payload.event === "adapter_registered" || event.payload.event === "canary_deployed"), false);
+  const started = events.find((event) => event.payload.event === "training_started");
+  assert.equal(started?.payload.sandboxRequested, true);
+  assert.equal(started?.payload.sandboxed, undefined, "requested configuration must not become an isolation attestation");
 });
 
 test("missing, public, and expired compute authority never invokes the trainer backend", async () => {

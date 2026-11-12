@@ -1,25 +1,13 @@
 /**
- * Auto-training suite composition — the gated far-tier weight-adaptation loop.
- *
- * The self-improvement backbone's deepest tier. Assembles:
- *  - DataEngineLoop: real, GPU-free Snorkel-style data engineering (LFs → denoise → held-out eval set).
- *  - AutoTrainer: decision → permission → training → deploy, where the SAFETY machinery is real and the COMPUTE is a seam.
- *
- * Safety-by-construction (this is off-by-default and permission-gated for a reason):
- *  - decideTraining is conservative — few-shot / prompt-tuning usually suffices, so it usually says "don't train weights".
- *  - permissionFor gates non-SOTA-safe training: it ASKS the human in plain language rather than proceeding.
- *  - deploy requires a FRESH per-session human authorization (never envelope-covered) — the human gate for weight changes.
- *  - the trainer backend is a PORT: absent → a null backend that honestly reports "unavailable" instead of faking a run.
- *
- * SOTA basis (2026-08-07): the mature single-GPU, solo-dev toolchain is QLoRA + a verifiable reward (RLVR); Keep generates
- * a declarative config and drives a real trainer through the port so a non-engineer never scripts. What would change it:
- * a real backend (Unsloth/Axolotl/TRL) + a sandbox canary-deploy are the seams a GPU deployment supplies; the decision,
- * permission, provenance, and deploy-authorization logic here is real and enforced regardless.
+ * Experimental training composition: data preparation, decision, permission and an external port.
+ * The default backend reports unavailable. An injected backend also needs current private-compute
+ * authority. Its completed result is retained, but this automatic route cannot construct or deploy
+ * a candidate because the port supplies no verified screening, sandbox or replay evidence.
  */
 
 import { AutoTrainer, type AutoTrainerDeps, type AutoTrainRequest } from "./auto_trainer.js";
 import { DataEngineLoop } from "../training/data_engine_loop.js";
-import { TrainingLoop, type TrainerBackend, type TrainingRunResult } from "./training_loop.js";
+import { TrainingLoop, type TrainerBackend } from "./training_loop.js";
 import { AdapterRegistry, type LoraAdapter } from "../lora/adapter_tier.js";
 import { RollbackLedger } from "../control/rollback.js";
 import type { EvalHarness } from "../lora/eval_gate.js";
@@ -41,14 +29,15 @@ const NULL_HARNESS: EvalHarness = {
 };
 
 export interface AutoTrainingSeams {
-  /** The real GPU trainer backend (Unsloth/Axolotl/TRL in a sandbox). Absent → honestly-unavailable null backend. */
+  /** External trainer supplied by the operator; its configuration does not establish isolation. Absent → unavailable. */
   readonly backend?: TrainerBackend;
   /** Fresh authority for the concrete compute receiving training data. */
   readonly compute?: TrainingComputeAuthorization;
-  /** Real canary deploy into a sandbox, returning a concrete undo. Absent → fail closed. */
+  /** Reserved deployment seam; the current automatic route refuses before candidate construction. */
   readonly canaryDeploy?: (adapter: LoraAdapter) => Promise<{ undo: () => Promise<void> }>;
   /** Real eval harness for the deploy gate. Absent → a null harness (no score). */
   readonly evalHarness?: EvalHarness;
+  /** Reserved probe seam; currently unused because automatic candidate construction is refused. */
   readonly backdoorProbe?: (adapterRef: string) => Promise<boolean> | boolean;
   readonly operator?: string;
   readonly clock?: () => number;
@@ -65,27 +54,8 @@ export interface TrainingComputeAuthorization {
 export interface AutoTrainingSuite {
   readonly dataEngine: DataEngineLoop;
   readonly trainer: AutoTrainer;
-  /** Run the full decision → permission → training → deploy orchestration for a capability. */
+  /** Run decision/permission/backend orchestration; missing evidence prevents automatic deployment. */
   run(req: AutoTrainRequest): ReturnType<AutoTrainer["run"]>;
-}
-
-/** Mint a provenance-carrying LoraAdapter record from a completed training run (never loads weights into-process). */
-function buildAdapter(run: TrainingRunResult, req: AutoTrainRequest, now: number, backdoorProbed: boolean): LoraAdapter {
-  return {
-    id: req.auth?.authorizedAdapterId ?? `adapter-${req.capability}-${now.toString(36)}`,
-    version: 1,
-    targetSignature: req.capability,
-    rewardKind: req.verifierKind, // "unit-tests" | "compiler" | "exact-match" — all verifiable RLVR rewards
-    provenance: {
-      exampleCount: req.trainingData.length,
-      untrustedFraction: 0,
-      allScreened: true, // corpus sources came through the governed ingestion gate
-      backdoorProbed,
-    },
-    weightsRef: run.adapterRef ?? "",
-    status: "candidate",
-    createdTs: now,
-  };
 }
 
 export function buildAutoTrainingSuite(spine: Spine, seams: AutoTrainingSeams = {}): AutoTrainingSuite {
@@ -104,7 +74,6 @@ export function buildAutoTrainingSuite(spine: Spine, seams: AutoTrainingSeams = 
     spine,
     trainingLoop,
     deployDeps,
-    buildAdapter: async (run, req) => buildAdapter(run, req, clock(), run.adapterRef ? await (seams.backdoorProbe?.(run.adapterRef) ?? false) : false),
   };
   const trainer = new AutoTrainer(deps);
   const dataEngine = new DataEngineLoop(spine);

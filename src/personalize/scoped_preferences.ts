@@ -1,21 +1,10 @@
 /**
- * CRYPTOGRAPHIC preference isolation — binds the preference spine through the project's ProjectNamespace so
- * preferences are isolated by the SAME per-tenant-key boundary as session history / memory / ingest, closing the
- * theme-2 ∩ theme-4 seam.
+ * Project-scoped encrypted preference storage.
  *
- * The gap this closes: the personalization envelope isolates preferences by a LOGICAL CP-net string scope
- * (`pref:<dim>@project:alpha`) matched in code — weaker than the cryptographic ProjectNamespace (per-project keys
- * + `key()` namespacing + crypto-shred) that everything else in Keep uses. A forged/mismatched string scope
- * could in principle read another project's preference. Here every preference is (a) written under a NAMESPACED
- * key `ns.key("pref:...")` that binds it to one ProjectId, and (b) encrypted under that project's own key
- * (AES-256-GCM — authenticated, so a wrong-key decrypt throws). So project B's namespace can neither address nor
- * decrypt project A's preferences, and crypto-shredding A (destroying its key) makes A's preferences
- * permanently inaccessible (GDPR-grade clean-delete). Deterministic, below the model — "relying on LLMs for
- * access control is an architectural anti-pattern" (Truto 2026).
- *
- * BUILT + proven in-env: the namespacing binding + the default-deny filter + `assertScopedRead`. It REUSES the
- * envelope's `resolveDimension` (CP-net scope) + `applyWithinPolicy` (clamp) and the registry's ProjectNamespace
- * — it does not reimplement isolation or rebuild the envelope. The persistent per-project store is the SEAM.
+ * Preference keys use the ProjectNamespace and values are encrypted under its key.
+ * Reads also enforce the envelope's logical scope and policy bounds. Destroying the
+ * project key prevents this store from decrypting retained ciphertext; copies of
+ * keys or plaintext outside this boundary require separate handling.
  */
 
 import type { RevisionStore, Version } from "../frontdoor/revision_store.js";

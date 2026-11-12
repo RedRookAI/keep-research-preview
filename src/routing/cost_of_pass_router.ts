@@ -17,7 +17,7 @@
  * inspectable). SEAM: the actual model calls, and a LEARNED router/success-predictor behind the same
  * interface (the in-env estimator is a transparent scoring function the operator can read and tune).
  *
- * DESIGN GUARDRAIL (industry-leading, not a proxy): pure cost-of-pass minimization has a known failure — a
+ * Reliability guard: pure cost-of-pass minimization has a known failure — a
  * "lottery-ticket" cheap model with near-zero success can show a deceptively low cost-of-pass. So a
  * RELIABILITY FLOOR (`minSuccess`) is the "predicted to succeed" gate: a model below it is ineligible
  * regardless of price. Savings are MEASURED on the operator's workload, never promised.

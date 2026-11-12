@@ -1,26 +1,18 @@
 /**
- * Auto-Training system: the AutoTrainer orchestrator (Increment 11d).
+ * Experimental training orchestration: decision, permission and an external backend call.
  *
- * This is the corrected capability: Keep ACTUALLY auto-trains when training genuinely helps, safely
- * and scalably, and explains itself to a non-engineer. It ties the whole pipeline together:
- *
- *   decideTraining (when it helps — usually says no)
- *     → permissionFor (proceed autonomously when SOTA-safe, else ask the human in plain language)
- *       → TrainingLoop (actually trains: GRPO on a verifiable reward, QLoRA, safety-preserving,
- *          reward-hacking-monitored, in a sandbox)
- *         → deployAdapter (the existing safety gauntlet: entry gates → before/after eval →
- *            colluding-LoRA composition check → canary + one-tap rollback)
- *
- * Every stage is auditable (spine) and explainable. The human merge gate stays the owner's: a canary
- * is the most an autonomous run produces; full activation is always a human step. Fail-closed
- * throughout. This REPLACES the earlier refuse-to-train stub. Zero deps.
+ * The backend reports progress and completion; a requested configuration does not prove that it
+ * screened the supplied examples, used a sandbox or mixed replay data. Its current result contract
+ * carries no evidence for those properties. Consequently this automatic route preserves the run
+ * result but refuses candidate construction and deployment. The separate adapter deploy gates
+ * remain available to callers with their own admitted evidence and human authorization.
  */
 
 import type { Spine } from "../spine/spine.js";
 import { decideTraining, type TrainingSignals, type TrainingDecisionOptions, type TrainingDecision } from "./training_decision.js";
 import { permissionFor, buildPermissionRequest, type PermissionContext, type PermissionOptions, type PermissionDecision, type PermissionRequest } from "./permission.js";
 import { TrainingLoop, generateConfig, type TrainingRunResult } from "./training_loop.js";
-import { deployAdapter, type DeployRequest, type DeployDecision, type DeployDeps } from "../lora/deploy_orchestrator.js";
+import type { DeployDecision, DeployDeps } from "../lora/deploy_orchestrator.js";
 import type { LoraAdapter, SessionAuthorization } from "../lora/adapter_tier.js";
 
 export type AutoTrainStage = "decision" | "permission" | "awaiting-permission" | "training" | "training-aborted" | "deploy" | "done";
@@ -57,8 +49,8 @@ export interface AutoTrainerDeps {
   readonly spine: Spine;
   readonly trainingLoop: TrainingLoop;
   readonly deployDeps: DeployDeps;
-  /** Mints the LoraAdapter record from a completed training run (provenance carried from item 8). */
-  readonly buildAdapter: (run: TrainingRunResult, req: AutoTrainRequest) => LoraAdapter | Promise<LoraAdapter>;
+  /** Legacy candidate factory; not invoked while this route lacks training evidence. */
+  readonly buildAdapter?: (run: TrainingRunResult, req: AutoTrainRequest) => LoraAdapter | Promise<LoraAdapter>;
   readonly clock?: () => number;
 }
 
@@ -67,8 +59,8 @@ export class AutoTrainer {
 
   /**
    * Run the auto-train pipeline for one capability gap. Returns an outcome at whatever stage it
-   * reaches: a "don't train" decision, an awaiting-permission ask, a training abort, or a deployed
-   * canary. Nothing is forced; the human gate holds.
+   * reaches: a declined decision, a permission wait, an aborted backend run or an explicit
+   * missing-evidence deployment refusal. Backend completion alone cannot admit an adapter.
    */
   async run(req: AutoTrainRequest): Promise<AutoTrainOutcome> {
     const { spine } = this.deps;
@@ -96,32 +88,26 @@ export class AutoTrainer {
       return { stage: "awaiting-permission", decision, permission, permissionRequest, summary: `Asking permission before training "${req.capability}": ${permission.reason}` };
     }
 
-    // 3. Train (autonomous, or permission granted). GRPO + QLoRA + safety-preserving, reward-hack-monitored.
+    // 3. Request training and monitor backend-supplied progress. Configuration is not attestation.
     const config = generateConfig(req.baseModel, req.verifierKind);
-    spine.stage({ type: "identity.action", actor: "autotrain", payload: { event: "training_started", capability: req.capability, method: config.method, sandboxed: config.sandboxed } });
+    spine.stage({ type: "identity.action", actor: "autotrain", payload: { event: "training_started", capability: req.capability, method: config.method, sandboxRequested: config.sandboxed } });
     const training = await this.deps.trainingLoop.run(config, req.trainingData);
     if (!training.completed) {
       spine.stage({ type: "identity.action", actor: "autotrain", payload: { event: "training_aborted", capability: req.capability, reason: training.abortedReason } });
-      return { stage: "training-aborted", decision, permission, training, summary: `Training stopped safely before finishing: ${training.abortedReason}. Nothing was deployed; Keep keeps its current approach.` };
+      return { stage: "training-aborted", decision, permission, training, summary: `The training run was not accepted as completed: ${training.abortedReason}. Nothing was deployed.` };
     }
 
-    // 4. Deploy through the FULL safety gauntlet (entry gates → eval → composition → canary).
-    const adapter = await this.deps.buildAdapter(training, req);
-    const deployReq: DeployRequest = {
-      adapter,
-      auth: req.auth,
-      sandboxed: true,
-      replay: { replayFraction: config.replayFraction, attested: true },
+    // The current port returns a weights handle and metrics, without data/sandbox/replay evidence.
+    // Refuse before invoking any candidate factory or registering trusted provenance.
+    const deploy: DeployDecision = {
+      deployed: false,
+      stageReached: "rejected",
+      reason: "automatic deployment unavailable: the backend contract supplies no verified training-data screening/trust, sandbox or replay evidence",
     };
-    const deploy = await deployAdapter(deployReq, this.deps.deployDeps);
-    spine.stage({ type: "identity.action", actor: "autotrain", payload: { event: "deploy_result", capability: req.capability, deployed: deploy.deployed, stage: deploy.stageReached } });
-
-    if (!deploy.deployed) {
-      return { stage: "deploy", decision, permission, training, deploy, summary: `Trained successfully, but the safety checks did not clear it: ${deploy.reason}. It was NOT deployed — Keep keeps its current approach.` };
-    }
+    spine.stage({ type: "identity.action", actor: "autotrain", payload: { event: "training_evidence_missing", capability: req.capability, reason: deploy.reason } });
     return {
-      stage: "done", decision, permission, training, deploy,
-      summary: `Trained and deployed a trial ("canary") adapter for "${req.capability}". It passed the safety and capability checks and the combined-safety check. It's running on a trial basis with one-tap undo; I'll leave full activation to you.`,
+      stage: "deploy", decision, permission, training, deploy,
+      summary: `The backend reported a completed training run for "${req.capability}". No adapter was registered or deployed: ${deploy.reason}.`,
     };
   }
 }

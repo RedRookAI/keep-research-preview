@@ -20,7 +20,28 @@ flowchart TD
     Runtime <--> State[Durable project and effect records]
 ```
 
-The **0.0.19-preview.1** combined download includes the generation-only Codex engine, restricted OpenClaw plugin and native project console shown above. Its account-free walkthrough uses controlled local responses. A separate [genuine repository case](genuine-codex-walkthrough.md) passed with actual Codex generation, native OpenClaw dispatch and browser approval/veto; OpenClaw tool selection was scripted. [Exact archive qualification](qualification/combined-preview-2026-10-20.json) separately records unprivileged startup, demos, instance lifecycle and plugin setup, with matching component evidence explicitly reused. The historical 0.0.12 download predates these additions.
+The historical **0.0.19-preview.1** combined download includes the generation-only Codex engine, restricted OpenClaw plugin and native project console shown above. Its account-free walkthrough uses controlled local responses. A separate [genuine repository case](genuine-codex-walkthrough.md) passed with actual Codex generation, native OpenClaw dispatch and browser approval/veto; OpenClaw tool selection was scripted. [Exact archive qualification](qualification/combined-preview-2026-10-20.json) separately records unprivileged startup, demos, instance lifecycle and plugin setup, with matching component evidence explicitly reused. The historical 0.0.12 download predates these additions.
+
+Current hosted and appliance identities and prerequisites are listed in the repository README. The historical case and archive receipts retain the versions they actually exercised.
+
+## Follow a change through the code
+
+- **Admit and check an edit:** src/solve/solve_pipeline.ts binds project edits to repository content and fixed goal checks.
+- **Decide on the exact proposal:** src/solve/governed_local_merge.ts verifies the proposal digest, persisted evidence and current source before landing.
+- **Recover an interrupted operation:** src/autonomy/project_loop.ts records in-flight effects; src/autonomy/project_checkpoint_store.ts persists revisions with compare-and-swap.
+- **Inspect executable evidence:** test/guided_demo.test.ts checks actual source/workspace bytes and exports. test/project_checkpoint_store.test.ts races separate processes against persisted checkpoint state.
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/src/solve/solve_pipeline.ts
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/src/solve/governed_local_merge.ts
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/src/autonomy/project_loop.ts
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/src/autonomy/project_checkpoint_store.ts
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/test/guided_demo.test.ts
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/test/project_checkpoint_store.test.ts
 
 ## The main boundaries
 

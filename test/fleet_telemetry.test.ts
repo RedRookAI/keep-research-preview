@@ -18,12 +18,15 @@ test("OBS-01 local view attributes measured cost, retains failures, and reports 
   const spans: Span[] = Array.from({ length: 5 }, (_, index) => ({
     spanId: `s${index}`, traceId: `tr${index}`, name: "gen_ai", taskId: `task-${index}`,
     provider: index < 3 ? "local" : "remote", agent: "worker", lessonIds: ["lesson-a"],
-    cost: cost(index + 1), startTs: index, endTs: index + 1, status: index === 4 ? "llm-error" : "ok",
+    cost: cost(index + 1), costStatus: "known", startTs: index, endTs: index + 1, status: index === 4 ? "llm-error" : "ok",
   }));
   const view = localCostTraceView(spans, { offset: 1, limit: 2 });
   assert.equal(view.totalUsd, 15);
-  assert.deepEqual(view.attribution.providers, [{ id: "remote", usd: 9 }, { id: "local", usd: 6 }]);
-  assert.deepEqual(view.attribution.lessons, [{ id: "lesson-a", usd: 15 }]);
+  assert.equal(view.costKnown, true);
+  assert.equal(view.totalKind, "observed");
+  assert.equal(view.unknownCostSpans, 0);
+  assert.deepEqual(view.attribution.providers, [{ id: "remote", usd: 9, costKnown: true, unknownCostSpans: 0 }, { id: "local", usd: 6, costKnown: true, unknownCostSpans: 0 }]);
+  assert.deepEqual(view.attribution.lessons, [{ id: "lesson-a", usd: 15, costKnown: true, unknownCostSpans: 0 }]);
   assert.deepEqual(view.forecast, { p50: 3, p95: 4.8, sampleSize: 5, credible: true });
   assert.deepEqual(view.page, { offset: 1, limit: 2, total: 5, nextOffset: 3 });
   assert.deepEqual(view.traces.map((trace) => trace.taskId), ["task-1", "task-2"]);

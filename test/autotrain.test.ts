@@ -152,7 +152,7 @@ test("training loop completes a healthy run", async () => {
   assert.ok(r.adapterRef);
 });
 
-test("generateConfig always produces a safe config (GRPO, QLoRA, safety-preserving, replay, sandboxed)", () => {
+test("generateConfig requests GRPO, QLoRA, safety module, replay and sandbox settings", () => {
   const c = generateConfig("llama-8b", "unit-tests");
   assert.equal(c.method, "grpo");
   assert.equal(c.peft, "qlora");
@@ -197,8 +197,9 @@ test("buildPermissionRequest produces a plain-language ask a non-engineer can re
   const d = decideTraining(goodSignals());
   const req = buildPermissionRequest(d, { capability: "handling async errors", baseModel: "llama-8b", exampleCount: 800, estimatedCostUsd: 1.2, estimatedGainPct: 20 });
   assert.match(req.what, /I'd like to train/);
-  assert.match(req.involves, /sandboxed|won't touch the base model/);
-  assert.match(req.risksAndSafeguards, /safety|canary|undo/i);
+  assert.match(req.involves, /external training job/);
+  assert.match(req.involves, /depend on the configured backend/);
+  assert.match(req.risksAndSafeguards, /automatic adapter construction and deployment are refused/);
   assert.match(req.ask, /permission|yes|no/i);
 });
 
@@ -259,17 +260,23 @@ test("INVARIANT: AutoTrainer ASKS permission (and does not train) for a first-of
   assert.match(out.permissionRequest!.what, /I'd like to train/);
 });
 
-test("INVARIANT: AutoTrainer runs the FULL pipeline to a canary when authorized + healthy", async () => {
+test("INVARIANT: backend completion and permission cannot mint an adapter without training evidence", async () => {
   const spine = newSpine();
-  const at = new AutoTrainer(autoTrainerDeps(spine, [
+  const deps = autoTrainerDeps(spine, [
     { step: 1, reward: 0.5, heldOutSignal: 0.95 },
     { step: 2, reward: 0.85, heldOutSignal: 0.96 },
-  ]));
+  ]);
+  let candidates = 0;
+  const at = new AutoTrainer({ ...deps, buildAdapter: () => { candidates++; throw new Error("unevidenced candidate must not be constructed"); } });
   const out = await at.run(autoReq());
-  assert.equal(out.stage, "done", out.summary);
-  assert.equal(out.deploy!.deployed, true);
-  assert.equal(out.deploy!.stageReached, "canary");
-  assert.match(out.summary, /canary|trial/i);
+  assert.equal(out.training?.completed, true, "the backend's completed computation report is retained");
+  assert.equal(out.training?.adapterRef, "sb://ad");
+  assert.equal(out.stage, "deploy");
+  assert.equal(out.deploy?.deployed, false);
+  assert.match(out.deploy?.reason ?? "", /screening\/trust, sandbox or replay evidence/);
+  assert.equal(candidates, 0);
+  assert.equal(deps.deployDeps.registry.get("trained-1"), undefined);
+  assert.equal(spine.currentEvents().some((event) => event.payload.event === "adapter_registered"), false);
 });
 
 test("INVARIANT: AutoTrainer aborts safely (no deploy) if training reward-hacks", async () => {
