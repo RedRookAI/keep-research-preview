@@ -8,6 +8,22 @@ Choose **Start demo**, then **Prepare the fix**. Review four actual checks, appr
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/guided-demo.md
 
+## Self-contained reviewer appliance
+
+The recommended downloadable walkthrough is **0.0.29-preview.1**. It supplies Keep, Node and the required sandbox in a Linux x64 VM. Your host needs QEMU/KVM with existing KVM access, Python 3.8+ and OpenSSH. It passed both browser decisions, checks, export and stop/restart on a fresh CI machine.
+
+Download and checksum record:
+
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3
+
+Start and stop instructions:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/reviewer-appliance.md
+
+The sample needs no AI account. Personal repository/account setup has separate instructions and remains outside the completed fresh-consumer result.
+
+## Earlier direct Node archive
+
 The current **0.0.21-preview.1** combined Linux x64 download includes Keep, bundled TypeScript, the generation-only Codex engine and the restricted OpenClaw plugin. Use Linux x64 with the Ubuntu 24.04 library baseline, Node 22.23.5 or later on the Node 22 line, and Git for the repository walkthrough. This installation path needs no npm installer or Rust/C compiler. Review the dated [dependency conditions](dependency-status.md).
 
 This download's account-free workflow was reproduced on a fresh x64 VM. Independent source-build evidence and the additional host prerequisite for required-jail preparation are recorded here:
@@ -48,7 +64,7 @@ Required-jail work additionally needs the measured Bubblewrap 0.13.0 helper in a
 
 ## Build from source
 
-Development source is **0.0.27-preview.1**; the latest combined download is **0.0.21-preview.1**. The release record names the frozen source commit, fresh native and carried engine inputs and fresh scoped installed checks. The downloadable source snapshot is bound to its exact release commit; later documentation corrections do not rebuild or requalify that archive. See [the release record](../KEEP_RELEASE.md) for source identity and [Contributing](../WORKFLOW.md) for build interfaces and evidence limits.
+Development source and the latest reviewer appliance are **0.0.29-preview.1**; the separate earlier combined download is **0.0.21-preview.1**. The release record names the frozen source commit, fresh native and carried engine inputs and fresh scoped installed checks. The downloadable source snapshot is bound to its exact release commit; later documentation corrections do not rebuild or requalify that archive. See [the release record](../KEEP_RELEASE.md) for source identity and [Contributing](../WORKFLOW.md) for build interfaces and evidence limits.
 
 Contributors need isolated Linux x64 resources, Node.js 22.23.5 or later on Node 22, npm and Git, pinned Rust 1.97.1 with its musl target and host C build tools. Follow [Contributing](../WORKFLOW.md); the build verifies existing pinned tools rather than fetching replacements.
 

@@ -14,11 +14,15 @@ Walkthrough and observed desktop/phone browser results:
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/guided-demo.md
 
-**Development source: 0.0.29-preview.1. Hosted demo: 0.0.25-preview.1. Latest download: 0.0.21-preview.1, a Linux x64 development preview.** The broader platform remains under development; the table below separates implemented scope from observed readiness.
+**Development source: 0.0.29-preview.1. Hosted demo: 0.0.25-preview.1. Latest appliance download: 0.0.29-preview.1 for Linux x64.** The broader platform remains under development; the table below separates implemented scope from observed readiness.
 
-The new self-contained Linux x64 appliance carries its own Node runtime, sandbox helper and generation engine. The exact .29 archive passed both browser approval and veto on a fresh CI machine, four real checks, evidence export and stop/restart with retained jobs. Two fresh instances received distinct identities. Its matching source companion includes all 289 required source/version pairs. The qualified package is being prepared for public download; fresh live-account generation and current OpenClaw-to-Keep integration remain open.
+The new self-contained Linux x64 appliance carries its own Node runtime, sandbox helper and generation engine. The exact .29 archive passed both browser approval and veto on a fresh CI machine, four real checks, evidence export and stop/restart with retained jobs. Two fresh instances received distinct identities. Its matching source companion includes all 289 required source/version pairs. Download the qualified appliance and follow its start guide. Fresh live-account generation and current OpenClaw-to-Keep integration remain open.
 
 https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-29-2026-11-12.md
+
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/reviewer-appliance.md
 
 Browser submission, recovery and evidence:
 
@@ -61,7 +65,13 @@ https://github.com/RedRookAI/keep-research-preview/blob/main/docs/genuine-codex-
 
 ## Run the installed preview
 
-The combined Linux x64 download contains Keep, bundled TypeScript, the measured generation-only Codex engine and the restricted OpenClaw plugin. Extract it and select the documented Node 22 runtime. This route starts directly from the archive.
+The recommended reviewer download is the self-contained .29 Linux x64 appliance. It supplies the runtime and required sandbox inside its VM and needs existing QEMU/KVM access on the host.
+
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/reviewer-appliance.md
+
+The earlier .21 combined archive remains available for the separate direct Node installation route. The combined Linux x64 download contains Keep, bundled TypeScript, the measured generation-only Codex engine and the restricted OpenClaw plugin. Extract it and select the documented Node 22 runtime. This route starts directly from the archive.
 
 ```sh
 ./bin/keep demo project

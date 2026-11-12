@@ -4,7 +4,11 @@ The appliance carries Keep, its Node runtime, Git, the fixed sandbox helper and 
 
 This package targets Linux x64 with QEMU/KVM and the pc-q35-8.2 machine. QEMU8.2.2 was used for the profile proof. Your host needs Python3.8 or later, OpenSSH, qemu-system-x86_64, qemu-img and existing read/write KVM access. Allow storage for the download, the roughly2GB base image and each instance's growing writable overlay. Each guest disk has8GiB virtual capacity; this is separate from the base image's storage. The guest uses2vCPU and2GiB RAM. Host Node/npm/Rust are unnecessary. The launcher installs no host tools or policy.
 
-The source recipe is under tools/appliance. A shipping download is available only after its exact artifact passes the clean-consumer check and the release record supplies its URL and checksum. The earlier KC110 proof identifies the supported baseline; it does not qualify a new image by itself.
+Download the qualified **0.0.29-preview.1** appliance:
+
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3
+
+Archive: `keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repack.tar.xz`. SHA256: `b4a0208da9ff6e713a624b0eca034ba4d6d70090f8a88f6c456474f44fc0ec51`. The exact archive passed both browser decisions, four checks, export and stop/restart on a fresh CI host. The release supplies matching sources and checksums. The source recipe is under tools/appliance.
 
 ## Start your instance
 
@@ -50,7 +54,7 @@ The manifest records the guest image's source separately from the host-tool asse
 
 The qualification consumer captures the final guest's installed package metadata, including source versions and Built-Using fields, plus its copyright notices and existing Keep, engine and Node support files. The capture records file checksums and the exact image and source identities. The bundle also retains the pinned Bubblewrap source archive and its build recipe.
 
-The Debian source companion must contain the exact source packages and Debian patches identified by that guest inventory before the appliance binary is published. Candidate builds remain private drafts while this companion and the clean consumer are being qualified.
+The published Debian source companion contains all 289 required source/version pairs, including the Debian patches identified by the guest inventory. The exact .29 image and clean-consumer observation are recorded with their hashes in the release qualification.
 
 ## Set up your own repository
 

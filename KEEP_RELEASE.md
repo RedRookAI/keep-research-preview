@@ -1,3 +1,31 @@
+# Keep 0.0.29-preview.1 — self-contained Linux x64 reviewer appliance
+
+Download:
+
+https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3
+
+The exact archive passed a clean-machine browser consumer: both veto and approval, four real checks, verified evidence exports, graceful stop/start and retained original jobs. Two fresh instances had distinct machine IDs, SSH identities and credentials. The sample uses authored responses and makes zero paid model calls.
+
+Archive: `keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repack.tar.xz`. Bytes: 588952968. SHA256: `b4a0208da9ff6e713a624b0eca034ba4d6d70090f8a88f6c456474f44fc0ec51`.
+
+Guest image SHA256: `0ec8468c91ebf2afabeb88c149e8d48fc85e1485211c6c8849085b52900f1897`. Runtime source: `253fbca62133bef33ecc7d0c4b2192541cb55918`. Host assembly source: `73fabd7a98971335153590193ac9235140d5fbe3`. The release tag adds external qualification documentation without rebuilding those bytes.
+
+Use Linux x64 with Python 3.8+, OpenSSH, qemu-system-x86_64, qemu-img and existing read/write KVM access. The Debian 13 guest supplies Node 22.23.5, the required sandbox helper and measured generation engine. Profile: pc-q35-8.2, 2 vCPU, 2 GiB RAM, 8 GiB virtual disk. Allow disk space for the archive, 1979252736-byte base image and growing instance overlays. No host Node/npm/Rust is used.
+
+Start/stop guide:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/reviewer-appliance.md
+
+Exact consumer receipt, scope and source-closure result:
+
+https://github.com/RedRookAI/keep-research-preview/blob/main/docs/qualification/appliance-29-2026-11-12.md
+
+All 289 required source/version pairs were acquired. The release includes the source archive, installed inventory, notices/support and source-index.json. KEEP-RELEASE-SHA256SUMS covers the selected release assets; SHA256SUMS covers the source companion. The immutable candidate descriptor retains its pre-test flag; consumer-qualification.json is the completed test receipt. CI verified complete hashes while transferring the selected bytes; anonymous public availability was checked separately without downloading the large payloads again.
+
+Fresh live-account generation, current OpenClaw-to-Keep handover, independent operator acceptance and full-platform completion remain open. ARM64 and other host profiles are unqualified for this appliance. The earlier combined archive retains its historical qualification below.
+
+## Historical 0.0.21-preview.1 combined archive
+
 # Keep 0.0.21-preview.1 — offline preparation and governed execution
 
 The November 11 update adds organization code/PKCE login, pinned key refresh, session-bound project dispatch and captured native patch application. Real offline preparation now copies Git objects independently and uses separate private npm configuration files.

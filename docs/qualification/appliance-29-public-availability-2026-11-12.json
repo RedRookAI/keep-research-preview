@@ -1,0 +1,96 @@
+{
+  "schema": "keep.appliance.public-availability/v1",
+  "checkedUtc": "2026-11-12T09:20:01.653834+00:00",
+  "releaseId": 442694756,
+  "releaseUrl": "https://github.com/RedRookAI/keep-research-preview/releases/tag/keep-reviewer-2026-11-12.3",
+  "anonymous": true,
+  "ciCopyRunId": 43190049031,
+  "largeFilesFullHashVerifiedDuringCiCopy": true,
+  "largeFilesDownloadedAgain": false,
+  "assets": [
+    {
+      "name": "keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repack.tar.xz",
+      "httpStatus": 206,
+      "bytes": 588952968,
+      "fullSha256VerifiedAnonymously": false,
+      "range": "bytes 0-0/588952968"
+    },
+    {
+      "name": "keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repack.tar.xz.candidate.json",
+      "httpStatus": 200,
+      "bytes": 644,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repack.tar.xz.sha256",
+      "httpStatus": 200,
+      "bytes": 146,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "source-index.json",
+      "httpStatus": 200,
+      "bytes": 768477,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "distribution-input.json",
+      "httpStatus": 200,
+      "bytes": 1256,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "guest-dpkg-status",
+      "httpStatus": 200,
+      "bytes": 330730,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "guest-packages.tsv",
+      "httpStatus": 200,
+      "bytes": 15989,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "guest-distribution-support.tar.gz",
+      "httpStatus": 206,
+      "bytes": 46588290,
+      "fullSha256VerifiedAnonymously": false,
+      "range": "bytes 0-0/46588290"
+    },
+    {
+      "name": "debian-sources-0001.tar",
+      "httpStatus": 206,
+      "bytes": 867338240,
+      "fullSha256VerifiedAnonymously": false,
+      "range": "bytes 0-0/867338240"
+    },
+    {
+      "name": "SHA256SUMS",
+      "httpStatus": 200,
+      "bytes": 533,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "consumer-qualification.json",
+      "httpStatus": 200,
+      "bytes": 1935,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    },
+    {
+      "name": "KEEP-RELEASE-SHA256SUMS",
+      "httpStatus": 200,
+      "bytes": 1164,
+      "fullSha256VerifiedAnonymously": true,
+      "range": null
+    }
+  ]
+}
