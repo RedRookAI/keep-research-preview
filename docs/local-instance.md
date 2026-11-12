@@ -90,6 +90,29 @@ Stop the owned worker before prepare. An active worker or unresolved startup ref
 
 The preparation handoff has source component checks, a real unavailable-helper refusal and a positive unprivileged changed-source consumer. That consumer observed an empty-cache refusal, an explicit seeded retry, installation of TypeScript 5.9.3 and a passing transpilation checker under the required namespace policy. Exact installed-release qualification is recorded separately in the current release receipt; source or hybrid observations do not qualify another archive.
 
+## Issue a restricted OpenClaw client for this instance
+
+This subcommand requires development source .26 or later. The .21 download and .25 appliance candidate frozen at `6a1d880` retain the environment-configured issuance route.
+
+After saving the personal public-repository Codex setup, keep the worker stopped and create a private directory outside the source and workspaces. Choose a future expiry and issue the client using the saved instance:
+
+```sh
+mkdir -m 700 /absolute/private/client-directory
+keep instance client-issue /absolute/path/to/my-keep \
+  --profile=/absolute/private/client-directory/client.json \
+  --token-file=/absolute/private/client-directory/client-token \
+  --agent-id=my-openclaw \
+  --expires-at=YOUR_FUTURE_ISO_TIMESTAMP
+keep instance status /absolute/path/to/my-keep
+keep instance start /absolute/path/to/my-keep
+```
+
+This runs the existing local owner issuance command with this instance's saved repository, checker, engine, model, limits and original data directory. It inspects the engine's version and existing login status; it does not sign in, generate work or change the invocation allowance. The new grant has the existing restricted `change.solve` authority. The private profile and token files retain their normal validation, expiry and no-overwrite rules.
+
+After successful issuance and profile readback, Keep saves only `KEEP_OPENCLAW_CLIENT_PROFILE` in the same private `instance.json`. Status shows that reference, and subsequent start uses it. The token value and account credentials are never saved in the instance profile or printed. Give the plugin its own restricted credential, following the [client guide](openclaw-client.md).
+
+An active or unresolved worker, pending startup, concurrent instance control or existing saved client binding refuses issuance. Stop and reconcile this owned instance first. A failed command saves no new profile reference; inspect any retained private client files and grants before explicitly retrying. If issuance succeeds but saving its reference is not confirmed, retain those files and inspect `instance.json`; do not create another instance or grant to evade uncertain state. This command does not replace an existing client binding or reset usage history. Use the existing owner revocation command when retiring a client.
+
 ## Start and inspect
 
 ```sh

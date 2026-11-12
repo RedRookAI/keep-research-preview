@@ -1,7 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, renameSync, rmdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { basename, join, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+import { readRestrictedClientProfile } from "../gateway/restricted_client.js";
 import { FileGatewayTokenStore } from "./gateway_token_store.js";
 import { createGatewayClient } from "./gateway_client.js";
 import { launchNativeWorker, type NativeWorkerReceipt } from "./native_worker.js";
@@ -34,7 +36,7 @@ const within = (parent: string, child: string): boolean => child === parent || c
 function generationSetup(profile: InstanceProfile): string {
   const env = profile.environment;
   if (!env.KEEP_PROJECT_MODEL) return "Generation is not configured. The local stub will start with dispatch paused.";
-  return `Codex selected; model=${env.KEEP_CODEX_MODEL}; executable=${env.KEEP_CODEX_EXECUTABLE ?? "runtime PATH selection"}\nSaved caller limits: invocations=${env.KEEP_CODEX_MAX_INVOCATIONS}; prompt bytes=${env.KEEP_CODEX_MAX_PROMPT_BYTES}; captured output bytes=${env.KEEP_CODEX_MAX_OUTPUT_BYTES}; timeout ms=${env.KEEP_CODEX_TIMEOUT_MS}\nGeneration qualification is separate. Profile edits apply after an owned stop/start.`;
+  return `Codex selected; model=${env.KEEP_CODEX_MODEL}; executable=${env.KEEP_CODEX_EXECUTABLE ?? "runtime PATH selection"}\nSaved caller limits: invocations=${env.KEEP_CODEX_MAX_INVOCATIONS}; prompt bytes=${env.KEEP_CODEX_MAX_PROMPT_BYTES}; captured output bytes=${env.KEEP_CODEX_MAX_OUTPUT_BYTES}; timeout ms=${env.KEEP_CODEX_TIMEOUT_MS}\nGeneration qualification is separate. Profile edits apply after an owned stop/start.\nRestricted client profile: ${env.KEEP_OPENCLAW_CLIENT_PROFILE ?? "not issued"}`;
 }
 
 function checkSetup(profile: InstanceProfile): string {
@@ -85,8 +87,13 @@ function readPrivate(path: string): unknown {
 }
 function writePrivate(path: string, value: unknown): void {
   const temporary = `${path}.${randomUUID()}.tmp`;
-  writeFileSync(temporary, JSON.stringify(value, null, 2) + "\n", { flag: "wx", mode: 0o600 });
+  const fd = openSync(temporary, "wx", 0o600);
+  try { writeFileSync(fd, JSON.stringify(value, null, 2) + "\n"); fsyncSync(fd); } finally { closeSync(fd); }
   renameSync(temporary, path);
+  if (process.platform !== "win32") {
+    const directory = openSync(resolve(path, ".."), "r");
+    try { fsyncSync(directory); } finally { closeSync(directory); }
+  }
 }
 function profileAt(directory: string): InstanceProfile {
   const row = readPrivate(join(directory, PROFILE)) as InstanceProfile;
@@ -126,8 +133,8 @@ function runtimeEnvironment(profile: InstanceProfile): NodeJS.ProcessEnv {
 /** An inert owner profile around the existing worker and authenticated lifecycle API. */
 export async function runInstanceCommand(args: readonly string[], write: (text: string) => void): Promise<number> {
   const [action, directoryArg, ...options] = args;
-  if (!action || !["init", "prepare", "start", "status", "projects", "stop"].includes(action) || !directoryArg || directoryArg.startsWith("--")) {
-    write("Usage: keep instance init <directory> --repository=<path> --test-command=<executable> [--test-args=<JSON>] [--branch=<branch>]\n       Codex: --project-model=codex --codex-processing=owner-public-repository --codex-executable=<absolute-path> --codex-model=<model> --codex-max-invocations=N --codex-max-prompt-bytes=N --codex-max-output-bytes=N --codex-timeout-ms=N\n       Helpers: --test-namespace-jail=required|best-effort|off [--test-jail-executable=<absolute-path>]\n       Prerequisites: --test-prerequisites=<JSON-path-array> [--workspace-preparation=npm-offline --workspace-toolchain=<absolute-node-distribution>]\n       keep instance prepare <directory>\n       keep instance start <directory> [--port=N] [--paused]\n       keep instance status|projects|stop <directory>"); return 2;
+  if (!action || !["init", "prepare", "client-issue", "start", "status", "projects", "stop"].includes(action) || !directoryArg || directoryArg.startsWith("--")) {
+    write("Usage: keep instance init <directory> --repository=<path> --test-command=<executable> [--test-args=<JSON>] [--branch=<branch>]\n       Codex: --project-model=codex --codex-processing=owner-public-repository --codex-executable=<absolute-path> --codex-model=<model> --codex-max-invocations=N --codex-max-prompt-bytes=N --codex-max-output-bytes=N --codex-timeout-ms=N\n       Helpers: --test-namespace-jail=required|best-effort|off [--test-jail-executable=<absolute-path>]\n       Prerequisites: --test-prerequisites=<JSON-path-array> [--workspace-preparation=npm-offline --workspace-toolchain=<absolute-node-distribution>]\n       keep instance prepare <directory>\n       keep instance client-issue <directory> --profile=<absolute-path> --token-file=<absolute-path> --agent-id=<id> --expires-at=<ISO-date>\n       keep instance start <directory> [--port=N] [--paused]\n       keep instance status|projects|stop <directory>"); return 2;
   }
   try {
     if (action === "init") {
@@ -171,11 +178,47 @@ export async function runInstanceCommand(args: readonly string[], write: (text: 
       return 0;
     }
     const directory = privateDirectory(resolve(directoryArg));
-    const profile = profileAt(directory);
-    if (action !== "start" && options.length) throw new Error(`${action} accepts only the instance directory`);
+    if (action !== "start" && action !== "client-issue" && options.length) throw new Error(`${action} accepts only the instance directory`);
     const lock = join(directory, ".control-lock");
     try { mkdirSync(lock, { mode: 0o700 }); } catch (error) { if ((error as NodeJS.ErrnoException).code === "EEXIST") throw new Error("another instance control is in progress; inspect this instance before retrying"); throw error; }
     try {
+      const profile = profileAt(directory);
+      if (action === "client-issue") {
+        const fields = new Map<string, string>();
+        for (const option of options) {
+          const match = /^--(profile|token-file|agent-id|expires-at)=(.+)$/u.exec(option);
+          if (!match || option.includes("\0") || fields.has(match[1]!)) throw new Error("client-issue requires each documented option exactly once");
+          fields.set(match[1]!, match[2]!);
+        }
+        if (fields.size !== 4) throw new Error("client-issue requires --profile, --token-file, --agent-id and --expires-at");
+        if (profile.environment.KEEP_OPENCLAW_CLIENT_PROFILE !== undefined) throw new Error("This instance already has a client profile binding; inspect or revoke that grant before changing its saved setup. No new client was issued.");
+        if (existsSync(join(directory, PENDING))) throw new Error("Previous startup is unresolved; reconcile this instance before issuing a client.");
+        if (existsSync(join(directory, CURRENT))) {
+          const previous = workerAt(directory);
+          if (!existsSync(join(directory, "data", "native-workers", `${previous.workerId}.stopped.json`))) throw new Error("Stop this owned instance before issuing a client; its worker may still be active or unresolved.");
+        }
+        if (profile.environment.KEEP_PROJECT_MODEL !== "codex") throw new Error("Client issuance requires this instance's saved personal public-repository Codex setup.");
+        // Reuse the installed owner issuance path with the exact saved runtime.
+        // No shell, ambient KEEP_* settings, credential values or generation call.
+        try {
+          execFileSync(process.execPath, [fileURLToPath(new URL("../main.js", import.meta.url)), "openclaw-client", "issue", ...options], {
+            cwd: directory, env: runtimeEnvironment(profile), stdio: ["ignore", "pipe", "pipe"], maxBuffer: 65_536,
+          });
+        } catch {
+          throw new Error("Client issuance did not confirm success; no profile reference was saved. Inspect the selected private output files and this instance's retained grants before an explicit retry. Verify the saved engine metadata/login status, private output paths, agent ID and future expiry. No account diagnostic or credential value was printed.");
+        }
+        const clientPath = realpathSync(fields.get("profile")!);
+        const client = readRestrictedClientProfile(clientPath);
+        if (client.agentId !== fields.get("agent-id") || client.expiresAt !== Date.parse(fields.get("expires-at")!))
+          throw new Error("Issued client readback differs; retain the private files and grant for inspection. No profile reference was saved.");
+        try {
+          writePrivate(join(directory, PROFILE), { ...profile, environment: { ...profile.environment, KEEP_OPENCLAW_CLIENT_PROFILE: clientPath } });
+        } catch {
+          throw new Error("Client was issued but saving its instance reference was not confirmed. Preserve the private client files and grant; inspect instance.json before any retry. No new instance or allowance was created.");
+        }
+        write(`Restricted client issued and saved for this instance. Profile: ${clientPath}\nPrivate plugin credential file: ${fields.get("token-file")}\nStart: keep instance start ${directory}\n${generationSetup(profileAt(directory))}`);
+        return 0;
+      }
       if (action === "prepare") {
         if (existsSync(join(directory, PENDING))) throw new Error("Previous startup is unresolved; reconcile this instance before preparing its workspace.");
         if (existsSync(join(directory, CURRENT))) {

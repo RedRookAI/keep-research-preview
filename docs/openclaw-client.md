@@ -4,13 +4,15 @@ The **0.0.20-preview.1** combined preview includes the personal restricted clien
 
 ## Issue a client
 
-Use the same personal public-repository Codex configuration and `KEEP_DATA_DIR` as the intended Keep worker. Keep uses its existing local owner authority to issue a durable, expiring `change.solve` grant. The selected repository must remain at its pinned commit with a clean working tree. Keep's data, workspace and client credentials belong outside that source repository.
+The saved-instance subcommand below requires development source .26 or later. The .21 download and .25 appliance candidate frozen at `6a1d880` use the environment-configured route described after it.
+
+For a [saved local instance](local-instance.md), use `keep instance client-issue` while its worker is stopped. It projects the saved personal public-repository Codex configuration and original data directory into the existing owner issuance command, then saves the nonsecret client-profile reference after success. The selected repository must remain at its pinned commit with a clean working tree. Keep's data, workspace and client credentials belong outside that source repository.
 
 Create a private directory for the two new files. Replace the expiry placeholder with your chosen future ISO timestamp:
 
 ```sh
 mkdir -m 700 /absolute/private/client-directory
-keep openclaw-client issue \
+keep instance client-issue /absolute/path/to/my-keep \
   --profile=/absolute/private/client-directory/client.json \
   --token-file=/absolute/private/client-directory/client-token \
   --agent-id=my-openclaw \
@@ -19,7 +21,9 @@ keep openclaw-client issue \
 
 Keep refuses existing output files. The profile stores a credential hash, grant identity, expiry and exact project runtime binding. The token file contains the random client credential; neither file contains the owner bearer or Codex authentication. Keep prints file locations, never the credential value. Give the trusted plugin access only to the client token file and its own state. Its process must not have direct source-write authority or access to Keep owner/Codex credentials; a tool allowlist alone does not provide that isolation.
 
-Set `KEEP_OPENCLAW_CLIENT_PROFILE` to the profile path before starting the same configured worker. A saved [local instance](local-instance.md) can retain that reference in its owner-controlled `instance.json`. Restart only that owned instance to apply the profile reference. The profile and durable grant are checked again on use; revocation does not require a worker restart. Organization deployments retain their separate identity admission and cannot use this personal profile as an owner fallback.
+The saved-instance command refuses an active/unresolved worker, existing binding or concurrent control and retains every original limit and invocation claim. It prints locations and setup guidance without raw account diagnostics. Failed issuance saves no new reference; inspect retained output files and grants before retrying. A reference-save failure after issuance needs explicit reconciliation, not another grant.
+
+For an environment-configured worker, `keep openclaw-client issue` with the same four options remains supported. Supply its complete personal public-repository Codex settings and original `KEEP_DATA_DIR`, then set `KEEP_OPENCLAW_CLIENT_PROFILE` before starting that same worker. Supplying `KEEP_DATA_DIR` alone does not reproduce the project binding. The saved-instance command does this projection without shell evaluation or manual profile editing. The profile and durable grant are checked again on use; revocation does not require a worker restart. Organization deployments retain their separate identity admission and cannot use this personal profile as an owner fallback.
 
 ## Restricted operations
 
