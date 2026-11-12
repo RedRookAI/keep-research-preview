@@ -71,6 +71,7 @@ try {
     assert.match(await page.locator('main').innerText(), /Review the checked change/);
     assert.equal(await page.locator('.demo-checks strong').allTextContents().then(values => values.filter(value => value === 'Passed').length), 4);
   }
+  if (sampleMode) await page.getByText('Inspect the code change', { exact: true }).click();
   await notice(); stages.push('real-webhook-fix-and-four-checks');
   await page.screenshot({ path: join(root, '02-checked-proposal.png'), fullPage: true });
   const retainedBefore = fixture.app.projectRuntime.retainedJobs(new Set([projectId])).map(job => job.id).sort();
