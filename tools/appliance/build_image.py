@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import shlex
 import shutil
 import subprocess
 import tarfile
@@ -57,6 +58,12 @@ def verify_carried_native(artifact, expected):
         raise RuntimeError('Carried native identity/mode mismatch: ' + expected['name']
             + ' expected_sha256=' + expected['sha256'] + ' actual_sha256=' + actual_sha
             + ' expected_mode=' + oct(expected_mode) + ' actual_mode=' + oct(actual_mode))
+
+
+def background_freeze(script='/root/kc111-freeze.sh', serial_device='/dev/ttyS0'):
+    # /dev/console can select VGA even when kernel messages also reach serial.
+    # This profile explicitly captures QEMU's first serial port, ttyS0.
+    return ['bash', '-c', 'nohup setsid ' + shlex.quote(script) + ' >' + shlex.quote(str(serial_device)) + ' 2>&1 </dev/null &']
 
 
 def main():
@@ -168,7 +175,7 @@ systemctl poweroff
     config = {'users': [{'name': 'keep', 'shell': '/bin/bash', 'lock_passwd': True}], 'ssh_pwauth': False, 'disable_root': True,
               'write_files': [{'path': '/root/kc111-provision.sh', 'permissions': '0700', 'content': provision},
                               {'path': '/root/kc111-freeze.sh', 'permissions': '0700', 'content': freeze}],
-              'runcmd': [['bash', '/root/kc111-provision.sh'], ['bash', '-c', 'nohup setsid /root/kc111-freeze.sh >/dev/console 2>&1 </dev/null &']]}
+              'runcmd': [['bash', '/root/kc111-provision.sh'], background_freeze()]}
     (payload / 'user-data').write_text('#cloud-config\n' + json.dumps(config) + '\n')
     (payload / 'meta-data').write_text('instance-id: kc111-build-' + os.environ['GITHUB_RUN_ID'] + '\nlocal-hostname: keep-image-builder\n')
     base = work / BASE_NAME
@@ -188,7 +195,8 @@ systemctl poweroff
         if vm.returncode != 0: raise RuntimeError('Image provisioning guest failed')
         serial = (work / 'serial.log').read_text(errors='replace')
         if 'KC111_IMAGE_SANITIZED' not in serial or not receipt_path.exists():
-            raise RuntimeError('Image sanitization/provisioning not confirmed')
+            raise RuntimeError('Image sanitization/provisioning not confirmed: serial_marker='
+                + str('KC111_IMAGE_SANITIZED' in serial) + ' source_receipt=' + str(receipt_path.exists()))
     finally:
         server.shutdown(); server.server_close()
         if vm.poll() is None: vm.terminate(); vm.wait(timeout=30)
