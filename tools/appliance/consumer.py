@@ -139,6 +139,25 @@ def wait_for_console_navigation(read_page, previous_document, deadline, *, proje
     raise RuntimeError('Console navigation not confirmed before deadline; inspect retained work; no submission or action retried')
 
 
+def wait_for_console_page(read_page, previous_document, deadline, *, expected_url, require_control=False):
+    """Observe one explicit navigation/login at its fixed route; never dispatch."""
+    parsed = urllib.parse.urlsplit(expected_url)
+    if (parsed.scheme, parsed.netloc) != ('http', '127.0.0.1:7788') or not (
+            expected_url in ('http://127.0.0.1:7788/console', 'http://127.0.0.1:7788/console/new') or
+            console_project_id(expected_url)):
+        raise RuntimeError('Expected console route is invalid')
+    while time.monotonic() < deadline:
+        page = read_page()
+        if page['document'] != previous_document and page['ready'] == 'complete':
+            if page['url'] != expected_url:
+                raise RuntimeError('Console navigation reached an unexpected/error route; no action retried')
+            if require_control and not page['expectedControl']:
+                raise RuntimeError('Completed console page lacks its authenticated/expected control; no action retried')
+            return page
+        time.sleep(0.1)
+    raise RuntimeError('Console page navigation not confirmed before deadline; no action retried')
+
+
 def failure_diagnostics(url, body, credential=None):
     parsed = urllib.parse.urlsplit(url)
     # Retain the route only: invitation, CSRF, submission and export query values
@@ -232,7 +251,12 @@ def main():
     def content(selector): return call('POST', '/execute/sync', {'script': 'return document.querySelector(arguments[0]).textContent', 'args': [selector]})
     def click(selector): call('POST', '/element/' + element(selector) + '/click', {})
     def attribute(selector, name): return call('GET', '/element/' + element(selector) + '/attribute/' + name)
-    def navigate(url): call('POST', '/url', {'url': url})
+    def navigate(url, expected_control=None):
+        deadline = time.monotonic() + 30
+        previous = page_state()['document']
+        call('POST', '/url', {'url': url})
+        return wait_for_console_page(lambda: page_state(expected_control), previous, deadline,
+                                     expected_url=url, require_control=expected_control is not None)
     def screenshot(name): (output / name).write_bytes(base64.b64decode(call('GET', '/screenshot')))
     def control(state, action, *args): return execute([sys.executable, str(cli), action, str(state), *args])
     def page_state(expected_control=None):
@@ -241,6 +265,14 @@ def main():
         previous = page_state()['document']
         click(selector)
         return previous
+    def sign_in(credential):
+        call('POST', '/element/' + element('input[name=token]') + '/value', {'text': credential})
+        deadline = time.monotonic() + 30
+        previous = click_navigation('form[action="/console/login"] button')
+        # review_web's successful POST returns303 to /console. The fixed goal
+        # control exists only in its authenticated sample landing/recovery form.
+        return wait_for_console_page(lambda: page_state('form[action="/console/submit"] [name=goal]'),
+                                     previous, deadline, expected_url='http://127.0.0.1:7788/console', require_control=True)
     def open_action_result(project_url, previous_document, action_path, deadline):
         current, _ = wait_for_console_navigation(page_state, previous_document, deadline,
                                                  project_url=project_url, action_path=action_path)
@@ -288,10 +320,9 @@ def main():
                 'binary': chrome, 'args': ['--headless=new', '--mute-audio', '--disable-dev-shm-usage'],
                 'prefs': {'download.default_directory': str(output), 'download.prompt_for_download': False}}}}})
             session = value['sessionId']
-            navigate('http://127.0.0.1:7788/console')
+            navigate('http://127.0.0.1:7788/console', 'input[name=token]')
             assert contract['notice'] in text('body') and 'approval retains the reviewed workspace' in text('body')
-            call('POST', '/element/' + element('input[name=token]') + '/value', {'text': token})
-            click('form[action="/console/login"] button')
+            sign_in(token)
             assert len(elements('.project')) == 0
             assert attribute('[name=goal]', 'value') == contract['goal']
             deadline = time.monotonic() + 600
@@ -334,8 +365,8 @@ def main():
             navigate(project_url)
             # New server session deliberately requires the retained instance credential.
             if elements('input[name=token]'):
-                call('POST', '/element/' + element('input[name=token]') + '/value', {'text': token})
-                click('form[action="/console/login"] button'); navigate(project_url)
+                sign_in(token)
+                navigate(project_url)
             observed_diff = inspect_diff()
             for name in changed_files: assert 'diff --git a/' + name + ' b/' + name in observed_diff
             assert elements('a[href*="/console/export?"]')
@@ -370,7 +401,9 @@ def main():
     except Exception as error:
         failure = {'source': manifest['source'], 'stages': stages, 'error': str(error)}
         if session:
-            try: failure['browser'] = failure_diagnostics(call('GET', '/url'), text('body'), token)
+            try:
+                page = call('POST', '/execute/sync', {'script': 'return {url: location.href, body: document.body?.innerText || ""}', 'args': []})
+                failure['browser'] = failure_diagnostics(page['url'], page['body'], token)
             except Exception: pass
             try: screenshot('failure.png')
             except Exception: pass
