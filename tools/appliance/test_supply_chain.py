@@ -20,6 +20,20 @@ consumer = load('candidate_consumer', 'consumer.py')
 
 
 class FrozenCandidate(unittest.TestCase):
+    def test_failed_host_command_retains_stderr_and_withholds_stdout(self):
+        with self.assertRaisesRegex(RuntimeError, 'host-key metadata failure') as captured:
+            consumer.execute([sys.executable, '-c', 'import sys;print("invitation stdout excluded");sys.stderr.write("host-key metadata failure");raise SystemExit(4)'])
+        self.assertNotIn('invitation stdout excluded', str(captured.exception))
+
+    def test_host_assembly_and_unchanged_guest_image_have_explicit_sources(self):
+        original = {'source': 'a' * 40, 'components': {'source': 'a' * 40}}
+        self.assertEqual(consumer.runtime_source(original), 'a' * 40)
+        repacked = {**original, 'source': 'b' * 40, 'imageSource': 'a' * 40}
+        consumer.verify_manifest_source(repacked, 'b' * 40)
+        self.assertEqual(consumer.runtime_source(repacked), 'a' * 40)
+        with self.assertRaisesRegex(RuntimeError, 'image provenance'):
+            consumer.runtime_source({**repacked, 'components': {'source': 'c' * 40}})
+
     def test_guest_binary_capture_preserves_bytes_and_refuses_failed_command(self):
         with tempfile.TemporaryDirectory(prefix='guest evidence ') as temporary:
             root = Path(temporary)

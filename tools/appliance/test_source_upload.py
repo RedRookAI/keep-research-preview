@@ -11,6 +11,13 @@ upload = importlib.util.module_from_spec(spec); spec.loader.exec_module(upload)
 
 
 class SourceUpload(unittest.TestCase):
+    def test_release_target_uses_assembly_identity_separately_from_guest_sources(self):
+        release = {'id': 10, 'tag_name': 'owned-draft', 'draft': True, 'target_commitish': 'c' * 40}
+        upload.verify_destination(release, 10, 'owned-draft', 'c' * 40)
+        for target in ['a' * 40, '']:
+            with self.assertRaises(RuntimeError): upload.verify_destination(release, 10, 'owned-draft', target)
+        with self.assertRaises(RuntimeError): upload.verify_destination(dict(release, draft=False), 10, 'owned-draft', 'c' * 40)
+
     def test_actual_companion_output_is_accepted_without_adapting_its_manifest(self):
         with tempfile.TemporaryDirectory(prefix='source integration ') as temporary, fixture.FixtureServer() as server:
             root = Path(temporary); directory, _ = fixture.input_fixture(root)

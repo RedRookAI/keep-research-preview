@@ -1,0 +1,133 @@
+name: KC111 frozen guest host-kit assembly
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  KC111_DRAFT_RELEASE_ID: "442420387"
+  KC111_DRAFT_RELEASE_TAG: keep-reviewer-2026-11-12
+jobs:
+  repack:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      asset_id: ${{ steps.transfer.outputs.asset_id }}
+      asset_sha256: ${{ steps.transfer.outputs.asset_sha256 }}
+      asset_name: ${{ steps.transfer.outputs.asset_name }}
+      source: ${{ steps.transfer.outputs.source }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Fetch only the frozen image source tree for the reuse guard
+        run: git -c credential.helper= fetch --depth=1 --no-tags origin fbd88f7c0190da905b49809290dfa496af290e10
+      - name: Focused host assembly and source custody checks
+        run: |
+          python3 tools/appliance/test_launcher.py
+          python3 tools/appliance/test_dispatch.py
+          python3 tools/appliance/test_repack.py
+          python3 tools/appliance/test_supply_chain.py
+          python3 tools/appliance/test_distribution_input.py
+          python3 tools/appliance/test_source_upload.py
+      - name: Download the exact existing image archive and its frozen receipt
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import os,json,hashlib,pathlib,urllib.request
+          root='https://api.github.com/repos/RedRookAI/keep-research-preview'
+          def fetch(path,accept='application/vnd.github+json'):
+            req=urllib.request.Request(root+path,headers={'Accept':accept,'User-Agent':'Keep-immutable-image-repack','X-GitHub-Api-Version':'2022-11-28'})
+            req.add_unredirected_header('Authorization','Bearer '+os.environ['GITHUB_TOKEN'])
+            return urllib.request.urlopen(req,timeout=600)
+          with fetch('/releases/442420387') as response:release=json.load(response)
+          assert release['draft'] is True and release['tag_name']=='keep-reviewer-2026-11-12' and release['target_commitish']==os.environ['GITHUB_SHA']
+          for asset_id,name,wanted,size in [(738161682,'original.tar.xz','055ff90c5051e10ad8a38cf2f7e5f29625f59973ec2538ca0a30947e7c5d748b',569054452),(738162715,'original-candidate.json','8fc82c12602af9a6454736fa95ead481082f01162843e6ebdf85b165aa1a961e',509)]:
+            asset=next(a for a in release['assets'] if a['id']==asset_id)
+            assert asset['digest']=='sha256:'+wanted and asset['size']==size
+            h=hashlib.sha256()
+            with fetch('/releases/assets/'+str(asset_id),'application/octet-stream') as response,pathlib.Path(name).open('xb') as out:
+              while True:
+                block=response.read(1024*1024)
+                if not block:break
+                h.update(block);out.write(block)
+            assert h.hexdigest()==wanted and pathlib.Path(name).stat().st_size==size
+          print('Exact original image transport verified; no guest boot or image changes')
+          PY
+      - name: Assemble current host controls around unchanged measured guest bytes
+        run: |
+          env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 GITHUB_ACTIONS=true GITHUB_SHA="$GITHUB_SHA" GITHUB_RUN_ID="$GITHUB_RUN_ID" \
+            python3 tools/appliance/repack_image.py --archive original.tar.xz --candidate original-candidate.json
+      - name: Transfer exact new assembly to the reviewed draft
+        id: transfer
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/appliance/upload_candidate.py
+  consumer:
+    needs: repack
+    runs-on: ubuntu-24.04
+    permissions:
+      # Draft staging requires push visibility; only its GET step gets the token.
+      contents: write
+    steps:
+      # Deliberately no checkout or developer dependency cache.
+      - name: Download exact owned candidate asset and verify before extraction
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          KC111_ASSET_ID: ${{ needs.repack.outputs.asset_id }}
+          KC111_ASSET_SHA256: ${{ needs.repack.outputs.asset_sha256 }}
+          KC111_ASSET_NAME: ${{ needs.repack.outputs.asset_name }}
+        run: |
+          python3 - <<'PY'
+          import os,hashlib,urllib.request,tarfile,pathlib
+          root=pathlib.Path('candidate with spaces');root.mkdir(mode=0o700)
+          name=os.environ['KC111_ASSET_NAME']
+          assert pathlib.Path(name).name==name
+          req=urllib.request.Request('https://api.github.com/repos/RedRookAI/keep-research-preview/releases/assets/'+str(int(os.environ['KC111_ASSET_ID'])),headers={'Accept':'application/octet-stream','User-Agent':'Keep-clean-consumer','X-GitHub-Api-Version':'2022-11-28'})
+          req.add_unredirected_header('Authorization','Bearer '+os.environ['GITHUB_TOKEN'])
+          h=hashlib.sha256()
+          with urllib.request.urlopen(req,timeout=600) as response,(root/name).open('xb') as out:
+            while True:
+              block=response.read(1024*1024)
+              if not block:break
+              h.update(block);out.write(block)
+          assert h.hexdigest()==os.environ['KC111_ASSET_SHA256'],'download differs from frozen candidate'
+          with tarfile.open(root/name) as archive:archive.extractall(root,filter='data')
+          bundles=[p for p in root.iterdir() if p.is_dir()]
+          assert len(bundles)==1
+          pathlib.Path('bundle-path').write_text(str(bundles[0].resolve())+'\n')
+          print('KC111_CONSUMER_ARCHIVE_SHA256='+h.hexdigest())
+          print('KC111_STAGING_JOB_CONTENTS_PERMISSION=write; product environment is cleared in next step')
+          PY
+      - name: Clean actual consumer using shipped controls and existing browser
+        env:
+          KC111_EXPECTED_SOURCE: ${{ github.sha }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends qemu-system-x86 qemu-utils
+          runner_uid=$(id -u)
+          runner_gid=$(id -g)
+          groups=$(printf '%s\n' "$(id -G | tr ' ' ',')",$(stat -c %g /dev/kvm) | tr ',' '\n' | sort -un | paste -sd, -)
+          bundle=$(cat bundle-path)
+          sudo setpriv --reuid "$runner_uid" --regid "$runner_gid" --groups "$groups" -- env -i PATH="$PATH" HOME="$HOME" CHROMEWEBDRIVER="${CHROMEWEBDRIVER:-}" KC111_EXPECTED_SOURCE="$KC111_EXPECTED_SOURCE" python3 - "$bundle" "$GITHUB_WORKSPACE/consumer-evidence" <<'PY'
+          import os,sys,pathlib,runpy,json
+          assert set(os.environ)<={'PATH','HOME','CHROMEWEBDRIVER','KC111_EXPECTED_SOURCE','LC_CTYPE'}
+          print('KC111_PRODUCT_ENVIRONMENT_JSON='+json.dumps({'githubCredentialPresent':False,'environmentKeys':sorted(os.environ),'checkoutAvailable':False}),flush=True)
+          bundle=pathlib.Path(sys.argv[1]);output=sys.argv[2]
+          sys.argv=[str(bundle/'qualify.py'),str(bundle),output]
+          runpy.run_path(str(bundle/'qualify.py'),run_name='__main__')
+          PY
+      - name: Retain small proof receipts and screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kc111-consumer-evidence
+          path: |
+            consumer-evidence/*.json
+            consumer-evidence/*.png
+            consumer-evidence/guest-packages.tsv
+            consumer-evidence/guest-dpkg-status
+            consumer-evidence/guest-distribution-support.tar.gz
+          if-no-files-found: warn
+          retention-days: 1

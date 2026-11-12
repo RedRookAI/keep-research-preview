@@ -13,6 +13,31 @@ fetch = importlib.util.module_from_spec(spec); spec.loader.exec_module(fetch)
 
 
 class DistributionCustody(unittest.TestCase):
+    def test_complete_capture_allows_source_collection_without_claiming_consumer_pass(self):
+        files = self.fixture(); del files['consumer.json']
+        proof = {'schema': 'keep.appliance.guest-proof/v1', 'passed': True, 'source': 'a' * 40, 'modelCalls': 0, 'uid': 1000, 'arch': 'x64'}
+        files['guest-proof-1.json'] = json.dumps(proof).encode()
+        run = {'head_sha': 'c' * 40, 'status': 'completed', 'conclusion': 'failure'}
+        with self.assertRaisesRegex(RuntimeError, 'qualification workflow'): fetch.verify_run(run, 'c' * 40)
+        fetch.verify_run(run, 'c' * 40, 'captured-distribution')
+        with tempfile.TemporaryDirectory(prefix='captured guest sources ') as temporary:
+            output = Path(temporary) / 'captured'
+            fetch.unpack(self.archive(files), output, 'captured-distribution')
+            fetch.verify(output, 'a' * 40, 'b' * 64, 'captured-distribution')
+            self.assertFalse((output / 'consumer.json').exists())
+            (output / 'guest-proof-1.json').write_text(json.dumps(dict(proof, passed=False)))
+            with self.assertRaisesRegex(RuntimeError, 'guest proof'):
+                fetch.verify(output, 'a' * 40, 'b' * 64, 'captured-distribution')
+
+    def test_missing_capture_cancelled_run_and_unrecognized_purpose_are_refused(self):
+        run = {'head_sha': 'c' * 40, 'status': 'completed', 'conclusion': 'cancelled'}
+        with self.assertRaisesRegex(RuntimeError, 'qualification workflow'): fetch.verify_run(run, 'c' * 40, 'captured-distribution')
+        with tempfile.TemporaryDirectory() as temporary:
+            with self.assertRaisesRegex(RuntimeError, 'lacks final'):
+                fetch.unpack(self.archive(self.fixture()), Path(temporary) / 'missing-proof', 'captured-distribution')
+            with self.assertRaisesRegex(RuntimeError, 'Unknown'):
+                fetch.unpack(self.archive(self.fixture()), Path(temporary) / 'unknown', 'allow-failure')
+
     def test_qualification_workflow_and_frozen_image_sources_are_separate(self):
         run = {'head_sha': 'c' * 40, 'conclusion': 'success'}
         fetch.verify_run(run, 'c' * 40)

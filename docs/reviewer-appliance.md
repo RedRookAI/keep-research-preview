@@ -46,6 +46,8 @@ Restart reopens the same sample and its retained jobs. It preserves decisions an
 
 ## Distribution records
 
+The manifest records the guest image's source separately from the host-tool assembly source. A host-tool update can reuse the same verified guest image. `HOST_SOURCE.tar.gz` supplies the assembly's exact source; the guest retains its own source support and component identities.
+
 The qualification consumer captures the final guest's installed package metadata, including source versions and Built-Using fields, plus its copyright notices and existing Keep, engine and Node support files. The capture records file checksums and the exact image and source identities. The bundle also retains the pinned Bubblewrap source archive and its build recipe.
 
 The Debian source companion must contain the exact source packages and Debian patches identified by that guest inventory before the appliance binary is published. Candidate builds remain private drafts while this companion and the clean consumer are being qualified.

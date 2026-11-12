@@ -398,6 +398,7 @@ def build(input_dir, output, expected_source, expected_image, cache=None, plan_o
     binaries, skipped, closure = source_closure(metadata['guest-dpkg-status'].decode('utf-8'), metadata['guest-packages.tsv'].decode('utf-8'))
     output.mkdir(mode=0o700)  # Never replace an older result or follow an output symlink.
     index = {'schema': 'keep.appliance.debian-source-companion/v1', 'source': expected_source, 'imageSha256': expected_image,
+             'runtimeSource': receipt.get('runtimeSource', receipt['source']),
              'generatorScriptSha256': file_hash(Path(__file__)),
              'consumerReceiptSha256': hashlib.sha256(receipt_bytes).hexdigest(), 'consumerArtifacts': receipt['files'],
              'scope': 'All retained versioned dpkg-status Source, Built-Using and Static-Built-Using pairs; no Build-Depends expansion',

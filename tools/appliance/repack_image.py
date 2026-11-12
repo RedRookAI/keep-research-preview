@@ -22,6 +22,7 @@ ORIGINAL = {
     'diskVirtualBytes': 8589934592,
 }
 GUEST_PATHS = ['src', 'bin', 'package.json', 'package-lock.json',
+               'integrations/openclaw', 'tools/reviewer_local_sample.mjs',
                'tools/appliance/guest-control.py', 'tools/appliance/guest-proof.mjs']
 HOST_FILES = {'keep-appliance.py': 'tools/appliance/keep-appliance.py',
               'qualify.py': 'tools/appliance/consumer.py', 'GUIDE.md': 'docs/reviewer-appliance.md'}

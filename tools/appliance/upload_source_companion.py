@@ -2,6 +2,7 @@
 """Retain a complete exact-image source companion in the reviewed private draft."""
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 
@@ -38,6 +39,12 @@ def verified_files(output, source, image):
     return records
 
 
+def verify_destination(release, release_id, tag, assembly_source):
+    if not re.fullmatch('[0-9a-f]{40}', assembly_source): raise RuntimeError('Explicit frozen release assembly source required')
+    if release['id'] != release_id or release['draft'] is not True or release['tag_name'] != tag or release['target_commitish'] != assembly_source:
+        raise RuntimeError('Destination differs from exact reviewed assembly draft')
+
+
 def main():
     if os.environ.get('GITHUB_ACTIONS') != 'true': raise RuntimeError('Disposable CI only')
     output = Path('source-output')
@@ -45,9 +52,9 @@ def main():
     files = verified_files(output, source, image)
     files['SHA256SUMS'] = {'sha256': digest(output / 'SHA256SUMS'), 'bytes': (output / 'SHA256SUMS').stat().st_size}
     release_id = int(os.environ['KC111_DRAFT_RELEASE_ID']); tag = os.environ['KC111_DRAFT_RELEASE_TAG']
+    assembly_source = os.environ['KC111_DRAFT_TARGET_SOURCE']
     release = api('/releases/' + str(release_id))
-    if release['id'] != release_id or release['draft'] is not True or release['tag_name'] != tag or release['target_commitish'] != source:
-        raise RuntimeError('Destination differs from exact reviewed candidate draft')
+    verify_destination(release, release_id, tag, assembly_source)
     existing = {asset['name']: asset for asset in release['assets']}
     # Check ALL conflicts before uploading anything. Existing exact assets are reusable.
     for name, wanted in files.items():
@@ -59,13 +66,12 @@ def main():
             subprocess.run(['gh', 'release', 'upload', tag, str(output / name), '--repo', REPOSITORY], check=True,
                            env={**os.environ, 'GH_TOKEN': os.environ['GITHUB_TOKEN']}, timeout=600)
     actual = api('/releases/' + str(release_id))
-    if actual['draft'] is not True or actual['tag_name'] != tag or actual['target_commitish'] != source:
-        raise RuntimeError('Draft identity changed during transfer; inspect retained assets')
+    verify_destination(actual, release_id, tag, assembly_source)
     assets = {asset['name']: asset for asset in actual['assets']}
     for name, wanted in files.items():
         if assets[name]['digest'] != 'sha256:' + wanted['sha256'] or assets[name]['size'] != wanted['bytes']:
             raise RuntimeError('Transferred source identity differs')
-    receipt = {'schema': 'keep.appliance.source-transfer/v1', 'source': source, 'imageSha256': image, 'scriptSource': os.environ['GITHUB_SHA'],
+    receipt = {'schema': 'keep.appliance.source-transfer/v1', 'source': source, 'imageSha256': image, 'assemblySource': assembly_source, 'scriptSource': os.environ['GITHUB_SHA'],
         'releaseId': release_id, 'tag': tag, 'draft': True,
         'assets': {name: {**wanted, 'id': assets[name]['id']} for name, wanted in files.items()}}
     Path('source-transfer.json').write_text(json.dumps(receipt, indent=2) + '\n')

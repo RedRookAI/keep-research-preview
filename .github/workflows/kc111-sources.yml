@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       consumer_run:
-        description: Exact successful owned appliance run ID
+        description: Exact owned distribution-capture or successful consumer run ID
         required: true
       consumer_artifact:
         description: Exact consumer evidence artifact ID
@@ -20,6 +20,14 @@ on:
       image_sha256:
         description: Frozen qualified appliance image SHA256
         required: true
+      capture_purpose:
+        description: Source collection may use completed capture before later consumer failure
+        type: choice
+        default: qualified-consumer
+        options: [qualified-consumer, captured-distribution]
+      draft_target_source:
+        description: Independently frozen release assembly commit SHA
+        required: true
 permissions:
   contents: read
   actions: read
@@ -30,6 +38,8 @@ env:
   KC111_ARTIFACT_SHA256: ${{ inputs.artifact_sha256 }}
   KC111_EXPECTED_SOURCE: ${{ inputs.candidate_source }}
   KC111_IMAGE_SHA256: ${{ inputs.image_sha256 }}
+  KC111_CAPTURE_PURPOSE: ${{ inputs.capture_purpose }}
+  KC111_DRAFT_TARGET_SOURCE: ${{ inputs.draft_target_source }}
   KC111_DRAFT_RELEASE_ID: "442420387"
   KC111_DRAFT_RELEASE_TAG: keep-reviewer-2026-11-12
 jobs:

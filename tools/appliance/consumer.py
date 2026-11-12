@@ -16,8 +16,13 @@ import urllib.request
 
 
 def execute(args, **options):
-    return subprocess.run(args, check=True, text=True, capture_output=True, timeout=options.pop('timeout', 600),
-                          env={'PATH': os.environ['PATH'], 'HOME': os.environ['HOME'], 'LANG': 'C.UTF-8'}, **options).stdout.strip()
+    try:
+        return subprocess.run(args, check=True, text=True, capture_output=True, timeout=options.pop('timeout', 600),
+                              env={'PATH': os.environ['PATH'], 'HOME': os.environ['HOME'], 'LANG': 'C.UTF-8'}, **options).stdout.strip()
+    except subprocess.CalledProcessError as error:
+        # Controlled account-free host commands only; stdout can hold the sample
+        # invitation, so retain just bounded stderr for failed operations.
+        raise RuntimeError('Owned consumer command failed: ' + error.stderr[:8192]) from error
 
 
 def capture_file(args, path):
@@ -42,6 +47,13 @@ def node_directory(manifest):
     return 'opt/keep/node-v' + version + '-linux-x64'
 
 
+def runtime_source(manifest):
+    source = manifest.get('imageSource', manifest['source'])
+    if not re.fullmatch(r'[0-9a-f]{40}', source) or manifest['components']['source'] != source:
+        raise RuntimeError('Frozen image provenance differs from its components')
+    return source
+
+
 def capture_distribution(cli, state, output, manifest):
     run = [sys.executable, str(cli), 'run', str(state), '--']
     files = [capture_file(run + ['cat', '/var/lib/dpkg/status'], output / 'guest-dpkg-status')]
@@ -56,6 +68,7 @@ def capture_distribution(cli, state, output, manifest):
         node_directory(manifest) + '/LICENSE', node_directory(manifest) + '/lib/node_modules/npm']
     files.append(capture_file(run + ['tar', '-czf', '-', '-C', '/', *paths], output / 'guest-distribution-support.tar.gz'))
     receipt = {'schema': 'keep.appliance.distribution-input/v1', 'source': manifest['source'],
+        'runtimeSource': runtime_source(manifest),
         'imageSha256': manifest['files']['keep.qcow2'], 'files': files,
         'debianSourcesAcquired': False, 'noticeAndSupportPaths': paths}
     (output / 'distribution-input.json').write_text(json.dumps(receipt, indent=2) + '\n')
@@ -164,7 +177,7 @@ def main():
             before = json.loads(control(state, 'sample-status'))
             assert before['status'] == 'stopped' and before['stateRetained'] is False
             proof = json.loads(control(state, 'run', '--', '/' + node_directory(manifest) + '/bin/node', '/opt/keep/runtime/tools/appliance/guest-proof.mjs'))
-            assert proof['passed'] is True and proof['source'] == manifest['source']
+            assert proof['passed'] is True and proof['source'] == runtime_source(manifest)
             assert proof['hashes']['node'] == manifest['components']['nodeExecutableSha256']
             (output / ('guest-proof-' + str(index) + '.json')).write_text(json.dumps(proof, indent=2) + '\n')
             if index == 1:
@@ -261,6 +274,7 @@ def main():
         execute([sys.executable, str(cli), 'check'])
         assert json.loads((bundle / 'manifest.json').read_text())['files']['keep.qcow2'] == original_image_hash
         receipt = {'schema': 'keep.appliance.clean-consumer/v1', 'passed': True, 'source': manifest['source'],
+            'runtimeSource': runtime_source(manifest),
             'imageSha256': original_image_hash, 'checkoutAvailable': False, 'hostNodeNpmRustUsed': False,
             'browserDriver': execute([driver_path, '--version']), 'browser': execute([chrome, '--version']),
             'stages': stages, 'freshCloneIdentities': identities, 'paidCalls': 0}
