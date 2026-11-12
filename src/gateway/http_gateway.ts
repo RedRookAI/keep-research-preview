@@ -997,7 +997,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
   }
 
   if (req.method === "GET" && req.path === "/projects") {
-    if (app.autonomyLoop === undefined) return json(200, { projects: [], active: null });
+    if (app.autonomyLoop === undefined) return json(200, { projects: [], active: null, runtime: { available: false, softwareConfigured: false, paused: false } });
     const denied = gate("audit.view"); if (denied) return denied;
     const lookup = readProjectProjection(() => {
       const projects = app.autonomyLoop!.manager.list().filter(visibleProject).flatMap((r) => {
@@ -1032,7 +1032,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
         }
       });
       const active = app.autonomyLoop!.manager.active(principal.tenant);
-      return json(200, { projects, active: active !== undefined && projects.some((project) => project.id === active) ? String(active) : null });
+      return json(200, { runtime: { available: app.projectRuntime !== undefined, paused: app.projectRuntime?.paused ?? false, softwareConfigured: app.autonomyLoop!.supportsStrategy(undefined) }, projects, active: active !== undefined && projects.some((project) => project.id === active) ? String(active) : null });
     });
     return lookup.ok ? lookup.value : lookup.response;
   }
@@ -1074,7 +1074,7 @@ export async function handleGatewayRequest(app: KeepApp, req: GatewayRequest, se
       const job = app.projectRuntime.job(req.query["jobId"], visibleIds);
       return job === undefined ? json(404, { error: "job not found" }) : json(200, { job, activities: app.projectRuntime.activities(job.id, visibleIds) ?? [] });
     }
-    return json(200, { jobs: app.projectRuntime.jobs(visibleIds), status: app.projectRuntime.status(visibleIds) });
+    return json(200, { jobs: req.query["includeTerminal"] === "true" ? app.projectRuntime.retainedJobs(visibleIds) : app.projectRuntime.jobs(visibleIds), status: app.projectRuntime.status(visibleIds) });
   }
 
   if (req.method === "POST" && (req.path === "/project/switch" || req.path === "/project/background")) {
@@ -1653,7 +1653,7 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
           ...(opts.identity ? { identity: opts.identity } : {}),
           projectConsole: (request, principal, csrf, sessionAuthority) => handleProjectConsole(request, csrf, (method, path, query = {}, body) => handleGatewayRequest(app, {
             method, path, query, body: body === undefined ? "" : JSON.stringify(body), headers: { authorization: `Bearer ${token}` },
-          }, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(opts.identity ? { principalFor: () => principal, ...(sessionAuthority ? { sessionAuthority } : {}) } : {}) }), { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline"), cancel: can(app.authorization, principal, "change.solve") }),
+          }, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(opts.identity ? { principalFor: () => principal, ...(sessionAuthority ? { sessionAuthority } : {}) } : {}) }), { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline"), cancel: can(app.authorization, principal, "change.solve"), submit: can(app.authorization, principal, "change.solve") }),
         });
       } else resp = await handleGatewayRequest(app, greq, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(workerControl ? { workerControl } : {}), ...(opts.principalFor ? { principalFor: opts.principalFor } : {}), ...(opts.identity ? { identity: opts.identity } : {}) });
       res.writeHead(resp.status, { ...resp.headers });

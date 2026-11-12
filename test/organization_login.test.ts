@@ -274,7 +274,7 @@ test("code-flow browser effect routes are held before console or review handlers
   const security = { token: "fixture", origin: ORIGIN, allowedHosts: [new URL(ORIGIN).host], principal: OWNER, identity: f.identity, now: NOW,
     projectConsole: async () => { dispatches++; return { status: 200, headers: {}, body: "observed" }; } };
   const request = (method: string, path: string) => handleReviewRequest(f.app, { method, path, query: {}, body: `csrf=${current.csrfToken}&action=approve`, headers: { host: new URL(ORIGIN).host, origin: ORIGIN, cookie } }, security);
-  for (const [method, path] of [["POST", "/console/merge"], ["POST", "/console/cancel"], ["POST", "/review/fixture/decide"], ["GET", "/console/future-effect"]]) {
+  for (const [method, path] of [["GET", "/console/new"], ["POST", "/console/submit"], ["POST", "/console/merge"], ["POST", "/console/cancel"], ["POST", "/review/fixture/decide"], ["GET", "/console/future-effect"]]) {
     const response = await request(method!, path!); assert.equal(response.status, 409, response.body); assert.match(response.body, /route is held/u);
   }
   assert.equal(dispatches, 0); assert.equal(f.app.spine.currentEvents().some(event => event.payload["event"] === "review.decided"), false);

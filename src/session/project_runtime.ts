@@ -306,6 +306,12 @@ export class ProjectRuntime {
     return { running: localRunning + foreignRunning, queued: localQueuedIds.size + remoteQueued };
   }
   jobs(projectIds?: ReadonlySet<ProjectId>): readonly ProjectJobIntent[] { return [...this.intents.values()].filter((intent) => projectIds === undefined || projectIds.has(intent.projectId)).map((intent) => ({ ...intent })); }
+  /** Read-only retained navigation, including failed/completed work removed from active capacity. */
+  retainedJobs(projectIds?: ReadonlySet<ProjectId>): readonly ProjectJobIntent[] {
+    const retained = new Map(this.intents);
+    for (const intent of this.journal?.load() ?? []) retained.set(intent.id, intent);
+    return [...retained.values()].filter(intent => projectIds === undefined || projectIds.has(intent.projectId)).map(intent => ({ ...intent }));
+  }
 
   private now(): number { const value = (this.config.now ?? Date.now)(); if (!Number.isSafeInteger(value) || value < 0) throw new Error("invalid project runtime clock"); return value; }
   private runningEntries(): RunningEntry[] {
