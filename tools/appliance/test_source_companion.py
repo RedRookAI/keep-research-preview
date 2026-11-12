@@ -142,6 +142,66 @@ class ConsumerBinding(unittest.TestCase):
 
 
 class ExactSourceAcquisition(unittest.TestCase):
+    def test_exact_source_reuse_keeps_archive_bytes_and_refreshes_runtime_bindings_without_network(self):
+        with tempfile.TemporaryDirectory(prefix='source reuse ') as t, FixtureServer() as server:
+            root = Path(t); directory, receipt = input_fixture(root); server.source()
+            prior = root / 'prior'
+            original = app.build(directory, prior, SOURCE, IMAGE, transport=server.transport)
+            original_index_sha = app.file_hash(prior / 'source-index.json')
+            updated_source, updated_image = 'c' * 40, 'd' * 64
+            receipt.update(source=updated_source, runtimeSource=updated_source, imageSha256=updated_image)
+            support = b'new runtime source support'
+            (directory / 'guest-distribution-support.tar.gz').write_bytes(support)
+            support_record = next(row for row in receipt['files'] if row['file'] == 'guest-distribution-support.tar.gz')
+            support_record.update(bytes=len(support), sha256=h(support))
+            (directory / 'distribution-input.json').write_bytes(app.json_bytes(receipt))
+            def forbidden(*args, **kwargs): raise AssertionError('source reuse must not acquire source metadata or blobs')
+            output = root / 'new'
+            reused = app.build(directory, output, updated_source, updated_image, transport=forbidden,
+                               reuse_dir=prior, reuse_index_sha256=original_index_sha)
+            self.assertTrue(reused['complete'])
+            self.assertEqual(reused['packages'], original['packages'])
+            self.assertEqual(reused['assets'], original['assets'])
+            self.assertEqual(reused['source'], updated_source); self.assertEqual(reused['runtimeSource'], updated_source)
+            self.assertEqual(reused['imageSha256'], updated_image)
+            self.assertEqual(reused['consumerReceiptSha256'], app.file_hash(directory / 'distribution-input.json'))
+            self.assertEqual(reused['sourceReuse'], {'indexSha256': original_index_sha, 'source': SOURCE,
+                                                     'imageSha256': IMAGE, 'inventoryUnchanged': True})
+            self.assertEqual((output / 'guest-distribution-support.tar.gz').read_bytes(), support)
+            for asset in reused['assets']:
+                self.assertEqual((output / asset['file']).read_bytes(), (prior / asset['file']).read_bytes())
+            for line in (output / 'SHA256SUMS').read_text().splitlines():
+                digest, name = line.split('  '); self.assertEqual(app.file_hash(output / name), digest)
+
+    def test_source_reuse_refuses_changed_inventory_index_archive_and_missing_source_records(self):
+        with tempfile.TemporaryDirectory(prefix='source reuse refusal ') as t, FixtureServer() as server:
+            root = Path(t); directory, receipt = input_fixture(root); server.source()
+            prior = root / 'prior'
+            original = app.build(directory, prior, SOURCE, IMAGE, transport=server.transport)
+            original_bytes = (prior / 'source-index.json').read_bytes()
+            original_sha = h(original_bytes)
+            def reuse(name, wanted=original_sha):
+                return app.build(directory, root / name, SOURCE, IMAGE, reuse_dir=prior, reuse_index_sha256=wanted)
+            with self.assertRaisesRegex(app.SourceError, 'index hash mismatch'):
+                reuse('wrong-index', 'e' * 64)
+            for key, value in [('complete', False), ('packages', []), ('assets', [])]:
+                changed = copy.deepcopy(original); changed[key] = value
+                raw = app.json_bytes(changed); (prior / 'source-index.json').write_bytes(raw)
+                with self.subTest(key=key), self.assertRaises(app.SourceError): reuse('bad-' + key, h(raw))
+            (prior / 'source-index.json').write_bytes(original_bytes)
+            archive = prior / original['assets'][0]['file']; archive_bytes = archive.read_bytes()
+            archive.write_bytes(archive_bytes + b'changed')
+            with self.assertRaisesRegex(app.SourceError, 'archive size/hash mismatch'):
+                reuse('bad-archive')
+            archive.write_bytes(archive_bytes)
+            changed_status = (directory / 'guest-dpkg-status').read_bytes().replace(b'install ok installed', b'deinstall ok config-files')
+            (directory / 'guest-dpkg-status').write_bytes(changed_status)
+            record = next(row for row in receipt['files'] if row['file'] == 'guest-dpkg-status')
+            record.update(bytes=len(changed_status), sha256=h(changed_status))
+            (directory / 'distribution-input.json').write_bytes(app.json_bytes(receipt))
+            with self.assertRaisesRegex(app.SourceError, 'inventory differs'):
+                reuse('changed-inventory')
+
     def test_complete_http_acquisition_keeps_dsc_all_sha256_files_and_checked_tar_index(self):
         with tempfile.TemporaryDirectory(prefix='source fixture ') as t, FixtureServer() as server:
             root = Path(t); directory, _ = input_fixture(root); _, expected = server.source()

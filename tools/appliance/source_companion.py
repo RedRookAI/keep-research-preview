@@ -5,6 +5,10 @@ python3 tools/appliance/source_companion.py --input CONSUMER_DIR \
   --expected-source FROZEN_SOURCE --expected-image-sha256 FROZEN_IMAGE_SHA256 \
   --output NEW_OUTPUT_DIR [--cache RETAINED_DOWNLOAD_CACHE] [--plan-only]
 
+For an unchanged binary/source inventory, --reuse EXISTING_COMPANION_DIR plus
+--reuse-index-sha256 REVIEWED_INDEX_HASH reuses its verified source archive bytes.
+Current runtime notices and consumer bindings still come from the new input.
+
 The input receipt must bind guest-dpkg-status, guest-packages.tsv and the separate
 notice/support archive. All receipt hashes/sizes are checked before use. Production
 transport is HTTPS snapshot.debian.org only, with no version search/substitution.
@@ -378,9 +382,54 @@ def pack_sources(output, packages, max_asset=MAX_ASSET):
     return assets
 
 
-def build(input_dir, output, expected_source, expected_image, cache=None, plan_only=False, transport=None, max_asset=MAX_ASSET):
+def reuse_sources(directory, expected_index, current, output, max_asset):
+    """Reuse an independently selected complete source set only for the same inventory."""
+    require(re.fullmatch(r'[0-9a-f]{64}', expected_index or ''), 'reviewed reuse index SHA256 required')
+    directory = Path(directory)
+    path = directory / 'source-index.json'
+    require(regular(path).st_size <= META_LIMIT, 'reuse source index too large')
+    raw = path.read_bytes()
+    require(hashlib.sha256(raw).hexdigest() == expected_index, 'reuse source index hash mismatch')
+    prior = json.loads(raw)
+    require(prior.get('schema') == 'keep.appliance.debian-source-companion/v1'
+            and prior.get('complete') is True and prior.get('planOnly') is False and prior.get('missing') == [],
+            'reuse source companion is incomplete')
+    require(all(prior.get(key) == current[key] for key in ('binaries', 'required', 'skipped')),
+            'reuse binary/source inventory differs; acquire sources for the changed inventory')
+    require(isinstance(prior.get('packages'), list) and isinstance(prior.get('assets'), list) and prior['assets'],
+            'reuse source companion has no complete source records')
+    require(sorted((row['package'], row['version']) for row in prior['packages'])
+            == sorted((row['package'], row['version']) for row in current['required']),
+            'reuse package records differ from exact required source pairs')
+    seen = set()
+    for asset in prior['assets']:
+        name = basename(asset['file'])
+        require(name not in seen and re.fullmatch(r'debian-sources-[0-9]+\.tar', name), 'invalid or duplicate reuse source asset')
+        seen.add(name)
+        require(type(asset.get('bytes')) is int and 0 < asset['bytes'] <= max_asset
+                and re.fullmatch(r'[0-9a-f]{64}', asset.get('sha256', '')), 'invalid reuse source identity')
+        original = directory / name
+        require(regular(original).st_size == asset['bytes'] and file_hash(original) == asset['sha256'],
+                'reuse source archive size/hash mismatch')
+    for package in prior['packages']:
+        require(package.get('files') and all(record.get('asset') in seen for record in package['files']),
+                'reuse source package references a missing archive')
+    for asset in prior['assets']:
+        original, destination = directory / asset['file'], output / asset['file']
+        with original.open('rb') as source, destination.open('xb') as target:
+            shutil.copyfileobj(source, target, length=1024 * 1024)
+            target.flush(); os.fsync(target.fileno())
+        require(regular(destination).st_size == asset['bytes'] and file_hash(destination) == asset['sha256'],
+                'reuse source archive changed during copy')
+    return prior
+
+
+def build(input_dir, output, expected_source, expected_image, cache=None, plan_only=False, transport=None, max_asset=MAX_ASSET,
+          reuse_dir=None, reuse_index_sha256=None):
     require(not Path(output).exists() and not Path(output).is_symlink(), 'output already exists; preserve it and use a new output with the retained cache')
     require(isinstance(max_asset, int) and 10240 <= max_asset <= MAX_ASSET, 'invalid source asset cap')
+    require((reuse_dir is None) == (reuse_index_sha256 is None), 'reuse directory and reviewed index SHA256 are required together')
+    require(reuse_dir is None or (not plan_only and cache is None), 'source reuse cannot be combined with plan/cache acquisition')
     receipt = verify_input(input_dir, expected_source, expected_image)
     input_dir, output = Path(input_dir), Path(output)
     metadata = {}
@@ -406,7 +455,12 @@ def build(input_dir, output, expected_source, expected_image, cache=None, plan_o
              'use': 'Extract all listed source .tar assets into the same directory. Each sources/package/version-hash directory contains an exact .dsc and its original-basename files. Keep source-index.json, SHA256SUMS and the separate consumer notice/support asset adjacent.',
              'binaries': binaries, 'skipped': skipped, 'required': [{'package': p, 'version': v, 'requiredBy': refs} for (p, v), refs in sorted(closure.items())],
              'packages': [], 'missing': [], 'assets': [], 'complete': False, 'planOnly': plan_only}
-    if not plan_only:
+    if reuse_dir is not None:
+        prior = reuse_sources(reuse_dir, reuse_index_sha256, index, output, max_asset)
+        index.update(packages=prior['packages'], assets=prior['assets'], complete=True,
+                     sourceReuse={'indexSha256': reuse_index_sha256, 'source': prior['source'],
+                                  'imageSha256': prior['imageSha256'], 'inventoryUnchanged': True})
+    elif not plan_only:
         snapshot = Snapshot(cache or output / 'cache', transport)
         for package, version in sorted(closure):
             try:
@@ -445,12 +499,15 @@ def main():
     parser.add_argument('--expected-source', required=True)
     parser.add_argument('--expected-image-sha256', required=True)
     parser.add_argument('--cache', type=Path)
+    parser.add_argument('--reuse', type=Path, help='existing complete companion with the same binary/source inventory')
+    parser.add_argument('--reuse-index-sha256', help='independently selected SHA256 of the existing source-index.json')
     parser.add_argument('--plan-only', action='store_true', help='verify consumer input and emit exact required pairs without network/source acquisition')
     parser.add_argument('--max-asset-bytes', type=int, default=MAX_ASSET)
     args = parser.parse_args()
     try:
         result = build(args.input, args.output, args.expected_source, args.expected_image_sha256,
-                       args.cache, args.plan_only, max_asset=args.max_asset_bytes)
+                       args.cache, args.plan_only, max_asset=args.max_asset_bytes,
+                       reuse_dir=args.reuse, reuse_index_sha256=args.reuse_index_sha256)
         print(json.dumps({'complete': result['complete'], 'planOnly': result['planOnly'], 'requiredPairs': len(result['required']),
                           'acquiredPairs': len(result['packages']), 'missingPairs': len(result['missing']), 'assets': result['assets']}))
         return 0 if result['complete'] or args.plan_only else 1

@@ -28,6 +28,12 @@ on:
       draft_target_source:
         description: Independently frozen release assembly commit SHA
         required: true
+      draft_release_id:
+        description: Exact operator-created draft release ID
+        required: true
+      draft_release_tag:
+        description: Exact operator-created draft release tag
+        required: true
 permissions:
   contents: read
   actions: read
@@ -40,8 +46,9 @@ env:
   KC111_IMAGE_SHA256: ${{ inputs.image_sha256 }}
   KC111_CAPTURE_PURPOSE: ${{ inputs.capture_purpose }}
   KC111_DRAFT_TARGET_SOURCE: ${{ inputs.draft_target_source }}
-  KC111_DRAFT_RELEASE_ID: "442592040"
-  KC111_DRAFT_RELEASE_TAG: keep-reviewer-2026-11-12.2
+  KC111_DRAFT_RELEASE_ID: ${{ inputs.draft_release_id }}
+  KC111_DRAFT_RELEASE_TAG: ${{ inputs.draft_release_tag }}
+  KC111_REUSE_INDEX_SHA256: 80e50445a6e6c9547ec9329a64e6b9736aa4c61c711722148be27dfdf59e561b
 jobs:
   companion:
     runs-on: ubuntu-24.04
@@ -61,11 +68,38 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python3 tools/appliance/fetch_distribution_input.py
-      - name: Acquire exact installed guest sources on disposable CI
+      - name: Fetch the existing source set only for the same captured guest inventory
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,sys,urllib.request
+          sys.path.insert(0,'tools/appliance')
+          from source_companion import source_closure
+          target=pathlib.Path('retained-source');target.mkdir(mode=0o700)
+          origin='https://github.com/RedRookAI/keep-research-preview/releases/download/keep-reviewer-2026-11-12.3/'
+          def fetch(name,size,wanted):
+            h=hashlib.sha256();received=0
+            with urllib.request.urlopen(origin+name,timeout=600) as response,(target/name).open('xb') as output:
+              while True:
+                block=response.read(1024*1024)
+                if not block:break
+                received+=len(block)
+                assert received<=size
+                h.update(block);output.write(block)
+            assert received==size and h.hexdigest()==wanted
+          fetch('source-index.json',768477,os.environ['KC111_REUSE_INDEX_SHA256'])
+          prior=json.loads((target/'source-index.json').read_text())
+          current=pathlib.Path('distribution-input')
+          binaries,skipped,closure=source_closure((current/'guest-dpkg-status').read_text(),(current/'guest-packages.tsv').read_text())
+          required=[{'package':p,'version':v,'requiredBy':refs} for (p,v),refs in sorted(closure.items())]
+          assert prior['binaries']==binaries and prior['skipped']==skipped and prior['required']==required,'Guest inventory changed; review exact source acquisition before continuing'
+          fetch('debian-sources-0001.tar',867338240,'d26529691a1d131119f1f36e99bf0c91e794d0730cc5e5884b2692733594bf07')
+          print('Reused existing exact source archive; no Debian snapshot acquisition')
+          PY
+      - name: Bind retained source bytes to the current image and runtime support
         run: |
           python3 tools/appliance/source_companion.py --input distribution-input \
             --expected-source "$KC111_EXPECTED_SOURCE" --expected-image-sha256 "$KC111_IMAGE_SHA256" \
-            --output source-output
+            --output source-output --reuse retained-source --reuse-index-sha256 "$KC111_REUSE_INDEX_SHA256"
       - name: Transfer complete source set to reviewed draft
         env:
           GITHUB_TOKEN: ${{ github.token }}

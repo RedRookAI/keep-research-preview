@@ -181,6 +181,66 @@ CONSOLE_PAGE_STATE_SCRIPT = '''return {
 }'''
 
 
+APPROVAL_BOUNDARY_PROBE = r'''
+import assert from 'node:assert/strict';
+import {mkdtempSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
+import {dirname,join} from 'node:path';
+import {execFileSync} from 'node:child_process';
+import {createBrowserProjectFixture,SAMPLE_GOAL} from '/opt/keep/runtime/dist/src/demo/browser_project_fixture.js';
+import {handleGatewayRequest} from '/opt/keep/runtime/dist/src/gateway/http_gateway.js';
+import {verifyProposalExport} from '/opt/keep/runtime/dist/src/audit/proposal_export.js';
+const root=mkdtempSync('/home/keep/approval-boundary-');
+let settled=false;
+try {
+  const fixture=createBrowserProjectFixture(root,{localAppliance:true,requiredJail:{
+    executable:'/opt/keep/bubblewrap/0.13.0/bwrap',nodeToolchain:dirname(dirname(process.execPath))}});
+  const token='appliance-boundary-fixture-only';
+  const request=async(method,path,body={},query={})=>{
+    const response=await handleGatewayRequest(fixture.app,{method,path,query,
+      headers:{authorization:`Bearer ${token}`},body:method==='GET'?'':JSON.stringify(body)},{token});
+    assert.equal(response.status,200,`${path}: ${response.body}`);
+    return JSON.parse(response.body);
+  };
+  const started=await request('POST','/project',{goal:SAMPLE_GOAL});
+  assert.ok(started.wait?.decisionId);
+  const prepared=await request('POST','/project/resume',{runId:started.runId,
+    approval:{decisionId:started.wait.decisionId,approved:true}});
+  assert.match(prepared.proposalDigest,/^[a-f0-9]{64}$/);
+  const reviewed=await request('GET','/project',{}, {runId:started.runId});
+  assert.equal(reviewed.proposal.checks.testsPassed,true);
+  assert.equal(reviewed.proposal.checks.passedTests.length,4);
+  const workspace=join(fixture.workspaces,'project');
+  const git=(cwd,...args)=>execFileSync('git',['-c','core.hooksPath=/dev/null',...args],{
+    cwd,encoding:'utf8',env:{PATH:process.env.PATH,GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null'},timeout:5000});
+  const before=git(workspace,'rev-parse','HEAD').trim();
+  const marker='Unreviewed appliance qualification file.\n';
+  writeFileSync(join(workspace,'unreviewed.txt'),marker,{flag:'wx'});
+  const result=await request('POST','/project/merge',{runId:started.runId,
+    decision:'approve',proposalDigest:prepared.proposalDigest});
+  assert.ok(['failed','refused'].includes(result.status),JSON.stringify(result));
+  assert.match(result.reason,/unreviewed|untracked/i);
+  assert.equal(git(workspace,'rev-parse','HEAD').trim(),before);
+  assert.equal(git(fixture.source,'rev-parse','HEAD').trim(),fixture.baseRevision);
+  assert.equal(git(workspace,'diff','--cached','--name-only'),'');
+  assert.equal(git(workspace,'ls-files','--','unreviewed.txt'),'');
+  assert.equal(readFileSync(join(workspace,'unreviewed.txt'),'utf8'),marker);
+  const exported=await request('GET','/project/export',{}, {runId:started.runId,proposalDigest:prepared.proposalDigest});
+  const bundle=verifyProposalExport(JSON.stringify(exported));
+  assert.equal(bundle.data.proposal.diff,reviewed.proposal.diff);
+  assert.equal(bundle.data.proposal.diff.includes('unreviewed.txt'),false);
+  const unresolved=fixture.app.projectRuntime.retainedJobs().filter(job=>['queued','running','reconciliation-required'].includes(job.state));
+  assert.deepEqual(unresolved,[]);
+  settled=true;
+  assert.equal(fixture.generations(),2);
+  console.log(JSON.stringify({schema:'keep.appliance.approval-boundary/v1',passed:true,
+    status:result.status,checks:4,authoredResponses:fixture.generations(),requiredJail:true,
+    headUnchanged:true,sourceUnchanged:true,unreviewedFileUnstaged:true,proposalExportUnchanged:true,unresolvedJobs:0}));
+} finally {
+  if(settled) rmSync(root,{recursive:true,force:true});
+}
+'''
+
+
 def wait_for_console_control(read_page, project_url, deadline, credential=None):
     """Read one atomic DOM snapshot at the UI's two-second refresh cadence.
 
@@ -233,6 +293,7 @@ def main():
     base = 'http://127.0.0.1:' + str(driver_port)
     session = None; active_state = None; token = None
     stages, identities = [], []
+    approval_boundary = None
 
     def webdriver(method, path, data=None):
         req = urllib.request.Request(base + path, data=None if data is None else json.dumps(data).encode(),
@@ -305,6 +366,13 @@ def main():
             (output / ('guest-proof-' + str(index) + '.json')).write_text(json.dumps(proof, indent=2) + '\n')
             if index == 1:
                 capture_distribution(cli, state, output, manifest)
+            if decision == 'approve':
+                # A separate owned fixture exercises the installed negative path.
+                # The browser task below keeps its normal one-decision lifecycle.
+                approval_boundary = json.loads(control(state, 'run', '--', '/' + node_directory(manifest) + '/bin/node',
+                    '--input-type=module', '-e', APPROVAL_BOUNDARY_PROBE))
+                assert approval_boundary['passed'] is True
+                (output / 'approval-boundary.json').write_text(json.dumps(approval_boundary, indent=2) + '\n')
             # A fresh clone's authorized key must be exactly this import's public key.
             guest_key = control(state, 'run', '--', 'cat', '/home/keep/.ssh/authorized_keys').strip()
             public_key = (state / 'owner-key.pub').read_text().strip()
@@ -321,7 +389,7 @@ def main():
                 'prefs': {'download.default_directory': str(output), 'download.prompt_for_download': False}}}}})
             session = value['sessionId']
             navigate('http://127.0.0.1:7788/console', 'input[name=token]')
-            assert contract['notice'] in text('body') and 'approval retains the reviewed workspace' in text('body')
+            assert contract['notice'] in text('body') and 'Approval retains the reviewed workspace' in text('body')
             sign_in(token)
             assert len(elements('.project')) == 0
             assert attribute('[name=goal]', 'value') == contract['goal']
@@ -395,7 +463,7 @@ def main():
             'runtimeSource': runtime_source(manifest),
             'imageSha256': original_image_hash, 'checkoutAvailable': False, 'hostNodeNpmRustUsed': False,
             'browserDriver': execute([driver_path, '--version']), 'browser': execute([chrome, '--version']),
-            'stages': stages, 'freshCloneIdentities': identities, 'paidCalls': 0}
+            'stages': stages, 'freshCloneIdentities': identities, 'approvalBoundary': approval_boundary, 'paidCalls': 0}
         (output / 'consumer.json').write_text(json.dumps(receipt, indent=2) + '\n')
         print('KC111_CONSUMER_JSON=' + json.dumps(receipt), flush=True)
     except Exception as error:
