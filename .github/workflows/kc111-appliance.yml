@@ -40,6 +40,7 @@ jobs:
           node --test --test-concurrency=1 dist/test/reviewer_sample.test.js
           node --test tools/reviewer_node_toolchain.test.mjs
           python3 tools/appliance/test_consumer_navigation.py
+          python3 tools/appliance/test_consumer_observation.py
           python3 tools/appliance/test_launcher.py
           python3 tools/appliance/test_dispatch.py
           python3 tools/appliance/test_stop.py
