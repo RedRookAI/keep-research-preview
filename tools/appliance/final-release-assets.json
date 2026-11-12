@@ -1,26 +1,93 @@
 {
   "schema": "keep.appliance.release-copy/v1",
-  "ready": false,
+  "ready": true,
   "repository": "RedRookAI/keep-research-preview",
   "sourceRelease": {
     "id": 442592040,
     "tag": "keep-reviewer-2026-11-12.2",
-    "target": null
+    "target": "73fabd7a98971335153590193ac9235140d5fbe3"
   },
   "destinationRelease": {
-    "id": null,
-    "tag": null,
-    "target": null
+    "id": 442694756,
+    "tag": "keep-reviewer-2026-11-12.3",
+    "target": "41f04b4987d46ee20bb5a12f187c9b0bb144cb12"
   },
-  "archive": null,
-  "imageSource": null,
-  "imageSha256": null,
+  "archive": "keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repack.tar.xz",
+  "imageSource": "253fbca62133bef33ecc7d0c4b2192541cb55918",
+  "imageSha256": "0ec8468c91ebf2afabeb88c149e8d48fc85e1485211c6c8849085b52900f1897",
   "qualification": {
-    "receiptAsset": null,
-    "runId": null,
-    "workflowSource": null,
-    "artifactId": null,
-    "artifactSha256": null
+    "receiptAsset": "consumer-qualification.json",
+    "runId": 43184645622,
+    "workflowSource": "73fabd7a98971335153590193ac9235140d5fbe3",
+    "artifactId": 13927629310,
+    "artifactSha256": "d28ca9992059ba3c185a91c5ebe6ac105ee0b9bf5cfe8238b1e431b4bd3eec4c"
   },
-  "assets": []
+  "assets": [
+    {
+      "id": 738725379,
+      "name": "keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repack.tar.xz",
+      "bytes": 588952968,
+      "sha256": "b4a0208da9ff6e713a624b0eca034ba4d6d70090f8a88f6c456474f44fc0ec51"
+    },
+    {
+      "id": 738726068,
+      "name": "keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repack.tar.xz.candidate.json",
+      "bytes": 644,
+      "sha256": "c85dbbf0d734f94511e287159654c14d04662fa6f47aea62f7f2255cd9f24d25"
+    },
+    {
+      "id": 738726096,
+      "name": "keep-reviewer-0.0.29-preview.1-linux-x64-73fabd7a9897-43184645622-repack.tar.xz.sha256",
+      "bytes": 146,
+      "sha256": "72237b2fb9a12bc660a1ab3d0e872289429af2832b1c9ad676c4094481c287da"
+    },
+    {
+      "id": 738751821,
+      "name": "source-index.json",
+      "bytes": 768477,
+      "sha256": "80e50445a6e6c9547ec9329a64e6b9736aa4c61c711722148be27dfdf59e561b"
+    },
+    {
+      "id": 738751902,
+      "name": "distribution-input.json",
+      "bytes": 1256,
+      "sha256": "40dedf1c861b5e59d994497f31883df4e80354188aa8d1e77dd4530edea27db5"
+    },
+    {
+      "id": 738751984,
+      "name": "guest-dpkg-status",
+      "bytes": 330730,
+      "sha256": "d951e0c25092367010a58637b254a7ae959f2809c9177edb704957ffbe7d3d0c"
+    },
+    {
+      "id": 738752051,
+      "name": "guest-packages.tsv",
+      "bytes": 15989,
+      "sha256": "4b3501e589ff15592851cb130baafc09cd1c539d320b81178a88841d0a60645e"
+    },
+    {
+      "id": 738752115,
+      "name": "guest-distribution-support.tar.gz",
+      "bytes": 46588290,
+      "sha256": "aa036b0781abbd6e53d6a1fc471503e248eb7018c72ae68d34607a4f3f961724"
+    },
+    {
+      "id": 738752254,
+      "name": "debian-sources-0001.tar",
+      "bytes": 867338240,
+      "sha256": "d26529691a1d131119f1f36e99bf0c91e794d0730cc5e5884b2692733594bf07"
+    },
+    {
+      "id": 738753799,
+      "name": "SHA256SUMS",
+      "bytes": 533,
+      "sha256": "1d49b87768d205d1897408c402202bab862dfa23eb51546550cb411045e32faa"
+    },
+    {
+      "id": 738753889,
+      "name": "consumer-qualification.json",
+      "bytes": 1935,
+      "sha256": "31c12825636d2597649d7803ce32414a1632d468d6af8722c5d0ccc698564445"
+    }
+  ]
 }
