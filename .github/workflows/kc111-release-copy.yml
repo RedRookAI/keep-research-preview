@@ -1,0 +1,31 @@
+name: KC111 frozen final draft asset copy
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  copy:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Synthetic custody controls without platform credentials
+        run: python3 tools/appliance/test_release_copy.py
+      - name: Copy only the reviewed frozen selection between existing drafts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          python3 tools/appliance/copy_release_assets.py --apply
+          --manifest tools/appliance/final-release-assets.json
+          --receipt release-copy.jsonl
+      - name: Retain confirmed and uncertain transfer records
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: kc111-release-copy-custody
+          path: release-copy.jsonl
+          if-no-files-found: warn
+          retention-days: 1

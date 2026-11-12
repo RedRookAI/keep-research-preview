@@ -1,0 +1,26 @@
+{
+  "schema": "keep.appliance.release-copy/v1",
+  "ready": false,
+  "repository": "RedRookAI/keep-research-preview",
+  "sourceRelease": {
+    "id": 442420387,
+    "tag": "keep-reviewer-2026-11-12",
+    "target": null
+  },
+  "destinationRelease": {
+    "id": null,
+    "tag": null,
+    "target": null
+  },
+  "archive": null,
+  "imageSource": null,
+  "imageSha256": null,
+  "qualification": {
+    "receiptAsset": null,
+    "runId": null,
+    "workflowSource": null,
+    "artifactId": null,
+    "artifactSha256": null
+  },
+  "assets": []
+}
