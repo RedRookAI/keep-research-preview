@@ -18,6 +18,44 @@ recipe = importlib.util.module_from_spec(spec); spec.loader.exec_module(recipe)
 
 
 class FrozenArchiveModes(unittest.TestCase):
+    def test_new_public_support_modes_survive_runtime_archive_without_touching_native_or_private_state(self):
+        with tempfile.TemporaryDirectory(prefix='public support modes ') as temporary:
+            root = Path(temporary); runtime = root / 'runtime'; runtime.mkdir()
+            integrations = runtime / 'integrations'; integrations.mkdir()
+            previous = os.umask(0o077)
+            try:
+                plugin = integrations / 'openclaw'; plugin.mkdir()
+                packed = plugin / 'candidate-plugin.tgz'; packed.write_bytes(b'fixed plugin fixture')
+                source = runtime / 'source-support.tar.gz'; source.write_bytes(b'fixed source fixture')
+                private = root / 'private state'; private.mkdir()
+                token = private / 'token'; token.write_bytes(b'private fixture')
+            finally: os.umask(previous)
+            self.assertEqual(plugin.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(source.stat().st_mode & 0o777, 0o600)
+            native = runtime / 'native'; native.mkdir()
+            native_inputs = {}
+            for name, mode in [('manifest.json', 0o444), ('native-client', 0o555)]:
+                artifact = native / name; artifact.write_bytes(name.encode()); artifact.chmod(mode)
+                native_inputs[name] = {'name': name, 'sha256': recipe.sha(artifact), 'modeOctal': oct(mode)}
+            source_hashes = {p: recipe.sha(p) for p in (source, packed)}
+            recipe.publish_generated_runtime_support(runtime)
+            self.assertEqual(plugin.stat().st_mode & 0o777, 0o755)
+            for artifact, digest in source_hashes.items():
+                self.assertEqual(artifact.stat().st_mode & 0o777, 0o444)
+                self.assertEqual(recipe.sha(artifact), digest)
+            for name, expected in native_inputs.items(): recipe.verify_carried_native(native / name, expected)
+            self.assertEqual(private.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(token.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(root.stat().st_mode & 0o777, 0o700)
+            archive = root / 'runtime.tgz'
+            subprocess.run(['tar', '-czf', str(archive), '-C', str(runtime), '.'], check=True)
+            with tarfile.open(archive) as stream:
+                self.assertEqual(stream.getmember('./integrations/openclaw').mode, 0o755)
+                self.assertEqual(stream.getmember('./integrations/openclaw/candidate-plugin.tgz').mode, 0o444)
+                self.assertEqual(stream.getmember('./source-support.tar.gz').mode, 0o444)
+                for name, expected in native_inputs.items():
+                    self.assertEqual(stream.getmember('./native/' + name).mode, int(expected['modeOctal'], 8))
+
     def test_background_sanitization_reaches_tty_and_survives_hangup(self):
         with tempfile.TemporaryDirectory(prefix='freeze tty ') as temporary:
             root = Path(temporary); script = root / 'freeze step.sh'
