@@ -57,7 +57,7 @@ import { ProjectSubmissionConflictError } from "../session/project_job_journal.j
 import { ProjectSubmissionUncertainError, type ProjectJobContext } from "../session/project_runtime.js";
 import { handleReviewRequest, type IdentityLayer } from "../review/review_web.js";
 import { handleProjectConsole } from "../review/project_console.js";
-import { isReviewerSample, SAMPLE_GOAL, SAMPLE_NOTICE, SAMPLE_SUBMISSION_KEY } from "../review/reviewer_sample.js";
+import { isReviewerSample, reviewerSampleNotice, SAMPLE_GOAL, SAMPLE_SUBMISSION_KEY } from "../review/reviewer_sample.js";
 import { assertRestrictedCurrent, assertRestrictedHuman, matchesRestrictedBearer, readRestrictedClientProfile, restrictedClientPrincipal, restrictedProjectStatus, type RestrictedClientProfile } from "./restricted_client.js";
 import { SessionCapacityError, type SessionReservation, type SessionAuthorityRef } from "../identity/session_store.js";
 
@@ -1678,7 +1678,7 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
         else resp = await handleReviewRequest(app, greq, {
           token, origin: publicOrigin?.origin ?? opts.identity?.codeFlow?.config.publicOrigin ?? `http://${host}:${port}`, allowedHosts: publicOrigin ? [publicOrigin.host] : opts.identity?.codeFlow ? [new URL(opts.identity.codeFlow.config.publicOrigin).host] : [`${host}:${port}`, `localhost:${port}`], principal: OWNER,
           ...(opts.identity ? { identity: opts.identity } : {}),
-          ...(opts.reviewerSample ? { sampleNotice: SAMPLE_NOTICE } : {}),
+          ...(opts.reviewerSample ? { sampleNotice: reviewerSampleNotice(app) } : {}),
           projectConsole: (request, principal, csrf, sessionAuthority) => handleProjectConsole(request, csrf, (method, path, query = {}, body) => {
             if (opts.reviewerSample && method === "POST" && path === "/project") {
               if (body?.["goal"] !== SAMPLE_GOAL || Object.keys(body).sort().join(",") !== "background,goal,idempotencyKey" || body["background"] !== true)
@@ -1688,7 +1688,7 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
             return handleGatewayRequest(app, {
             method, path, query, body: body === undefined ? "" : JSON.stringify(body), headers: { authorization: `Bearer ${token}` },
           }, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(opts.identity ? { principalFor: () => principal, ...(sessionAuthority ? { sessionAuthority } : {}) } : {}) });
-          }, { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline"), cancel: can(app.authorization, principal, "change.solve"), submit: can(app.authorization, principal, "change.solve") }, opts.reviewerSample ? { goal: SAMPLE_GOAL, notice: SAMPLE_NOTICE } : undefined),
+          }, { approve: can(app.authorization, principal, "review.approve"), decline: can(app.authorization, principal, "review.decline"), cancel: can(app.authorization, principal, "change.solve"), submit: can(app.authorization, principal, "change.solve") }, opts.reviewerSample ? { goal: SAMPLE_GOAL, notice: reviewerSampleNotice(app) } : undefined),
         });
       } else resp = await handleGatewayRequest(app, greq, { token, ...(opts.restrictedClientProfile ? { restrictedClientProfile: opts.restrictedClientProfile } : {}), ...(workerControl ? { workerControl } : {}), ...(opts.principalFor ? { principalFor: opts.principalFor } : {}), ...(opts.identity ? { identity: opts.identity } : {}) });
       res.writeHead(resp.status, { ...resp.headers });

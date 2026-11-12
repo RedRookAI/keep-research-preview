@@ -5,7 +5,12 @@ export const SAMPLE_GOAL = "In repository code, the sum function in calc.mjs sho
 export const SAMPLE_ORIGINAL = "export const sum = (a,b) => a-b;\n";
 export const SAMPLE_NOTICE = "Sample task · two scripted responses · real workspace edits and checks · no AI account or paid calls.";
 export const SAMPLE_SUBMISSION_KEY = "keep.reviewer.sample.v1";
-const fixtures = new WeakSet<KeepApp>();
+const fixtures = new WeakMap<KeepApp, { readonly localWorkspaceOnly?: true }>();
 /** Called only by the controlled sample composition factory, not a request handler. */
-export function registerReviewerSample(app: KeepApp): void { fixtures.add(app); }
+export function registerReviewerSample(app: KeepApp, options: { readonly localWorkspaceOnly?: true } = {}): void { fixtures.set(app, options); }
 export function isReviewerSample(app: KeepApp): boolean { return fixtures.has(app); }
+export function reviewerSampleNotice(app: KeepApp): string {
+  return fixtures.get(app)?.localWorkspaceOnly
+    ? SAMPLE_NOTICE + ' Proposal approval retains the reviewed workspace; this sample leaves the source repository unchanged.'
+    : SAMPLE_NOTICE;
+}
