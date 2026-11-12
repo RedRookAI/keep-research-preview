@@ -1,6 +1,6 @@
 {
   "name": "keep",
-  "version": "0.0.26-preview.1",
+  "version": "0.0.27-preview.1",
   "description": "Self-hosted platform for AI work, persistent knowledge, reusable skills and governed execution",
   "main": "dist/src/index.js",
   "scripts": {
@@ -160,7 +160,7 @@
     "test": "test"
   },
   "engines": {
-    "node": ">=22.23.3 <23"
+    "node": ">=22.23.5 <23"
   },
   "os": [
     "linux"

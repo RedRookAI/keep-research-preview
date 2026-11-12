@@ -6,7 +6,9 @@ Keep brings project goals, memory, reusable skills and execution records into on
 
 The implementation spans software development, research, knowledge management and content workflows. The most developed installed workflow takes a repository goal through generation, workspace edits, executable checks and review.
 
-**Development source: 0.0.26-preview.1. Latest download: 0.0.21-preview.1, a Linux x64 development preview.** The repository contains runnable workflows, tested components and experimental integration points. Readiness varies by capability; the broader platform remains under development.
+**Development source: 0.0.27-preview.1. Latest download: 0.0.21-preview.1, a Linux x64 development preview.** The repository contains runnable workflows, tested components and experimental integration points. Readiness varies by capability; the broader platform remains under development.
+
+Source .27 selects Node22.23.5 and fixes generated source/plugin file readability in the appliance recipe. The previous candidate booted and passed its required jail/engine proof; its distribution capture exposed the permission defect before browser qualification. The corrected image remains under qualification.
 
 Source .26 adds restricted-client issuance directly from a saved instance, preserving its original repository, checker, model, limits and usage history. It also adds exact guest source-companion acquisition and checksummed draft transfer. These are source changes; the hosted guided demo remains .25 and the appliance is still being qualified.
 

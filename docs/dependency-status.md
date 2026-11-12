@@ -1,8 +1,22 @@
 # Dependency status
 
+Checked **November12,2026**. Current Keep source requires **Node22.23.5 or later on Node22**. The next Linux x64 appliance uses its checksum-pinned22.23.5 distribution, including the November11 HTTP/TLS security fixes. Exact-image qualification remains a separate result.
+
+https://nodejs.org/en/blog/release/v22.23.5
+
+The separate native OpenClaw client needs current runtime admission. Node24.22.3 is the selected patched candidate. The plugin still declares its historical OpenClaw2026.10.5 peer contract; current patched OpenClaw compatibility and a complete admitted client closure remain open. Historical compatibility is not an instruction to install that older runtime for a new account workflow.
+
+https://nodejs.org/en/blog/release/v24.22.3
+
+https://github.com/openclaw/openclaw/blob/main/CHANGELOG/2026.10.9.md
+
+Runtime choices apply per workspace or guest. Retained release and execution records keep their original runtime identities and scope.
+
+## Historical October20 assessment
+
 Checked **October 20, 2026**. Keep's source checkpoint and its downloadable preview have separate identities. Historical workflow qualification records what passed on those bytes; it is not continuing security clearance for every dependency.
 
-Use **Node 22.23.3 or later on the supported Node 22 line** for current Keep source. [Node 22.23.3](https://nodejs.org/en/blog/release/v22.23.3) includes Undici 6.28.1 and OpenSSL 3.5.8. The previously documented 22.23.2 runtime predates those fixes. This guidance does not change an old archive or transfer its installed checks to a new runtime.
+The October20 guidance selected **Node22.23.3 or later on Node22**. [Node 22.23.3](https://nodejs.org/en/blog/release/v22.23.3) includes Undici 6.28.1 and OpenSSL 3.5.8. The previously documented 22.23.2 runtime predates those fixes. This guidance does not change an old archive or transfer its installed checks to a new runtime.
 
 The [October Node security announcement](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases) schedules additional fixes on or shortly after October 21. A documentation refresh at **October 21, 2026, 01:56 UTC** rechecked that announcement and the [official release index](https://nodejs.org/dist/index.json): the latest listed Node 22 and Node 24 versions remained 22.23.3 and 24.22.0, and the announcement still described the security releases as forthcoming. No new runtime was installed or qualified by that refresh. The controlled OpenClaw workflow used Node 24.22.0; compatibility and a successful workflow do not establish that it contains future fixes.
 

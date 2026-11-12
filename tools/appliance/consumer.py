@@ -36,6 +36,12 @@ def capture_file(args, path):
     return {'file': path.name, 'sha256': digest.hexdigest(), 'bytes': path.stat().st_size}
 
 
+def node_directory(manifest):
+    version = manifest['components']['nodeVersion']
+    if not re.fullmatch(r'22\.[0-9]+\.[0-9]+', version): raise RuntimeError('Unsupported frozen Node directory')
+    return 'opt/keep/node-v' + version + '-linux-x64'
+
+
 def capture_distribution(cli, state, output, manifest):
     run = [sys.executable, str(cli), 'run', str(state), '--']
     files = [capture_file(run + ['cat', '/var/lib/dpkg/status'], output / 'guest-dpkg-status')]
@@ -47,7 +53,7 @@ def capture_distribution(cli, state, output, manifest):
         'opt/keep/runtime/LICENSE', 'opt/keep/runtime/NOTICE', 'opt/keep/runtime/THIRD_PARTY_NOTICES.txt',
         'opt/keep/runtime/native/licenses', 'opt/keep/runtime/source-support.tar.gz',
         'opt/keep/runtime/engines/codex-generation.2/source-support.tar.gz',
-        'opt/keep/node-v22.23.4-linux-x64/LICENSE', 'opt/keep/node-v22.23.4-linux-x64/lib/node_modules/npm']
+        node_directory(manifest) + '/LICENSE', node_directory(manifest) + '/lib/node_modules/npm']
     files.append(capture_file(run + ['tar', '-czf', '-', '-C', '/', *paths], output / 'guest-distribution-support.tar.gz'))
     receipt = {'schema': 'keep.appliance.distribution-input/v1', 'source': manifest['source'],
         'imageSha256': manifest['files']['keep.qcow2'], 'files': files,
@@ -157,8 +163,9 @@ def main():
             control(state, 'start', '--port', '7788', '--ssh-port', '2222')
             before = json.loads(control(state, 'sample-status'))
             assert before['status'] == 'stopped' and before['stateRetained'] is False
-            proof = json.loads(control(state, 'run', '--', '/opt/keep/node-v22.23.4-linux-x64/bin/node', '/opt/keep/runtime/tools/appliance/guest-proof.mjs'))
+            proof = json.loads(control(state, 'run', '--', '/' + node_directory(manifest) + '/bin/node', '/opt/keep/runtime/tools/appliance/guest-proof.mjs'))
             assert proof['passed'] is True and proof['source'] == manifest['source']
+            assert proof['hashes']['node'] == manifest['components']['nodeExecutableSha256']
             (output / ('guest-proof-' + str(index) + '.json')).write_text(json.dumps(proof, indent=2) + '\n')
             if index == 1:
                 capture_distribution(cli, state, output, manifest)
