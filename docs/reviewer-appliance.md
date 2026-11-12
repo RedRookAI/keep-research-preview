@@ -31,6 +31,8 @@ For a remote host, make an additional SSH tunnel from your browser's computer to
 
 Choose **Submit a repository goal**, then **Submit goal**. Approve the displayed step to run the sample. Inspect the checked diff, choose **Veto proposal**, open the updated project and download the proposal evidence. The original sample repository remains unchanged after veto. Opening or refreshing the console does not submit another goal.
 
+In this appliance sample, proposal approval retains the reviewed workspace and leaves the source repository unchanged. You can reopen either an approved or vetoed sample to inspect its retained decision and export.
+
 ```sh
 python3 keep-appliance.py sample-stop /your/private/keep-instance
 python3 keep-appliance.py sample-start /your/private/keep-instance

@@ -45,6 +45,11 @@ def save(path, value):
         stream.flush()
         os.fsync(stream.fileno())
     os.replace(temporary, path)
+    directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
 
 
 def command(argv, **options):
@@ -152,10 +157,33 @@ def alive(record):
 
 
 def spawn_owned(argv, log):
+    executable = shutil.which(argv[0])
+    if executable is None:
+        fail('Missing launch executable: ' + argv[0])
+    argv = [executable, *argv[1:]]
     with open(log, 'ab', buffering=0) as stream:
         child = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=stream, stderr=stream,
                                  env={'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8'}, start_new_session=True)
     return identity(child.pid)
+
+
+def refuse_pending(data):
+    pending = [name for name, record in data.get('dispatches', {}).items() if record['state'] == 'intent']
+    if pending or data.get('stage') == 'initializing':
+        fail('Unresolved appliance dispatch: ' + ','.join(pending or ['initialization']) + '; inspect retained state; no replacement or reset')
+
+
+def dispatch_owned(path, data, name, argv, log):
+    refuse_pending(data)
+    data.setdefault('dispatches', {})[name] = {'state': 'intent', 'id': str(uuid.uuid4())}
+    save(path / 'instance.json', data)
+    # A crash before this confirmed handle leaves durable intent. Stop/retry may
+    # not turn an unknown child into permission to launch a replacement.
+    record = spawn_owned(argv, log)
+    data[name] = record
+    data['dispatches'][name]['state'] = 'confirmed'
+    save(path / 'instance.json', data)
+    return record
 
 
 def terminate(record):
@@ -221,6 +249,7 @@ def verify_overlay(path, data):
 
 
 def start(path, data, port, ssh_port):
+    refuse_pending(data)
     prerequisites()
     frozen = manifest()
     if alive(data.get('qemu')) or alive(data.get('seed')) or alive(data.get('tunnel')):
@@ -236,11 +265,15 @@ def start(path, data, port, ssh_port):
     if data['stage'] == 'new':
         if shutil.disk_usage(path).free < 8 * 1024 ** 3:
             fail('At least8GiB free host storage is required for this profile')
+        data['stage'] = 'initializing'
+        save(path / 'instance.json', data)
         command(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-f', str(path / 'owner-key')])
         command(['qemu-img', 'create', '-f', 'qcow2', '-F', 'qcow2', '-b', str(BUNDLE / 'keep.qcow2'), str(path / 'instance.qcow2')], capture_output=True)
         info = (path / 'instance.qcow2').stat()
         data['overlay'] = {'device': info.st_dev, 'inode': info.st_ino}
         data['imageSha256'] = frozen['files']['keep.qcow2']
+        data['stage'] = 'prepared'
+        save(path / 'instance.json', data)
     elif data['imageSha256'] != frozen['files']['keep.qcow2']:
         fail('Bundle image changed; existing instance is retained')
     verify_overlay(path, data)
@@ -250,8 +283,7 @@ def start(path, data, port, ssh_port):
             target.unlink()  # Prior resources are all confirmed stopped above.
     data.update({'stage': 'starting', 'port': port, 'sshPort': ssh_port})
     save(path / 'instance.json', data)
-    data['seed'] = spawn_owned([sys.executable, str(Path(__file__).resolve()), '_seed', str(path)], path / 'seed.log')
-    save(path / 'instance.json', data)
+    dispatch_owned(path, data, 'seed', [sys.executable, str(Path(__file__).resolve()), '_seed', str(path)], path / 'seed.log')
     deadline = time.monotonic() + 600
     while not (path / 'seed-ready.json').exists():
         if not alive(data['seed']) or time.monotonic() >= deadline:
@@ -265,8 +297,7 @@ def start(path, data, port, ssh_port):
             '-drive', 'file=' + qemu_value(path / 'instance.qcow2') + ',if=virtio,format=qcow2',
             '-netdev', 'user,id=net0,hostfwd=tcp:127.0.0.1:' + str(ssh_port) + '-:22',
             '-device', 'virtio-net-pci,netdev=net0', '-smbios', 'type=1,serial=ds=nocloud;s=http://10.0.2.2:' + str(seed_port) + '/']
-    data['qemu'] = spawn_owned(args, path / 'qemu.log')
-    save(path / 'instance.json', data)
+    dispatch_owned(path, data, 'qemu', args, path / 'qemu.log')
     while True:
         try:
             guest(path, data, ['test', '-f', '/opt/keep/appliance-ready'], capture_output=True, timeout=10)
@@ -282,16 +313,17 @@ def start(path, data, port, ssh_port):
 
 
 def tunnel(path, data):
+    refuse_pending(data)
     if alive(data.get('tunnel')):
         return
     port_available(data['port'])
     args = ssh_options(path, data) + ['-N', '-o', 'ExitOnForwardFailure=yes', '-o', 'ServerAliveInterval=15',
             '-o', 'ServerAliveCountMax=2', '-L', '127.0.0.1:{0}:127.0.0.1:{0}'.format(data['port']), 'keep@127.0.0.1']
-    data['tunnel'] = spawn_owned(args, path / 'tunnel.log')
-    save(path / 'instance.json', data)
+    dispatch_owned(path, data, 'tunnel', args, path / 'tunnel.log')
 
 
 def sample(path, data, action):
+    refuse_pending(data)
     verify_overlay(path, data)
     result = guest(path, data, ['keep-reviewer', action, str(data['port'])], capture_output=True, text=True)
     value = json.loads(result.stdout)
@@ -333,6 +365,7 @@ def qmp_powerdown(path):
 
 
 def stop(path, data):
+    refuse_pending(data)
     if data['stage'] == 'new':
         return {'status': 'guest-not-started', 'stateRetained': True, 'unresolved': []}
     unresolved = 'unknown'
@@ -373,7 +406,8 @@ def main():
         if args.action == 'start': value = start(path, data, args.port, args.ssh_port)
         elif args.action == 'stop': value = stop(path, data)
         elif args.action == 'status':
-            value = {'stage': data['stage'], 'guestRunning': alive(data.get('qemu')), 'tunnelRunning': alive(data.get('tunnel')), 'stateRetained': True}
+            value = {'stage': data['stage'], 'guestRunning': alive(data.get('qemu')), 'tunnelRunning': alive(data.get('tunnel')), 'stateRetained': True,
+                     'unresolvedDispatches': [name for name, record in data.get('dispatches', {}).items() if record['state'] == 'intent']}
         elif args.action.startswith('sample-'): value = sample(path, data, args.action[7:])
         elif args.action == 'credential':
             guest(path, data, ['cat', '/home/keep/reviewer-sample/invitation-token']); return

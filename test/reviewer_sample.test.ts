@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { composeKeep } from "../src/compose.js";
 import { createBrowserProjectFixture, SAMPLE_GOAL } from "../src/demo/browser_project_fixture.js";
-import { SAMPLE_NOTICE } from "../src/review/reviewer_sample.js";
+import { SAMPLE_NOTICE, reviewerSampleNotice } from "../src/review/reviewer_sample.js";
 import { startGatewayServer, type GatewayServerHandle, type GatewayServerOptions } from "../src/gateway/http_gateway.js";
 
 function http(server: GatewayServerHandle, path: string, options: { method?: string; headers?: Record<string, string>; form?: Record<string, string> } = {}): Promise<{ status: number; headers: import("node:http").IncomingHttpHeaders; body: string }> {
@@ -29,9 +29,11 @@ test("local appliance resume retains the same source and refuses changed source 
   try {
     const ordinary = createBrowserProjectFixture(hosted);
     ordinary.app.projectRuntime!.pauseDispatch();
+    assert.equal(reviewerSampleNotice(ordinary.app), SAMPLE_NOTICE);
     assert.equal(existsSync(join(hosted, 'fixture.json')), false, 'hosted default does not acquire local metadata');
     const first = createBrowserProjectFixture(root, { localAppliance: true });
     first.app.projectRuntime!.pauseDispatch();
+    assert.match(reviewerSampleNotice(first.app), /approval retains the reviewed workspace/);
     const resumed = createBrowserProjectFixture(root, { localAppliance: true, resume: true });
     resumed.app.projectRuntime!.pauseDispatch();
     assert.equal(resumed.baseRevision, first.baseRevision);

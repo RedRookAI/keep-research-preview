@@ -9,6 +9,7 @@ import signal
 import subprocess
 import sys
 import time
+import uuid
 
 ROOT = Path.home() / '.keep-reviewer-control'
 SAMPLE = Path.home() / 'reviewer-sample'
@@ -64,6 +65,47 @@ def write_state(data):
         json.dump(data, stream)
         stream.flush(); os.fsync(stream.fileno())
     path.replace(ROOT / 'control.json')
+    directory = os.open(ROOT, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
+
+
+def start_sample(data, port):
+    if data.get('stage') == 'starting':
+        raise RuntimeError('Previous sample dispatch is unresolved; inspect retained state; no replacement')
+    baseline = len(events())
+    data.update({'stage': 'starting', 'dispatchId': str(uuid.uuid4()), 'port': port, 'eventsBeforeStart': baseline})
+    data.pop('process', None)
+    write_state(data)  # Durable intent precedes Popen, including the handle gap.
+    with open(ROOT / 'sample.log', 'ab', buffering=0) as log:
+        child = subprocess.Popen([NODE, ENTRY, str(SAMPLE), str(port)], stdin=subprocess.DEVNULL,
+            stdout=log, stderr=log, start_new_session=True,
+            env={'PATH': '/opt/keep/node-v22.23.4-linux-x64/bin:/usr/bin:/bin', 'HOME': str(Path.home()), 'LANG': 'C.UTF-8'})
+    data['process'] = identity(child.pid)
+    write_state(data)
+    deadline = time.monotonic() + 30
+    while True:
+        fresh = events()[baseline:]
+        if fresh and fresh[-1]['event'] == 'sample-ready':
+            data['stage'] = 'running'; write_state(data); return
+        if not alive(data['process']) or time.monotonic() >= deadline:
+            raise RuntimeError('Sample startup did not confirm readiness; inspect retained sample.log')
+        time.sleep(0.1)
+
+
+def stop_sample(data):
+    if data.get('stage') == 'starting' and not data.get('process'):
+        raise RuntimeError('Unresolved sample dispatch has no confirmed handle; stop cannot clear it')
+    if data.get('stage') != 'stopped' and alive(data.get('process')):
+        os.kill(data['process']['pid'], signal.SIGTERM)
+        deadline = time.monotonic() + 30
+        while alive(data['process']) and time.monotonic() < deadline:
+            time.sleep(0.1)
+        if alive(data['process']):
+            raise RuntimeError('Sample stop not confirmed; state retained without forced termination')
+    data['stage'] = 'stopped'; write_state(data)
 
 
 def main():
@@ -82,40 +124,20 @@ def main():
         if action not in ('start', 'status', 'stop') or not 1024 <= port <= 65535:
             raise RuntimeError('Expected start/status/stop and console port1024..65535')
         state_file = ROOT / 'control.json'
-        data = json.loads(state_file.read_text()) if state_file.exists() else {'stage': 'new'}
+        data = json.loads(state_file.read_text()) if state_file.exists() else {'schema': 'keep.appliance.sample-control/v1', 'stage': 'new'}
+        if data.get('schema') != 'keep.appliance.sample-control/v1' or data.get('stage') not in ('new', 'starting', 'running', 'stopped'):
+            raise RuntimeError('Unknown sample control state; existing work is retained')
         running = data.get('stage') != 'stopped' and alive(data.get('process'))
-        if action == 'start' and not running:
-            if data.get('stage') == 'starting':
-                raise RuntimeError('Previous sample startup is unresolved; inspect retained logs')
-            log = open(ROOT / 'sample.log', 'ab', buffering=0)
-            child = subprocess.Popen([NODE, ENTRY, str(SAMPLE), str(port)], stdin=subprocess.DEVNULL,
-                stdout=log, stderr=log, start_new_session=True,
-                env={'PATH': '/opt/keep/node-v22.23.4-linux-x64/bin:/usr/bin:/bin', 'HOME': str(Path.home()), 'LANG': 'C.UTF-8'})
-            log.close()
-            data = {'stage': 'starting', 'process': identity(child.pid), 'port': port,
-                    'eventsBeforeStart': len(events())}
-            write_state(data)
-            deadline = time.monotonic() + 30
-            while True:
-                fresh = events()[data['eventsBeforeStart']:]
-                if fresh and fresh[-1]['event'] == 'sample-ready':
-                    data['stage'] = 'running'; write_state(data); running = True; break
-                if not alive(data['process']) or time.monotonic() >= deadline:
-                    raise RuntimeError('Sample startup did not confirm readiness; inspect retained sample.log')
-                time.sleep(0.1)
+        if action == 'start':
+            if data['stage'] == 'starting':
+                raise RuntimeError('Previous sample dispatch is unresolved; inspect retained state')
+            if not running: start_sample(data, port); running = True
         elif action == 'stop':
-            if running:
-                os.kill(data['process']['pid'], signal.SIGTERM)
-                deadline = time.monotonic() + 30
-                while alive(data['process']) and time.monotonic() < deadline:
-                    time.sleep(0.1)
-                if alive(data['process']):
-                    raise RuntimeError('Sample stop not confirmed; state retained without forced termination')
-            data['stage'] = 'stopped'; write_state(data); running = False
+            stop_sample(data); running = False
         history = events()
         last_ready = next((value for value in reversed(history) if value['event'] == 'sample-ready'), None)
         last_stop = next((value for value in reversed(history) if value['event'] == 'sample-stopped'), None)
-        print(json.dumps({'status': 'running' if running else 'stopped', 'stateRetained': SAMPLE.exists(),
+        print(json.dumps({'status': data['stage'] if data['stage'] == 'starting' else ('running' if running else 'stopped'), 'stateRetained': SAMPLE.exists(),
             'sample': last_ready, 'unresolved': (last_stop or {}).get('unresolved', [] if not history else 'unknown'),
             'scripted': True, 'paidCalls': 0}))
     finally:

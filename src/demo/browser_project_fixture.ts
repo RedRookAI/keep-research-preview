@@ -44,7 +44,7 @@ export function createBrowserProjectFixture(root: string, options: BrowserProjec
   }
   // Retained jobs/checkpoints own recovery; no separate counter authorizes replay.
   let generations = 0;
-  const app = composeKeep({ dataDir: join(root, 'state'), sourceLanding: true, projectPosture: 'approval-required',
+  const app = composeKeep({ dataDir: join(root, 'state'), sourceLanding: options.localAppliance ? false : true, projectPosture: 'approval-required',
     repositoryMaterialization: { sourceDir: source, workspaceBase: workspaces, repoRef: 'project', commit: baseRevision, baseBranch: 'main' },
     testCommand: { command: process.execPath, args: ['--test', 'repo.test.mjs'], timeoutMs: options.requiredJail ? 600_000 : 5000,
       ...(options.requiredJail ? { namespaceJail: 'required' as const, jailExecutable: options.requiredJail.executable,
@@ -56,6 +56,6 @@ export function createBrowserProjectFixture(root: string, options: BrowserProjec
         : { action: 'plan', rationale: 'arithmetic correction', edits: [{ file: 'calc.mjs', search: 'a-b', replace: 'a+b', intent: 'add operands' }] };
       return { text: JSON.stringify(value), model: 'scripted-browser-sample', tokensIn: 1, tokensOut: 1 };
     } } });
-  registerReviewerSample(app);
+  registerReviewerSample(app, options.localAppliance ? { localWorkspaceOnly: true } : undefined);
   return { app, source, workspaces, baseRevision, generations: () => generations };
 }
