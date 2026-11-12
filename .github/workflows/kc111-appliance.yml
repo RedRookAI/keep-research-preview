@@ -1,7 +1,7 @@
 name: KC111 appliance source and candidate
 on:
   push:
-    branches: [work/kc111-appliance-2026-11-12, work/kc111-candidate-2026-11-12-4ct, work/kc111-candidate-2026-11-12-4ct-02]
+    branches: [work/kc111-appliance-2026-11-12, work/kc111-candidate-2026-11-12-4ct, work/kc111-candidate-2026-11-12-4ct-02, work/kc111-candidate-2026-11-12-4ct-03]
 permissions:
   contents: read
 env:
@@ -42,6 +42,7 @@ jobs:
           python3 tools/appliance/test_dispatch.py
           python3 tools/appliance/test_stop.py
           python3 tools/appliance/test_supply_chain.py
+          python3 tools/appliance/test_build.py
   build:
     if: contains(github.event.head_commit.message, '[kc111-build-approved]')
     needs: source
