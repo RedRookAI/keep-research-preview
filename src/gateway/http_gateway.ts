@@ -23,6 +23,7 @@
  */
 
 import { createServer, type IncomingMessage } from "node:http";
+import type { Socket } from "node:net";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import type { KeepApp } from "../compose.js";
 import { projectRepositoryOutcomes } from "../solve/governed_local_merge.js";
@@ -1638,6 +1639,14 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
   const token = opts.token ?? randomBytes(24).toString("hex");
   const maxBody = opts.maxBodyBytes ?? 1_000_000;
   let activeRequests = 0, stopping = false;
+  const unadmittedSockets = new Set<Socket>();
+  const closeServer = (onClosed: () => void): void => {
+    stopping = true;
+    server.close(onClosed);
+    // A speculative TCP connection has no admitted request to drain, but can
+    // otherwise keep Node's close callback pending past owner stop confirmation.
+    for (const socket of unadmittedSockets) socket.destroy();
+  };
   const workerControl = opts.worker === undefined ? undefined : { id: opts.worker.id, state: () => stopping ? "stopping" as const : app.projectRuntime?.paused ? "paused" as const : "running" as const,
     setPaused: (paused: boolean) => {
       if (stopping || app.projectRuntime === undefined) return false;
@@ -1648,11 +1657,12 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
       const status = app.projectRuntime?.status();
       if (stopping || activeRequests !== 1 || status === undefined || status.running !== 0 || status.queued !== 0) return false;
       stopping = true; // Same event-loop turn: close admission before draining the listener.
-      setImmediate(() => server.close(() => opts.worker!.onStopped())); return true;
+      setImmediate(() => closeServer(() => opts.worker!.onStopped())); return true;
     },
   };
 
   const server = createServer((req, res) => {
+    unadmittedSockets.delete(req.socket);
     if (stopping) { res.writeHead(503, { "content-type": "text/plain" }); res.end("Worker is stopping"); return; }
     activeRequests++;
     (async () => {
@@ -1710,6 +1720,12 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
     })().catch(() => { if (!res.headersSent) { res.writeHead(500, { "content-type": "text/plain" }); res.end("Internal error."); } }).finally(() => { activeRequests--; });
   });
 
+  server.on("connection", socket => {
+    if (stopping) { socket.destroy(); return; }
+    unadmittedSockets.add(socket);
+    socket.once("close", () => unadmittedSockets.delete(socket));
+  });
+
   return new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(opts.port ?? 7788, host, () => {
@@ -1719,7 +1735,7 @@ export function startGatewayServer(app: KeepApp, opts: GatewayServerOptions = {}
         origin: `http://${host}:${port}`,
         port,
         token,
-        close: () => new Promise<void>((r) => server.close(() => r())),
+        close: () => new Promise<void>((r) => closeServer(r)),
       });
     });
   });
