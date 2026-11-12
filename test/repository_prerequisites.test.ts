@@ -153,7 +153,9 @@ test("unsupported manager, lockfile, changed toolchain and real unavailable help
 
 test("preparation that mutates the predefined checker is refused and preserved for inspection", async t => {
   const f = fixture(t); f.clone();
-  await assert.rejects(prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [], preparation: f.preparation }, () => ({ run: async () => {
+  await assert.rejects(prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [], preparation: f.preparation }, config => ({ run: async () => {
+    if (config.args[0] === "-e") return componentSuccess;
+    assert.equal(config.args[0], f.preparation.npmCli, "mutate the checker during installation, after a successful preflight");
     writeFileSync(join(f.workspace, "calc.test.cjs"), "process.exit(0)"); f.supply(f.workspace); return componentSuccess;
   } })), /changed tracked repository\/checker bytes/u);
   assert.equal(readFileSync(join(f.source, "calc.test.cjs"), "utf8").includes("assert.equal"), true);
@@ -167,7 +169,9 @@ test("throwing preparation retains pre-dispatch hold until both source and works
   const f = fixture(t); f.clone();
   const checker = readFileSync(join(f.source, "calc.test.cjs"), "utf8"), source = readFileSync(join(f.source, "calc.js"), "utf8");
   const hold = join(f.workspace, ".git/keep-preparation-hold.json");
-  await assert.rejects(prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [], preparation: f.preparation }, () => ({ run: async () => {
+  await assert.rejects(prepareRepositoryWorkspace(f.source, f.workspace, f.command, { prerequisites: [], preparation: f.preparation }, config => ({ run: async () => {
+    if (config.args[0] === "-e") return componentSuccess;
+    assert.equal(config.args[0], f.preparation.npmCli, "throw after installation effects, after a successful preflight");
     assert.equal(existsSync(hold), true, "intent is present before runner effects");
     const pending = describeRepositoryReadiness(inspectRepositoryReadiness(f.source, f.workspace, f.command));
     assert.match(pending, /integrity is pending or unresolved/u);
