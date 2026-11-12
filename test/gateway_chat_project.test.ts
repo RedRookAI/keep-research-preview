@@ -55,7 +55,7 @@ test("served chat script recovers a lost submission across restart without dupli
   const root = mkdtempSync(join(tmpdir(), "keep-chat-project-")), token = "chat-fixture-credential";
   let app = fixture(root), server = await startGatewayServer(app, { port: 0, token });
   t.after(async () => { await server.close(); rmSync(root, { recursive: true, force: true }); });
-  const page = await openPage(server.origin, token, undefined, true);
+  const page = await openPage(server.origin, token, server.origin + "/?token=" + token, true);
   const goal = "Repair the private customer workflow";
   page.element("msg").value = goal; await page.click("start");
   assert.match(page.element("projectStatus").textContent, /Connection lost after acceptance/u);

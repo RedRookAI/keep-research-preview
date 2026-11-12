@@ -1839,6 +1839,8 @@ var projectKey=null, projectId=null, projectJob=null, projectBusy=false, project
 var work=document.getElementById("projectStatus"), start=document.getElementById("start");
 function saveProjectLocation(){
   var u=new URL(location.href);
+  // Legacy query-token entry must not carry its credential into recovery URLs.
+  u.searchParams.delete("token");
   ["submissionKey","projectId","jobId"].forEach(function(k){u.searchParams.delete(k)});
   if(projectKey)u.searchParams.set("submissionKey",projectKey);
   if(projectId&&projectJob){u.searchParams.set("projectId",projectId);u.searchParams.set("jobId",projectJob)}
